@@ -191,6 +191,12 @@ async function handleCommand(sock, msg, command, args, sender) {
             if (!isUrl(args[0]) || !args[0].includes('tiktok')) return sock.sendMessage(msg.key.remoteJid, { text: "❌ Enlace de TikTok inválido." }, { quoted: msg });
 
             try {
+                sock.sendMessage(msg.key.remoteJid, {
+        react: {
+          text: '⏱️',
+          key: msg.key,
+        },
+      });
                 const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
                 const videoData = response.data.data.media;
                 const videoUrl = videoData.org;
@@ -216,6 +222,12 @@ async function handleCommand(sock, msg, command, args, sender) {
             if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://www.instagram.com/p/CCoI4DQBGVQ/` }, { quoted: msg });
 
             try {
+                sock.sendMessage(msg.key.remoteJid, {
+        react: {
+          text: '⏱️',
+          key: msg.key,
+        },
+      });
                 const apiUrl = `https://api.dorratz.com/igdl?url=${text}`;
                 const response = await axios.get(apiUrl);
                 const { data } = response.data;
@@ -243,6 +255,12 @@ async function handleCommand(sock, msg, command, args, sender) {
             }
 
             try {
+                sock.sendMessage(msg.key.remoteJid, {
+        react: {
+          text: '⏱️',
+          key: msg.key,
+        },
+      });
                 const response = await axios.get(`https://api.dorratz.com/fbvideo?url=${encodeURIComponent(text)}`);
                 const results = response.data;
 
