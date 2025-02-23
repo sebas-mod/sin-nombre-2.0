@@ -107,6 +107,68 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+
+ case "ver": {
+    try {
+        if (!msg.message.extendedTextMessage || 
+            !msg.message.extendedTextMessage.contextInfo || 
+            !msg.message.extendedTextMessage.contextInfo.quotedMessage) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ *Error:* Debes responder a un mensaje de *ver una sola vez* (imagen, video o audio) para poder verlo nuevamente." },
+                { quoted: msg }
+            );
+        }
+
+        const quotedMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+        let mediaType, mediaMessage;
+
+        if (quotedMsg.imageMessage?.viewOnce) {
+            mediaType = "image";
+            mediaMessage = quotedMsg.imageMessage;
+        } else if (quotedMsg.videoMessage?.viewOnce) {
+            mediaType = "video";
+            mediaMessage = quotedMsg.videoMessage;
+        } else if (quotedMsg.audioMessage?.viewOnce) {
+            mediaType = "audio";
+            mediaMessage = quotedMsg.audioMessage;
+        } else {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ *Error:* Solo puedes usar este comando en mensajes de *ver una sola vez*." },
+                { quoted: msg }
+            );
+        }
+
+        // Descargar el multimedia
+        const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
+        let mediaBuffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+        }
+
+        // Enviar el archivo descargado al grupo o chat
+        let messageOptions = {
+            mimetype: mediaMessage.mimetype,
+        };
+
+        if (mediaType === "image") {
+            messageOptions.image = mediaBuffer;
+        } else if (mediaType === "video") {
+            messageOptions.video = mediaBuffer;
+        } else if (mediaType === "audio") {
+            messageOptions.audio = mediaBuffer;
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, messageOptions, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando ver:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo recuperar el mensaje de *ver una sola vez*." }, { quoted: msg });
+    }
+    break;
+}       
+        
 case "perfil": {
     try {
         let userJid = null;
