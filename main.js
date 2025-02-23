@@ -134,7 +134,9 @@ case 'g': {
 }
         
 case 'guar': {
-    if (!msg.message.extendedTextMessage || !msg.message.extendedTextMessage.contextInfo || !msg.message.extendedTextMessage.contextInfo.quotedMessage) {
+    if (!msg.message.extendedTextMessage || 
+        !msg.message.extendedTextMessage.contextInfo || 
+        !msg.message.extendedTextMessage.contextInfo.quotedMessage) {
         return sock.sendMessage(
             msg.key.remoteJid,
             { text: "❌ *Error:* Debes responder a un multimedia (imagen, video, audio, sticker, etc.) con una palabra clave para guardarlo. 📂" },
@@ -142,7 +144,7 @@ case 'guar': {
         );
     }
 
-    const saveKey = args.join(' ').trim().toLowerCase(); // Palabra clave en minúsculas
+    const saveKey = args.join(' ').trim().toLowerCase(); // Clave en minúsculas
     if (!saveKey) {
         return sock.sendMessage(
             msg.key.remoteJid,
@@ -160,23 +162,28 @@ case 'guar': {
     let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
 
     const quotedMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage;
-    let mediaType, mediaMessage;
+    let mediaType, mediaMessage, fileExtension;
 
     if (quotedMsg.imageMessage) {
         mediaType = "image";
         mediaMessage = quotedMsg.imageMessage;
+        fileExtension = "jpg";
     } else if (quotedMsg.videoMessage) {
         mediaType = "video";
         mediaMessage = quotedMsg.videoMessage;
+        fileExtension = "mp4";
     } else if (quotedMsg.audioMessage) {
         mediaType = "audio";
         mediaMessage = quotedMsg.audioMessage;
+        fileExtension = "mp3";
     } else if (quotedMsg.stickerMessage) {
         mediaType = "sticker";
         mediaMessage = quotedMsg.stickerMessage;
+        fileExtension = "webp"; // Stickers son .webp
     } else if (quotedMsg.documentMessage) {
         mediaType = "document";
         mediaMessage = quotedMsg.documentMessage;
+        fileExtension = mediaMessage.mimetype.split("/")[1] || "bin"; // Obtener la extensión real
     } else {
         return sock.sendMessage(
             msg.key.remoteJid,
@@ -185,9 +192,8 @@ case 'guar': {
         );
     }
 
+    // Descargar el multimedia
     const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
-
-    // Convertir el stream en un buffer
     let mediaBuffer = Buffer.alloc(0);
     for await (const chunk of mediaStream) {
         mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
@@ -197,8 +203,8 @@ case 'guar': {
     guarData[saveKey] = {
         buffer: mediaBuffer.toString("base64"), // Convertir a base64
         mimetype: mediaMessage.mimetype,
-        extension: mediaMessage.mimetype.split("/")[1],
-        savedBy: msg.key.participant, // Número del usuario que guardó el archivo
+        extension: fileExtension,
+        savedBy: msg.key.participant || msg.key.remoteJid, // Número del usuario que guardó el archivo
     };
 
     // Escribir en guar.json
