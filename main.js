@@ -107,6 +107,7 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+
 case "ver": {
     try {
         if (!msg.message.extendedTextMessage || 
@@ -141,23 +142,26 @@ case "ver": {
 
         // Enviar reacción mientras procesa
         await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "🔄", key: msg.key } 
+            react: { text: "⏳", key: msg.key } 
         });
 
-        // Descargar el multimedia
-        const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
+        // Descargar el multimedia de forma segura
+        const mediaStream = await new Promise(async (resolve, reject) => {
+            try {
+                const stream = await downloadContentFromMessage(mediaMessage, mediaType);
+                let buffer = Buffer.alloc(0);
+                for await (const chunk of stream) {
+                    buffer = Buffer.concat([buffer, chunk]);
+                }
+                resolve(buffer);
+            } catch (err) {
+                reject(null);
+            }
+        });
 
-        if (!mediaStream) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "⚠️ *Error:* No se pudo descargar el archivo. Intenta de nuevo." },
-                { quoted: msg }
-            );
-        }
-
-        let mediaBuffer = Buffer.alloc(0);
-        for await (const chunk of mediaStream) {
-            mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+        if (!mediaStream || mediaStream.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo descargar el archivo. Intenta de nuevo." }, { quoted: msg });
+            return;
         }
 
         // Enviar el archivo descargado al grupo o chat
@@ -166,16 +170,16 @@ case "ver": {
         };
 
         if (mediaType === "image") {
-            messageOptions.image = mediaBuffer;
+            messageOptions.image = mediaStream;
         } else if (mediaType === "video") {
-            messageOptions.video = mediaBuffer;
+            messageOptions.video = mediaStream;
         } else if (mediaType === "audio") {
-            messageOptions.audio = mediaBuffer;
+            messageOptions.audio = mediaStream;
         }
 
         await sock.sendMessage(msg.key.remoteJid, messageOptions, { quoted: msg });
 
-        // Confirmar que el archivo ha sido enviado
+        // Confirmar que el archivo ha sido enviado con éxito
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: "✅", key: msg.key } 
         });
@@ -186,7 +190,6 @@ case "ver": {
     }
     break;
 }
- 
         
 case "perfil": {
     try {
