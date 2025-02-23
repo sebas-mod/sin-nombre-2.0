@@ -39,6 +39,62 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "guar": {
+    const fs = require("fs");
+    const path = "./guar.json";
+
+    if (!msg.quoted || !msg.quoted.mimetype) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "❌ *Error:* Responde a un multimedia (imagen, video, audio, sticker, etc.) con una palabra clave para guardarlo. 📂" },
+            { quoted: msg }
+        );
+    }
+
+    const saveKey = args.join(" ").trim(); // Palabra clave para guardar
+    if (!saveKey) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "⚠️ *Aviso:* Escribe una palabra clave para guardar este multimedia. 📝" },
+            { quoted: msg }
+        );
+    }
+
+    // Verificar si el archivo guar.json existe, si no, crearlo
+    if (!fs.existsSync(path)) fs.writeFileSync(path, JSON.stringify({}, null, 2));
+
+    // Leer el archivo y cargar datos existentes
+    let multimediaStore = JSON.parse(fs.readFileSync(path));
+
+    // Descargar el multimedia
+    const mediaType = msg.quoted.mimetype;
+    const mediaExt = mediaType.split("/")[1]; // Ejemplo: "jpg", "mp4", etc.
+    const mediaStream = await downloadContentFromMessage(msg.quoted, mediaType.split("/")[0]);
+
+    // Convertir el stream en un buffer
+    let mediaBuffer = Buffer.alloc(0);
+    for await (const chunk of mediaStream) {
+        mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+    }
+
+    // Guardar multimedia con la palabra clave, usuario y formato base64
+    multimediaStore[saveKey.toLowerCase()] = {
+        buffer: mediaBuffer.toString("base64"), // Convertir a base64
+        mimetype: mediaType,
+        extension: mediaExt,
+        savedBy: msg.key.participant || msg.key.remoteJid, // Número del usuario que guarda el archivo
+    };
+
+    fs.writeFileSync(path, JSON.stringify(multimediaStore, null, 2)); // Guardar en archivo
+
+    return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `✅ *Guardado con éxito:* El multimedia se ha almacenado con la palabra clave: *"${saveKey}"*. 🎉` },
+        { quoted: msg }
+    );
+}
+break;
+        
 case "setprefix":
     if (!isOwner(sender.replace("@s.whatsapp.net", ""))) { // Asegurar que se compara correctamente
         await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });
