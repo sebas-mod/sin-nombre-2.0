@@ -107,10 +107,10 @@ case 'g': {
 break;
         
 case 'guar': {
-    if (!msg.quoted || !msg.quoted.mimetype) {
+    if (!msg.message.extendedTextMessage || !msg.message.extendedTextMessage.contextInfo || !msg.message.extendedTextMessage.contextInfo.quotedMessage) {
         return sock.sendMessage(
             msg.key.remoteJid,
-            { text: "❌ *Error:* Responde a un multimedia (imagen, video, audio, sticker, etc.) con una palabra clave para guardarlo. 📂" },
+            { text: "❌ *Error:* Debes responder a un multimedia (imagen, video, audio, sticker, etc.) con una palabra clave para guardarlo. 📂" },
             { quoted: msg }
         );
     }
@@ -124,13 +124,41 @@ case 'guar': {
         );
     }
 
+    // Verificar si el archivo guar.json existe, si no, crearlo
+    if (!fs.existsSync("./guar.json")) {
+        fs.writeFileSync("./guar.json", JSON.stringify({}, null, 2));
+    }
+
     // Leer archivo guar.json
     let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
 
-    // Descargar el multimedia
-    const mediaType = msg.quoted.mimetype;
-    const mediaExt = mediaType.split('/')[1]; // Ejemplo: "jpg", "mp4", etc.
-    const mediaStream = await downloadContentFromMessage(msg.quoted, mediaType.split('/')[0]);
+    const quotedMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+    let mediaType, mediaMessage;
+
+    if (quotedMsg.imageMessage) {
+        mediaType = "image";
+        mediaMessage = quotedMsg.imageMessage;
+    } else if (quotedMsg.videoMessage) {
+        mediaType = "video";
+        mediaMessage = quotedMsg.videoMessage;
+    } else if (quotedMsg.audioMessage) {
+        mediaType = "audio";
+        mediaMessage = quotedMsg.audioMessage;
+    } else if (quotedMsg.stickerMessage) {
+        mediaType = "sticker";
+        mediaMessage = quotedMsg.stickerMessage;
+    } else if (quotedMsg.documentMessage) {
+        mediaType = "document";
+        mediaMessage = quotedMsg.documentMessage;
+    } else {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "❌ *Error:* Solo puedes guardar imágenes, videos, audios, stickers y documentos. 📂" },
+            { quoted: msg }
+        );
+    }
+
+    const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
 
     // Convertir el stream en un buffer
     let mediaBuffer = Buffer.alloc(0);
@@ -141,8 +169,8 @@ case 'guar': {
     // Guardar multimedia con la palabra clave y la información del usuario que lo guardó
     guarData[saveKey] = {
         buffer: mediaBuffer.toString("base64"), // Convertir a base64
-        mimetype: mediaType,
-        extension: mediaExt,
+        mimetype: mediaMessage.mimetype,
+        extension: mediaMessage.mimetype.split("/")[1],
         savedBy: msg.key.participant, // Número del usuario que guardó el archivo
     };
 
