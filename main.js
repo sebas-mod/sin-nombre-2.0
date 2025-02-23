@@ -107,7 +107,7 @@ case "setprefix":
     // Obtener el ID del usuario que envió el comando
     const senderNumber = sender.replace("@s.whatsapp.net", ""); 
 
-    // Verificar si el usuario es dueño del bot desde config.js
+    // Verificar si el usuario es dueño del bot
     if (!isOwner(senderNumber)) { 
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "⛔ *Solo los dueños del bot pueden cambiar el prefijo.*"
@@ -131,7 +131,7 @@ case "setprefix":
         return;
     }
 
-    // Cambiar el prefijo globalmente usando la función `setPrefix` de config.js
+    // Cambiar el prefijo globalmente usando `setPrefix()`
     setPrefix(args[0]);
 
     // Confirmar el cambio en el grupo o chat privado
