@@ -66,6 +66,48 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case 'clavelista': {
+    // Verificar si el archivo guar.json existe
+    if (!fs.existsSync("./guar.json")) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "❌ *Error:* No hay multimedia guardado aún. Usa `.guar` para guardar algo primero." },
+            { quoted: msg }
+        );
+    }
+
+    // Leer archivo guar.json
+    let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
+    
+    if (Object.keys(guarData).length === 0) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "📂 *Lista vacía:* No hay palabras clave registradas." },
+            { quoted: msg }
+        );
+    }
+
+    // Construir el mensaje con la lista de palabras clave y quién las guardó
+    let listaMensaje = "📜 *Lista de palabras clave guardadas:*\n\n";
+    
+    for (let clave in guarData) {
+        let user = guarData[clave].savedBy.replace("@s.whatsapp.net", ""); // Obtener solo el número
+        listaMensaje += `🔹 *${clave}* → Guardado por: @${user}\n`;
+    }
+
+    // Enviar la lista de palabras clave mencionando a los usuarios
+    return sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: listaMensaje,
+            mentions: Object.values(guarData).map(item => item.savedBy) // Mencionar a los que guardaron multimedia
+        },
+        { quoted: msg }
+    );
+}
+break;
+        
+        
 case 'g': {
     const removeEmojis = (text) => text.replace(/[\u{1F300}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, ""); // Remover emojis
     const normalizeText = (text) => removeEmojis(text).toLowerCase().trim(); // Normalizar texto
