@@ -129,10 +129,16 @@ case "get": {
         } else if (quotedMsg.videoMessage) {
             mediaType = "video";
             mediaMessage = quotedMsg.videoMessage;
+        } else if (quotedMsg.audioMessage) {
+            mediaType = "audio";
+            mediaMessage = quotedMsg.audioMessage;
+        } else if (quotedMsg.conversation || quotedMsg.extendedTextMessage) {
+            mediaType = "text";
+            mediaMessage = quotedMsg.conversation || quotedMsg.extendedTextMessage.text;
         } else {
             return sock.sendMessage(
                 msg.key.remoteJid,
-                { text: "❌ *Error:* Solo puedes descargar *imágenes o videos* de estados de WhatsApp." },
+                { text: "❌ *Error:* Solo puedes descargar *imágenes, videos, audios y textos* de estados de WhatsApp." },
                 { quoted: msg }
             );
         }
@@ -142,37 +148,66 @@ case "get": {
             react: { text: "⏳", key: msg.key } 
         });
 
-        // Descargar el multimedia
-        const mediaStream = await new Promise(async (resolve, reject) => {
-            try {
-                const stream = await downloadContentFromMessage(mediaMessage, mediaType);
-                let buffer = Buffer.alloc(0);
-                for await (const chunk of stream) {
-                    buffer = Buffer.concat([buffer, chunk]);
+        if (mediaType === "text") {
+            // Convertir el texto en una imagen
+            const { createCanvas, loadImage } = require("canvas");
+            const canvas = createCanvas(500, 250);
+            const ctx = canvas.getContext("2d");
+
+            // Fondo blanco
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Configurar texto
+            ctx.fillStyle = "#000000";
+            ctx.font = "20px Arial";
+            ctx.fillText(mediaMessage, 20, 100, 460); // Ajustar el texto dentro del cuadro
+
+            // Guardar la imagen en buffer
+            const buffer = canvas.toBuffer("image/png");
+
+            // Enviar la imagen del estado de texto
+            await sock.sendMessage(msg.key.remoteJid, { 
+                image: buffer, 
+                caption: "📝 *Estado de texto convertido en imagen*" 
+            }, { quoted: msg });
+
+        } else {
+            // Descargar el multimedia
+            const mediaStream = await new Promise(async (resolve, reject) => {
+                try {
+                    const stream = await downloadContentFromMessage(mediaMessage, mediaType);
+                    let buffer = Buffer.alloc(0);
+                    for await (const chunk of stream) {
+                        buffer = Buffer.concat([buffer, chunk]);
+                    }
+                    resolve(buffer);
+                } catch (err) {
+                    reject(null);
                 }
-                resolve(buffer);
-            } catch (err) {
-                reject(null);
+            });
+
+            if (!mediaStream || mediaStream.length === 0) {
+                await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo descargar el estado. Intenta de nuevo." }, { quoted: msg });
+                return;
             }
-        });
 
-        if (!mediaStream || mediaStream.length === 0) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo descargar el estado. Intenta de nuevo." }, { quoted: msg });
-            return;
+            // Enviar el archivo descargado al chat
+            let messageOptions = {
+                mimetype: mediaMessage.mimetype,
+            };
+
+            if (mediaType === "image") {
+                messageOptions.image = mediaStream;
+            } else if (mediaType === "video") {
+                messageOptions.video = mediaStream;
+            } else if (mediaType === "audio") {
+                messageOptions.audio = mediaStream;
+                messageOptions.mimetype = "audio/mpeg"; // Especificar que es un audio
+            }
+
+            await sock.sendMessage(msg.key.remoteJid, messageOptions, { quoted: msg });
         }
-
-        // Enviar el archivo descargado al chat
-        let messageOptions = {
-            mimetype: mediaMessage.mimetype,
-        };
-
-        if (mediaType === "image") {
-            messageOptions.image = mediaStream;
-        } else if (mediaType === "video") {
-            messageOptions.video = mediaStream;
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, messageOptions, { quoted: msg });
 
         // Confirmar que el estado ha sido enviado con éxito
         await sock.sendMessage(msg.key.remoteJid, {
