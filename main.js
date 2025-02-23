@@ -211,7 +211,13 @@ case 'video': {
     if (!args.length || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
         return sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, ingresa un enlace de YouTube válido.' });
     }
-
+await sock.sendMessage(msg.key.remoteJid, {
+            react: {
+                text: '⏱️',
+                key: msg.key,
+            },
+        });
+                
     await sock.sendMessage(msg.key.remoteJid, { text: '🚀 Procesando tu solicitud...' });
     const videoUrl = args[0];
 
@@ -262,6 +268,13 @@ case 'video': {
     await sock.sendMessage(msg.key.remoteJid, { text: '🔄 Obteniendo información del video...' });
 
     try {
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: {
+                text: '⏱️',
+                key: msg.key,
+            },
+        });
+        
         const infoResponse = await fetch(`https://ytdownloader.nvlgroup.my.id/info?url=${url}`);
         const info = await infoResponse.json();
 
