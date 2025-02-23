@@ -85,8 +85,8 @@ async function handleCommand(sock, msg, command, args, sender) {
 // 💾 Manejo del comando "setprefix"
 case 'creador': {
     const ownerNumber = "15167096032@s.whatsapp.net"; // Número del dueño en formato WhatsApp
-    const ownerName = "🤖 Dueño del Bot";
-    const messageText = "📞 *Contacto del Creador:*\n\nSi tienes dudas, preguntas o sugerencias sobre el bot, puedes contactar a mi creador.\n\n📌 *Número:* +1 (516) 709-6032\n💬 *Mensaje directo:* Pulsa sobre el contacto y chatea con él.";
+    const ownerName = "Russell 🤖"; // Nombre del dueño
+    const messageText = "📞 *Contacto del Creador:*\n\nSi tienes dudas, preguntas o sugerencias sobre el bot, puedes contactar a mi creador.\n\n📌 *Nombre:* Russell\n📌 *Número:* +1 (516) 709-6032\n💬 *Mensaje directo:* Pulsa sobre el contacto y chatea con él.";
 
     // Enviar mensaje con el contacto del dueño
     await sock.sendMessage(msg.key.remoteJid, {
@@ -744,15 +744,36 @@ await sock.sendMessage(msg.key.remoteJid, {
     }
     break;
 }
+
+        
         case "ping":
             await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong! El bot está activo." });
             break;
 
-        case "info":
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: `🤖 *Azura Ultra Bot*\n\n📌 Prefijo actual: *${global.prefix}*\n👤 Dueño: *${global.owner[0][1]}*`
-            });
-            break;
+case "info":
+    await sock.sendMessage(msg.key.remoteJid, {
+        text: `╭───〔 *🤖 AZURA ULTRA 2.0 BOT* 〕───╮
+│ 🔹 *Prefijo actual:* ${global.prefix}
+│ 👑 *Dueño:* Russell
+│ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
+│ 🚀 *Creado por:* Russell
+│  
+├───〔 📥 *Colaboraciones en Descargas* 〕───
+│ 📌 *Instagram, TikTok y Facebook*  
+│    - 👤 *Colaboró:* DIEGO-OFC  
+│  
+│ 📌 *Audios y Videos* (.play, .play2, .ytmp3, .ytmp4)  
+│    - 👤 *Colaboró:* Eliasar54  
+│  
+├───〔 📜 *Menús y Comandos* 〕───
+│ 📌 Usa *${global.prefix}menu* para ver los comandos principales.  
+│ 📌 Usa *${global.prefix}allmenu* para ver todos los comandos disponibles.  
+╰───────────────────────────────╯
+    `
+    });
+    break;
+
+            
 
         case "cerrargrupo":
             try {
