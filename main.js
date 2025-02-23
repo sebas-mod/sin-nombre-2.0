@@ -3,6 +3,8 @@ const chalk = require("chalk");
 const { isOwner } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
+const { exec } = require('child_process');
+const path = require('path');
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
     global.prefix = configData.prefix || ".";
