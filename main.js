@@ -89,7 +89,9 @@ case 'play': {
     const yts = require('yt-search'); 
 
     if (!text || text.trim() === '') {
-        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Proporciona el nombre o término de búsqueda del video.' });
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play boza yaya*\n🔍 _Proporciona el nombre o término de búsqueda del Audio._` 
+        });
     } 
 
     const query = args.join(' ') || text; 
@@ -145,7 +147,9 @@ case 'play2': {
     const yts = require('yt-search'); 
 
     if (!text || text.trim() === '') {
-        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Proporciona el nombre o término de búsqueda del video.' });
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play2 boza yaya*\n🎬 _Proporciona el nombre o término de búsqueda del video._` 
+        });
     } 
 
     const query = args.join(' ') || text; 
@@ -691,7 +695,7 @@ await sock.sendMessage(msg.key.remoteJid, {
             });
             break;
 
-        case "cerrar grupo":
+        case "cerrargrupo":
             try {
                 if (!msg.key.remoteJid.includes("@g.us")) {
                     return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
@@ -725,7 +729,7 @@ await sock.sendMessage(msg.key.remoteJid, {
             }
             break;
 
-        case "abrir grupo":
+        case "abrirgrupo":
             try {
                 if (!msg.key.remoteJid.includes("@g.us")) {
                     return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
