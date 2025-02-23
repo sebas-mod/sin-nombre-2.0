@@ -5,29 +5,38 @@ const axios = require("axios");
 const fetch = require("node-fetch");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 // Cargar prefijo desde archivo de configuración
-const configPath = "./config.json"; // Ruta del archivo de configuración
+const path = "./config.json"; // Ruta del archivo de configuración
 
-// Verificar si el archivo config.json existe, si no, crearlo con valores por defecto
-if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(configPath, JSON.stringify({ globalPrefix: ".", groupPrefixes: {} }, null, 2));
+// Cargar configuración al iniciar el bot
+let configData = {};
+if (fs.existsSync(path)) {
+    configData = JSON.parse(fs.readFileSync(path, "utf-8"));
 }
 
-// Cargar la configuración desde config.json
-const configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-
-// Definir el prefijo global y los prefijos de los grupos
+// Prefijo global por defecto
 global.prefix = configData.globalPrefix || ".";
-global.groupPrefixes = configData.groupPrefixes || {};
 
-// Función para obtener el prefijo de un grupo o el global si no tiene uno asignado
+// Función para obtener el prefijo de un chat
 global.getPrefix = (chatId) => {
-    return global.groupPrefixes[chatId] || global.prefix;
+    if (chatId.endsWith("@g.us")) {
+        return configData.groupPrefixes?.[chatId] || global.prefix; // Prefijo del grupo o global
+    }
+    return global.prefix; // Prefijo global en privado
 };
 
-// Función para guardar cambios en config.json
-global.saveConfig = () => {
-    fs.writeFileSync(configPath, JSON.stringify({ globalPrefix: global.prefix, groupPrefixes: global.groupPrefixes }, null, 2));
+// Función para establecer el prefijo en un grupo o globalmente
+global.setPrefix = (chatId, newPrefix, isGlobal = false) => {
+    if (isGlobal) {
+        global.prefix = newPrefix;
+        configData.globalPrefix = newPrefix;
+    } else {
+        if (!configData.groupPrefixes) configData.groupPrefixes = {};
+        configData.groupPrefixes[chatId] = newPrefix;
+    }
+    fs.writeFileSync(path, JSON.stringify(configData, null, 2)); // Guardar cambios
 };
+
+console.log(`🔧 Prefijo global cargado: ${global.prefix}`);
 //perfijo ariba
 
 
