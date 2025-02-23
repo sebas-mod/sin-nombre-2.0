@@ -34,6 +34,40 @@ async function handleCommand(sock, msg, command, args, sender) {
     const text = args.join(" ");
 
     switch (lowerCommand) {
+            case 'video': {
+    const fetch = require('node-fetch');
+
+    if (!text) return sock.sendMessage(msg.key.remoteJid, { text: 'Proporciona un enlace de YouTube válido.' });
+    const url = args[0];
+
+    if (!url.includes('youtu')) return sock.sendMessage(msg.key.remoteJid, { text: 'Proporciona un enlace válido de YouTube.' });
+
+    await sock.sendMessage(msg.key.remoteJid, { text: '🔄 Obteniendo información del video...' });
+
+    try {
+        const infoResponse = await fetch(`https://ytdownloader.nvlgroup.my.id/info?url=${url}`);
+        const info = await infoResponse.json();
+
+        if (!info.resolutions || info.resolutions.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: '❌ No se encontraron resoluciones disponibles.' });
+        }
+
+        const randomResolution = info.resolutions[Math.floor(Math.random() * info.resolutions.length)];
+        const selectedHeight = randomResolution.height;
+
+        await sock.sendMessage(msg.key.remoteJid, { text: `🔄 Descargando el video en ${selectedHeight}p, espera...` });
+
+        const videoUrl = `https://ytdownloader.nvlgroup.my.id/download?url=${url}&resolution=${selectedHeight}`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: videoUrl },
+            caption: `✅ Aquí está tu video en ${selectedHeight}p.`,
+        }, { quoted: msg });
+    } catch (e) {
+        await sock.sendMessage(msg.key.remoteJid, { text: `❌ Error: ${e.message}\n\nNo se pudo obtener información del video.` });
+    }
+    break;
+}
         case "ping":
             await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong! El bot está activo." });
             break;
