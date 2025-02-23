@@ -188,7 +188,7 @@ async function handleCommand(sock, msg, command, args, sender) {
         case "tiktok":
         case "tt":
             if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://vm.tiktok.com/ZMjdrFCtg/` });
-            if (!isUrl(args[0]) || !args[0].includes('tiktok')) return sock.sendMessage(msg.key.remoteJid, { text: "❌ Enlace de TikTok inválido." });
+            if (!isUrl(args[0]) || !args[0].includes('tiktok')) return sock.sendMessage(msg.key.remoteJid, { text: "❌ Enlace de TikTok inválido." }, { quoted: msg });
 
             try {
                 const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
@@ -213,7 +213,7 @@ async function handleCommand(sock, msg, command, args, sender) {
 
         case "instagram":
         case "ig":
-            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://www.instagram.com/p/CCoI4DQBGVQ/` });
+            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://www.instagram.com/p/CCoI4DQBGVQ/` }, { quoted: msg });
 
             try {
                 const apiUrl = `https://api.dorratz.com/igdl?url=${text}`;
@@ -222,11 +222,11 @@ async function handleCommand(sock, msg, command, args, sender) {
                 const caption = `> 🌙 Solicitud procesada por api.dorratz.com`;
 
                 for (let item of data) {
-                    await sock.sendMessage(msg.key.remoteJid, { video: { url: item.url }, caption: caption });
+                    await sock.sendMessage(msg.key.remoteJid, { video: { url: item.url }, caption: caption }, { quoted: msg });
                 }
             } catch (error) {
                 console.error(error);
-                await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al procesar el enlace de Instagram." });
+                await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al procesar el enlace de Instagram." }, { quoted: msg });
             }
             break;
 
@@ -234,7 +234,7 @@ async function handleCommand(sock, msg, command, args, sender) {
 
         case "facebook":
         case "fb":
-            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/` });
+            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/` }, { quoted: msg });
 
             if (!text.match(/www.facebook.com|fb.watch/g)) {
                 return sock.sendMessage(msg.key.remoteJid, {
@@ -260,7 +260,7 @@ ${results.map((res, index) => `- ${res.resolution}`).join('\n')}
                 await sock.sendMessage(msg.key.remoteJid, {
                     video: { url: results[0].url },
                     caption: message
-                });
+                }, { quoted: msg });
 
             } catch (error) {
                 console.error(error);
