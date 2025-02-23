@@ -129,23 +129,23 @@ async function handleCommand(sock, msg, command, args, sender) {
             break;
 
         case "setprefix":
-            if (!isOwner(sender)) {
-                await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });
-                return;
-            }
-            if (!args[0]) {
-                await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
-                return;
-            }
-            if (!isValidPrefix(args[0])) {
-                await sock.sendMessage(msg.key.remoteJid, {
-                    text: "❌ Prefijo inválido. Usa un solo carácter o un emoji."
-                });
-                return;
-            }
-            savePrefix(args[0]);
-            await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}*` });
-            break;
+    if (!isOwner(sender)) {
+        await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });
+        return;
+    }
+    if (!args[0]) {
+        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
+        return;
+    }
+    if (!isValidPrefix(args[0])) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Prefijo inválido. Usa un solo carácter o un emoji de la lista permitida."
+        });
+        return;
+    }
+    setPrefix(args[0]);
+    await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}* 🚀` });
+    break;
 
         case "cerrargrupo":
             try {
