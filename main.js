@@ -78,7 +78,7 @@ case 'play2': case 'play': {
         image: { url: video.thumbnail }, 
         caption: `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~* │║◈ Título: ${video.title} │║◈ Duración: ${secondString(video.timestamp || 0)} │║◈ Vistas: ${video.views || 0} │║◈ Autor: ${video.author || 'Desconocido'} │║◈ Link: ${video.url} ╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤`, 
         footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
-        viewOnce: true, 
+        viewOnce: false, 
         headerType: 4, 
         mentions: [msg.key.participant || msg.key.remoteJid], 
     }, { quoted: msg });
