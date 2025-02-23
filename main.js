@@ -87,6 +87,14 @@ case "perfil": {
     try {
         let userJid;
         
+        if (!msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length &&
+            !msg.message.extendedTextMessage?.contextInfo?.participant &&
+            args.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo de uso:* \n1️⃣ *Para obtener la foto de perfil de alguien:* \n👉 _Responde a su mensaje con el comando_\n2️⃣ *Para obtener la foto de perfil de un número:* \n👉 _.perfil +1 555-123-4567_\n3️⃣ *Para obtener la foto de perfil de un usuario mencionado:* \n👉 _.perfil @usuario_" 
+            }, { quoted: msg });
+        }
+
         if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
             // Si mencionaron a alguien
             userJid = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
@@ -97,8 +105,6 @@ case "perfil": {
             // Si el usuario ingresó un número
             let number = args.join("").replace(/[^0-9]/g, ""); // Limpia el número de caracteres no numéricos
             userJid = number + "@s.whatsapp.net";
-        } else {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Error:* Debes responder a un mensaje, mencionar a alguien o escribir un número válido.\n\n📌 *Ejemplo:* \n.perfil +1 516-709-6032" }, { quoted: msg });
         }
 
         // Intentar obtener la imagen de perfil
