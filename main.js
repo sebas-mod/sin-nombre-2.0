@@ -1,6 +1,6 @@
 const fs = require("fs");
 const chalk = require("chalk");
-const { isOwner, setPrefix, allowedPrefixes } = require("./config");
+const { isOwner, getPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
