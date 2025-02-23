@@ -5,7 +5,7 @@
     const fs = require("fs");
     const readline = require("readline");
     const pino = require("pino");
-    const { isOwner, setPrefix } = require("./config"); 
+    const { isOwner, getPrefix, allowedPrefixes } = require("./config");
     const { handleCommand } = require("./main"); 
 
     // Carga de credenciales y estado de autenticación
