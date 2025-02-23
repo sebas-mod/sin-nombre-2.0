@@ -206,11 +206,8 @@ async function handleCommand(sock, msg, command, args, sender) {
                                     `*Likes*: ${response.data.data.like}\n` +
                                     `*Comentarios*: ${response.data.data.comment}`;
 
-                await sock.sendMessage(msg.key.remoteJid, {
-                    text: videoDetails,
-                    video: { url: videoUrl },
-                    mentions: [sender]
-                });
+                await sock.sendMessage(msg.key.remoteJid, { video: { url: videoUrl }, caption: videoDetails }, { quoted: msg });
+               
             } catch (error) {
                 console.error(error);
                 await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al procesar el enlace de TikTok." });
