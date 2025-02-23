@@ -107,8 +107,7 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-
- case "ver": {
+case "ver": {
     try {
         if (!msg.message.extendedTextMessage || 
             !msg.message.extendedTextMessage.contextInfo || 
@@ -140,8 +139,22 @@ return buffer;
             );
         }
 
+        // Enviar reacción mientras procesa
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🔄", key: msg.key } 
+        });
+
         // Descargar el multimedia
         const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
+
+        if (!mediaStream) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "⚠️ *Error:* No se pudo descargar el archivo. Intenta de nuevo." },
+                { quoted: msg }
+            );
+        }
+
         let mediaBuffer = Buffer.alloc(0);
         for await (const chunk of mediaStream) {
             mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
@@ -162,12 +175,18 @@ return buffer;
 
         await sock.sendMessage(msg.key.remoteJid, messageOptions, { quoted: msg });
 
+        // Confirmar que el archivo ha sido enviado
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "✅", key: msg.key } 
+        });
+
     } catch (error) {
         console.error("❌ Error en el comando ver:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo recuperar el mensaje de *ver una sola vez*." }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo recuperar el mensaje de *ver una sola vez*. Inténtalo de nuevo." }, { quoted: msg });
     }
     break;
-}       
+}
+ 
         
 case "perfil": {
     try {
