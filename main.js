@@ -13,27 +13,11 @@ if (fs.existsSync("./config.json")) {
 }
 
 //sistema de su bot prueba
-const crypto = require("crypto");
-
-const subbotsFile = "./subbots.json";
-if (!fs.existsSync(subbotsFile)) {
-    fs.writeFileSync(subbotsFile, JSON.stringify({}, null, 2));
-}
-
-// Función para generar un código de 8 dígitos
-function generateSubBotCode() {
-    return crypto.randomBytes(4).toString("hex").toUpperCase();
-}
-
-// Cargar subbots desde el archivo
-function loadSubBots() {
-    return JSON.parse(fs.readFileSync(subbotsFile, "utf-8"));
-}
-
-// Guardar subbots en el archivo
-function saveSubBots(subbots) {
-    fs.writeFileSync(subbotsFile, JSON.stringify(subbots, null, 2));
-}
+require("./config"); const crypto = require("crypto"); const subbotsFile = "./subbots.json";
+if (!fs.existsSync(subbotsFile)) { fs.writeFileSync(subbotsFile, JSON.stringify({}, null, 2)); }
+// Función para generar un código de sub-bot válido function generateSubBotCode() { return crypto.randomBytes(4).toString("hex").toUpperCase(); }
+// Cargar subbots function loadSubBots() { return JSON.parse(fs.readFileSync(subbotsFile, "utf-8")); }
+// Guardar subbots function saveSubBots(subbots) { fs.writeFileSync(subbotsFile, JSON.stringify(subbots, null, 2)); }
 
 //ariba su bot
 
@@ -131,52 +115,13 @@ return buffer;
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
 
-case "modoprivado": {
-    const senderId = sender.replace("@s.whatsapp.net", "");
-    let subbots = loadSubBots();
-
-    if (!subbots[senderId]) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No eres un sub-bot registrado.* Usa .serbot primero." }, { quoted: msg });
-    }
-
-    subbots[senderId].mode = "privado";
-    saveSubBots(subbots);
-
-    return sock.sendMessage(msg.key.remoteJid, { text: "🔒 *Modo privado activado.* Solo tú puedes usar este bot." }, { quoted: msg });
+case "serbot": { const senderId = sender.replace("@s.whatsapp.net", ""); let subbots = loadSubBots();
+if (subbots[senderId]) { return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ya eres un sub-bot registrado.* Usa .subot para ver la lista." }, { quoted: msg }); } const subBotCode = generateSubBotCode(); subbots[senderId] = { code: subBotCode, status: "activo", mode: "publico" }; saveSubBots(subbots); return sock.sendMessage(msg.key.remoteJid, { text: `✅ *Ahora eres un sub-bot.* 
+🔑 Código: ${subBotCode} 🔄 Usa .modoprivado para que solo tú uses este bot.` }, { quoted: msg }); } break;
+case "subot": { let subbots = loadSubBots(); let subBotsList = Object.keys(subbots); if (subBotsList.length === 0) { return sock.sendMessage(msg.key.remoteJid, { text: "🚫 *No hay sub-bots conectados.*" }, { quoted: msg }); } let message = "🤖 *Lista de Sub-Bots Activos:* 
+\n"; subBotsList.forEach((bot, index) => { message += 🔹 *ID:* ${bot}\n🔑 *Código:* ${subbots[bot].code}\n🔄 *Estado:* ${subbots[bot].status}\n🔒 *Modo:* ${subbots[bot].mode}\n\n; });
+return sock.sendMessage(msg.key.remoteJid, { text: message }, { quoted: msg }); } break; case "modoprivado": { const senderId = sender.replace("@s.whatsapp.net", ""); let subbots = loadSubBots(); if (!subbots[senderId]) { return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No eres un sub-bot registrado.* Usa .serbot primero." }, { quoted: msg }); } subbots[senderId].mode = "privado"; saveSubBots(subbots); return sock.sendMessage(msg.key.remoteJid, { text: "🔒 *Modo privado activado.* Solo tú puedes usar este bot." }, { quoted: msg }); } break; case "modopublico": { const senderId = sender.replace("@s.whatsapp.net", ""); let subbots = loadSubBots(); if (!subbots[senderId]) { return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No eres un sub-bot registrado.* Usa .serbot primero." }, { quoted: msg }); } subbots[senderId].mode = "publico"; saveSubBots(subbots); return sock.sendMessage(msg.key.remoteJid, { text: "🌍 *Modo público activado.* Cualquier usuario podrá interactuar con este bot." }, { quoted: msg }); } break; } 
 }
-break;
-
-case "modopublico": {
-    const senderId = sender.replace("@s.whatsapp.net", "");
-    let subbots = loadSubBots();
-
-    if (!subbots[senderId]) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No eres un sub-bot registrado.* Usa .serbot primero." }, { quoted: msg });
-    }
-
-    subbots[senderId].mode = "publico";
-    saveSubBots(subbots);
-
-    return sock.sendMessage(msg.key.remoteJid, { text: "🌍 *Modo público activado.* Cualquier usuario podrá interactuar con este bot." }, { quoted: msg });
-}
-break;
-
-case "subot": {
-    let subbots = loadSubBots();
-    let subBotsList = Object.keys(subbots);
-
-    if (subBotsList.length === 0) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "🚫 *No hay sub-bots conectados.*" }, { quoted: msg });
-    }
-
-    let message = "🤖 *Lista de Sub-Bots Activos:*\n\n";
-    subBotsList.forEach((bot, index) => {
-        message += `🔹 *ID:* ${bot}\n🔑 *Código:* ${subbots[bot].code}\n🔄 *Estado:* ${subbots[bot].status}\n🔒 *Modo:* ${subbots[bot].mode}\n\n`;
-    });
-
-    return sock.sendMessage(msg.key.remoteJid, { text: message }, { quoted: msg });
-}
-break;
 
             
 case "get": {
