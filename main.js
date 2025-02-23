@@ -83,7 +83,44 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case 'vercomandos':
+case 'verco': {
+    const fs = require("fs");
 
+    // Leer el archivo main.js
+    const mainFilePath = "./main.js";
+    if (!fs.existsSync(mainFilePath)) {
+        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se encontró el archivo de comandos." }, { quoted: msg });
+    }
+
+    // Leer contenido del archivo
+    const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
+
+    // Extraer los nombres de los comandos dentro de `case 'comando':`
+    const commandRegex = /case\s+['"]([^'"]+)['"]:/g;
+    let commands = [];
+    let match;
+    while ((match = commandRegex.exec(mainFileContent)) !== null) {
+        commands.push(match[1]);
+    }
+
+    // Filtrar y ordenar los comandos
+    commands = [...new Set(commands)].sort();
+
+    // Construir mensaje con formato de lista
+    let commandList = "📜 *Lista de Comandos Disponibles:*\n\n";
+    commands.forEach(cmd => {
+        commandList += `🔹 *${global.prefix}${cmd}*\n`;
+    });
+
+    // Enviar el mensaje con el menú de comandos
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: commandList, footer: "📌 Usa los comandos con el prefijo actual.", quoted: msg },
+    );
+
+    break;
+}
             
 case 'play': { 
     const yts = require('yt-search'); 
