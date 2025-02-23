@@ -109,7 +109,7 @@ return buffer;
 // 💾 Manejo del comando "setprefix"
 case "perfil": {
     try {
-        let userJid;
+        let userJid = null;
 
         // Si el usuario solo escribe .perfil sin argumentos, menciones o respuesta, enviar un mensaje con el ejemplo de uso
         if (!msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length &&
@@ -126,27 +126,32 @@ case "perfil": {
             }, { quoted: msg });
         }
 
+        // Verifica si se mencionó un usuario
         if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
-            // Si mencionaron a alguien
             userJid = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
-        } else if (msg.message.extendedTextMessage?.contextInfo?.participant) {
-            // Si es una respuesta a un mensaje
+        } 
+        // Verifica si se respondió a un mensaje
+        else if (msg.message.extendedTextMessage?.contextInfo?.participant) {
             userJid = msg.message.extendedTextMessage.contextInfo.participant;
-        } else if (args.length > 0) {
-            // Si el usuario ingresó un número
+        } 
+        // Verifica si se ingresó un número
+        else if (args.length > 0) {
             let number = args.join("").replace(/[^0-9]/g, ""); // Limpia el número de caracteres no numéricos
             userJid = number + "@s.whatsapp.net";
         }
+
+        // Si no se encontró un usuario válido, termina la ejecución (esto evita que el bot intente descargar una imagen por defecto cuando no debe)
+        if (!userJid) return;
 
         // Intentar obtener la imagen de perfil
         let ppUrl;
         try {
             ppUrl = await sock.profilePictureUrl(userJid, "image"); // "image" para foto de perfil normal
         } catch {
-            ppUrl = "https://i.imgur.com/3J8M0wG.png"; // Imagen de perfil por defecto si no tiene
+            ppUrl = "https://i.imgur.com/3J8M0wG.png"; // Imagen de perfil por defecto si el usuario no tiene foto
         }
 
-        // Enviar la imagen de perfil
+        // Enviar la imagen de perfil solo si se encontró un usuario válido
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: ppUrl },
             caption: `🖼️ *Foto de perfil de:* @${userJid.split("@")[0]}`,
