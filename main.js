@@ -119,15 +119,16 @@ case 'play': {
             .join(':'); 
     } 
 
-    await sock.sendMessage(msg.key.remoteJid, { 
-        image: { url: video.thumbnail }, 
-        caption: `🎵 *Título:* ${video.title}\n⏱️ *Duración:* ${secondString(video.timestamp || 0)}\n👁️ *Vistas:* ${video.views || 0}\n👤 *Autor:* ${video.author || 'Desconocido'}\n🔗 *Link:* ${video.url}\n\n📌 *Para descargar el audio, espera unos segundos...*`, 
-        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
-    }, { quoted: msg });
-
+    // Reacción antes de enviar el mensaje
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: "🎼", key: msg.key } 
     });
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        image: { url: video.thumbnail }, 
+        caption: `🎵 *Título:* ${video.title}\n⏱️ *Duración:* ${secondString(video.timestamp || 0)}\n👁️ *Vistas:* ${video.views || 0}\n👤 *Autor:* ${video.author || 'Desconocido'}\n🔗 *Link:* ${video.url}\n\n📌 *Para descargar el audio usa el comando:* \n➡️ *${global.prefix}play* _nombre del video_\n➡️ *Para descargar el video usa:* \n*${global.prefix}play2* _nombre del video_`, 
+        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
+    }, { quoted: msg });
 
     // Ejecutar el comando .ytmp3 directamente
     handleCommand(sock, msg, "ytmp3", [video.url]);
@@ -174,21 +175,22 @@ case 'play2': {
             .join(':'); 
     } 
 
-    await sock.sendMessage(msg.key.remoteJid, { 
-        image: { url: video.thumbnail }, 
-        caption: `🎬 *Título:* ${video.title}\n⏱️ *Duración:* ${secondString(video.timestamp || 0)}\n👁️ *Vistas:* ${video.views || 0}\n👤 *Autor:* ${video.author || 'Desconocido'}\n🔗 *Link:* ${video.url}\n\n📌 *Para descargar el video, espera unos segundos...*`, 
-        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
-    }, { quoted: msg });
-
+    // Reacción antes de enviar el mensaje
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: "🎬", key: msg.key } 
     });
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        image: { url: video.thumbnail }, 
+        caption: `🎬 *Título:* ${video.title}\n⏱️ *Duración:* ${secondString(video.timestamp || 0)}\n👁️ *Vistas:* ${video.views || 0}\n👤 *Autor:* ${video.author || 'Desconocido'}\n🔗 *Link:* ${video.url}\n\n📌 *Para descargar el video usa el comando:* \n➡️ *${global.prefix}play2* _nombre del video_\n➡️ *Para descargar solo el audio usa:* \n*${global.prefix}play* _nombre del video_`, 
+        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
+    }, { quoted: msg });
 
     // Ejecutar el comando .ytmp4 directamente
     handleCommand(sock, msg, "ytmp4", [video.url]);
 
     break; 
-}           
+}
             
 case 'kill': {
     const searchKey = args.join(' ').trim().toLowerCase(); // Convertir clave a minúsculas
