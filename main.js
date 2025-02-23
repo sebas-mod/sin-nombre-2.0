@@ -79,24 +79,20 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-case 'play': {
+case 'play2': {  
     const yts = require('yt-search'),
+        ytdl = require('ytdl-core'),
         fetch = require('node-fetch');
 
-    if (!text || text.trim() === '') {
-        return m.reply('❌ *Error:* Proporciona el nombre o término de búsqueda del video.');
-    }
+    if (!text || text.trim() === '') return m.reply('❌ *Error:* Debes proporcionar el nombre o término de búsqueda del video.');
 
-    await conn.sendMessage(m.chat, { react: { text: "🎵", key: m.key } }); // Reacción musical al comando
-
+    m.react(rwait);
     const query = args.join(' ') || text;
     let video = {};
 
     try {
         const yt_play = await yts(query);
-        if (!yt_play || yt_play.all.length === 0) {
-            return m.reply('❌ *Error:* No se encontraron resultados para tu búsqueda.');
-        }
+        if (!yt_play || yt_play.all.length === 0) return m.reply('❌ *Error:* No se encontraron resultados para tu búsqueda.');
         const firstResult = yt_play.all[0];
         video = {
             url: firstResult.url,
@@ -120,58 +116,81 @@ case 'play': {
             .join(':');
     }
 
-    // Enviar mensaje con instrucciones
-    const sentMessage = await conn.sendMessage(m.chat, {
+    await conn.sendMessage(m.chat, {
         image: { url: video.thumbnail },
-        caption: `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
-│║◈ 🎵 *Título:* ${video.title}
-│║◈ ⏱️ *Duración:* ${secondString(video.timestamp || 0)}
-│║◈ 👁️ *Vistas:* ${video.views || 0}
-│║◈ 👤 *Autor:* ${video.author || 'Desconocido'}
-│║◈ 🔗 *Link:* ${video.url}
-╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤
+        caption: `🎬 *Título:* ${video.title}
+⏱️ *Duración:* ${secondString(video.timestamp || 0)}
+👁️ *Vistas:* ${video.views || 0}
+👤 *Autor:* ${video.author || 'Desconocido'}
+🔗 *Link:* ${video.url}
 
-📌 *Responde a este mensaje con:* 
-- 🅰️ *"A"* o *"Audio"* para descargar en formato 🎼
-- Ⓥ *"V"* o *"Video"* para descargar en formato 🎬`,
+📌 *Para descargar solo el audio, usa:* 
+👉 *play* ${video.url}`,
         footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶",
-        headerType: 4,
-        mentions: [m.sender],
     }, { quoted: m });
 
-    // Guardar el mensaje para respuestas
-    global.videoRequests = global.videoRequests || {};
-    global.videoRequests[sentMessage.key.id] = {
-        remoteJid: m.chat,
-        videoUrl: video.url
-    };
+    // Ejecutar comando de descarga de video automáticamente
+    await conn.sendMessage(m.chat, { text: `.video ${video.url}` });
 
     break;
 }
+        
+        
+case 'play': {  
+    const yts = require('yt-search'),
+        ytdl = require('ytdl-core'),
+        fetch = require('node-fetch');
 
-// ESCUCHAR RESPUESTAS AL MENSAJE DEL BO
-conn.ev.on('messages.upsert', async (messageUpsert) => {
-    const msg = messageUpsert.messages[0];
-    if (!msg || !msg.message || !msg.message.conversation) return;
+    if (!text || text.trim() === '') return m.reply('❌ *Error:* Debes proporcionar el nombre o término de búsqueda del audio.');
 
-    const replyText = msg.message.conversation.toLowerCase().trim();
-    const repliedTo = msg.message.extendedTextMessage?.contextInfo?.stanzaId;
+    m.react(rwait);
+    const query = args.join(' ') || text;
+    let video = {};
 
-    if (repliedTo && global.videoRequests && global.videoRequests[repliedTo]) {
-        const { remoteJid, videoUrl } = global.videoRequests[repliedTo];
-
-        if (["a", "audio"].includes(replyText)) {
-            await conn.sendMessage(remoteJid, { react: { text: "🎼", key: msg.key } }); // Reacción de nota musical
-            await conn.sendMessage(remoteJid, { text: `🎼 Descargando audio...` });
-            await conn.sendMessage(remoteJid, { text: `.musica ${videoUrl}` });
-        } else if (["v", "video"].includes(replyText)) {
-            await conn.sendMessage(remoteJid, { react: { text: "🎬", key: msg.key } }); // Reacción de claqueta de cine
-            await conn.sendMessage(remoteJid, { text: `🎬 Descargando video...` });
-            await conn.sendMessage(remoteJid, { text: `.video ${videoUrl}` });
-        }
+    try {
+        const yt_play = await yts(query);
+        if (!yt_play || yt_play.all.length === 0) return m.reply('❌ *Error:* No se encontraron resultados para tu búsqueda.');
+        const firstResult = yt_play.all[0];
+        video = {
+            url: firstResult.url,
+            title: firstResult.title,
+            thumbnail: firstResult.thumbnail || 'default-thumbnail.jpg',
+            timestamp: firstResult.duration.seconds,
+            views: firstResult.views,
+            author: firstResult.author.name,
+        };
+    } catch {
+        return m.reply('❌ *Error:* Ocurrió un problema al buscar el audio.');
     }
-});
 
+    function secondString(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return [h, m, s]
+            .map(v => v < 10 ? `0${v}` : v)
+            .filter((v, i) => v !== '00' || i > 0)
+            .join(':');
+    }
+
+    await conn.sendMessage(m.chat, {
+        image: { url: video.thumbnail },
+        caption: `🎼 *Título:* ${video.title}
+⏱️ *Duración:* ${secondString(video.timestamp || 0)}
+👁️ *Vistas:* ${video.views || 0}
+👤 *Autor:* ${video.author || 'Desconocido'}
+🔗 *Link:* ${video.url}
+
+📌 *Para descargar el video, usa:* 
+👉 *play2* ${video.url}`,
+        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶",
+    }, { quoted: m });
+
+    // Ejecutar comando de descarga de audio automáticamente
+    await conn.sendMessage(m.chat, { text: `.musica ${video.url}` });
+
+    break;
+}
             
 case 'kill': {
     const searchKey = args.join(' ').trim().toLowerCase(); // Convertir clave a minúsculas
