@@ -131,7 +131,7 @@ async function handleCommand(sock, msg, command, args, sender) {
 
             break;
     }
-}
+
 
 
 // ESCUCHAR REACCIONES AL MENSAJE
