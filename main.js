@@ -89,9 +89,15 @@ case 'clavelista': {
 
     // Construir el mensaje con la lista de palabras clave y quién las guardó
     let listaMensaje = "📜 *Lista de palabras clave guardadas:*\n\n";
-    
+    let mentions = [];
+
     for (let clave in guarData) {
-        let user = guarData[clave].savedBy.replace("@s.whatsapp.net", ""); // Obtener solo el número
+        let user = guarData[clave].savedBy || "Desconocido"; // Evitar undefined
+        if (user.includes("@s.whatsapp.net")) {
+            user = user.replace("@s.whatsapp.net", ""); // Obtener solo el número
+            mentions.push(`${user}@s.whatsapp.net`);
+        }
+
         listaMensaje += `🔹 *${clave}* → Guardado por: @${user}\n`;
     }
 
@@ -100,7 +106,7 @@ case 'clavelista': {
         msg.key.remoteJid,
         {
             text: listaMensaje,
-            mentions: Object.values(guarData).map(item => item.savedBy) // Mencionar a los que guardaron multimedia
+            mentions: mentions // Mencionar a los que guardaron multimedia
         },
         { quoted: msg }
     );
