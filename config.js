@@ -1,13 +1,6 @@
 const chalk = require("chalk");
-const fs = require("fs");
-const path = "./config.json"; // Archivo de configuración
-
-// Cargar datos de configuración
-let configData = {};
-if (fs.existsSync(path)) {
-    configData = JSON.parse(fs.readFileSync(path, "utf-8"));
-}
-
+const fs = require('fs') 
+const path = require('path')
 // Lista de Owners
 global.owner = [
     ["15167096032", "Owner", true],
@@ -47,15 +40,15 @@ global.isOwner = (user) => {
     return global.owner.some(owner => owner[0] === user);
 };
 
-// Función para obtener el prefijo correcto
-global.getPrefix = (chatId) => {
-    if (chatId.endsWith("@g.us")) {
-        return configData.groupPrefixes?.[chatId] || configData.globalPrefix || "."; // Prefijo del grupo o global
+// Función para cambiar el prefijo (con validación)
+global.setPrefix = (newPrefix) => {
+    if (global.allowedPrefixes.includes(newPrefix)) {
+        global.prefix = newPrefix;
+        console.log(chalk.green(`✅ Prefijo cambiado a: ${chalk.yellow.bold(newPrefix)}`));
+    } else {
+        console.log(chalk.red(`❌ Prefijo no permitido. Usa uno de estos: ${chalk.blue.bold(global.allowedPrefixes.join(" "))}`));
     }
-    return configData.globalPrefix || "."; // Prefijo global en privado
 };
 
 // Exportar configuraciones
-module.exports = { isOwner: global.isOwner, getPrefix: global.getPrefix, allowedPrefixes: global.allowedPrefixes };
-
-console.log(chalk.green(`✅ Configuración cargada correctamente. Prefijo global: ${chalk.yellow.bold(configData.globalPrefix || ".")}`));
+module.exports = { isOwner: global.isOwner, setPrefix: global.setPrefix, allowedPrefixes: global.allowedPrefixes };
