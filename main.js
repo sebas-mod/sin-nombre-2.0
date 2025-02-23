@@ -12,6 +12,29 @@ if (fs.existsSync("./config.json")) {
     global.prefix = ".";
 }
 
+// Verificar si guar.json existe, si no, crearlo
+const guarFilePath = "./guar.json";
+if (!fs.existsSync(guarFilePath)) {
+    fs.writeFileSync(guarFilePath, JSON.stringify({}, null, 2));
+}
+
+// Función para guardar multimedia en guar.json
+function saveMultimedia(key, data) {
+    let guarData = JSON.parse(fs.readFileSync(guarFilePath, "utf-8"));
+    guarData[key] = data;
+    fs.writeFileSync(guarFilePath, JSON.stringify(guarData, null, 2));
+}
+
+// Función para obtener la lista de multimedia guardado
+function getMultimediaList() {
+    return JSON.parse(fs.readFileSync(guarFilePath, "utf-8"));
+}
+
+// Exportamos las funciones para usarlas en los comandos
+module.exports = {
+    saveMultimedia,
+    getMultimediaList
+};
 // Verificar si un prefijo es válido
 function isValidPrefix(prefix) {
     return typeof prefix === "string" && (prefix.length === 1 || (prefix.length > 1 && [...prefix].length === 1));
