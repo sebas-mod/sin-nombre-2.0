@@ -34,12 +34,15 @@ async function handleCommand(sock, msg, command, args, sender) {
     const text = args.join(" ");
 
     switch (lowerCommand) {
+
+
+// ESCUCHAR REACCIONES AL MENSAJE
 case 'play2': case 'play': { 
     const yts = require('yt-search'); 
     const fetch = require('node-fetch'); 
     
     if (!text || text.trim() === '') {
-        return sock.sendMessage(msg.key.remoteJid, { text: 'Por favor, proporciona el nombre o término de búsqueda del video.' });
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Proporciona el nombre o término de búsqueda del video.' });
     } 
 
     const query = args.join(' ') || text; 
@@ -48,7 +51,7 @@ case 'play2': case 'play': {
     try { 
         const yt_play = await yts(query); 
         if (!yt_play || yt_play.all.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { text: 'No se encontraron resultados para tu búsqueda.' });
+            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* No se encontraron resultados para tu búsqueda.' });
         } 
 
         const firstResult = yt_play.all[0]; 
@@ -61,7 +64,7 @@ case 'play2': case 'play': {
             author: firstResult.author.name, 
         }; 
     } catch { 
-        return sock.sendMessage(msg.key.remoteJid, { text: 'Ocurrió un error al buscar el video.' });
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Ocurrió un problema al buscar el video.' });
     } 
 
     function secondString(seconds) { 
@@ -76,9 +79,19 @@ case 'play2': case 'play': {
 
     const sentMessage = await sock.sendMessage(msg.key.remoteJid, { 
         image: { url: video.thumbnail }, 
-        caption: `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~* │║◈ Título: ${video.title} │║◈ Duración: ${secondString(video.timestamp || 0)} │║◈ Vistas: ${video.views || 0} │║◈ Autor: ${video.author || 'Desconocido'} │║◈ Link: ${video.url} ╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤`, 
+        caption: `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
+│║◈ 🎵 *Título:* ${video.title}
+│║◈ ⏱️ *Duración:* ${secondString(video.timestamp || 0)}
+│║◈ 👁️ *Vistas:* ${video.views || 0}
+│║◈ 👤 *Autor:* ${video.author || 'Desconocido'}
+│║◈ 🔗 *Link:* ${video.url}
+╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤
+📌 *Reacciona con:* 
+- 👍 para *audio* 🎼 
+- ❤️ para *video* 🎬 
+_O responde al mensaje con "audio" o "video" para descargar._`, 
         footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
-        viewOnce: false, 
+        viewOnce: true, 
         headerType: 4, 
         mentions: [msg.key.participant || msg.key.remoteJid], 
     }, { quoted: msg });
@@ -92,43 +105,6 @@ case 'play2': case 'play': {
 
     break; 
 }
-
-// ESCUCHAR REACCIONES AL MENSAJE
-sock.ev.on('messages.reaction', async (reaction) => {
-    const messageId = reaction.key.id;
-    if (!global.videoRequests || !global.videoRequests[messageId]) return;
-
-    const { remoteJid, videoUrl } = global.videoRequests[messageId];
-
-    if (reaction.text === '👍') {
-        await sock.sendMessage(remoteJid, { text: `🎼 Descargando audio...` });
-        await sock.sendMessage(remoteJid, { text: `${global.prefix}ytmp3 ${videoUrl}` });
-    } else if (reaction.text === '❤️') {
-        await sock.sendMessage(remoteJid, { text: `🎬 Descargando video...` });
-        await sock.sendMessage(remoteJid, { text: `${global.prefix}ytmp4 ${videoUrl}` });
-    }
-});
-
-// ESCUCHAR RESPUESTAS AL MENSAJE
-sock.ev.on('messages.upsert', async (messageUpsert) => {
-    const msg = messageUpsert.messages[0];
-    if (!msg || !msg.message || !msg.message.conversation) return;
-
-    const replyText = msg.message.conversation.toLowerCase().trim();
-    const repliedTo = msg.message.extendedTextMessage?.contextInfo?.stanzaId;
-
-    if (repliedTo && global.videoRequests && global.videoRequests[repliedTo]) {
-        const { remoteJid, videoUrl } = global.videoRequests[repliedTo];
-
-        if (replyText.includes('audio')) {
-            await sock.sendMessage(remoteJid, { text: `🎼 Descargando audio...` });
-            await sock.sendMessage(remoteJid, { text: `${global.prefix}ytmp3 ${videoUrl}` });
-        } else if (replyText.includes('video')) {
-            await sock.sendMessage(remoteJid, { text: `🎬 Descargando video...` });
-            await sock.sendMessage(remoteJid, { text: `${global.prefix}ytmp4 ${videoUrl}` });
-        }
-    }
-});
                           
             case 'ytmp3': {
     const fs = require('fs');
