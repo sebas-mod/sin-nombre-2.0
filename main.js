@@ -86,12 +86,19 @@ async function handleCommand(sock, msg, command, args, sender) {
 case "perfil": {
     try {
         let userJid;
-        
+
+        // Si el usuario solo escribe .perfil sin argumentos, menciones o respuesta, enviar un mensaje con el ejemplo de uso
         if (!msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length &&
             !msg.message.extendedTextMessage?.contextInfo?.participant &&
             args.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo de uso:* \n1️⃣ *Para obtener la foto de perfil de alguien:* \n👉 _Responde a su mensaje con el comando_\n2️⃣ *Para obtener la foto de perfil de un número:* \n👉 _.perfil +1 555-123-4567_\n3️⃣ *Para obtener la foto de perfil de un usuario mencionado:* \n👉 _.perfil @usuario_" 
+            return await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo de uso:* \n\n" +
+                      "1️⃣ *Para obtener la foto de perfil de alguien:* \n" +
+                      "👉 _Responde a su mensaje con el comando_\n\n" +
+                      "2️⃣ *Para obtener la foto de perfil de un número:* \n" +
+                      "👉 _.perfil +1 555-123-4567_\n\n" +
+                      "3️⃣ *Para obtener la foto de perfil de un usuario mencionado:* \n" +
+                      "👉 _.perfil @usuario_"
             }, { quoted: msg });
         }
 
