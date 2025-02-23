@@ -4,6 +4,7 @@ const { isOwner, setPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
 
+// Cargar prefijo desde archivo de configuración
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
     global.prefix = configData.prefix || ".";
@@ -11,16 +12,19 @@ if (fs.existsSync("./config.json")) {
     global.prefix = ".";
 }
 
+// Verificar si un prefijo es válido
 function isValidPrefix(prefix) {
-    return typeof prefix === "string" && (prefix.length === 1 || prefix.length > 1 && [...prefix].length === 1);
+    return typeof prefix === "string" && (prefix.length === 1 || (prefix.length > 1 && [...prefix].length === 1));
 }
 
+// Guardar nuevo prefijo en el archivo de configuración
 function savePrefix(newPrefix) {
     global.prefix = newPrefix;
     fs.writeFileSync("./config.json", JSON.stringify({ prefix: newPrefix }, null, 2));
     console.log(chalk.green(`✅ Prefijo cambiado a: ${chalk.yellow.bold(newPrefix)}`));
 }
 
+// Función para verificar si una URL es válida
 function isUrl(url) {
     try {
         new URL(url);
