@@ -122,19 +122,35 @@ if (global.modoadmins) {
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
 case "modoadmins":
-    if (!isOwner(sender.replace("@s.whatsapp.net", ""))) { // Verifica si el usuario es dueño
-        return sock.sendMessage(msg.key.remoteJid, { text: "🚫 *Solo el dueño del bot puede cambiar este modo.*" }, { quoted: msg });
+    // Verificar si el comando se usa en un grupo
+    if (!msg.key.remoteJid.includes("@g.us")) {
+        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
     }
 
+    // Obtener el ID del usuario que envió el comando
+    const senderNumber = sender.replace("@s.whatsapp.net", ""); 
+
+    // Verificar si el usuario es dueño o administrador del grupo
+    const isAdminUser = await isAdmin(sock, msg.key.remoteJid, sender);
+    const isUserOwner = global.isOwner(senderNumber);
+
+    if (!isAdminUser && !isUserOwner) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "🚫 *Solo administradores del grupo o el dueño del bot pueden cambiar este modo.*" 
+        }, { quoted: msg });
+    }
+
+    // Verificar si el usuario proporcionó "on" o "off"
     if (!args[0] || (args[0] !== "on" && args[0] !== "off")) {
         return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso correcto:*\n.modoadmins on | off" }, { quoted: msg });
     }
 
-    const estadoNuevo = args[0] === "on"; // Convierte "on" en true y "off" en false
-    setModoAdmins(estadoNuevo);
+    // Cambiar el estado del modo administradores SOLO en este grupo y guardar en config.json
+    const estadoNuevo = args[0] === "on";
+    setModoAdmins(msg.key.remoteJid, estadoNuevo);
 
     await sock.sendMessage(msg.key.remoteJid, { 
-        text: `✅ *Modo Administradores ${estadoNuevo ? "Activado" : "Desactivado"}*`
+        text: `✅ *Modo Administradores ${estadoNuevo ? "Activado" : "Desactivado"} en este grupo.*`
     });
 
     break;
