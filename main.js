@@ -83,6 +83,46 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "perfil": {
+    try {
+        let userJid;
+        
+        if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
+            // Si mencionaron a alguien
+            userJid = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
+        } else if (msg.message.extendedTextMessage?.contextInfo?.participant) {
+            // Si es una respuesta a un mensaje
+            userJid = msg.message.extendedTextMessage.contextInfo.participant;
+        } else if (args.length > 0) {
+            // Si el usuario ingresó un número
+            let number = args.join("").replace(/[^0-9]/g, ""); // Limpia el número de caracteres no numéricos
+            userJid = number + "@s.whatsapp.net";
+        } else {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Error:* Debes responder a un mensaje, mencionar a alguien o escribir un número válido.\n\n📌 *Ejemplo:* \n.perfil +1 516-709-6032" }, { quoted: msg });
+        }
+
+        // Intentar obtener la imagen de perfil
+        let ppUrl;
+        try {
+            ppUrl = await sock.profilePictureUrl(userJid, "image"); // "image" para foto de perfil normal
+        } catch {
+            ppUrl = "https://i.imgur.com/3J8M0wG.png"; // Imagen de perfil por defecto si no tiene
+        }
+
+        // Enviar la imagen de perfil
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: ppUrl },
+            caption: `🖼️ *Foto de perfil de:* @${userJid.split("@")[0]}`,
+            mentions: [userJid]
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando perfil:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo obtener la foto de perfil." }, { quoted: msg });
+    }
+    break;
+}
+        
 case 'creador': {
     const ownerNumber = "15167096032@s.whatsapp.net"; // Número del dueño en formato WhatsApp
     const ownerName = "Russell 🤖"; // Nombre del dueño
