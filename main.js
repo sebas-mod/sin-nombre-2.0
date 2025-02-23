@@ -311,7 +311,7 @@ await sock.sendMessage(msg.key.remoteJid, {
             break;
 
         case "setprefix":
-    if (!isOwner(sender)) {
+    if (!global.isOwner(sender)) { // Asegurar que la función se usa correctamente
         await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });
         return;
     }
@@ -319,13 +319,13 @@ await sock.sendMessage(msg.key.remoteJid, {
         await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
         return;
     }
-    if (!isValidPrefix(args[0])) {
+    if (!global.allowedPrefixes.includes(args[0])) {
         await sock.sendMessage(msg.key.remoteJid, {
             text: "❌ Prefijo inválido. Usa un solo carácter o un emoji de la lista permitida."
         });
         return;
     }
-    setPrefix(args[0]);
+    global.setPrefix(args[0]);
     await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}* 🚀` });
     break;
 
