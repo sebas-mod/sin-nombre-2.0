@@ -5,13 +5,25 @@ const axios = require("axios");
 const fetch = require("node-fetch");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 // Cargar prefijo desde archivo de configuración
-if (fs.existsSync("./config.json")) {
-    let configData = JSON.parse(fs.readFileSync("./config.json"));
+// Cargar archivo de configuración
+const configPath = "./config.json";
+if (fs.existsSync(configPath)) {
+    let configData = JSON.parse(fs.readFileSync(configPath));
     global.prefix = configData.prefix || ".";
+    global.modoadmins = configData.modoadmins || false;  // Cargar estado de modoadmins
 } else {
     global.prefix = ".";
+    global.modoadmins = false;
 }
-
+//suabe
+// Función para cambiar el estado del modo administradores
+function setModoAdmins(state) {
+    global.modoadmins = state;  // Cambiar el estado global
+    let configData = JSON.parse(fs.readFileSync(configPath)); // Leer archivo
+    configData.modoadmins = state;  // Modificar el estado
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2)); // Guardar cambios
+}
+//ok fino
 
 const guarFilePath = "./guar.json";
 if (!fs.existsSync(guarFilePath)) {
@@ -97,13 +109,35 @@ return buffer;
 };
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
-
+// Si el modo admin está activado y el usuario no es admin, bloquear comandos
+if (global.modoadmins) {
+    const isAdminUser = await isAdmin(sock, msg.key.remoteJid, sender);
+    if (!isAdminUser && !isOwner(sender.replace("@s.whatsapp.net", ""))) {
+        return sock.sendMessage(msg.key.remoteJid, { text: "🚫 *Modo Administradores activado.* Solo los administradores pueden usar comandos." }, { quoted: msg });
+    }
+}
     switch (lowerCommand) {
 
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "modoadmins":
+    if (!isOwner(sender.replace("@s.whatsapp.net", ""))) { // Verifica si el usuario es dueño
+        return sock.sendMessage(msg.key.remoteJid, { text: "🚫 *Solo el dueño del bot puede cambiar este modo.*" }, { quoted: msg });
+    }
 
+    if (!args[0] || (args[0] !== "on" && args[0] !== "off")) {
+        return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso correcto:*\n.modoadmins on | off" }, { quoted: msg });
+    }
+
+    const estadoNuevo = args[0] === "on"; // Convierte "on" en true y "off" en false
+    setModoAdmins(estadoNuevo);
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        text: `✅ *Modo Administradores ${estadoNuevo ? "Activado" : "Desactivado"}*`
+    });
+
+    break;
             
 case "get": {
     try {
