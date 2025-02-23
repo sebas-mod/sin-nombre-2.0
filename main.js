@@ -393,9 +393,6 @@ case 'g': {
 }
         
 case 'guar': {
-    const fs = require("fs");
-    const path = require("path");
-
     if (!msg.message.extendedTextMessage || 
         !msg.message.extendedTextMessage.contextInfo || 
         !msg.message.extendedTextMessage.contextInfo.quotedMessage) {
@@ -470,24 +467,15 @@ case 'guar': {
         mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
     }
 
-    // Crear la carpeta de almacenamiento si no existe
-    const savePath = path.join(__dirname, "multimedia");
-    if (!fs.existsSync(savePath)) {
-        fs.mkdirSync(savePath, { recursive: true });
-    }
-
-    // Guardar el archivo en la carpeta multimedia/
-    const filePath = path.join(savePath, `${saveKey}.${fileExtension}`);
-    fs.writeFileSync(filePath, mediaBuffer);
-
-    // Guardar referencia en guar.json
+    // Guardar multimedia con la palabra clave y la información del usuario que lo guardó
     guarData[saveKey] = {
-        filePath: filePath, // Ruta al archivo guardado
+        buffer: mediaBuffer.toString("base64"), // Convertir a base64
         mimetype: mediaMessage.mimetype,
         extension: fileExtension,
-        savedBy: msg.key.participant || msg.key.remoteJid, // Usuario que lo guardó
+        savedBy: msg.key.participant || msg.key.remoteJid, // Número del usuario que guardó el archivo
     };
 
+    // Escribir en guar.json
     fs.writeFileSync("./guar.json", JSON.stringify(guarData, null, 2));
 
     return sock.sendMessage(
@@ -698,7 +686,7 @@ await sock.sendMessage(msg.key.remoteJid, {
             });
             break;
 
-        case "cerrargrupo":
+        case "cerrar grupo":
             try {
                 if (!msg.key.remoteJid.includes("@g.us")) {
                     return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
@@ -732,7 +720,7 @@ await sock.sendMessage(msg.key.remoteJid, {
             }
             break;
 
-        case "abrirgrupo":
+        case "abrir grupo":
             try {
                 if (!msg.key.remoteJid.includes("@g.us")) {
                     return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
