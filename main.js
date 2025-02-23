@@ -1,6 +1,6 @@
 const fs = require("fs");
 const chalk = require("chalk");
-const { isOwner } = require("./config");
+const { isOwner, setPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
 const { exec } = require('child_process');
@@ -39,7 +39,28 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 
 // ESCUCHAR REACCIONES AL MENSAJE
-  case 'play3': {
+// 💾 Manejo del comando "setprefix"
+case "setprefix":
+    if (!isOwner(sender)) { // ✅ Ahora `isOwner` se importa correctamente
+        await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });
+        return;
+    }
+    if (!args[0]) {
+        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
+        return;
+    }
+    if (!allowedPrefixes.includes(args[0])) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Prefijo inválido. Usa un solo carácter o un emoji de la lista permitida."
+        });
+        return;
+    }
+    setPrefix(args[0]);
+    await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}* 🚀` });
+    break;
+        
+        
+case 'play3': {
     const { Client } = require('youtubei');
     const { ytmp3 } = require("@hiudyy/ytdl");
     const yt = new Client();
@@ -309,25 +330,6 @@ await sock.sendMessage(msg.key.remoteJid, {
                 text: `🤖 *Azura Ultra Bot*\n\n📌 Prefijo actual: *${global.prefix}*\n👤 Dueño: *${global.owner[0][1]}*`
             });
             break;
-
-        case "setprefix":
-    if (!global.isOwner(sender)) { // Asegurar que la función se usa correctamente
-        await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });
-        return;
-    }
-    if (!args[0]) {
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
-        return;
-    }
-    if (!global.allowedPrefixes.includes(args[0])) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ Prefijo inválido. Usa un solo carácter o un emoji de la lista permitida."
-        });
-        return;
-    }
-    global.setPrefix(args[0]);
-    await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}* 🚀` });
-    break;
 
         case "cerrargrupo":
             try {
