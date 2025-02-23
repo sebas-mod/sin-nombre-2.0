@@ -75,6 +75,30 @@ function isUrl(url) {
 }
 
 async function handleCommand(sock, msg, command, args, sender) {
+    sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
+let buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) 
+? Buffer.from(path.split`,`[1], 'base64') 
+: /^https?:\/\//.test(path) 
+? await (await getBuffer(path)) 
+: fs.existsSync(path) 
+? fs.readFileSync(path) 
+: Buffer.alloc(0);
+
+let buffer;
+if (options && (options.packname || options.author)) {
+buffer = await writeExifImg(buff, options);
+} else {
+buffer = await imageToWebp(buff);
+}
+
+await sock.sendMessage(jid, { sticker: { url: buffer }, ...options }, { 
+quoted: quoted ? quoted : m, 
+ephemeralExpiration: 24 * 60 * 100, 
+disappearingMessagesInChat: 24 * 60 * 100 
+});
+
+return buffer;
+};
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
 
@@ -157,7 +181,25 @@ case 'creador': {
     break;
 }
         
-        
+case "s": case "stiker": { if (!msg.message.imageMessage && !msg.message.extendedTextMessage) { return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Responde a una imagen o envía una imagen con el comando." }, { quoted: msg }); }
+
+let quotedMessage = msg.message.extendedTextMessage ? msg.message.extendedTextMessage.contextInfo.quotedMessage : null;
+let mediaMessage = msg.message.imageMessage || (quotedMessage && quotedMessage.imageMessage);
+
+if (!mediaMessage) {
+    return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Solo puedes usar imágenes para hacer stickers." }, { quoted: msg });
+}
+
+const mediaStream = await downloadContentFromMessage(mediaMessage, "image");
+let mediaBuffer = Buffer.alloc(0);
+for await (const chunk of mediaStream) {
+    mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+}
+
+let stickerBuffer = await sock.sendImageAsSticker(msg.key.remoteJid, mediaBuffer, msg, { packname: "Mi Pack", author: "EliasarYT" });
+break;
+}
+            
 case 'vercomandos':
 case 'verco': {
     const fs = require("fs");
