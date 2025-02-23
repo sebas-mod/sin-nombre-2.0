@@ -37,6 +37,49 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 
 // ESCUCHAR REACCIONES AL MENSAJE
+  case 'play3': {
+    const { Client } = require('youtubei');
+    const { ytmp3 } = require("@hiudyy/ytdl");
+    const yt = new Client();
+
+    if (!text || text.trim() === '') return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, proporciona el nombre o término de búsqueda del video." });
+
+    try {
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: {
+                text: '⏱️',
+                key: msg.key,
+            },
+        });
+
+        const search = await yt.search(text, { type: "video" });
+        if (!search || !search.items || search.items.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "No se encontraron resultados para tu búsqueda." }, { quoted: msg });
+        }
+
+        const result = search.items[0];
+        const videoUrl = `https://www.youtube.com/watch?v=${result.id}`;
+
+        const str = `Youtube Play\n✧ *Título:* ${result.title}\n✧ *Fecha:* ${result.uploadDate}\n✧ *Descripción:* ${result.description}\n✧ *URL:* ${videoUrl}\n✧➢ Para video, usa:\n.ytmp4 ${videoUrl}\n\nEnviando audio....`;
+
+        await sock.sendMessage(msg.key.remoteJid, { image: { url: result.thumbnails[0].url }, caption: str }, { quoted: msg });
+
+        const audiodl = await ytmp3(videoUrl, {
+            quality: 'highest',
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: audiodl,
+            mimetype: "audio/mpeg",
+            caption: `Aquí está tu audio: ${result.title}`,
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("Error durante la búsqueda en YouTube:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "Ocurrió un error al procesar tu solicitud." }, { quoted: msg });
+    }
+    break;
+}          
 case 'play2': case 'play': { 
     const yts = require('yt-search'); 
     const fetch = require('node-fetch'); 
