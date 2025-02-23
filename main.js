@@ -77,7 +77,7 @@ case 'play2': case 'play': {
             .join(':'); 
     } 
 
-    const sentMessage = await sock.sendMessage(msg.key.remoteJid, { 
+    await sock.sendMessage(msg.key.remoteJid, { 
         image: { url: video.thumbnail }, 
         caption: `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
 │║◈ 🎵 *Título:* ${video.title}
@@ -86,24 +86,47 @@ case 'play2': case 'play': {
 │║◈ 👤 *Autor:* ${video.author || 'Desconocido'}
 │║◈ 🔗 *Link:* ${video.url}
 ╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤
-📌 *Reacciona con:* 
-- 👍 para *audio* 🎼 
-- ❤️ para *video* 🎬 
-_O responde al mensaje con "audio" o "video" para descargar._`, 
+
+📌 *Para descargar:*  
+- Escribe *${global.prefix}audio* para descargar el 🎼 audio.  
+- Escribe *${global.prefix}video* para descargar el 🎬 video.`, 
         footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
-        viewOnce: false, 
-        headerType: 4, 
         mentions: [msg.key.participant || msg.key.remoteJid], 
     }, { quoted: msg });
 
-    // Guardar el mensaje para reaccionar después
+    // Guardar el video para descargar después
     global.videoRequests = global.videoRequests || {};
-    global.videoRequests[sentMessage.key.id] = { 
-        remoteJid: msg.key.remoteJid, 
-        videoUrl: video.url 
-    };
+    global.videoRequests[msg.key.remoteJid] = video.url; 
 
     break; 
+}
+
+// 📥 Comando para descargar AUDIO
+case 'audio': { 
+    if (!global.videoRequests[msg.key.remoteJid]) {
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* No hay ningún video pendiente de descarga. Usa *play* primero.' });
+    }
+
+    const videoUrl = global.videoRequests[msg.key.remoteJid];
+
+    await sock.sendMessage(msg.key.remoteJid, { text: `🎼 Descargando audio...` });
+    await sock.sendMessage(msg.key.remoteJid, { text: `${global.prefix}ytmp3 ${videoUrl}` });
+
+    break;
+}
+
+// 📥 Comando para descargar VIDEO
+case 'video': { 
+    if (!global.videoRequests[msg.key.remoteJid]) {
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* No hay ningún video pendiente de descarga. Usa *play* primero.' });
+    }
+
+    const videoUrl = global.videoRequests[msg.key.remoteJid];
+
+    await sock.sendMessage(msg.key.remoteJid, { text: `🎬 Descargando video...` });
+    await sock.sendMessage(msg.key.remoteJid, { text: `${global.prefix}ytmp4 ${videoUrl}` });
+
+    break;
 }
                           
             case 'ytmp3': {
