@@ -40,6 +40,19 @@ function isValidPrefix(prefix) {
     return typeof prefix === "string" && (prefix.length === 1 || (prefix.length > 1 && [...prefix].length === 1));
 }
 
+async function isAdmin(sock, chatId, sender) {
+    try {
+        const groupMetadata = await sock.groupMetadata(chatId);
+        const admins = groupMetadata.participants
+            .filter(p => p.admin)
+            .map(p => p.id);
+        return admins.includes(sender.replace(/[^0-9]/g, '') + "@s.whatsapp.net");
+    } catch (error) {
+        console.error("⚠️ Error verificando administrador:", error);
+        return false;
+    }
+}
+
 // Guardar nuevo prefijo en el archivo de configuración
 function savePrefix(newPrefix) {
     global.prefix = newPrefix;
