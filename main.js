@@ -67,7 +67,10 @@ async function handleCommand(sock, msg, command, args, sender) {
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
 case 'g': {
-    const searchKey = args.join(' ').trim().toLowerCase(); // Palabra clave en minúsculas
+    const removeEmojis = (text) => text.replace(/[\u{1F300}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, ""); // Remover emojis
+    const normalizeText = (text) => removeEmojis(text).toLowerCase().trim(); // Normalizar texto
+
+    const searchKey = normalizeText(args.join(' ')); // Convertir clave a minúsculas y sin emojis
     if (!searchKey) {
         return sock.sendMessage(
             msg.key.remoteJid,
@@ -76,11 +79,23 @@ case 'g': {
         );
     }
 
+    // Verificar si el archivo guar.json existe
+    if (!fs.existsSync("./guar.json")) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "❌ *Error:* No hay multimedia guardado aún. Usa `.guar` para guardar algo primero." },
+            { quoted: msg }
+        );
+    }
+
     // Leer archivo guar.json
     let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
 
-    // Verificar si existe la palabra clave
-    if (!guarData[searchKey]) {
+    // Buscar la clave ignorando mayúsculas, minúsculas y emojis
+    const keys = Object.keys(guarData);
+    const foundKey = keys.find(key => normalizeText(key) === searchKey);
+
+    if (!foundKey) {
         return sock.sendMessage(
             msg.key.remoteJid,
             { text: `❌ *Error:* No se encontró multimedia guardado con la clave: *"${searchKey}"*.` },
@@ -88,23 +103,32 @@ case 'g': {
         );
     }
 
-    const storedMedia = guarData[searchKey];
+    const storedMedia = guarData[foundKey];
+
+    // Convertir la base64 nuevamente a Buffer
     const mediaBuffer = Buffer.from(storedMedia.buffer, "base64");
 
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            mimetype: storedMedia.mimetype,
-            [storedMedia.mimetype.startsWith("image") ? "image" :
-                storedMedia.mimetype.startsWith("video") ? "video" :
-                    storedMedia.mimetype.startsWith("audio") ? "audio" :
-                        storedMedia.mimetype.startsWith("application") ? "document" :
-                            "document"]: mediaBuffer,
-        },
-        { quoted: msg }
-    );
+    // Verificar el tipo de archivo y enviarlo correctamente
+    let messageOptions = {
+        mimetype: storedMedia.mimetype,
+    };
+
+    if (storedMedia.mimetype.startsWith("image")) {
+        messageOptions.image = mediaBuffer;
+    } else if (storedMedia.mimetype.startsWith("video")) {
+        messageOptions.video = mediaBuffer;
+    } else if (storedMedia.mimetype.startsWith("audio")) {
+        messageOptions.audio = mediaBuffer;
+    } else {
+        messageOptions.document = mediaBuffer;
+        messageOptions.fileName = `Archivo.${storedMedia.extension}`;
+    }
+
+    // Enviar el multimedia almacenado
+    await sock.sendMessage(msg.key.remoteJid, messageOptions, { quoted: msg });
+
+    break;
 }
-break;
         
 case 'guar': {
     if (!msg.message.extendedTextMessage || !msg.message.extendedTextMessage.contextInfo || !msg.message.extendedTextMessage.contextInfo.quotedMessage) {
