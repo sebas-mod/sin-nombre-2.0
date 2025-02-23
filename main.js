@@ -119,9 +119,12 @@ case 'g': {
         messageOptions.video = mediaBuffer;
     } else if (storedMedia.mimetype.startsWith("audio")) {
         messageOptions.audio = mediaBuffer;
-    } else {
+    } else if (storedMedia.mimetype.startsWith("application")) {
         messageOptions.document = mediaBuffer;
         messageOptions.fileName = `Archivo.${storedMedia.extension}`;
+    } else if (storedMedia.mimetype.startsWith("image/webp") || storedMedia.extension === "webp") {
+        // Si es un sticker
+        messageOptions.sticker = mediaBuffer;
     }
 
     // Enviar el multimedia almacenado
