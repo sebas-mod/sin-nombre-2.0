@@ -91,7 +91,7 @@ case 'play2': case 'play': {
 - ❤️ para *video* 🎬 
 _O responde al mensaje con "audio" o "video" para descargar._`, 
         footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
-        viewOnce: true, 
+        viewOnce: false, 
         headerType: 4, 
         mentions: [msg.key.participant || msg.key.remoteJid], 
     }, { quoted: msg });
