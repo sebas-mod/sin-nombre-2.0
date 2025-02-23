@@ -79,118 +79,126 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case 'play': { 
+    const yts = require('yt-search'); 
+    const fetch = require('node-fetch'); 
+    
+    if (!text || text.trim() === '') {
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Proporciona el nombre o término de búsqueda del audio.' });
+    } 
 
-case 'play': {  
-    const yts = require('yt-search'),
-        ytdl = require('ytdl-core'),
-        fetch = require('node-fetch');
+    const query = args.join(' ') || text; 
+    let video = {}; 
 
-    if (!text || text.trim() === '') return msg.reply('❌ *Error:* Debes proporcionar el nombre o término de búsqueda del audio.');
+    try { 
+        const yt_play = await yts(query); 
+        if (!yt_play || yt_play.all.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* No se encontraron resultados para tu búsqueda.' });
+        } 
 
-    msg.react(rwait);
-    const query = args.join(' ') || text;
-    let video = {};
+        const firstResult = yt_play.all[0]; 
+        video = { 
+            url: firstResult.url, 
+            title: firstResult.title, 
+            thumbnail: firstResult.thumbnail || 'default-thumbnail.jpg', 
+            timestamp: firstResult.duration.seconds, 
+            views: firstResult.views, 
+            author: firstResult.author.name, 
+        }; 
+    } catch { 
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Ocurrió un problema al buscar el audio.' });
+    } 
 
-    try {
-        const yt_play = await yts(query);
-        if (!yt_play || yt_play.all.length === 0) return msg.reply('❌ *Error:* No se encontraron resultados para tu búsqueda.');
-        const firstResult = yt_play.all[0];
-        video = {
-            url: firstResult.url,
-            title: firstResult.title,
-            thumbnail: firstResult.thumbnail || 'default-thumbnail.jpg',
-            timestamp: firstResult.duration.seconds,
-            views: firstResult.views,
-            author: firstResult.author.name,
-        };
-    } catch {
-        return msg.reply('❌ *Error:* Ocurrió un problema al buscar el audio.');
-    }
-
-    function secondString(seconds) {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
+    function secondString(seconds) { 
+        const h = Math.floor(seconds / 3600); 
+        const m = Math.floor((seconds % 3600) / 60); 
+        const s = seconds % 60; 
         return [h, m, s]
             .map(v => v < 10 ? `0${v}` : v)
             .filter((v, i) => v !== '00' || i > 0)
-            .join(':');
-    }
+            .join(':'); 
+    } 
 
-    await conn.sendMessage(msg.key.remoteJid, {
-        image: { url: video.thumbnail },
-        caption: `🎼 *Título:* ${video.title}
-⏱️ *Duración:* ${secondString(video.timestamp || 0)}
-👁️ *Vistas:* ${video.views || 0}
-👤 *Autor:* ${video.author || 'Desconocido'}
-🔗 *Link:* ${video.url}
-
-📌 *Para descargar el video, usa:* 
-👉 *play2* ${video.url}`,
-        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶",
+    await sock.sendMessage(msg.key.remoteJid, { 
+        image: { url: video.thumbnail }, 
+        caption: `🎵 *Audio Encontrado* 🎼  
+📌 *Título:* ${video.title}  
+⏱️ *Duración:* ${secondString(video.timestamp || 0)}  
+👁️ *Vistas:* ${video.views || 0}  
+👤 *Autor:* ${video.author || 'Desconocido'}  
+🔗 *Link:* ${video.url}  
+🛠️ *Descargando el audio...*`, 
+        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
+        mentions: [msg.key.participant || msg.key.remoteJid], 
     }, { quoted: msg });
 
-    // Ejecutar comando de descarga de audio automáticamente
-    await conn.sendMessage(msg.key.remoteJid, { text: `.musica ${video.url}` });
+    // Aquí descargaría el audio directamente
+    await sock.sendMessage(msg.key.remoteJid, { text: `🔊 Descargando audio...` });
+    await sock.sendMessage(msg.key.remoteJid, { audio: { url: video.url }, mimetype: "audio/mpeg" }, { quoted: msg });
 
-    break;
+    break; 
 }
 
-case 'play2': {  
-    const yts = require('yt-search'),
-        ytdl = require('ytdl-core'),
-        fetch = require('node-fetch');
+case 'play2': { 
+    const yts = require('yt-search'); 
+    const fetch = require('node-fetch'); 
+    
+    if (!text || text.trim() === '') {
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Proporciona el nombre o término de búsqueda del video.' });
+    } 
 
-    if (!text || text.trim() === '') return msg.reply('❌ *Error:* Debes proporcionar el nombre o término de búsqueda del video.');
+    const query = args.join(' ') || text; 
+    let video = {}; 
 
-    msg.react(rwait);
-    const query = args.join(' ') || text;
-    let video = {};
+    try { 
+        const yt_play = await yts(query); 
+        if (!yt_play || yt_play.all.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* No se encontraron resultados para tu búsqueda.' });
+        } 
 
-    try {
-        const yt_play = await yts(query);
-        if (!yt_play || yt_play.all.length === 0) return msg.reply('❌ *Error:* No se encontraron resultados para tu búsqueda.');
-        const firstResult = yt_play.all[0];
-        video = {
-            url: firstResult.url,
-            title: firstResult.title,
-            thumbnail: firstResult.thumbnail || 'default-thumbnail.jpg',
-            timestamp: firstResult.duration.seconds,
-            views: firstResult.views,
-            author: firstResult.author.name,
-        };
-    } catch {
-        return msg.reply('❌ *Error:* Ocurrió un problema al buscar el video.');
-    }
+        const firstResult = yt_play.all[0]; 
+        video = { 
+            url: firstResult.url, 
+            title: firstResult.title, 
+            thumbnail: firstResult.thumbnail || 'default-thumbnail.jpg', 
+            timestamp: firstResult.duration.seconds, 
+            views: firstResult.views, 
+            author: firstResult.author.name, 
+        }; 
+    } catch { 
+        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Ocurrió un problema al buscar el video.' });
+    } 
 
-    function secondString(seconds) {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
+    function secondString(seconds) { 
+        const h = Math.floor(seconds / 3600); 
+        const m = Math.floor((seconds % 3600) / 60); 
+        const s = seconds % 60; 
         return [h, m, s]
             .map(v => v < 10 ? `0${v}` : v)
             .filter((v, i) => v !== '00' || i > 0)
-            .join(':');
-    }
+            .join(':'); 
+    } 
 
-    await conn.sendMessage(msg.key.remoteJid, {
-        image: { url: video.thumbnail },
-        caption: `🎬 *Título:* ${video.title}
-⏱️ *Duración:* ${secondString(video.timestamp || 0)}
-👁️ *Vistas:* ${video.views || 0}
-👤 *Autor:* ${video.author || 'Desconocido'}
-🔗 *Link:* ${video.url}
-
-📌 *Para descargar solo el audio, usa:* 
-👉 *play* ${video.url}`,
-        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶",
+    await sock.sendMessage(msg.key.remoteJid, { 
+        image: { url: video.thumbnail }, 
+        caption: `🎬 *Video Encontrado* 🎥  
+📌 *Título:* ${video.title}  
+⏱️ *Duración:* ${secondString(video.timestamp || 0)}  
+👁️ *Vistas:* ${video.views || 0}  
+👤 *Autor:* ${video.author || 'Desconocido'}  
+🔗 *Link:* ${video.url}  
+🛠️ *Descargando el video...*`, 
+        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
+        mentions: [msg.key.participant || msg.key.remoteJid], 
     }, { quoted: msg });
 
-    // Ejecutar comando de descarga de video automáticamente
-    await conn.sendMessage(msg.key.remoteJid, { text: `.video ${video.url}` });
+    // Aquí descargaría el video directamente
+    await sock.sendMessage(msg.key.remoteJid, { text: `🎥 Descargando video...` });
+    await sock.sendMessage(msg.key.remoteJid, { video: { url: video.url }, mimetype: "video/mp4" }, { quoted: msg });
 
-    break;
+    break; 
 }
+
             
 case 'kill': {
     const searchKey = args.join(' ').trim().toLowerCase(); // Convertir clave a minúsculas
