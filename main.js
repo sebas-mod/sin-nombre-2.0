@@ -1,8 +1,8 @@
 const fs = require("fs");
 const chalk = require("chalk");
 const { isOwner } = require("./config");
+const axios = require("axios");
 
-// Cargar prefijo desde config.json si existe, sino usar "."
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
     global.prefix = configData.prefix || ".";
@@ -10,21 +10,28 @@ if (fs.existsSync("./config.json")) {
     global.prefix = ".";
 }
 
-// Verifica que el prefijo tenga 1 carácter o un emoji completo
 function isValidPrefix(prefix) {
     return typeof prefix === "string" && (prefix.length === 1 || prefix.length > 1 && [...prefix].length === 1);
 }
 
-// Guarda el prefijo en config.json
 function savePrefix(newPrefix) {
     global.prefix = newPrefix;
     fs.writeFileSync("./config.json", JSON.stringify({ prefix: newPrefix }, null, 2));
     console.log(chalk.green(`✅ Prefijo cambiado a: ${chalk.yellow.bold(newPrefix)}`));
 }
 
-// Manejador de comandos
+function isUrl(url) {
+    try {
+        new URL(url);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
 async function handleCommand(sock, msg, command, args, sender) {
     const lowerCommand = command.toLowerCase();
+    const text = args.join(" ");
 
     switch (lowerCommand) {
         case "ping":
@@ -55,131 +62,90 @@ async function handleCommand(sock, msg, command, args, sender) {
             savePrefix(args[0]);
             await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}*` });
             break;
-// 📌 Comando para CERRAR grupo (Solo admins y owners)
 
-case 'cerrargrupo': {
-    try {
-        if (!msg.key.remoteJid.includes("@g.us")) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
-        }
+        case "tiktok":
+        case "tt":
+            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://vm.tiktok.com/ZMjdrFCtg/` });
+            if (!isUrl(args[0]) || !args[0].includes('tiktok')) return sock.sendMessage(msg.key.remoteJid, { text: "❌ Enlace de TikTok inválido." });
 
-        const chat = await sock.groupMetadata(msg.key.remoteJid);
-        const senderId = msg.key.participant.replace(/@s.whatsapp.net/, '');
-        const isOwner = global.owner.some(o => o[0] === senderId);
-        const groupAdmins = chat.participants.filter(p => p.admin);
-        const isAdmin = groupAdmins.some(admin => admin.id === msg.key.participant);
+            try {
+                const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
+                const videoData = response.data.data.media;
+                const videoUrl = videoData.org;
+                const videoDetails = `*Título*: ${response.data.data.title}\n` +
+                                    `*Autor*: ${response.data.data.author.nickname}\n` +
+                                    `*Duración*: ${response.data.data.duration}s\n` +
+                                    `*Likes*: ${response.data.data.like}\n` +
+                                    `*Comentarios*: ${response.data.data.comment}`;
 
-        if (!isAdmin && !isOwner) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "🚫 *No tienes permisos para cerrar el grupo.*\n⚠️ *Solo administradores o el dueño del bot pueden usar este comando.*" },
-                { quoted: msg }
-            );
-        }
+                await sock.sendMessage(msg.key.remoteJid, {
+                    text: videoDetails,
+                    video: { url: videoUrl },
+                    mentions: [sender]
+                });
+            } catch (error) {
+                console.error(error);
+                await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al procesar el enlace de TikTok." });
+            }
+            break;
 
-        await sock.groupSettingUpdate(msg.key.remoteJid, 'announcement');
+        case "instagram":
+        case "ig":
+            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://www.instagram.com/p/CCoI4DQBGVQ/` });
 
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "🔒 *El grupo ha sido cerrado.*\n📢 *Solo los administradores pueden enviar mensajes ahora.*" },
-            { quoted: msg }
-        );
+            try {
+                const apiUrl = `https://api.dorratz.com/igdl?url=${text}`;
+                const response = await axios.get(apiUrl);
+                const { data } = response.data;
+                const caption = `> 🌙 Solicitud procesada por api.dorratz.com`;
 
-    } catch (error) {
-        console.error('❌ Error en el comando cerrargrupo:', error);
-        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al intentar cerrar el grupo.*" }, { quoted: msg });
-    }
-}
-break;
+                for (let item of data) {
+                    await sock.sendMessage(msg.key.remoteJid, { video: { url: item.url }, caption: caption });
+                }
+            } catch (error) {
+                console.error(error);
+                await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al procesar el enlace de Instagram." });
+            }
+            break;
 
-case 'abrirgrupo': {
-    try {
-        if (!msg.key.remoteJid.includes("@g.us")) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
-        }
+        case "facebook":
+        case "fb":
+            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/` });
 
-        const chat = await sock.groupMetadata(msg.key.remoteJid);
-        const senderId = msg.key.participant.replace(/@s.whatsapp.net/, '');
-        const isOwner = global.owner.some(o => o[0] === senderId);
-        const groupAdmins = chat.participants.filter(p => p.admin);
-        const isAdmin = groupAdmins.some(admin => admin.id === msg.key.participant);
+            if (!text.match(/www.facebook.com|fb.watch/g)) {
+                return sock.sendMessage(msg.key.remoteJid, {
+                    text: `❌ Enlace de Facebook inválido.\nEjemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/`
+                });
+            }
 
-        if (!isAdmin && !isOwner) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "🚫 *No tienes permisos para abrir el grupo.*\n⚠️ *Solo administradores o el dueño del bot pueden usar este comando.*" },
-                { quoted: msg }
-            );
-        }
+            try {
+                const response = await axios.get(`https://api.dorratz.com/fbvideo?url=${encodeURIComponent(text)}`);
+                const results = response.data;
 
-        await sock.groupSettingUpdate(msg.key.remoteJid, 'not_announcement');
+                if (!results || results.length === 0) {
+                    return sock.sendMessage(msg.key.remoteJid, { text: "❌ No se pudo obtener el video." });
+                }
 
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "🔓 *El grupo ha sido abierto.*\n📢 *Todos los miembros pueden enviar mensajes ahora.*" },
-            { quoted: msg }
-        );
+                const message = `Resoluciones disponibles:
+${results.map((res, index) => `- ${res.resolution}`).join('\n')}
 
-    } catch (error) {
-        console.error('❌ Error en el comando abrirgrupo:', error);
-        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al intentar abrir el grupo.*" }, { quoted: msg });
-    }
-}
-break;
+🔥 Enviado en 720p
 
-case 'kick': {
-    try {
-        if (!msg.key.remoteJid.includes("@g.us")) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
-        }
+> 🍧 Solicitud procesada por api.dorratz.com`.trim();
 
-        const chat = await sock.groupMetadata(msg.key.remoteJid);
-        const senderId = msg.key.participant.replace(/@s.whatsapp.net/, '');
-        const isOwner = global.owner.some(o => o[0] === senderId);
-        const groupAdmins = chat.participants.filter(p => p.admin);
-        const isAdmin = groupAdmins.some(admin => admin.id === msg.key.participant);
+                await sock.sendMessage(msg.key.remoteJid, {
+                    video: { url: results[0].url },
+                    caption: message
+                });
 
-        if (!isAdmin && !isOwner) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "🚫 *No tienes permisos para expulsar a miembros del grupo.*\n⚠️ *Solo los administradores o el dueño del bot pueden usar este comando.*" },
-                { quoted: msg }
-            );
-        }
+            } catch (error) {
+                console.error(error);
+                await sock.sendMessage(msg.key.remoteJid, {
+                    text: "❌ Ocurrió un error al procesar el enlace de Facebook."
+                });
+            }
+            break;
 
-        let userToKick = null;
-
-        // 📌 1️⃣ Verificar si el usuario fue mencionado
-        if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
-            userToKick = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
-        }
-
-        // 📌 2️⃣ Verificar si se respondió a un mensaje
-        if (!userToKick && msg.message.extendedTextMessage?.contextInfo?.participant) {
-            userToKick = msg.message.extendedTextMessage.contextInfo.participant;
-        }
-
-        // ⚠️ Si no hay usuario seleccionado, enviar error
-        if (!userToKick) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes mencionar o responder a un usuario para expulsarlo.*" }, { quoted: msg });
-        }
-
-        await sock.groupParticipantsUpdate(msg.key.remoteJid, [userToKick], "remove");
-
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: `🚷 *El usuario @${userToKick.split('@')[0]} ha sido expulsado del grupo.*`, mentions: [userToKick] },
-            { quoted: msg }
-        );
-
-    } catch (error) {
-        console.error('❌ Error en el comando kick:', error);
-        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al intentar expulsar al usuario.*" }, { quoted: msg });
-    }
-}
-break;
-
-        
         case "owner":
             await sock.sendMessage(msg.key.remoteJid, {
                 text: `👑 *Lista de Owners:* \n${global.owner.map(o => `📌 ${o[1] || "Sin nombre"} - ${o[0]}`).join("\n")}`
@@ -187,7 +153,6 @@ break;
             break;
 
         default:
-            // Comando desconocido: No enviar respuesta, solo ignorar
             break;
     }
 }
