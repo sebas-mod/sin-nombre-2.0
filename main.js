@@ -130,28 +130,6 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-case "serbot": {
-    const senderId = sender.replace("@s.whatsapp.net", "");
-    let subbots = loadSubBots();
-
-    if (subbots[senderId]) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Ya eres un sub-bot registrado.*" }, { quoted: msg });
-    }
-
-    const subBotCode = generateSubBotCode();
-    subbots[senderId] = {
-        code: subBotCode,
-        mode: "privado",
-        status: "activo",
-    };
-
-    saveSubBots(subbots);
-
-    return sock.sendMessage(msg.key.remoteJid, {
-        text: `✅ *Ahora eres un sub-bot.*\n🔑 *Código de conexión:* ${subBotCode}\n\n🔒 *Modo por defecto:* Privado\n\nPara cambiar el modo usa:\n➤ *${global.prefix}modoprivado* (Solo tú puedes usarlo)\n➤ *${global.prefix}modopublico* (Todos pueden usarlo)`,
-    }, { quoted: msg });
-}
-break;
 
 case "modoprivado": {
     const senderId = sender.replace("@s.whatsapp.net", "");
