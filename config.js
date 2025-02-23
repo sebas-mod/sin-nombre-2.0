@@ -39,7 +39,7 @@ global.allowedPrefixes = [
 // ✅ Función para verificar si un usuario es Owner
 global.isOwner = (user) => {
     if (!user) return false;
-    user = user.replace(/[^0-9]/g, ""); // Limpiar número
+    user = user.replace(/[^0-9]/g, ""); // Limpiar número dejando solo dígitos
     return global.owner.some(owner => Array.isArray(owner) ? owner[0] === user : owner === user);
 };
 
