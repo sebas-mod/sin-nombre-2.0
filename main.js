@@ -4,54 +4,45 @@ const { isOwner, setPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
-// Cargar prefijo desde archivo de configuración
+
 // Cargar archivo de configuración
 const configPath = "./config.json";
-if (fs.existsSync(configPath)) {
-    let configData = JSON.parse(fs.readFileSync(configPath));
-    global.prefix = configData.prefix || ".";
-    global.modoadmins = configData.modoadmins || false;  // Cargar estado de modoadmins
-} else {
-    global.prefix = ".";
-    global.modoadmins = false;
-}
-//suabe
-// Función para cambiar el estado del modo administradores
-function setModoAdmins(state) {
-    global.modoadmins = state;  // Cambiar el estado global
-    let configData = JSON.parse(fs.readFileSync(configPath)); // Leer archivo
-    configData.modoadmins = state;  // Modificar el estado
-    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2)); // Guardar cambios
-}
-//ok fino
-
-const guarFilePath = "./guar.json";
-if (!fs.existsSync(guarFilePath)) {
-    fs.writeFileSync(guarFilePath, JSON.stringify({}, null, 2));
+if (!fs.existsSync(configPath)) {
+    fs.writeFileSync(configPath, JSON.stringify({ prefix: ".", modoadmins: {} }, null, 2));
 }
 
-// Función para guardar multimedia en guar.json
-function saveMultimedia(key, data) {
-    let guarData = JSON.parse(fs.readFileSync(guarFilePath, "utf-8"));
-    guarData[key] = data;
-    fs.writeFileSync(guarFilePath, JSON.stringify(guarData, null, 2));
+let configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+global.prefix = configData.prefix || ".";
+global.modoadmins = configData.modoadmins || {};
+
+// Función para cambiar el estado del modo administradores por grupo
+function setModoAdmins(chatId, state) {
+    let configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    configData.modoadmins[chatId] = state; // Guardar el estado solo para ese grupo
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 }
 
-// Función para obtener la lista de multimedia guardado
-function getMultimediaList() {
-    return JSON.parse(fs.readFileSync(guarFilePath, "utf-8"));
+// Función para obtener el estado del modo administradores en un grupo específico
+function getModoAdmins(chatId) {
+    let configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    return configData.modoadmins[chatId] || false; // Si no existe, retorna `false`
 }
 
-// Exportamos las funciones para usarlas en los comandos
-module.exports = {
-    saveMultimedia,
-    getMultimediaList
-};
+// Guardar nuevo prefijo en el archivo de configuración
+function savePrefix(newPrefix) {
+    let configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    configData.prefix = newPrefix;
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+    global.prefix = newPrefix; // Actualizar la variable global
+    console.log(chalk.green(`✅ Prefijo cambiado a: ${chalk.yellow.bold(newPrefix)}`));
+}
+
 // Verificar si un prefijo es válido
 function isValidPrefix(prefix) {
     return typeof prefix === "string" && (prefix.length === 1 || (prefix.length > 1 && [...prefix].length === 1));
 }
 
+// Verificar si un usuario es administrador en un grupo
 async function isAdmin(sock, chatId, sender) {
     try {
         const groupMetadata = await sock.groupMetadata(chatId);
@@ -65,96 +56,86 @@ async function isAdmin(sock, chatId, sender) {
     }
 }
 
-// Guardar nuevo prefijo en el archivo de configuración
-function savePrefix(newPrefix) {
-    global.prefix = newPrefix;
-    fs.writeFileSync("./config.json", JSON.stringify({ prefix: newPrefix }, null, 2));
-    console.log(chalk.green(`✅ Prefijo cambiado a: ${chalk.yellow.bold(newPrefix)}`));
-}
-
-// Función para verificar si una URL es válida
-function isUrl(url) {
-    try {
-        new URL(url);
-        return true;
-    } catch (error) {
-        return false;
-    }
-}
-
+// Manejo de comandos
 async function handleCommand(sock, msg, command, args, sender) {
     sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
-let buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) 
-? Buffer.from(path.split`,`[1], 'base64') 
-: /^https?:\/\//.test(path) 
-? await (await getBuffer(path)) 
-: fs.existsSync(path) 
-? fs.readFileSync(path) 
-: Buffer.alloc(0);
+        let buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) 
+            ? Buffer.from(path.split`,`[1], 'base64') 
+            : /^https?:\/\//.test(path) 
+            ? await (await getBuffer(path)) 
+            : fs.existsSync(path) 
+            ? fs.readFileSync(path) 
+            : Buffer.alloc(0);
 
-let buffer;
-if (options && (options.packname || options.author)) {
-buffer = await writeExifImg(buff, options);
-} else {
-buffer = await imageToWebp(buff);
-}
+        let buffer;
+        if (options && (options.packname || options.author)) {
+            buffer = await writeExifImg(buff, options);
+        } else {
+            buffer = await imageToWebp(buff);
+        }
 
-await sock.sendMessage(jid, { sticker: { url: buffer }, ...options }, { 
-quoted: quoted ? quoted : m, 
-ephemeralExpiration: 24 * 60 * 100, 
-disappearingMessagesInChat: 24 * 60 * 100 
-});
+        await sock.sendMessage(jid, { sticker: { url: buffer }, ...options }, { 
+            quoted: quoted ? quoted : msg, 
+            ephemeralExpiration: 24 * 60 * 100, 
+            disappearingMessagesInChat: 24 * 60 * 100 
+        });
 
-return buffer;
-};
+        return buffer;
+    };
+
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
-// Si el modo admin está activado y el usuario no es admin, bloquear comandos
-if (global.modoadmins) {
-    const isAdminUser = await isAdmin(sock, msg.key.remoteJid, sender);
-    if (!isAdminUser && !isOwner(sender.replace("@s.whatsapp.net", ""))) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "🚫 *Modo Administradores activado.* Solo los administradores pueden usar comandos." }, { quoted: msg });
+
+    // Verificar si `modoadmins` está activado en este grupo y bloquear a no admins
+    if (getModoAdmins(msg.key.remoteJid)) {
+        const isAdminUser = await isAdmin(sock, msg.key.remoteJid, sender);
+        if (!isAdminUser && !isOwner(sender.replace("@s.whatsapp.net", ""))) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "🚫 *Modo Administradores activado en este grupo.* Solo los administradores pueden usar comandos." 
+            }, { quoted: msg });
+        }
+    }
+
+    switch (lowerCommand) {
+        case "modoadmins":
+            // Verificar si el comando se usa en un grupo
+            if (!msg.key.remoteJid.includes("@g.us")) {
+                return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+            }
+
+            // Obtener el ID del usuario que envió el comando
+            const senderNumber = sender.replace("@s.whatsapp.net", ""); 
+
+            // Verificar si el usuario es dueño o administrador del grupo
+            const isAdminUser = await isAdmin(sock, msg.key.remoteJid, sender);
+            const isUserOwner = global.isOwner(senderNumber);
+
+            if (!isAdminUser && !isUserOwner) {
+                return sock.sendMessage(msg.key.remoteJid, { 
+                    text: "🚫 *Solo administradores del grupo o el dueño del bot pueden cambiar este modo.*" 
+                }, { quoted: msg });
+            }
+
+            // Verificar si el usuario proporcionó "on" o "off"
+            if (!args[0] || (args[0] !== "on" && args[0] !== "off")) {
+                return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso correcto:*\n.modoadmins on | off" }, { quoted: msg });
+            }
+
+            // Cambiar el estado del modo administradores SOLO en este grupo
+            const estadoNuevo = args[0] === "on";
+            setModoAdmins(msg.key.remoteJid, estadoNuevo);
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `✅ *Modo Administradores ${estadoNuevo ? "Activado" : "Desactivado"} en este grupo.*`
+            });
+
+            break;
     }
 }
-    switch (lowerCommand) {
 
 
 // ESCUCHAR REACCIONES AL MENSAJE
-// 💾 Manejo del comando "setprefix"
-case "modoadmins":
-    // Verificar si el comando se usa en un grupo
-    if (!msg.key.remoteJid.includes("@g.us")) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
-    }
 
-    // Obtener el ID del usuario que envió el comando
-    const senderNumber = sender.replace("@s.whatsapp.net", ""); 
-
-    // Verificar si el usuario es dueño o administrador del grupo
-    const isAdminUser = await isAdmin(sock, msg.key.remoteJid, sender);
-    const isUserOwner = global.isOwner(senderNumber);
-
-    if (!isAdminUser && !isUserOwner) {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "🚫 *Solo administradores del grupo o el dueño del bot pueden cambiar este modo.*" 
-        }, { quoted: msg });
-    }
-
-    // Verificar si el usuario proporcionó "on" o "off"
-    if (!args[0] || (args[0] !== "on" && args[0] !== "off")) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso correcto:*\n.modoadmins on | off" }, { quoted: msg });
-    }
-
-    // Cambiar el estado del modo administradores SOLO en este grupo y guardar en config.json
-    const estadoNuevo = args[0] === "on";
-    setModoAdmins(msg.key.remoteJid, estadoNuevo);
-
-    await sock.sendMessage(msg.key.remoteJid, { 
-        text: `✅ *Modo Administradores ${estadoNuevo ? "Activado" : "Desactivado"} en este grupo.*`
-    });
-
-    break;
-            
 case "get": {
     try {
         if (!msg.message.extendedTextMessage || 
