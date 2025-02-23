@@ -98,6 +98,22 @@
                 }
             });
 
+            // 🛠 Evento para manejar REACCIONES en mensajes
+            sock.ev.on("messages.reaction", async (reaction) => {
+                const messageId = reaction.key.id;
+                if (!global.videoRequests || !global.videoRequests[messageId]) return;
+
+                const { remoteJid, videoUrl } = global.videoRequests[messageId];
+
+                if (reaction.text === "👍") {
+                    await sock.sendMessage(remoteJid, { text: `🎼 Descargando audio...` });
+                    await sock.sendMessage(remoteJid, { text: `${global.prefix}ytmp3 ${videoUrl}` });
+                } else if (reaction.text === "❤️") {
+                    await sock.sendMessage(remoteJid, { text: `🎬 Descargando video...` });
+                    await sock.sendMessage(remoteJid, { text: `${global.prefix}ytmp4 ${videoUrl}` });
+                }
+            });
+
             sock.ev.on("connection.update", async (update) => {
                 const { connection, lastDisconnect, qr } = update;
                 if (connection === "connecting") {
