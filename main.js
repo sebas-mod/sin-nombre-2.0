@@ -66,10 +66,47 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-case "guar": {
-    const fs = require("fs");
-    const path = "./guar.json";
+case 'g': {
+    const searchKey = args.join(' ').trim().toLowerCase(); // Palabra clave en minúsculas
+    if (!searchKey) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "⚠️ *Error:* Debes proporcionar una palabra clave para recuperar el multimedia. 🔍" },
+            { quoted: msg }
+        );
+    }
 
+    // Leer archivo guar.json
+    let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
+
+    // Verificar si existe la palabra clave
+    if (!guarData[searchKey]) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: `❌ *Error:* No se encontró multimedia guardado con la clave: *"${searchKey}"*.` },
+            { quoted: msg }
+        );
+    }
+
+    const storedMedia = guarData[searchKey];
+    const mediaBuffer = Buffer.from(storedMedia.buffer, "base64");
+
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            mimetype: storedMedia.mimetype,
+            [storedMedia.mimetype.startsWith("image") ? "image" :
+                storedMedia.mimetype.startsWith("video") ? "video" :
+                    storedMedia.mimetype.startsWith("audio") ? "audio" :
+                        storedMedia.mimetype.startsWith("application") ? "document" :
+                            "document"]: mediaBuffer,
+        },
+        { quoted: msg }
+    );
+}
+break;
+        
+case 'guar': {
     if (!msg.quoted || !msg.quoted.mimetype) {
         return sock.sendMessage(
             msg.key.remoteJid,
@@ -78,7 +115,7 @@ case "guar": {
         );
     }
 
-    const saveKey = args.join(" ").trim(); // Palabra clave para guardar
+    const saveKey = args.join(' ').trim().toLowerCase(); // Palabra clave en minúsculas
     if (!saveKey) {
         return sock.sendMessage(
             msg.key.remoteJid,
@@ -87,16 +124,13 @@ case "guar": {
         );
     }
 
-    // Verificar si el archivo guar.json existe, si no, crearlo
-    if (!fs.existsSync(path)) fs.writeFileSync(path, JSON.stringify({}, null, 2));
-
-    // Leer el archivo y cargar datos existentes
-    let multimediaStore = JSON.parse(fs.readFileSync(path));
+    // Leer archivo guar.json
+    let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
 
     // Descargar el multimedia
     const mediaType = msg.quoted.mimetype;
-    const mediaExt = mediaType.split("/")[1]; // Ejemplo: "jpg", "mp4", etc.
-    const mediaStream = await downloadContentFromMessage(msg.quoted, mediaType.split("/")[0]);
+    const mediaExt = mediaType.split('/')[1]; // Ejemplo: "jpg", "mp4", etc.
+    const mediaStream = await downloadContentFromMessage(msg.quoted, mediaType.split('/')[0]);
 
     // Convertir el stream en un buffer
     let mediaBuffer = Buffer.alloc(0);
@@ -104,19 +138,20 @@ case "guar": {
         mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
     }
 
-    // Guardar multimedia con la palabra clave, usuario y formato base64
-    multimediaStore[saveKey.toLowerCase()] = {
+    // Guardar multimedia con la palabra clave y la información del usuario que lo guardó
+    guarData[saveKey] = {
         buffer: mediaBuffer.toString("base64"), // Convertir a base64
         mimetype: mediaType,
         extension: mediaExt,
-        savedBy: msg.key.participant || msg.key.remoteJid, // Número del usuario que guarda el archivo
+        savedBy: msg.key.participant, // Número del usuario que guardó el archivo
     };
 
-    fs.writeFileSync(path, JSON.stringify(multimediaStore, null, 2)); // Guardar en archivo
+    // Escribir en guar.json
+    fs.writeFileSync("./guar.json", JSON.stringify(guarData, null, 2));
 
     return sock.sendMessage(
         msg.key.remoteJid,
-        { text: `✅ *Guardado con éxito:* El multimedia se ha almacenado con la palabra clave: *"${saveKey}"*. 🎉` },
+        { text: `✅ *Listo:* El multimedia se ha guardado con la palabra clave: *"${saveKey}"*. 🎉` },
         { quoted: msg }
     );
 }
