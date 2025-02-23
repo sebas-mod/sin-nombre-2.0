@@ -509,72 +509,82 @@ case 'guar': {
 break;
         
 case "setprefix": {
-    const fs = require("fs");
-    const configPath = "./config.json"; // Archivo de configuración
+    try {
+        const fs = require("fs");
+        const configPath = "./config.json"; // Archivo de configuración
 
-    if (!args[0]) {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ Debes especificar un nuevo prefijo." 
-        });
-    }
-
-    if (!allowedPrefixes.includes(args[0])) {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ Prefijo inválido. Usa un solo carácter o un emoji de la lista permitida."
-        });
-    }
-
-    const newPrefix = args[0].trim();
-    let configData = {};
-
-    // Si el archivo config.json no existe, crear uno vacío
-    if (!fs.existsSync(configPath)) {
-        fs.writeFileSync(configPath, JSON.stringify({}, null, 2));
-    }
-
-    // Cargar datos del archivo
-    configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-
-    // Si el comando se usa en privado, solo los dueños pueden cambiar el prefijo globalmente
-    if (!msg.key.remoteJid.endsWith("@g.us")) { // Chat privado
-        if (!isOwner(sender.replace("@s.whatsapp.net", ""))) {
+        if (!args[0]) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ Solo los dueños pueden cambiar el prefijo globalmente." 
+                text: "⚠️ *Debes especificar un nuevo prefijo.*" 
             });
         }
 
-        global.prefix = newPrefix; // Cambia el prefijo globalmente
-        configData.globalPrefix = newPrefix; // Guardar en config.json
+        if (!allowedPrefixes.includes(args[0])) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "❌ *Prefijo inválido.* Usa un solo carácter o un emoji de la lista permitida."
+            });
+        }
 
+        const newPrefix = args[0].trim();
+        let configData = {};
+
+        // Si el archivo config.json no existe, crearlo
+        if (!fs.existsSync(configPath)) {
+            fs.writeFileSync(configPath, JSON.stringify({ globalPrefix: ".", groupPrefixes: {} }, null, 2));
+        }
+
+        // Cargar datos del archivo
+        configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+
+        const senderId = msg.key.participant.replace(/@s.whatsapp.net/, '');
+        const isOwner = global.owner.some(o => o[0] === senderId);
+
+        // Si el comando se usa en privado, solo los dueños pueden cambiar el prefijo globalmente
+        if (!msg.key.remoteJid.endsWith("@g.us")) { 
+            if (!isOwner) {
+                return sock.sendMessage(msg.key.remoteJid, { 
+                    text: "⛔ *Solo los dueños pueden cambiar el prefijo globalmente.*" 
+                });
+            }
+
+            global.prefix = newPrefix; // Cambia el prefijo globalmente
+            configData.globalPrefix = newPrefix; // Guardar en config.json
+
+            fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `✅ *Prefijo global cambiado a:* *${newPrefix}* 🚀` 
+            });
+        }
+
+        // Si el comando se usa en un grupo, permitir solo a los administradores cambiar el prefijo localmente
+        const chat = await sock.groupMetadata(msg.key.remoteJid);
+        const groupAdmins = chat.participants.filter(p => p.admin);
+        const isAdmin = groupAdmins.some(admin => admin.id === msg.key.participant);
+
+        if (!isAdmin && !isOwner) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "🚫 *No tienes permisos para cambiar el prefijo.*\n⚠️ *Solo administradores o el dueño del bot pueden usar este comando.*" },
+                { quoted: msg }
+            );
+        }
+
+        // Guardar prefijo del grupo en config.json
+        if (!configData.groupPrefixes) {
+            configData.groupPrefixes = {};
+        }
+
+        configData.groupPrefixes[msg.key.remoteJid] = newPrefix;
         fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: `✅ *Prefijo global cambiado a:* *${newPrefix}* 🚀` 
+            text: `✅ *Prefijo cambiado a:* *${newPrefix}* *solo en este grupo* 🚀` 
         });
+
+    } catch (error) {
+        console.error('❌ Error en el comando setprefix:', error);
+        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al intentar cambiar el prefijo.*" }, { quoted: msg });
     }
-
-    // Si el comando se usa en un grupo, permitir solo a los administradores cambiar el prefijo localmente
-    const groupMetadata = await sock.groupMetadata(msg.key.remoteJid);
-    const admins = groupMetadata.participants
-        .filter(p => p.admin)
-        .map(p => p.id.replace("@s.whatsapp.net", ""));
-
-    if (!admins.includes(sender.replace("@s.whatsapp.net", "")) && !isOwner(sender.replace("@s.whatsapp.net", ""))) {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⛔ Solo los administradores pueden cambiar el prefijo en este grupo." 
-        });
-    }
-
-    // Guardar prefijo del grupo en config.json
-    if (!configData.groupPrefixes) {
-        configData.groupPrefixes = {};
-    }
-
-    configData.groupPrefixes[msg.key.remoteJid] = newPrefix;
-    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
-
-    return sock.sendMessage(msg.key.remoteJid, { 
-        text: `✅ *Prefijo cambiado a:* *${newPrefix}* *solo en este grupo* 🚀` 
-    });
 }
 break;
         
