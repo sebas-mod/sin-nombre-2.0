@@ -24,34 +24,28 @@ global.owner = [
     ["5216865268215"],
     ["50765500000"], 
     ["573012482694"], 
-    ['50582340051']
+    ["50582340051"]
 ];
 
 //---------[ PREFIJO DEL BOT ]---------
 global.prefix = "."; // Prefijo predeterminado
 
-// Lista de prefijos permitidos (ahora con más emojis 😎☠️👾🔥🚀🎉💥)
+// Lista de prefijos permitidos
 global.allowedPrefixes = [
-    ".", "!", "#", "?", "-", "+", "*", "~", "$", "&", "%", "=", 
-    "🔥", "💀", "✅", "🥰", "💎", "🐱", "🐶", "🌟", "🎃", "🍕", "🍔", 
-    "🍑", "🛠️", "📌", "⚡", "🚀", "👀", "💡", "💣", "💯", "😎", "☠️", 
-    "👾", "🎉", "💥"
+    ".", "!", "#", "?", "-", "+", "*", "~", "$", "&", "%", "=", "🔥", "💀", "✅", "🥰",
+    "💎", "🐱", "🐶", "🌟", "🎃", "🍕", "🍔", "🍑", "🛠️", "📌", "⚡", "🚀", "👀", "💡", "💣", "💯", "😎", "☠️", "👾"
 ];
 
-// Función para verificar si un usuario es Owner
+// ✅ Función para verificar si un usuario es Owner
 global.isOwner = (user) => {
+    if (!user) return false;
     user = user.replace(/[^0-9]/g, ""); // Limpiar número
-    return global.owner.some(owner => owner[0] === user);
+    return global.owner.some(owner => Array.isArray(owner) ? owner[0] === user : owner === user);
 };
 
-// Función para validar prefijo
-global.isValidPrefix = (prefix) => {
-    return global.allowedPrefixes.includes(prefix);
-};
-
-// Función para cambiar el prefijo (con validación)
+// ✅ Función para cambiar el prefijo (con validación)
 global.setPrefix = (newPrefix) => {
-    if (global.isValidPrefix(newPrefix)) {
+    if (global.allowedPrefixes.includes(newPrefix)) {
         global.prefix = newPrefix;
         console.log(chalk.green(`✅ Prefijo cambiado a: ${chalk.yellow.bold(newPrefix)}`));
     } else {
@@ -60,4 +54,4 @@ global.setPrefix = (newPrefix) => {
 };
 
 // Exportar configuraciones
-module.exports = { isOwner: global.isOwner, setPrefix: global.setPrefix, allowedPrefixes: global.allowedPrefixes, isValidPrefix: global.isValidPrefix };
+module.exports = { isOwner: global.isOwner, setPrefix: global.setPrefix, allowedPrefixes: global.allowedPrefixes };
