@@ -1,10 +1,9 @@
 const fs = require("fs");
 const chalk = require("chalk");
-const { isOwner } = require("./config");
+const { isOwner, setPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
-const { exec } = require('child_process');
-const path = require('path');
+
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
     global.prefix = configData.prefix || ".";
@@ -41,7 +40,7 @@ async function handleCommand(sock, msg, command, args, sender) {
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
 case "setprefix":
-    if (!isOwner(sender)) { // ✅ Ahora `isOwner` se importa correctamente
+    if (!isOwner(sender.replace("@s.whatsapp.net", ""))) { // Asegurar que se compara correctamente
         await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });
         return;
     }
