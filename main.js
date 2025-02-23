@@ -1,6 +1,6 @@
 const fs = require("fs");
 const chalk = require("chalk");
-const { isOwner, setPrefix, allowedPrefixes } = require("./config");
+const { isOwner } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
 const { exec } = require('child_process');
