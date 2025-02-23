@@ -113,7 +113,7 @@ case 'g': {
         mimetype: storedMedia.mimetype,
     };
 
-    if (storedMedia.mimetype.startsWith("image")) {
+    if (storedMedia.mimetype.startsWith("image") && storedMedia.extension !== "webp") {
         messageOptions.image = mediaBuffer;
     } else if (storedMedia.mimetype.startsWith("video")) {
         messageOptions.video = mediaBuffer;
@@ -122,9 +122,15 @@ case 'g': {
     } else if (storedMedia.mimetype.startsWith("application")) {
         messageOptions.document = mediaBuffer;
         messageOptions.fileName = `Archivo.${storedMedia.extension}`;
-    } else if (storedMedia.mimetype.startsWith("image/webp") || storedMedia.extension === "webp") {
-        // Si es un sticker
+    } else if (storedMedia.mimetype === "image/webp" || storedMedia.extension === "webp") {
+        // Si es un sticker (webp), se envía como sticker
         messageOptions.sticker = mediaBuffer;
+    } else {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "❌ *Error:* No se pudo enviar el archivo. Tipo de archivo desconocido." },
+            { quoted: msg }
+        );
     }
 
     // Enviar el multimedia almacenado
