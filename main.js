@@ -60,7 +60,7 @@ async function handleCommand(sock, msg, command, args, sender) {
         const result = search.items[0];
         const videoUrl = `https://www.youtube.com/watch?v=${result.id}`;
 
-        const str = `Youtube Play\n✧ *Título:* ${result.title}\n✧ *Fecha:* ${result.uploadDate}\n✧ *Descripción:* ${result.description}\n✧ *URL:* ${videoUrl}\n✧➢ Para video, usa:\n.ytmp4 ${videoUrl}\n\nEnviando audio....`;
+        const str = `Youtube Play\n✧ *Título:* ${result.title}\n✧ *Fecha:* ${result.uploadDate}\n✧ *Descripción:* ${result.description}\n✧ *URL:* ${videoUrl}\n✧➢ Para video, usa:\n.play4 ${videoUrl}\n\nEnviando audio....`;
 
         await sock.sendMessage(msg.key.remoteJid, { image: { url: result.thumbnails[0].url }, caption: str }, { quoted: msg });
 
@@ -79,7 +79,36 @@ async function handleCommand(sock, msg, command, args, sender) {
         await sock.sendMessage(msg.key.remoteJid, { text: "Ocurrió un error al procesar tu solicitud." }, { quoted: msg });
     }
     break;
-}          
+}          case 'play4': {
+    const fetch = require("node-fetch");
+    const { ytmp4 } = require("@hiudyy/ytdl");
+
+    if (!text || !text.includes('youtube.com') && !text.includes('youtu.be')) {
+        return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, proporciona un enlace válido de YouTube." });
+    }
+
+    try {
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: {
+                text: '⏱️',
+                key: msg.key,
+            },
+        });
+
+        const video = await ytmp4(args[0]);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: video },
+            caption: "✅ Aquí está tu video.",
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("Error al descargar el video:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "Ocurrió un error al descargar el video." }, { quoted: msg });
+    }
+    break;
+}
+            
 case 'play2': case 'play': { 
     const yts = require('yt-search'); 
     const fetch = require('node-fetch'); 
