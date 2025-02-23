@@ -111,18 +111,20 @@ case "perfil": {
     try {
         let userJid = null;
 
-        // Si el usuario solo escribe .perfil sin argumentos, menciones o respuesta, enviar un mensaje con el ejemplo de uso
+        // Si no hay argumentos, menciones ni respuesta, mostrar la guía de uso
         if (!msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length &&
             !msg.message.extendedTextMessage?.contextInfo?.participant &&
             args.length === 0) {
             return await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo de uso:* \n\n" +
-                      "1️⃣ *Para obtener la foto de perfil de alguien:* \n" +
-                      "👉 _Responde a su mensaje con el comando_\n\n" +
-                      "2️⃣ *Para obtener la foto de perfil de un número:* \n" +
-                      "👉 _.perfil +1 555-123-4567_\n\n" +
-                      "3️⃣ *Para obtener la foto de perfil de un usuario mencionado:* \n" +
-                      "👉 _.perfil @usuario_"
+                text: `🔍 *¿Cómo usar el comando .perfil?*\n\n` +
+                      `📌 *Ejemplos de uso:*\n\n` +
+                      `🔹 *Para obtener la foto de perfil de alguien:* \n` +
+                      `   - *Responde a su mensaje con:* _.perfil_\n\n` +
+                      `🔹 *Para obtener la foto de perfil de un número:* \n` +
+                      `   - _.perfil +1 555-123-4567_\n\n` +
+                      `🔹 *Para obtener la foto de perfil de un usuario mencionado:* \n` +
+                      `   - _.perfil @usuario_\n\n` +
+                      `⚠️ *Nota:* Algunos usuarios pueden tener su foto de perfil privada y el bot no podrá acceder a ella.`
             }, { quoted: msg });
         }
 
@@ -140,7 +142,7 @@ case "perfil": {
             userJid = number + "@s.whatsapp.net";
         }
 
-        // Si no se encontró un usuario válido, termina la ejecución (esto evita que el bot intente descargar una imagen por defecto cuando no debe)
+        // Si no se encontró un usuario válido, termina la ejecución
         if (!userJid) return;
 
         // Intentar obtener la imagen de perfil
