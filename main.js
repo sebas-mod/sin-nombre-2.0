@@ -752,23 +752,23 @@ await sock.sendMessage(msg.key.remoteJid, {
 
 case "info":
     await sock.sendMessage(msg.key.remoteJid, {
-        text: `╭───〔 *🤖 AZURA ULTRA 2.0 BOT* 〕───╮
+        text: `╭─〔 *🤖 AZURA ULTRA 2.0 BOT* 〕─╮
 │ 🔹 *Prefijo actual:* ${global.prefix}
 │ 👑 *Dueño:* Russell
 │ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
 │ 🚀 *Creado por:* Russell
 │  
-├───〔 📥 *Colaboraciones en Descargas* 〕───
+├─〔 📥 *Colaboraciones en Descargas* 〕─
 │ 📌 *Instagram, TikTok y Facebook*  
 │    - 👤 *Colaboró:* DIEGO-OFC  
 │  
 │ 📌 *Audios y Videos* (.play, .play2, .ytmp3, .ytmp4)  
 │    - 👤 *Colaboró:* Eliasar54  
 │  
-├───〔 📜 *Menús y Comandos* 〕───
+├─〔 📜 *Menús y Comandos* 〕─
 │ 📌 Usa *${global.prefix}menu* para ver los comandos principales.  
 │ 📌 Usa *${global.prefix}allmenu* para ver todos los comandos disponibles.  
-╰───────────────────────────────╯
+╰──────────────────────╯
     `
     });
     break;
