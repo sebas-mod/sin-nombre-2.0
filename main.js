@@ -3,7 +3,7 @@ const chalk = require("chalk");
 const { isOwner, setPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
-
+const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 // Cargar prefijo desde archivo de configuración
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
