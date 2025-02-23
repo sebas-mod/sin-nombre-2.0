@@ -15,7 +15,6 @@ if (fs.existsSync("./config.json")) {
 //sistema de mascota y personaje
 
 // Carga los datos del archivo 'cartera.json'
-let cartera = JSON.parse(fs.readFileSync(carteraFilePath));
 
 // Verificar si guar.json existe, si no, crearlo
 const guarFilePath = "./guar.json";
