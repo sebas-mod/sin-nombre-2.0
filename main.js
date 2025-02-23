@@ -752,7 +752,7 @@ await sock.sendMessage(msg.key.remoteJid, {
 
 case "info":
     await sock.sendMessage(msg.key.remoteJid, {
-        text: `╭─〔 *🤖 AZURA ULTRA 2.0 BOT* 〕─╮
+        text: `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
 │ 🔹 *Prefijo actual:* ${global.prefix}
 │ 👑 *Dueño:* Russell
 │ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
@@ -768,7 +768,7 @@ case "info":
 ├─〔 📜 *Menús y Comandos* 〕─
 │ 📌 Usa *${global.prefix}menu* para ver los comandos principales.  
 │ 📌 Usa *${global.prefix}allmenu* para ver todos los comandos disponibles.  
-╰──────────────────────╯
+╰──────────────────╯
     `
     });
     break;
