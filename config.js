@@ -1,5 +1,6 @@
 const chalk = require("chalk");
-
+const fs = require('fs') 
+const path = require('path')
 // Lista de Owners
 global.owner = [
     ["15167096032", "Owner", true],
