@@ -107,7 +107,44 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "rest":
+    try {
+        // Obtener el número del remitente
+        const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
+        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
 
+        // Verificar si el usuario es dueño del bot o si el mensaje fue enviado desde el bot mismo
+        if (!isOwner(senderNumber) && senderNumber !== botNumber) { 
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo los dueños del bot pueden reiniciar el servidor.*"
+            }, { quoted: msg });
+            return;
+        }
+
+        // Enviar una reacción antes de reiniciar
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🔄", key: msg.key }
+        });
+
+        // Enviar mensaje de confirmación
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "🔄 *Reiniciando el servidor...* \nEspera unos segundos..."
+        }, { quoted: msg });
+
+        // Esperar unos segundos antes de reiniciar
+        setTimeout(() => {
+            process.exit(1); // Reiniciar el bot (depende de tu gestor de procesos)
+        }, 3000);
+
+    } catch (error) {
+        console.error("❌ Error en el comando rest:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Error al intentar reiniciar el servidor.*"
+        }, { quoted: msg });
+    }
+    break;
+
+        
 case "cerrarsesion":
     try {
         // Verificar si el usuario es dueño del bot
