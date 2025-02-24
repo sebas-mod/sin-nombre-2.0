@@ -43,7 +43,7 @@ let modos = cargarModos();
 
     let method = "1"; // Por defecto: Código QR
     if (!fs.existsSync("./sessions/creds.json")) {
-        method = await question(chalk.magenta("✍️ Elige una opción (1 o 2): "));
+        method = await question(chalk.magenta("📞 Ingresa tu número (Ej: 5491168XXXX) "));
 
         if (!["1", "2"].includes(method)) {
             console.log(chalk.red("\n❌ Opción inválida. Reinicia el bot y elige 1 o 2."));
@@ -65,7 +65,7 @@ let modos = cargarModos();
 
             // Si la sesión no existe y se usa el código de 8 dígitos
             if (!fs.existsSync("./sessions/creds.json") && method === "2") {
-                let phoneNumber = await question("📞 Ingresa tu número (Ej: 5491168XXXX): ");
+                let phoneNumber = await question("😎Fino vamos aya😎: ");
                 phoneNumber = phoneNumber.replace(/\D/g, "");
                 setTimeout(async () => {
                     let code = await sock.requestPairingCode(phoneNumber);
