@@ -66,37 +66,60 @@
 
             // 🟢 Consola de mensajes entrantes con diseño
             sock.ev.on("messages.upsert", async (messageUpsert) => {
-                const msg = messageUpsert.messages[0];
-                if (!msg) return;
+    try {
+        const msg = messageUpsert.messages[0];
+        if (!msg) return;
 
-                const sender = msg.key.remoteJid.replace(/[^0-9]/g, ""); // Extrae solo el número
-                const fromMe = msg.key.fromMe ? chalk.blue("[Tú]") : chalk.red("[Usuario]");
-                let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "📂 Mensaje no compatible";
+        const sender = msg.key.remoteJid.replace(/[^0-9]/g, ""); // Extrae solo el número
+        const fromMe = msg.key.fromMe ? chalk.blue("[Tú]") : chalk.red("[Usuario]");
+        let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+        let messageType = Object.keys(msg.message || {})[0]; // Tipo de mensaje (text, image, video, etc.)
 
-                console.log(chalk.yellow(`\n📩 Nuevo mensaje recibido`));
-                console.log(chalk.green(`📨 De: ${fromMe} ${chalk.bold(sender)}`));
-                console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText)}`));
-                console.log(chalk.gray("──────────────────────────"));
+        // 🔥 Detectar si el mensaje fue eliminado
+        if (msg.message?.protocolMessage?.type === 0) {
+            console.log(chalk.red(`🗑️ Un mensaje fue eliminado por ${sender}`));
+            return;
+        }
 
-                // Detectar si es un comando
-                if (messageText.startsWith(global.prefix)) {
-                    const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
-                    const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
-                    
-                    if (command === "setprefix" && isOwner(sender)) {
-                        if (!args[0]) {
-                            sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
-                            return;
-                        }
-                        setPrefix(args[0]);
-                        sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}*` });
-                        return;
-                    }
+        // 🔍 Mostrar en consola el mensaje recibido
+        console.log(chalk.yellow(`\n📩 Nuevo mensaje recibido`));
+        console.log(chalk.green(`📨 De: ${fromMe} ${chalk.bold(sender)}`));
+        console.log(chalk.cyan(`💬 Tipo: ${messageType}`));
+        console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
+        console.log(chalk.gray("──────────────────────────"));
 
-                    // Enviar el comando a `main.js`
-                    handleCommand(sock, msg, command, args, sender, isAdmin);
+        // 🔒 Bloquear comandos si el "modo privado" está activado
+        if (global.modoPrivado && !isOwner(sender) && !msg.key.fromMe) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "🔒 *Modo privado activado.*\n⛔ *No tienes permiso para usar el bot en este momento.*"
+            }, { quoted: msg });
+            return;
+        }
+
+        // ✅ Detectar si es un comando
+        if (messageText.startsWith(global.prefix)) {
+            const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
+            const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
+
+            // ⚙️ Comando especial para cambiar prefijo
+            if (command === "setprefix" && (isOwner(sender) || msg.key.fromMe)) {
+                if (!args[0]) {
+                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
+                    return;
                 }
-            });
+                setPrefix(args[0]);
+                await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}*` });
+                return;
+            }
+
+            // 🔄 Enviar el comando a `main.js`
+            handleCommand(sock, msg, command, args, sender);
+        }
+
+    } catch (error) {
+        console.error("❌ Error en el evento messages.upsert:", error);
+    }
+});
 
             sock.ev.on("connection.update", async (update) => {
                 const { connection, lastDisconnect, qr } = update;
