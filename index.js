@@ -31,7 +31,7 @@
     console.clear();
     console.log(chalk.cyan(figlet.textSync("Azura Ultra Bot", { font: "Standard" })));
 
-    // ✅ Mensaje de inicio mejorado
+    // ✅ Mensaje de inicio mejorado con opciones bien presentadas
     console.log(chalk.green("\n✅ Iniciando conexión...\n"));
     console.log(chalk.yellow("📡 ¿Cómo deseas conectarte?\n"));
     console.log(chalk.green("  [1] ") + chalk.white("📷 Escanear código QR"));
@@ -68,10 +68,8 @@
                 let phoneNumber = await question(chalk.blue("\n📞 Ingresa tu número (Ej: 5491168XXXX): "));
                 phoneNumber = phoneNumber.replace(/\D/g, "");
 
-                setTimeout(async () => {
-                    let code = await sock.requestPairingCode(phoneNumber);
-                    console.log(chalk.magenta("\n🔑 Código de vinculación: ") + chalk.yellow(code.match(/.{1,4}/g).join("-")));
-                }, 2000);
+                let code = await sock.requestPairingCode(phoneNumber);
+                console.log(chalk.magenta("\n🔑 Código de vinculación: ") + chalk.yellow(code.match(/.{1,4}/g).join("-")));
             }
 
             // Función para verificar si un usuario es administrador en un grupo
