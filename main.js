@@ -80,40 +80,45 @@ function isUrl(url) {
 
 async function handleCommand(sock, msg, command, args, sender) {
 sock.sendSticker = async (jid, path, quoted, options = {}) => {
-let buff = Buffer.isBuffer(path)
-? path
-: /^data:.*?\/.*?;base64,/i.test(path)
-? Buffer.from(path.split(',')[1], 'base64')
-: /^https?:\/\//.test(path)
-? await (await getBuffer(path))
-: fs.existsSync(path)
-? fs.readFileSync(path)
-: Buffer.alloc(0);
+  let buff = Buffer.isBuffer(path)
+    ? path
+    : /^data:.*?\/.*?;base64,/i.test(path)
+    ? Buffer.from(path.split(',')[1], 'base64')
+    : /^https?:\/\//.test(path)
+    ? await (await getBuffer(path))
+    : fs.existsSync(path)
+    ? fs.readFileSync(path)
+    : Buffer.alloc(0);
 
-let buffer;
-if (options.packname || options.author) {
-buffer = path.endsWith('.mp4') || path.endsWith('.gif')
-? await writeExifVid(buff, options)
-: path.endsWith('.webp')
-? await writeExif(buff, options)
-: await writeExifImg(buff, options);
-} else {
-buffer = path.endsWith('.mp4') || path.endsWith('.gif')
-? await videoToWebp(buff)
-: await imageToWebp(buff);
-}
+  let mimeType = options.mimetype || (path.mimetype ? path.mimetype : "image/png");
+  let isVideo = mimeType.startsWith('video');
+  let isImage = mimeType.startsWith('image');
+  let isSticker = mimeType === 'image/webp';
 
-await sock.sendMessage(
-jid,
-{ sticker: { url: buffer }, ...options },
-{
-quoted: quoted || m,
-ephemeralExpiration: 24 * 60 * 100,
-disappearingMessagesInChat: 24 * 60 * 100
-}
-);
+  let buffer;
+  if (options.packname || options.author) {
+    buffer = isVideo
+      ? await writeExifVid(buff, options)
+      : isSticker
+      ? await writeExif(buff, options)
+      : await writeExifImg(buff, options);
+  } else {
+    buffer = isVideo
+      ? await videoToWebp(buff)
+      : await imageToWebp(buff);
+  }
 
-return buffer;
+  await sock.sendMessage(
+    jid,
+    { sticker: { url: buffer }, ...options },
+    {
+      quoted: quoted || m,
+      ephemeralExpiration: 24 * 60 * 100,
+      disappearingMessagesInChat: 24 * 60 * 100
+    }
+  );
+
+  return buffer;
 };
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
@@ -830,54 +835,57 @@ case 'creador': {
         
 case "s":
 case "sticker": {
-if (
-!msg.message.imageMessage &&
-!msg.message.videoMessage &&
-!msg.message.extendedTextMessage
-) {
-return sock.sendMessage(
-msg.key.remoteJid,
-{ text: "⚠️ Responde a una imagen, video, GIF o sticker para convertirlo en sticker." },
-{ quoted: msg }
-);
-}
+    if (
+        !msg.message.imageMessage &&
+        !msg.message.videoMessage &&
+        !msg.message.stickerMessage &&
+        !msg.message.extendedTextMessage
+    ) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "⚠️ Responde a una imagen, video, GIF o sticker para convertirlo." },
+            { quoted: msg }
+        );
+    }
 
-let quotedMessage = msg.message.extendedTextMessage
-? msg.message.extendedTextMessage.contextInfo.quotedMessage
-: null;
+    let quotedMessage = msg.message.extendedTextMessage
+        ? msg.message.extendedTextMessage.contextInfo.quotedMessage
+        : null;
 
-let mediaMessage =
-msg.message.imageMessage ||
-msg.message.videoMessage ||
-(quotedMessage && (quotedMessage.imageMessage || quotedMessage.videoMessage || quotedMessage.stickerMessage));
+    let mediaMessage =
+        msg.message.imageMessage ||
+        msg.message.videoMessage ||
+        msg.message.stickerMessage ||
+        (quotedMessage && (quotedMessage.imageMessage || quotedMessage.videoMessage || quotedMessage.stickerMessage));
 
-if (!mediaMessage) {
-return sock.sendMessage(
-msg.key.remoteJid,
-{ text: "⚠️ Solo puedes usar imágenes, videos, GIFs o stickers." },
-{ quoted: msg }
-);
-}
+    if (!mediaMessage) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "⚠️ Solo puedes usar imágenes, videos, GIFs o stickers." },
+            { quoted: msg }
+        );
+    }
 
-const mediaType = mediaMessage.mimetype.startsWith("image")
-? "image"
-: mediaMessage.mimetype.startsWith("video")
-? "video"
-: "sticker";
+    const mediaType = mediaMessage.mimetype.startsWith("image")
+        ? "image"
+        : mediaMessage.mimetype.startsWith("video")
+        ? "video"
+        : "sticker";
 
-const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
-let mediaBuffer = Buffer.alloc(0);
-for await (const chunk of mediaStream) {
-mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
-}
+    const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
+    let mediaBuffer = Buffer.alloc(0);
+    for await (const chunk of mediaStream) {
+        mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+    }
 
-await sock.sendSticker(msg.key.remoteJid, mediaBuffer, msg, {
-packname: "Mi Pack",
-author: "EliasarYT"
-});
+    await sock.sendSticker(msg.key.remoteJid, mediaBuffer, msg, {
+        packname: "Mi Pack",
+        author: "EliasarYT",
+        mimetype: mediaMessage.mimetype
+    });
 
-break;
-}
+    break;
+        }
             
 case 'verco': {
     const fs = require("fs");
