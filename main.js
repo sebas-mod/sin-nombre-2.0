@@ -116,10 +116,10 @@ case "info":
         });
 
         // Construcción del mensaje con información del bot
-        const infoMessage = `╭─「 *🤖 AZURA ULTRA 2.0 BOT* 」─╮
+        const infoMessage = `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
 │ 🔹 *Prefijo actual:* ${global.prefix}
 │ 👑 *Dueño:* Russell
-│ 🛠️ *Bot desarrollado desde cero con nuevas funciones.*
+│ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
 │ 🚀 *Creado por:* Russell
 │  
 ├─〔 📥 *Colaboraciones en Descargas* 〕─
