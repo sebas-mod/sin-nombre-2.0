@@ -65,7 +65,7 @@
             }
 
             // 🟢 Consola de mensajes entrantes con diseño
-            sock.ev.on("messages.upsert", async (messageUpsert) => {
+sock.ev.on("messages.upsert", async (messageUpsert) => {
     try {
         const msg = messageUpsert.messages[0];
         if (!msg) return;
@@ -88,12 +88,14 @@
         console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
         console.log(chalk.gray("──────────────────────────"));
 
-        // 🔒 Bloquear comandos si el "modo privado" está activado
-        if (global.modoPrivado && !isOwner(sender) && !msg.key.fromMe) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "🔒 *Modo privado activado.*\n⛔ *No tienes permiso para usar el bot en este momento.*"
-            }, { quoted: msg });
-            return;
+        // ⚠️ Si el "modo privado" está activado y el usuario no es dueño ni el bot, ignorar mensaje
+        if (modos.modoPrivado && !isOwner(sender) && !msg.key.fromMe) return;
+
+        // ⚠️ Si el "modo admins" está activado y el usuario no es admin, dueño o el bot, ignorar mensaje
+        if (modos.modoAdmins) {
+            const chat = await sock.groupMetadata(msg.key.remoteJid).catch(() => null);
+            const isAdmin = chat ? chat.participants.some(p => p.id.includes(sender) && p.admin) : false;
+            if (!isAdmin && !isOwner(sender) && !msg.key.fromMe) return;
         }
 
         // ✅ Detectar si es un comando
@@ -101,14 +103,27 @@
             const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
             const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
 
-            // ⚙️ Comando especial para cambiar prefijo
-            if (command === "setprefix" && (isOwner(sender) || msg.key.fromMe)) {
-                if (!args[0]) {
-                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });
+            // ⚙️ Comando para activar/desactivar "modo privado"
+            if (command === "modoprivado" && isOwner(sender)) {
+                if (!["on", "off"].includes(args[0])) {
+                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
                     return;
                 }
-                setPrefix(args[0]);
-                await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}*` });
+                modos.modoPrivado = args[0] === "on";
+                guardarModos(modos);
+                await sock.sendMessage(msg.key.remoteJid, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
+                return;
+            }
+
+            // ⚙️ Comando para activar/desactivar "modo admins"
+            if (command === "modoadmins" && isOwner(sender)) {
+                if (!["on", "off"].includes(args[0])) {
+                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off`" });
+                    return;
+                }
+                modos.modoAdmins = args[0] === "on";
+                guardarModos(modos);
+                await sock.sendMessage(msg.key.remoteJid, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"}*` });
                 return;
             }
 
@@ -120,7 +135,6 @@
         console.error("❌ Error en el evento messages.upsert:", error);
     }
 });
-
             sock.ev.on("connection.update", async (update) => {
                 const { connection, lastDisconnect, qr } = update;
                 if (connection === "connecting") {
