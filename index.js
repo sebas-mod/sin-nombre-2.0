@@ -103,12 +103,14 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
         console.log(chalk.gray("──────────────────────────"));
 
+        const chatId = msg.key.remoteJid; // ID del chat o grupo
+
         // ⚠️ Si el "modo privado" está activado y el usuario no es dueño ni el bot, ignorar mensaje
         if (modos.modoPrivado && !isOwner(sender) && !msg.key.fromMe) return;
 
-        // ⚠️ Si el "modo admins" está activado y el usuario no es admin, dueño o el bot, ignorar mensaje
-        if (modos.modoAdmins) {
-            const chat = await sock.groupMetadata(msg.key.remoteJid).catch(() => null);
+        // ⚠️ Si el "modo admins" está activado en el grupo, verificar si el usuario es admin
+        if (modos.modoAdmins[chatId]) {
+            const chat = await sock.groupMetadata(chatId).catch(() => null);
             const isAdmin = chat ? chat.participants.some(p => p.id.includes(sender) && p.admin) : false;
             if (!isAdmin && !isOwner(sender) && !msg.key.fromMe) return;
         }
@@ -121,24 +123,39 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
             // ⚙️ Comando para activar/desactivar "modo privado"
             if (command === "modoprivado" && isOwner(sender)) {
                 if (!["on", "off"].includes(args[0])) {
-                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
+                    await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
                     return;
                 }
                 modos.modoPrivado = args[0] === "on";
                 guardarModos(modos);
-                await sock.sendMessage(msg.key.remoteJid, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
+                await sock.sendMessage(chatId, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
                 return;
             }
 
-            // ⚙️ Comando para activar/desactivar "modo admins"
-            if (command === "modoadmins" && isOwner(sender)) {
-                if (!["on", "off"].includes(args[0])) {
-                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off`" });
+            // ⚙️ Comando para activar/desactivar "modo admins" por grupo
+            if (command === "modoadmins") {
+                const chat = await sock.groupMetadata(chatId).catch(() => null);
+                const isAdmin = chat ? chat.participants.some(p => p.id.includes(sender) && p.admin) : false;
+
+                // Solo admins, el owner o el bot pueden activar/desactivar el modo admins
+                if (!isAdmin && !isOwner(sender) && !msg.key.fromMe) {
+                    await sock.sendMessage(chatId, { text: "⛔ *Solo administradores pueden activar/desactivar el modo admins.*" });
                     return;
                 }
-                modos.modoAdmins = args[0] === "on";
+
+                if (!["on", "off"].includes(args[0])) {
+                    await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off`" });
+                    return;
+                }
+
+                if (args[0] === "on") {
+                    modos.modoAdmins[chatId] = true;
+                } else {
+                    delete modos.modoAdmins[chatId]; // Elimina el grupo de la lista de modo admins
+                }
+
                 guardarModos(modos);
-                await sock.sendMessage(msg.key.remoteJid, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"}*` });
+                await sock.sendMessage(chatId, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` });
                 return;
             }
 
@@ -150,6 +167,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.error("❌ Error en el evento messages.upsert:", error);
     }
 });
+
+            
             sock.ev.on("connection.update", async (update) => {
                 const { connection, lastDisconnect, qr } = update;
                 if (connection === "connecting") {
