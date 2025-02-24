@@ -16,13 +16,6 @@ if (fs.existsSync("./config.json")) {
 }
 //orivado
 // Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
-if (global.modoPrivado && !isOwner(sender) && !msg.key.fromMe) {
-    await sock.sendMessage(msg.key.remoteJid, { 
-        text: "🔒 *Modo privado activado.*\n⛔ *No tienes permiso para usar el bot en este momento.*"
-    }, { quoted: msg });
-    return;
-}
-
 
 //modoprivado ariba
 const guarFilePath = "./guar.json";
