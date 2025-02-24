@@ -160,7 +160,7 @@ ${global.prefix}clavelista → Ver todas las claves guardadas.
 
         // Enviar el menú con imagen
         await sock.sendMessage(msg.key.remoteJid, { 
-            image: { url: "https://cdn.dorratz.com/files/1740367799142.jpg" }, 
+            image: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" }, 
             caption: menuMessage 
         }, { quoted: msg });
 
