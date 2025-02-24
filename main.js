@@ -7,6 +7,7 @@ const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const os = require("os");
 const { execSync } = require("child_process");
 const path = require("path");
+const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
 // Cargar prefijo desde archivo de configuración
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
