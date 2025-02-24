@@ -10,7 +10,6 @@
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 //privado y admins
-const path = "./activos.json";
 
 // 📂 Cargar configuración de modos desde el archivo JSON
 function cargarModos() {
