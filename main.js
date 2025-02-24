@@ -127,11 +127,11 @@ return buffer;
 ━━━━━━━━━━━━━━━━━━  
 ${global.prefix}play → Descargar música.  
 ${global.prefix}play2 → Descargar videos.  
-${global.prefix}ytmp3 → Descargar YouTube a MP3.  
-${global.prefix}ytmp4 → Descargar YouTube a MP4.  
-${global.prefix}tiktok → Descargar videos TikTok.  
-${global.prefix}fb → Descargar videos Facebook.  
-${global.prefix}ig → Descargar video Instagram.  
+${global.prefix}ytmp3 → Descargar a MP3.  
+${global.prefix}ytmp4 → Descargar a MP4.  
+${global.prefix}tiktok → Descargar video.
+${global.prefix}fb → Descargar video.
+${global.prefix}ig → Descargar video.
 
 👥 *Comandos de Grupo* 👥  
 ━━━━━━━━━━━━━━━━━━  
