@@ -131,7 +131,15 @@ case "ping":
         const freeMemGB = (freeMem / 1024 / 1024 / 1024).toFixed(2);
         const totalMemGB = (totalMem / 1024 / 1024 / 1024).toFixed(2);
 
-        // Enviar mensaje con la información del servidor
+        // Reaccionar al mensaje con un emoji
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: {
+                text: "🏓",
+                key: msg.key
+            }
+        });
+
+        // Enviar mensaje respondiendo al usuario
         await sock.sendMessage(msg.key.remoteJid, {
             text: `🏓 *Pong! El bot está activo.*\n\n` +
                   `💻 *Información del Servidor:*\n` +
@@ -142,13 +150,15 @@ case "ping":
                   `🔹 *RAM:* ${freeMemGB}GB / ${totalMemGB}GB\n` +
                   `🔹 *Disco:* ${diskUsage}\n\n` +
                   `🌐 *Alojado en:* *Sky Ultra Plus* 🚀\n` +
-                  `📌 *Proveedor de Hosting de Confianza*`
+                  `📌 *Proveedor de Hosting de Confianza*`,
+            quoted: msg // Responder citando al mensaje original
         });
 
     } catch (error) {
         console.error("❌ Error en el comando ping:", error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Error al obtener información del servidor.*"
+            text: "❌ *Error al obtener información del servidor.*",
+            quoted: msg // Responder citando al mensaje original
         });
     }
     break;
