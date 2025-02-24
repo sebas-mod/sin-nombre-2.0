@@ -108,6 +108,49 @@ return buffer;
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
 
+case "info":
+    try {
+        // Reacción antes de enviar la información
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "ℹ️", key: msg.key } 
+        });
+
+        // Construcción del mensaje con información del bot
+        const infoMessage = `╭─「 *🤖 AZURA ULTRA 2.0 BOT* 」─╮
+│ 🔹 *Prefijo actual:* ${global.prefix}
+│ 👑 *Dueño:* Russell
+│ 🛠️ *Bot desarrollado desde cero con nuevas funciones.*
+│ 🚀 *Creado por:* Russell
+│  
+├─〔 📥 *Colaboraciones en Descargas* 〕─
+│ 📌 *Instagram, TikTok y Facebook*  
+│    - 👤 *Colaboró:* DIEGO-OFC  
+│  
+│ 📌 *Audios y Videos* (.play, .play2, .ytmp3, .ytmp4)  
+│    - 👤 *Colaboró:* Eliasar54  
+│  
+├─〔 📜 *Menús y Comandos* 〕─
+│ 📌 Usa *${global.prefix}menu* para ver los comandos principales.  
+│ 📌 Usa *${global.prefix}allmenu* para ver todos los comandos disponibles.  
+│ 📌 Usa *${global.prefix}menu2* para ver los comandos de multimedia y guardado.  
+╰──────────────────╯`;
+
+        // Enviar el mensaje con GIF animado
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: "https://cdn.dorratz.com/files/1740372626884.mp4" }, 
+            gifPlayback: true, // Esto hace que se reproduzca como GIF
+            caption: infoMessage
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando info:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al mostrar la información. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+        
+        
 case "menu": {
     try {
         // Reacción antes de enviar el menú
@@ -1287,29 +1330,6 @@ await sock.sendMessage(msg.key.remoteJid, {
     break;
 }
        
-        
-case "info":
-    await sock.sendMessage(msg.key.remoteJid, {
-        text: `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
-│ 🔹 *Prefijo actual:* ${global.prefix}
-│ 👑 *Dueño:* Russell
-│ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
-│ 🚀 *Creado por:* Russell
-│  
-├─〔 📥 *Colaboraciones en Descargas* 〕─
-│ 📌 *Instagram, TikTok y Facebook*  
-│    - 👤 *Colaboró:* DIEGO-OFC  
-│  
-│ 📌 *Audios y Videos* (.play, .play2, .ytmp3, .ytmp4)  
-│    - 👤 *Colaboró:* Eliasar54  
-│  
-├─〔 📜 *Menús y Comandos* 〕─
-│ 📌 Usa *${global.prefix}menu* para ver los comandos principales.  
-│ 📌 Usa *${global.prefix}allmenu* para ver todos los comandos disponibles.  
-╰──────────────────╯
-    `
-    });
-    break;
 
             
 
