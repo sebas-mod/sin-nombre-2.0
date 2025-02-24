@@ -4,6 +4,9 @@ const { isOwner, setPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
+const os = require("os");
+const { execSync } = require("child_process");
+
 // Cargar prefijo desde archivo de configuración
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
@@ -104,6 +107,51 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+        
+
+
+case "ping":
+    try {
+        // Obtener información del sistema
+        const uptime = os.uptime(); // Tiempo de actividad en segundos
+        const freeMem = os.freemem(); // Memoria RAM libre
+        const totalMem = os.totalmem(); // Memoria RAM total
+        const cpuModel = os.cpus()[0].model; // Modelo de CPU
+        const cpuUsage = execSync("top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}'").toString().trim(); // Uso de CPU
+        const loadAvg = os.loadavg()[0].toFixed(2); // Promedio de carga del sistema
+        const diskUsage = execSync("df -h / | awk 'NR==2 {print $3 \" / \" $2}'").toString().trim(); // Uso de disco
+
+        // Formatear uptime a horas, minutos y segundos
+        const uptimeHours = Math.floor(uptime / 3600);
+        const uptimeMinutes = Math.floor((uptime % 3600) / 60);
+        const uptimeSeconds = Math.floor(uptime % 60);
+        const uptimeFormatted = `${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`;
+
+        // Formatear memoria RAM
+        const freeMemGB = (freeMem / 1024 / 1024 / 1024).toFixed(2);
+        const totalMemGB = (totalMem / 1024 / 1024 / 1024).toFixed(2);
+
+        // Enviar mensaje con la información del servidor
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `🏓 *Pong! El bot está activo.*\n\n` +
+                  `💻 *Información del Servidor:*\n` +
+                  `🔹 *Uptime:* ${uptimeFormatted}\n` +
+                  `🔹 *CPU:* ${cpuModel}\n` +
+                  `🔹 *Uso de CPU:* ${cpuUsage}%\n` +
+                  `🔹 *Carga del sistema:* ${loadAvg}\n` +
+                  `🔹 *RAM:* ${freeMemGB}GB / ${totalMemGB}GB\n` +
+                  `🔹 *Disco:* ${diskUsage}\n\n` +
+                  `🌐 *Alojado en:* *Sky Ultra Plus* 🚀\n` +
+                  `📌 *Proveedor de Hosting de Confianza*`
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando ping:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Error al obtener información del servidor.*"
+        });
+    }
+    break;
         
 case "setprefix":
     try {
@@ -1081,12 +1129,8 @@ await sock.sendMessage(msg.key.remoteJid, {
     }
     break;
 }
-
+       
         
-        case "ping":
-            await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong! El bot está activo." });
-            break;
-
 case "info":
     await sock.sendMessage(msg.key.remoteJid, {
         text: `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
@@ -1226,12 +1270,6 @@ case "info":
                 console.error('❌ Error en el comando kick:', error);
                 return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al intentar expulsar al usuario.*" }, { quoted: msg });
             }
-            break;
-
-        case "owner":
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: `👑 *Lista de Owners:* \n${global.owner.map(o => `📌 ${o[1] || "Sin nombre"} - ${o[0]}`).join("\n")}`
-            });
             break;
 
         case "tiktok":
