@@ -517,7 +517,6 @@ let stickerBuffer = await sock.sendImageAsSticker(msg.key.remoteJid, mediaBuffer
 break;
 }
             
-case 'vercomandos':
 case 'verco': {
     const fs = require("fs");
 
