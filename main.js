@@ -79,27 +79,39 @@ function isUrl(url) {
 }
 
 async function handleCommand(sock, msg, command, args, sender) {
-    sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
-let buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) 
-? Buffer.from(path.split`,`[1], 'base64') 
-: /^https?:\/\//.test(path) 
-? await (await getBuffer(path)) 
-: fs.existsSync(path) 
-? fs.readFileSync(path) 
+sock.sendSticker = async (jid, path, quoted, options = {}) => {
+let buff = Buffer.isBuffer(path)
+? path
+: /^data:.*?\/.*?;base64,/i.test(path)
+? Buffer.from(path.split(',')[1], 'base64')
+: /^https?:\/\//.test(path)
+? await (await getBuffer(path))
+: fs.existsSync(path)
+? fs.readFileSync(path)
 : Buffer.alloc(0);
 
 let buffer;
-if (options && (options.packname || options.author)) {
-buffer = await writeExifImg(buff, options);
+if (options.packname || options.author) {
+buffer = path.endsWith('.mp4') || path.endsWith('.gif')
+? await writeExifVid(buff, options)
+: path.endsWith('.webp')
+? await writeExif(buff, options)
+: await writeExifImg(buff, options);
 } else {
-buffer = await imageToWebp(buff);
+buffer = path.endsWith('.mp4') || path.endsWith('.gif')
+? await videoToWebp(buff)
+: await imageToWebp(buff);
 }
 
-await sock.sendMessage(jid, { sticker: { url: buffer }, ...options }, { 
-quoted: quoted ? quoted : m, 
-ephemeralExpiration: 24 * 60 * 100, 
-disappearingMessagesInChat: 24 * 60 * 100 
-});
+await sock.sendMessage(
+jid,
+{ sticker: { url: buffer }, ...options },
+{
+quoted: quoted || m,
+ephemeralExpiration: 24 * 60 * 100,
+disappearingMessagesInChat: 24 * 60 * 100
+}
+);
 
 return buffer;
 };
@@ -816,22 +828,54 @@ case 'creador': {
     break;
 }
         
-case "s": case "stiker": { if (!msg.message.imageMessage && !msg.message.extendedTextMessage) { return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Responde a una imagen o envía una imagen con el comando." }, { quoted: msg }); }
+case "s":
+case "sticker": {
+if (
+!msg.message.imageMessage &&
+!msg.message.videoMessage &&
+!msg.message.extendedTextMessage
+) {
+return sock.sendMessage(
+msg.key.remoteJid,
+{ text: "⚠️ Responde a una imagen, video, GIF o sticker para convertirlo en sticker." },
+{ quoted: msg }
+);
+}
 
-let quotedMessage = msg.message.extendedTextMessage ? msg.message.extendedTextMessage.contextInfo.quotedMessage : null;
-let mediaMessage = msg.message.imageMessage || (quotedMessage && quotedMessage.imageMessage);
+let quotedMessage = msg.message.extendedTextMessage
+? msg.message.extendedTextMessage.contextInfo.quotedMessage
+: null;
+
+let mediaMessage =
+msg.message.imageMessage ||
+msg.message.videoMessage ||
+(quotedMessage && (quotedMessage.imageMessage || quotedMessage.videoMessage || quotedMessage.stickerMessage));
 
 if (!mediaMessage) {
-    return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Solo puedes usar imágenes para hacer stickers." }, { quoted: msg });
+return sock.sendMessage(
+msg.key.remoteJid,
+{ text: "⚠️ Solo puedes usar imágenes, videos, GIFs o stickers." },
+{ quoted: msg }
+);
 }
 
-const mediaStream = await downloadContentFromMessage(mediaMessage, "image");
+const mediaType = mediaMessage.mimetype.startsWith("image")
+? "image"
+: mediaMessage.mimetype.startsWith("video")
+? "video"
+: "sticker";
+
+const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
 let mediaBuffer = Buffer.alloc(0);
 for await (const chunk of mediaStream) {
-    mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
 }
 
-let stickerBuffer = await sock.sendImageAsSticker(msg.key.remoteJid, mediaBuffer, msg, { packname: "Mi Pack", author: "EliasarYT" });
+await sock.sendSticker(msg.key.remoteJid, mediaBuffer, msg, {
+packname: "Mi Pack",
+author: "EliasarYT"
+});
+
 break;
 }
             
