@@ -107,7 +107,7 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
- case "menu": {
+case "menu": {
     try {
         // Reacción antes de enviar el menú
         await sock.sendMessage(msg.key.remoteJid, {
@@ -129,14 +129,14 @@ ${global.prefix}play → Descargar música.
 ${global.prefix}play2 → Descargar videos.  
 ${global.prefix}ytmp3 → Descargar a MP3.  
 ${global.prefix}ytmp4 → Descargar a MP4.  
-${global.prefix}tiktok → Descargar video.
-${global.prefix}fb → Descargar video.
-${global.prefix}ig → Descargar video.
+${global.prefix}tiktok → Descargar video.  
+${global.prefix}fb → Descargar video.  
+${global.prefix}ig → Descargar video.  
 
 👥 *Comandos de Grupo* 👥  
 ━━━━━━━━━━━━━━━━━━  
-${global.prefix}cerrargrupo → Cierra el grupo.
-${global.prefix}abrirgrupo → Abre el grupo.
+${global.prefix}cerrargrupo → Cierra el grupo.  
+${global.prefix}abrirgrupo → Abre el grupo.  
 ${global.prefix}kick → Expulsar del grupo.  
 
 🔍 *Otros Comandos* 🔍  
@@ -158,9 +158,10 @@ ${global.prefix}clavelista → Ver todas las claves guardadas.
 💡 *Azura Ultra 2.0 está en constante desarrollo. Se agregarán más funciones pronto.*  
 ⚙️ *Desarrollado por Russell* 🚀`;
 
-        // Enviar el menú con imagen
+        // Enviar el menú con video como GIF
         await sock.sendMessage(msg.key.remoteJid, { 
-            image: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" }, 
+            video: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" }, 
+            gifPlayback: true, // Esto hace que se reproduzca como GIF
             caption: menuMessage 
         }, { quoted: msg });
 
@@ -171,7 +172,7 @@ ${global.prefix}clavelista → Ver todas las claves guardadas.
         }, { quoted: msg });
     }
     break;
-}
+} 
     
 
 
