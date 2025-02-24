@@ -114,7 +114,7 @@ sock.sendSticker = async (jid, path, quoted, options = {}) => {
 
     await sock.sendMessage(
       jid,
-      { sticker: buffer },
+      { sticker: { stream: buffer }, ...options },
       { quoted: quoted || null }
     );
 
