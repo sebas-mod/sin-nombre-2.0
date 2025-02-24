@@ -291,10 +291,8 @@ ${global.prefix}kill → Elimina un archivo guardado.
     break;
 }    
 
-
 case "ping":
     try {
-        // Obtener la fecha y hora actual
         const now = new Date();
         const options = { 
             weekday: "long", 
@@ -308,25 +306,32 @@ case "ping":
         };
         const formattedDate = now.toLocaleDateString("es-ES", options);
 
-        // Obtener el tiempo activo en segundos y convertirlo a días, horas, minutos y segundos
+        // Obtener el tiempo activo en días, horas, minutos y segundos
         const uptime = os.uptime();
-        const uptimeDays = Math.floor(uptime / 86400); // Días
-        const uptimeHours = Math.floor((uptime % 86400) / 3600); // Horas
-        const uptimeMinutes = Math.floor((uptime % 3600) / 60); // Minutos
-        const uptimeSeconds = Math.floor(uptime % 60); // Segundos
+        const uptimeDays = Math.floor(uptime / 86400);
+        const uptimeHours = Math.floor((uptime % 86400) / 3600);
+        const uptimeMinutes = Math.floor((uptime % 3600) / 60);
+        const uptimeSeconds = Math.floor(uptime % 60);
         const uptimeFormatted = `${uptimeDays} días, ${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`;
 
-        // Obtener información del sistema
-        const freeMem = os.freemem(); 
-        const totalMem = os.totalmem(); 
-        const cpuModel = os.cpus()[0].model; 
-        const cpuUsage = execSync("top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}'").toString().trim();
-        const loadAvg = os.loadavg()[0].toFixed(2); 
-        const diskUsage = execSync("df -h / | awk 'NR==2 {print $3 \" / \" $2}'").toString().trim(); 
-
-        // Formatear memoria RAM
+        // Información del sistema
+        const freeMem = os.freemem();
+        const totalMem = os.totalmem();
+        const usedMem = totalMem - freeMem;
         const freeMemGB = (freeMem / 1024 / 1024 / 1024).toFixed(2);
         const totalMemGB = (totalMem / 1024 / 1024 / 1024).toFixed(2);
+        const usedMemGB = (usedMem / 1024 / 1024 / 1024).toFixed(2);
+
+        const cpuModel = os.cpus()[0].model;
+        const numCores = os.cpus().length;
+        const loadAvg = os.loadavg()[0].toFixed(2);
+        const diskUsage = execSync("df -h / | awk 'NR==2 {print $3 \" / \" $2}'").toString().trim();
+
+        // Obtener el uso de cada núcleo del CPU
+        const cpuUsages = os.cpus().map((cpu, index) => {
+            const usage = execSync(`top -bn1 | grep 'Cpu${index}' | awk '{print $2 + $4}'`).toString().trim();
+            return `🔹 *Núcleo ${index + 1}:* ${usage || "0"}%`;
+        }).join("\n");
 
         // Reaccionar al mensaje con un emoji
         await sock.sendMessage(msg.key.remoteJid, {
@@ -343,11 +348,14 @@ case "ping":
                      `📅 *Fecha y hora actual:* ${formattedDate}\n\n` +
                      `🕒 *Tiempo Activo:* ${uptimeFormatted}\n\n` +
                      `💻 *Información del Servidor:*\n` +
-                     `🔹 *CPU:* ${cpuModel}\n` +
-                     `🔹 *Uso de CPU:* ${cpuUsage}%\n` +
-                     `🔹 *Carga del sistema:* ${loadAvg}\n` +
-                     `🔹 *RAM:* ${freeMemGB}GB / ${totalMemGB}GB\n` +
-                     `🔹 *Disco:* ${diskUsage}\n\n` +
+                     `🔹 *CPU:* ${cpuModel} (${numCores} núcleos)\n` +
+                     `🔹 *Carga del sistema:* ${loadAvg}\n\n` +
+                     `🔍 *Uso de CPU por núcleo:*\n${cpuUsages}\n\n` +
+                     `🖥️ *Memoria RAM:*\n` +
+                     `🔹 *Usada:* ${usedMemGB}GB\n` +
+                     `🔹 *Libre:* ${freeMemGB}GB\n` +
+                     `🔹 *Total:* ${totalMemGB}GB\n\n` +
+                     `💾 *Disco:* ${diskUsage}\n\n` +
                      `🌐 *Alojado en:* *Sky Ultra Plus* 🚀\n` +
                      `📌 *Proveedor de Hosting de Confianza*`,
             quoted: msg // Responder citando al mensaje original
@@ -361,6 +369,7 @@ case "ping":
         });
     }
     break;
+
         
 case "setprefix":
     try {
