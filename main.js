@@ -417,10 +417,11 @@ case "setprefix":
         const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
 
         // Obtener el número del bot
-        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
+        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
 
-        // Verificar si el usuario es dueño del bot o si el bot mismo ejecuta el comando
-        if (!isOwner(senderNumber) && senderNumber !== botNumber) { 
+        // Verificar si el mensaje fue enviado por el bot o por un dueño autorizado
+        const isBotMessage = msg.key.fromMe; // True si el mensaje es del bot
+        if (!isOwner(senderNumber) && !isBotMessage) { 
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "⛔ *Solo los dueños del bot o el bot mismo pueden cambiar el prefijo global.*"
             }, { quoted: msg });
