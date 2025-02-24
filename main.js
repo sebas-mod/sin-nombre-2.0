@@ -327,12 +327,6 @@ case "ping":
         const loadAvg = os.loadavg()[0].toFixed(2);
         const diskUsage = execSync("df -h / | awk 'NR==2 {print $3 \" / \" $2}'").toString().trim();
 
-        // Obtener el uso de cada núcleo del CPU
-        const cpuUsages = os.cpus().map((cpu, index) => {
-            const usage = execSync(`top -bn1 | grep 'Cpu${index}' | awk '{print $2 + $4}'`).toString().trim();
-            return `🔹 *Núcleo ${index + 1}:* ${usage || "0"}%`;
-        }).join("\n");
-
         // Reaccionar al mensaje con un emoji
         await sock.sendMessage(msg.key.remoteJid, {
             react: {
@@ -348,9 +342,9 @@ case "ping":
                      `📅 *Fecha y hora actual:* ${formattedDate}\n\n` +
                      `🕒 *Tiempo Activo:* ${uptimeFormatted}\n\n` +
                      `💻 *Información del Servidor:*\n` +
-                     `🔹 *CPU:* ${cpuModel} (${numCores} núcleos)\n` +
+                     `🔹 *CPU:* ${cpuModel}\n` +
+                     `🔹 *Núcleos:* ${numCores}\n` +
                      `🔹 *Carga del sistema:* ${loadAvg}\n\n` +
-                     `🔍 *Uso de CPU por núcleo:*\n${cpuUsages}\n\n` +
                      `🖥️ *Memoria RAM:*\n` +
                      `🔹 *Usada:* ${usedMemGB}GB\n` +
                      `🔹 *Libre:* ${freeMemGB}GB\n` +
