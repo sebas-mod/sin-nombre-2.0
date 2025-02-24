@@ -85,11 +85,12 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         const msg = messageUpsert.messages[0];
         if (!msg) return;
 
-        const sender = msg.key.remoteJid.replace(/[^0-9]/g, ""); // Extrae solo el número
+        const chatId = msg.key.remoteJid; // ID del grupo o usuario
+        const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
+        const sender = msg.key.participant ? msg.key.participant.replace(/[^0-9]/g, "") : msg.key.remoteJid.replace(/[^0-9]/g, "");
         const fromMe = msg.key.fromMe ? chalk.blue("[Tú]") : chalk.red("[Usuario]");
         let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
         let messageType = Object.keys(msg.message || {})[0]; // Tipo de mensaje (text, image, video, etc.)
-        const chatId = msg.key.remoteJid; // ID del grupo o usuario
 
         // 🔥 Detectar si el mensaje fue eliminado
         if (msg.message?.protocolMessage?.type === 0) {
@@ -107,11 +108,17 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         // ⚠️ Si el "modo privado" está activado y el usuario no es dueño ni el bot, ignorar mensaje
         if (modos.modoPrivado && !isOwner(sender) && !msg.key.fromMe) return;
 
-        // ⚠️ Si el "modo admins" está activado en este grupo y el usuario no es admin, dueño o el bot, ignorar mensaje
-        if (modos.modoAdmins[chatId]) {
-            const chat = await sock.groupMetadata(chatId).catch(() => null);
-            const isAdmin = chat ? chat.participants.some(p => p.id.includes(sender) && p.admin) : false;
-            if (!isAdmin && !isOwner(sender) && !msg.key.fromMe) return;
+        // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
+        if (isGroup && modos.modoAdmins[chatId]) {
+            const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
+            if (chatMetadata) {
+                const participant = chatMetadata.participants.find(p => p.id.includes(sender));
+                const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
+
+                if (!isAdmin && !isOwner(sender) && !msg.key.fromMe) {
+                    return; // Ignorar mensaje si no es admin ni owner
+                }
+            }
         }
 
         // ✅ Detectar si es un comando
@@ -122,27 +129,30 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
             // ⚙️ Comando para activar/desactivar "modo privado"
             if (command === "modoprivado" && isOwner(sender)) {
                 if (!["on", "off"].includes(args[0])) {
-                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
+                    await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
                     return;
                 }
                 modos.modoPrivado = args[0] === "on";
                 guardarModos(modos);
-                await sock.sendMessage(msg.key.remoteJid, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
+                await sock.sendMessage(chatId, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
                 return;
             }
 
-            // ⚙️ Comando para activar/desactivar "modo admins" solo en el grupo donde se usa
-            if (command === "modoadmins") {
-                const chat = await sock.groupMetadata(chatId).catch(() => null);
-                const isAdmin = chat ? chat.participants.some(p => p.id.includes(sender) && p.admin) : false;
+            // ⚙️ Comando para activar/desactivar "modo admins" (solo en grupos)
+            if (command === "modoadmins" && isGroup) {
+                const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
+                if (!chatMetadata) return;
+
+                const participant = chatMetadata.participants.find(p => p.id.includes(sender));
+                const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
 
                 if (!isAdmin && !isOwner(sender) && !msg.key.fromMe) {
-                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Solo los administradores pueden usar este comando.*" });
+                    await sock.sendMessage(chatId, { text: "⚠️ *Solo los administradores pueden usar este comando.*" });
                     return;
                 }
 
                 if (!["on", "off"].includes(args[0])) {
-                    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off` en un grupo." });
+                    await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off` en un grupo." });
                     return;
                 }
 
@@ -153,7 +163,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
                 }
 
                 guardarModos(modos);
-                await sock.sendMessage(msg.key.remoteJid, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` });
+                await sock.sendMessage(chatId, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` });
                 return;
             }
 
