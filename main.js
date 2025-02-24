@@ -123,7 +123,7 @@ case "info":
 │ 🚀 *Creado por:* Russell
 │  
 ├─〔 📥 *Descargas Redes* 〕─
-│ 📌 *Instagram, TikTok y Facebook*  
+│ 📌 *IG, TikTok y FB*  
 │    - 👤 *Colaboró:* DIEGO-OFC  
 │  
 │ 📌 *Descargas youtube*
