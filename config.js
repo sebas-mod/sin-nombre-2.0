@@ -34,7 +34,7 @@ global.allowedPrefixes = [
     ".", "!", "#", "?", "-", "+", "*", "~", "$", "&", "%", "=", "🔥", "💀", "✅", "🥰",
     "💎", "🐱", "🐶", "🌟", "🎃", "🍕", "🍔", "🍑", "🛠️", "📌", "⚡", "🚀", "👀", "💡", "💣", "💯", "😎", "☠️", "👾"
 ];
-
+global.modoPrivado = false; // El modo privado está desactivado por defecto
 // Prefijo por defecto
 global.prefix = ".";
 // Función para verificar si un usuario es Owner
