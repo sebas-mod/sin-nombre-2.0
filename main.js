@@ -462,7 +462,7 @@ case "setprefix":
             text: "❌ *Ocurrió un error al intentar cambiar el prefijo global.*"
         }, { quoted: msg });
     }
-    break;        
+    break;
 
             
 case "get": {
