@@ -202,52 +202,6 @@ case "rest":
     break;
 
         
-case "cerrarsesion":
-    try {
-        // Verificar si el usuario es dueño del bot
-        const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
-        if (!isOwner(senderNumber)) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los dueños del bot pueden cerrar la sesión.*"
-            }, { quoted: msg });
-            return;
-        }
-
-        // Enviar reacción de confirmación
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "🔴", key: msg.key }
-        });
-
-        // Enviar mensaje de cierre de sesión
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "⚠️ *El bot cerrará la sesión y se eliminarán los datos de la sesión.*\n⏳ *Apagando en 5 segundos...*"
-        }, { quoted: msg });
-
-        // Esperar 5 segundos antes de cerrar
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        // Cerrar sesión del bot
-        await sock.logout();
-
-        // Eliminar la carpeta de la sesión
-        const sessionPath = "./session"; // Ruta de la carpeta de sesión (ajustar según tu configuración)
-        if (fs.existsSync(sessionPath)) {
-            fs.rmSync(sessionPath, { recursive: true, force: true });
-        }
-
-        console.log("✅ Sesión cerrada y archivos eliminados.");
-
-        // Apagar el bot
-        process.exit(0);
-        
-    } catch (error) {
-        console.error("❌ Error al cerrar la sesión:", error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Error al cerrar la sesión. Inténtalo de nuevo.*",
-            quoted: msg
-        });
-    }
-    break;
         
 case "info":
     try {
