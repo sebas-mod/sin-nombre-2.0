@@ -11,15 +11,9 @@ if (fs.existsSync("./config.json")) {
 } else {
     global.prefix = ".";
 }
-// 📌 Objeto global para almacenar los prefijos por grupo
-global.groupPrefixes = {}; 
+//perfijo
 
-// 📌 Función para cambiar el prefijo de un grupo
-function setGroupPrefix(groupId, newPrefix) {
-    global.groupPrefixes[groupId] = newPrefix; // Guardar en memoria (global)
-    console.log(`✅ Prefijo del grupo ${groupId} cambiado a: ${newPrefix}`);
-}
-
+//grupo 
 const guarFilePath = "./guar.json";
 if (!fs.existsSync(guarFilePath)) {
     fs.writeFileSync(guarFilePath, JSON.stringify({}, null, 2));
@@ -110,58 +104,6 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-case "setprefixgrupo":
-    try {
-        // Verificar si el comando se usa en un grupo
-        if (!msg.key.remoteJid.includes("@g.us")) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *Este comando solo se puede usar en grupos.*"
-            }, { quoted: msg });
-        }
-
-        // Obtener la metadata del grupo
-        const chat = await sock.groupMetadata(msg.key.remoteJid);
-        const senderId = msg.key.participant.replace(/@s.whatsapp.net/, '');
-        const isOwner = global.owner.some(o => o[0] === senderId);
-        const groupAdmins = chat.participants.filter(p => p.admin);
-        const isAdmin = groupAdmins.some(admin => admin.id === msg.key.participant);
-
-        // Verificar si el usuario es admin del grupo o dueño del bot
-        if (!isAdmin && !isOwner) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "🚫 *No tienes permisos para cambiar el prefijo del grupo.*\n⚠️ *Solo los administradores o el dueño del bot pueden usar este comando.*"
-            }, { quoted: msg });
-        }
-
-        // Verificar si se proporcionó un nuevo prefijo
-        if (!args[0]) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Debes especificar un nuevo prefijo para este grupo.*\nEjemplo: `.setprefixgrupo !`"
-            }, { quoted: msg });
-        }
-
-        // Validar si el prefijo está permitido
-        if (!allowedPrefixes.includes(args[0])) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "❌ *Prefijo inválido.*\nUsa un solo carácter o un emoji de la lista permitida."
-            }, { quoted: msg });
-        }
-
-        // Cambiar el prefijo solo en este grupo
-        setGroupPrefix(msg.key.remoteJid, args[0]);
-
-        // Confirmar el cambio
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: `✅ *Prefijo de este grupo cambiado a:* *${args[0]}* 🚀`
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando setprefixgrupo:", error);
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al intentar cambiar el prefijo del grupo. Inténtalo de nuevo.*"
-        }, { quoted: msg });
-    }
-    break;
         
 case "setprefix":
     // Obtener el número del remitente
