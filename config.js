@@ -1,5 +1,6 @@
 const fs = require("fs");
 const chalk = require("chalk");
+// Prefijo global por defecto
 
 // Lista de Owners
 global.owner = [
@@ -36,7 +37,7 @@ global.allowedPrefixes = [
 
 // Prefijo por defecto
 global.prefix = ".";
-
+global.groupPrefixes = {};
 // Función para verificar si un usuario es Owner
 global.isOwner = (user) => {
     user = user.replace(/[^0-9]/g, ""); // Limpiar número
