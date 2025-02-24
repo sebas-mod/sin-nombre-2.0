@@ -7,40 +7,46 @@
     const pino = require("pino");
     const { isOwner, getPrefix, allowedPrefixes } = require("./config");
     const { handleCommand } = require("./main"); 
-    // Carga de credenciales y estado de autenticación
+
+    // 📂 Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
-//privado y admins
 
-const path = "./activos.json";
+    // 📂 Archivo de configuración de modos (modo privado y admins)
+    const path = "./activos.json";
 
-// 📂 Cargar configuración de modos desde el archivo JSON
-function cargarModos() {
-    if (!fs.existsSync(path)) {
-        fs.writeFileSync(path, JSON.stringify({ modoPrivado: false, modoAdmins: {} }, null, 2));
+    function cargarModos() {
+        if (!fs.existsSync(path)) {
+            fs.writeFileSync(path, JSON.stringify({ modoPrivado: false, modoAdmins: {} }, null, 2));
+        }
+        return JSON.parse(fs.readFileSync(path, "utf-8"));
     }
-    return JSON.parse(fs.readFileSync(path, "utf-8"));
-}
 
-// 📂 Guardar configuración de modos en el archivo JSON
-function guardarModos(data) {
-    fs.writeFileSync(path, JSON.stringify(data, null, 2));
-}
+    function guardarModos(data) {
+        fs.writeFileSync(path, JSON.stringify(data, null, 2));
+    }
 
-let modos = cargarModos();
-    
-    // Configuración de consola
-    console.log(chalk.cyan(figlet.textSync("Azura Ultra Bot", { font: "Standard" })));    
-    console.log(chalk.green("Iniciando conexión..."));
+    let modos = cargarModos();
 
-    // Manejo de entrada de usuario
+    // 🎨 Diseño de la consola
+    console.clear();
+    console.log(chalk.cyan(figlet.textSync("Azura Ultra Bot", { font: "Standard" })));
+
+    // ✅ Mensaje de inicio mejorado
+    console.log(chalk.green("\n✅ Iniciando conexión...\n"));
+    console.log(chalk.yellow("📡 ¿Cómo deseas conectarte?\n"));
+    console.log(chalk.green("  [1] ") + chalk.white("📷 Escanear código QR"));
+    console.log(chalk.green("  [2] ") + chalk.white("🔑 Ingresar código de 8 dígitos\n"));
+
+    // 📥 Capturar elección del usuario
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
     let method = "1"; // Por defecto: Código QR
     if (!fs.existsSync("./sessions/creds.json")) {
-        method = await question("¿Cómo deseas conectarte? (1: Código QR, 2: Código de 8 dígitos) > ");
+        method = await question(chalk.magenta("✍️ Elige una opción (1 o 2): "));
+
         if (!["1", "2"].includes(method)) {
-            console.log(chalk.red("❌ Opción inválida. Reinicia el bot y elige 1 o 2."));
+            console.log(chalk.red("\n❌ Opción inválida. Reinicia el bot y elige 1 o 2."));
             process.exit(1);
         }
     }
@@ -57,13 +63,14 @@ let modos = cargarModos();
 
             const sock = makeWASocket(socketSettings);
 
-            // Si la sesión no existe y se usa el código de 8 dígitos
+            // 📌 Si la sesión no existe y se usa código de 8 dígitos
             if (!fs.existsSync("./sessions/creds.json") && method === "2") {
-                let phoneNumber = await question("📞 Ingresa tu número (Ej: 5491168XXXX): ");
+                let phoneNumber = await question(chalk.blue("\n📞 Ingresa tu número (Ej: 5491168XXXX): "));
                 phoneNumber = phoneNumber.replace(/\D/g, "");
+
                 setTimeout(async () => {
                     let code = await sock.requestPairingCode(phoneNumber);
-                    console.log(chalk.magenta("🔑 Código de vinculación: ") + chalk.yellow(code.match(/.{1,4}/g).join("-")));
+                    console.log(chalk.magenta("\n🔑 Código de vinculación: ") + chalk.yellow(code.match(/.{1,4}/g).join("-")));
                 }, 2000);
             }
 
