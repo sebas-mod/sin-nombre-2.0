@@ -172,20 +172,7 @@ ${global.prefix}clavelista → Ver todas las claves guardadas.
     }
     break;
 }
-        // Enviar la imagen con el menú
-        await sock.sendMessage(msg.key.remoteJid, { 
-            image: { url: "https://cdn.dorratz.com/files/1740367799142.jpg" }, 
-            caption: menuMessage 
-        }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error al enviar el menú:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al mostrar el menú. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
-}       
+    
 
 
 case "ping":
