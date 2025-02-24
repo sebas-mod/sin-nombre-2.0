@@ -6,7 +6,7 @@ const fetch = require("node-fetch");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const os = require("os");
 const { execSync } = require("child_process");
-
+const path = require("path");
 // Cargar prefijo desde archivo de configuración
 if (fs.existsSync("./config.json")) {
     let configData = JSON.parse(fs.readFileSync("./config.json"));
@@ -297,6 +297,27 @@ case "menu": {
             react: { text: "📜", key: msg.key } 
         });
 
+        // Definir la URL del archivo GIF/Video
+        const mediaUrl = "https://cdn.dorratz.com/files/1740370321585.mp4"; 
+        const filePath = path.join(__dirname, "menu_video.mp4");
+
+        // Descargar el archivo si no existe localmente
+        if (!fs.existsSync(filePath)) {
+            const response = await axios({
+                method: "GET",
+                url: mediaUrl,
+                responseType: "stream"
+            });
+
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+
+            await new Promise((resolve, reject) => {
+                writer.on("finish", resolve);
+                writer.on("error", reject);
+            });
+        }
+
         // Construcción del menú con formato mejorado y prefijo dinámico
         const menuMessage = `┏━━━━━━━━━━━━━━━┓
 ┃  🤖 *AZURA ULTRA 2.0 BOT*  
@@ -346,10 +367,10 @@ ${global.prefix}clavelista → Ver todas las claves guardadas.
 💡 *Azura Ultra 2.0 está en constante desarrollo. Se agregarán más funciones pronto.*  
 ⚙️ *Desarrollado por Russell* 🚀`;
 
-        // Enviar el menú con video como GIF
+        // Enviar el archivo local como video/GIF con el menú
         await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" }, 
-            gifPlayback: true, // Esto hace que se reproduzca como GIF
+            video: { url: filePath }, 
+            gifPlayback: true,
             caption: menuMessage 
         }, { quoted: msg });
 
