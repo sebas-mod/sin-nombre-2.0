@@ -122,11 +122,12 @@ case "info":
 │ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
 │ 🚀 *Creado por:* Russell
 │  
-├─〔 📥 *Colaboraciones en Descargas* 〕─
+├─〔 📥 *Descargas Redes* 〕─
 │ 📌 *Instagram, TikTok y Facebook*  
 │    - 👤 *Colaboró:* DIEGO-OFC  
 │  
-│ 📌 *Audios y Videos* (.play, .play2, .ytmp3, .ytmp4)  
+│ 📌 *Descargas youtube*
+│     (.play, .play2, .ytmp3, .ytmp4)  
 │    - 👤 *Colaboró:* Eliasar54  
 │  
 ├─〔 📜 *Menús y Comandos* 〕─
