@@ -80,45 +80,49 @@ function isUrl(url) {
 
 async function handleCommand(sock, msg, command, args, sender) {
 sock.sendSticker = async (jid, path, quoted, options = {}) => {
-  let buff = Buffer.isBuffer(path)
-    ? path
-    : /^data:.*?\/.*?;base64,/i.test(path)
-    ? Buffer.from(path.split(',')[1], 'base64')
-    : /^https?:\/\//.test(path)
-    ? await (await getBuffer(path))
-    : fs.existsSync(path)
-    ? fs.readFileSync(path)
-    : Buffer.alloc(0);
+  try {
+    let buff = Buffer.isBuffer(path)
+      ? path
+      : /^data:.*?\/.*?;base64,/i.test(path)
+      ? Buffer.from(path.split(',')[1], 'base64')
+      : /^https?:\/\//.test(path)
+      ? await (await getBuffer(path))
+      : fs.existsSync(path)
+      ? fs.readFileSync(path)
+      : Buffer.alloc(0);
 
-  let mimeType = options.mimetype || (path.mimetype ? path.mimetype : "image/png");
-  let isVideo = mimeType.startsWith('video');
-  let isImage = mimeType.startsWith('image');
-  let isSticker = mimeType === 'image/webp';
+    if (!buff.length) throw new Error("No se pudo obtener el archivo.");
 
-  let buffer;
-  if (options.packname || options.author) {
-    buffer = isVideo
-      ? await writeExifVid(buff, options)
-      : isSticker
-      ? await writeExif(buff, options)
-      : await writeExifImg(buff, options);
-  } else {
-    buffer = isVideo
-      ? await videoToWebp(buff)
-      : await imageToWebp(buff);
-  }
+    let mimeType = options.mimetype || (path.mimetype ? path.mimetype : "image/png");
+    let isVideo = mimeType.startsWith('video');
+    let isImage = mimeType.startsWith('image');
+    let isSticker = mimeType === 'image/webp';
 
-  await sock.sendMessage(
-    jid,
-    { sticker: { url: buffer }, ...options },
-    {
-      quoted: quoted || m,
-      ephemeralExpiration: 24 * 60 * 100,
-      disappearingMessagesInChat: 24 * 60 * 100
+    let buffer;
+    if (options.packname || options.author) {
+      buffer = isVideo
+        ? await writeExifVid(buff, options)
+        : isSticker
+        ? await writeExif(buff, options)
+        : await writeExifImg(buff, options);
+    } else {
+      buffer = isVideo
+        ? await videoToWebp(buff)
+        : await imageToWebp(buff);
     }
-  );
 
-  return buffer;
+    if (!buffer) throw new Error("Error al convertir a sticker.");
+
+    await sock.sendMessage(
+      jid,
+      { sticker: buffer, ...options },
+      { quoted: quoted || null }
+    );
+
+    console.log("✅ Sticker enviado correctamente.");
+  } catch (error) {
+    console.error("❌ Error al enviar el sticker:", error.message);
+  }
 };
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
@@ -835,57 +839,55 @@ case 'creador': {
         
 case "s":
 case "sticker": {
-    if (
-        !msg.message.imageMessage &&
-        !msg.message.videoMessage &&
-        !msg.message.stickerMessage &&
-        !msg.message.extendedTextMessage
-    ) {
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "⚠️ Responde a una imagen, video, GIF o sticker para convertirlo." },
-            { quoted: msg }
-        );
-    }
-
+  try {
     let quotedMessage = msg.message.extendedTextMessage
-        ? msg.message.extendedTextMessage.contextInfo.quotedMessage
-        : null;
+      ? msg.message.extendedTextMessage.contextInfo.quotedMessage
+      : null;
 
     let mediaMessage =
-        msg.message.imageMessage ||
-        msg.message.videoMessage ||
-        msg.message.stickerMessage ||
-        (quotedMessage && (quotedMessage.imageMessage || quotedMessage.videoMessage || quotedMessage.stickerMessage));
+      msg.message.imageMessage ||
+      msg.message.videoMessage ||
+      msg.message.stickerMessage ||
+      (quotedMessage && (quotedMessage.imageMessage || quotedMessage.videoMessage || quotedMessage.stickerMessage));
 
     if (!mediaMessage) {
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "⚠️ Solo puedes usar imágenes, videos, GIFs o stickers." },
-            { quoted: msg }
-        );
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⚠️ Responde a una imagen, video, GIF o sticker para convertirlo." },
+        { quoted: msg }
+      );
+      break;
     }
 
-    const mediaType = mediaMessage.mimetype.startsWith("image")
-        ? "image"
-        : mediaMessage.mimetype.startsWith("video")
-        ? "video"
-        : "sticker";
+    const mediaType = mediaMessage.mimetype?.startsWith("image")
+      ? "image"
+      : mediaMessage.mimetype?.startsWith("video")
+      ? "video"
+      : "sticker";
 
     const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
     let mediaBuffer = Buffer.alloc(0);
     for await (const chunk of mediaStream) {
-        mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+      mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+    }
+
+    if (mediaBuffer.length === 0) {
+      await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Error al descargar el archivo." }, { quoted: msg });
+      break;
     }
 
     await sock.sendSticker(msg.key.remoteJid, mediaBuffer, msg, {
-        packname: "Mi Pack",
-        author: "EliasarYT",
-        mimetype: mediaMessage.mimetype
+      packname: "Mi Pack",
+      author: "EliasarYT",
+      mimetype: mediaMessage.mimetype
     });
 
-    break;
-        }
+    console.log("✅ Comando sticker ejecutado correctamente.");
+  } catch (error) {
+    console.error("❌ Error al ejecutar el comando sticker:", error.message);
+  }
+  break;
+}
             
 case 'verco': {
     const fs = require("fs");
