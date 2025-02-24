@@ -7,7 +7,22 @@
     const pino = require("pino");
     const { isOwner, getPrefix, allowedPrefixes } = require("./config");
     const { handleCommand } = require("./main"); 
+const path = "./activos.json";
 
+// 📂 Cargar configuración de modos desde el archivo JSON
+function cargarModos() {
+    if (!fs.existsSync(path)) {
+        fs.writeFileSync(path, JSON.stringify({ modoPrivado: false, modoAdmins: false }, null, 2));
+    }
+    return JSON.parse(fs.readFileSync(path, "utf-8"));
+}
+
+// 📂 Guardar configuración de modos en el archivo JSON
+function guardarModos(data) {
+    fs.writeFileSync(path, JSON.stringify(data, null, 2));
+}
+
+let modos = cargarModos();
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 
