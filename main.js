@@ -822,9 +822,10 @@ case 'creador': {
   case "sticker": {
     try {
       const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+      const mime = quoted?.imageMessage?.mimetype || quoted?.videoMessage?.mimetype;
 
       if (quoted && /image/.test(mime)) {
-        const mediaStream = await downloadContentFromMessage(quoted, mime);
+        const mediaStream = await downloadContentFromMessage(quoted.imageMessage, "image");
         let encmedia = await sock.sendImageAsSticker(msg.key.remoteJid, mediaStream, {
           quoted: msg,
           packname: "",
@@ -836,10 +837,11 @@ case 'creador': {
         });
         await fs.unlinkSync(encmedia);
       } else if (quoted && /video/.test(mime)) {
-        if ((quoted?.seconds || 0) > 20) {
+        const videoMessage = quoted.videoMessage;
+        if ((videoMessage?.seconds || 0) > 20) {
           sock.sendMessage(msg.key.remoteJid, { text: 'El video no puede durar más de 20 segundos.' }, { quoted: msg });
         } else {
-          const mediaStream = await downloadContentFromMessage(quoted, mime);
+          const mediaStream = await downloadContentFromMessage(videoMessage, "video");
           let encmedia = await sock.sendVideoAsSticker(msg.key.remoteJid, mediaStream, {
             quoted: msg,
             packname: "",
@@ -860,7 +862,7 @@ case 'creador': {
       sock.sendMessage(msg.key.remoteJid, { text: 'Hubo un error al procesar tu solicitud.' }, { quoted: msg });
     }
     break;
-    }
+  }
             
 case 'verco': {
     const fs = require("fs");
