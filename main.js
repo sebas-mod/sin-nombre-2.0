@@ -14,9 +14,17 @@ if (fs.existsSync("./config.json")) {
 } else {
     global.prefix = ".";
 }
-//perfijo
+//orivado
+// Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
+if (global.modoPrivado && !isOwner(sender) && !msg.key.fromMe) {
+    await sock.sendMessage(msg.key.remoteJid, { 
+        text: "🔒 *Modo privado activado.*\n⛔ *No tienes permiso para usar el bot en este momento.*"
+    }, { quoted: msg });
+    return;
+}
 
-//grupo 
+
+//modoprivado ariba
 const guarFilePath = "./guar.json";
 if (!fs.existsSync(guarFilePath)) {
     fs.writeFileSync(guarFilePath, JSON.stringify({}, null, 2));
@@ -107,6 +115,44 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "modoprivado":
+    try {
+        // Obtener el número del remitente
+        const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
+        const isBotMessage = msg.key.fromMe; // True si el mensaje es del bot
+
+        // Solo el dueño del bot o el bot mismo pueden activar/desactivar el modo privado
+        if (!isOwner(senderNumber) && !isBotMessage) { 
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo el dueño del bot o el bot mismo pueden activar/desactivar el modo privado.*"
+            }, { quoted: msg });
+            return;
+        }
+
+        // Verificar si el usuario proporcionó "on" o "off"
+        if (!args[0] || (args[0] !== "on" && args[0] !== "off")) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Uso incorrecto.*\n\nEjemplo: \n`.modoprivado on` → Activa el modo privado\n`.modoprivado off` → Desactiva el modo privado"
+            }, { quoted: msg });
+            return;
+        }
+
+        // Activar o desactivar el modo privado
+        global.modoPrivado = args[0] === "on";
+
+        // Confirmar el cambio
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✅ *Modo privado ${global.modoPrivado ? "activado" : "desactivado"}.* 🚀`
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando modoprivado:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al intentar cambiar el modo privado.*"
+        }, { quoted: msg });
+    }
+    break;
+        
 case "git":
     try {
         // Verificar si se proporcionó un comando
