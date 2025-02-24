@@ -37,7 +37,6 @@ global.allowedPrefixes = [
 
 // Prefijo por defecto
 global.prefix = ".";
-global.groupPrefixes = {};
 // Función para verificar si un usuario es Owner
 global.isOwner = (user) => {
     user = user.replace(/[^0-9]/g, ""); // Limpiar número
