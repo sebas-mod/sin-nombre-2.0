@@ -111,19 +111,22 @@ case "rest":
     try {
         // Obtener el número del remitente
         const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
-        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
 
-        // Verificar si el usuario es dueño del bot o si el mensaje fue enviado desde el bot mismo
-        if (!isOwner(senderNumber) && senderNumber !== botNumber) { 
+        // Obtener el número del bot
+        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
+
+        // Verificar si el mensaje fue enviado por el bot o por un dueño autorizado
+        const isBotMessage = msg.key.fromMe; // True si el mensaje es del bot
+        if (!isOwner(senderNumber) && !isBotMessage) { 
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los dueños del bot pueden reiniciar el servidor.*"
+                text: "⛔ *Solo los dueños del bot o el bot mismo pueden reiniciar el servidor.*"
             }, { quoted: msg });
             return;
         }
 
-        // Enviar una reacción antes de reiniciar
+        // 🟢 Enviar reacción antes de reiniciar
         await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "🔄", key: msg.key }
+            react: { text: "🔄", key: msg.key } // Emoji de reinicio
         });
 
         // Enviar mensaje de confirmación
