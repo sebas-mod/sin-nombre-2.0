@@ -411,16 +411,18 @@ case "ping":
     }
     break;
 
-        
 case "setprefix":
     try {
         // Obtener el número del remitente
         const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
 
-        // Verificar si el usuario es dueño del bot
-        if (!isOwner(senderNumber)) { 
+        // Obtener el número del bot
+        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
+
+        // Verificar si el usuario es dueño del bot o si el bot mismo ejecuta el comando
+        if (!isOwner(senderNumber) && senderNumber !== botNumber) { 
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los dueños del bot pueden cambiar el prefijo global.*"
+                text: "⛔ *Solo los dueños del bot o el bot mismo pueden cambiar el prefijo global.*"
             }, { quoted: msg });
             return;
         }
@@ -460,7 +462,8 @@ case "setprefix":
             text: "❌ *Ocurrió un error al intentar cambiar el prefijo global.*"
         }, { quoted: msg });
     }
-    break;
+    break;        
+
             
 case "get": {
     try {
