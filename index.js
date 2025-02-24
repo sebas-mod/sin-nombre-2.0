@@ -9,7 +9,24 @@
     const { handleCommand } = require("./main"); 
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
+//privado y admins
+const path = "./activos.json";
 
+// 📂 Cargar configuración de modos desde el archivo JSON
+function cargarModos() {
+    if (!fs.existsSync(path)) {
+        fs.writeFileSync(path, JSON.stringify({ modoPrivado: false, modoAdmins: {} }, null, 2));
+    }
+    return JSON.parse(fs.readFileSync(path, "utf-8"));
+}
+
+// 📂 Guardar configuración de modos en el archivo JSON
+function guardarModos(data) {
+    fs.writeFileSync(path, JSON.stringify(data, null, 2));
+}
+
+let modos = cargarModos();
+    
     // Configuración de consola
     console.log(chalk.cyan(figlet.textSync("Azura Ultra Bot", { font: "Standard" })));    
     console.log(chalk.green("Iniciando conexión..."));
