@@ -97,24 +97,21 @@ sock.sendSticker = async (jid, path, quoted, options = {}) => {
     let isVideo = mimeType.startsWith('video');
     let isSticker = mimeType === 'image/webp';
 
-    let buffer;
-    if (options.packname || options.author) {
-      buffer = isVideo
+    let buffer = options.packname || options.author
+      ? isVideo
         ? await writeExifVid(buff, options)
         : isSticker
         ? await writeExif(buff, options)
-        : await writeExifImg(buff, options);
-    } else {
-      buffer = isVideo
-        ? await videoToWebp(buff)
-        : await imageToWebp(buff);
-    }
+        : await writeExifImg(buff, options)
+      : isVideo
+      ? await videoToWebp(buff)
+      : await imageToWebp(buff);
 
     if (!buffer) throw new Error("Error al convertir a sticker.");
 
     await sock.sendMessage(
       jid,
-      { sticker: { stream: buffer }, ...options },
+      { sticker: buffer, ...options },
       { quoted: quoted || null }
     );
 
