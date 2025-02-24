@@ -30,7 +30,12 @@ let modos = cargarModos();
     
     // Configuración de consola
     console.log(chalk.cyan(figlet.textSync("Azura Ultra Bot", { font: "Standard" })));    
-    console.log(chalk.green("Iniciando conexión..."));
+    console.log(chalk.green("\n✅ Iniciando conexión...\n"));
+    
+    // ✅ Mostrar opciones de conexión bien presentadas
+    console.log(chalk.yellow("📡 ¿Cómo deseas conectarte?\n"));
+    console.log(chalk.green("  [1] ") + chalk.white("📷 Escanear código QR"));
+    console.log(chalk.green("  [2] ") + chalk.white("🔑 Ingresar código de 8 dígitos\n"));
 
     // Manejo de entrada de usuario
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -38,9 +43,10 @@ let modos = cargarModos();
 
     let method = "1"; // Por defecto: Código QR
     if (!fs.existsSync("./sessions/creds.json")) {
-        method = await question("¿Cómo deseas conectarte? (1: Código QR, 2: Código de 8 dígitos) > ");
+        method = await question(chalk.magenta("✍️ Elige una opción (1 o 2): "));
+
         if (!["1", "2"].includes(method)) {
-            console.log(chalk.red("❌ Opción inválida. Reinicia el bot y elige 1 o 2."));
+            console.log(chalk.red("\n❌ Opción inválida. Reinicia el bot y elige 1 o 2."));
             process.exit(1);
         }
     }
