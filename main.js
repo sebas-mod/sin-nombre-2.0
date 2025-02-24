@@ -103,23 +103,42 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-case "setprefix":  
-    if (!isOwner(sender.replace("@s.whatsapp.net", ""))) { // Asegurar que se compara correctamente  
-        await sock.sendMessage(msg.key.remoteJid, { text: "⛔ Solo los dueños pueden cambiar el prefijo." });  
-        return;  
-    }  
-    if (!args[0]) {  
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes especificar un nuevo prefijo." });  
-        return;  
-    }  
-    if (!allowedPrefixes.includes(args[0])) {  
-        await sock.sendMessage(msg.key.remoteJid, {  
-            text: "❌ Prefijo inválido. Usa un solo carácter o un emoji de la lista permitida."  
-        });  
-        return;  
-    }  
-    setPrefix(args[0]);  
-    await sock.sendMessage(msg.key.remoteJid, { text: `✅ Prefijo cambiado a: *${args[0]}* 🚀` });  
+case "setprefix":
+    // Obtener el número del remitente (en grupos y privado)
+    const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
+
+    // Verificar si el usuario es dueño del bot desde `config.js`
+    if (!isOwner(senderNumber)) { 
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "⛔ *Solo los dueños del bot pueden cambiar el prefijo.*"
+        }, { quoted: msg });
+        return;
+    }
+
+    // Verificar si se proporcionó un nuevo prefijo
+    if (!args[0]) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "⚠️ *Debes especificar un nuevo prefijo.*\nEjemplo: `.setprefix !`"
+        }, { quoted: msg });
+        return;
+    }
+
+    // Validar si el prefijo está permitido en `allowedPrefixes`
+    if (!allowedPrefixes.includes(args[0])) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Prefijo inválido.*\nUsa un solo carácter o un emoji de la lista permitida."
+        }, { quoted: msg });
+        return;
+    }
+
+    // Cambiar el prefijo globalmente usando `setPrefix()` de `config.js`
+    setPrefix(args[0]);
+
+    // Confirmar el cambio en el grupo o chat privado
+    await sock.sendMessage(msg.key.remoteJid, { 
+        text: `✅ *Prefijo cambiado a:* *${args[0]}* 🚀`
+    });
+
     break;
             
 case "get": {
