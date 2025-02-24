@@ -15,7 +15,7 @@ if (fs.existsSync("./config.json")) {
     global.prefix = ".";
 }
 //orivado
-const path = "./activos.json";
+
 
 // Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
@@ -110,51 +110,6 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-case "modoprivado":
-    if (!isOwner(sender) && !msg.key.fromMe) {
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Solo el dueño del bot puede usar este comando.*" });
-        return;
-    }
-    if (!["on", "off"].includes(args[0])) {
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
-        return;
-    }
-    modos.modoPrivado = args[0] === "on";
-    guardarModos(modos);
-    await sock.sendMessage(msg.key.remoteJid, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
-    break;
-
-case "modoadmins":
-    if (!msg.key.remoteJid.endsWith("@g.us")) {
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este comando solo se puede usar en grupos.*" });
-        return;
-    }
-
-    const chatMetadata = await sock.groupMetadata(msg.key.remoteJid).catch(() => null);
-    if (!chatMetadata) return;
-    
-    const participant = chatMetadata.participants.find(p => p.id.includes(sender));
-    const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
-    
-    if (!isAdmin && !isOwner(sender) && !msg.key.fromMe) {
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Solo los administradores pueden usar este comando.*" });
-        return;
-    }
-    
-    if (!["on", "off"].includes(args[0])) {
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off` en un grupo." });
-        return;
-    }
-    
-    if (args[0] === "on") {
-        modos.modoAdmins[msg.key.remoteJid] = true;
-    } else {
-        delete modos.modoAdmins[msg.key.remoteJid];
-    }
-    
-    guardarModos(modos);
-    await sock.sendMessage(msg.key.remoteJid, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` });
-    break;
 
             
 case "git":
