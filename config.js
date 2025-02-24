@@ -4,7 +4,7 @@ const chalk = require("chalk");
 
 // Lista de Owners
 global.owner = [
-    ["01516709603222", "Owner", true],
+    ["15167096032", "Owner", true],
     ["50766066665"],
     ["595975740803"],
     ["595986172767"],
