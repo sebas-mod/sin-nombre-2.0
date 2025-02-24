@@ -95,7 +95,6 @@ sock.sendSticker = async (jid, path, quoted, options = {}) => {
 
     let mimeType = options.mimetype || (path.mimetype ? path.mimetype : "image/png");
     let isVideo = mimeType.startsWith('video');
-    let isImage = mimeType.startsWith('image');
     let isSticker = mimeType === 'image/webp';
 
     let buffer;
@@ -115,11 +114,10 @@ sock.sendSticker = async (jid, path, quoted, options = {}) => {
 
     await sock.sendMessage(
       jid,
-      { sticker: buffer, ...options },
+      { sticker: buffer },
       { quoted: quoted || null }
     );
 
-    console.log("✅ Sticker enviado correctamente.");
   } catch (error) {
     console.error("❌ Error al enviar el sticker:", error.message);
   }
@@ -871,7 +869,7 @@ case "sticker": {
       mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
     }
 
-    if (mediaBuffer.length === 0) {
+    if (!mediaBuffer.length) {
       await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Error al descargar el archivo." }, { quoted: msg });
       break;
     }
@@ -882,7 +880,6 @@ case "sticker": {
       mimetype: mediaMessage.mimetype
     });
 
-    console.log("✅ Comando sticker ejecutado correctamente.");
   } catch (error) {
     console.error("❌ Error al ejecutar el comando sticker:", error.message);
   }
