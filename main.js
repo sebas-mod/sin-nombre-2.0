@@ -11,7 +11,14 @@ if (fs.existsSync("./config.json")) {
 } else {
     global.prefix = ".";
 }
+// 📌 Objeto global para almacenar los prefijos por grupo
+global.groupPrefixes = {}; 
 
+// 📌 Función para cambiar el prefijo de un grupo
+function setGroupPrefix(groupId, newPrefix) {
+    global.groupPrefixes[groupId] = newPrefix; // Guardar en memoria (global)
+    console.log(`✅ Prefijo del grupo ${groupId} cambiado a: ${newPrefix}`);
+}
 
 const guarFilePath = "./guar.json";
 if (!fs.existsSync(guarFilePath)) {
