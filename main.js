@@ -114,56 +114,64 @@ return buffer;
             react: { text: "📜", key: msg.key } 
         });
 
-        // Construcción del menú con formato limpio, prefijo dinámico e imagen
-        const menuMessage = `╭─「 *🤖 AZURA ULTRA 2.0 BOT* 」─╮
-│ 🔹 *Bienvenido al Menú* 🔹  
-│ 📌 *Prefijo actual:* ${global.prefix}  
-╰──────────────────────╯
+        // Construcción del menú con formato mejorado y prefijo dinámico
+        const menuMessage = `┏━━━━━━━━━━━━━━━┓
+┃  🤖 *AZURA ULTRA 2.0 BOT*  
+┃  🚀 *Tu Asistente Inteligente*  
+┗━━━━━━━━━━━━━━━┛
+
+🌟 *Prefijo actual:* ${global.prefix}  
+💡 *Usa ${global.prefix} antes de cada comando.*
 
 📥 *Comandos de Descarga* 📥  
-   
-${global.prefix}play  
-${global.prefix}play2  
-${global.prefix}ytmp3  
-${global.prefix}ytmp4  
-${global.prefix}tiktok  
-${global.prefix}fb  
-${global.prefix}ig  
-
-━━━━━━━━━━━━━━━━━━━  
+━━━━━━━━━━━━━━━━━━  
+${global.prefix}play → Descargar música.  
+${global.prefix}play2 → Descargar videos.  
+${global.prefix}ytmp3 → Descargar YouTube a MP3.  
+${global.prefix}ytmp4 → Descargar YouTube a MP4.  
+${global.prefix}tiktok → Descargar videos TikTok.  
+${global.prefix}fb → Descargar videos Facebook.  
+${global.prefix}ig → Descargar video Instagram.  
 
 👥 *Comandos de Grupo* 👥  
-
-${global.prefix}cerrargrupo  
-${global.prefix}abrirgrupo  
-${global.prefix}kick  
-
-━━━━━━━━━━━━━━━━━━━  
+━━━━━━━━━━━━━━━━━━  
+${global.prefix}cerrargrupo → Cierra el grupo.
+${global.prefix}abrirgrupo → Abre el grupo.
+${global.prefix}kick → Expulsar del grupo.  
 
 🔍 *Otros Comandos* 🔍  
-
-${global.prefix}ver  
-${global.prefix}perfil  
-${global.prefix}get  
-${global.prefix}ping  
-${global.prefix}creador  
-${global.prefix}info  
-
-━━━━━━━━━━━━━━━━━━━  
+━━━━━━━━━━━━━━━━━━  
+${global.prefix}ver → Ver mensajes de "ver una vez".  
+${global.prefix}perfil → Descargar la foto de perfil de alguien.  
+${global.prefix}get → Descargar estados de WhatsApp.  
+${global.prefix}ping → Ver el estado del bot y el servidor.  
+${global.prefix}creador → Ver el contacto del creador.  
+${global.prefix}info → Ver detalles del bot.  
 
 📂 *Comandos de Multimedia* 📂  
+━━━━━━━━━━━━━━━━━━  
+${global.prefix}guar → Guardar archivos con una clave.  
+${global.prefix}g → Recuperar archivos guardados.  
+${global.prefix}kill → Eliminar un archivo guardado.  
+${global.prefix}clavelista → Ver todas las claves guardadas.  
 
-${global.prefix}guar  
-${global.prefix}g  
-${global.prefix}kill  
-${global.prefix}clavelista  
+💡 *Azura Ultra 2.0 está en constante desarrollo. Se agregarán más funciones pronto.*  
+⚙️ *Desarrollado por Russell* 🚀`;
 
-━━━━━━━━━━━━━━━━━━━  
+        // Enviar el menú con imagen
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: "https://cdn.dorratz.com/files/1740367799142.jpg" }, 
+            caption: menuMessage 
+        }, { quoted: msg });
 
-📢 *Este bot está desarrollado desde cero y se irán agregando más comandos poco a poco.*  
-
-🌐 *Azura Ultra 2.0 Bot - Desarrollado por Russell*`;
-
+    } catch (error) {
+        console.error("❌ Error al enviar el menú:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al mostrar el menú. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
         // Enviar la imagen con el menú
         await sock.sendMessage(msg.key.remoteJid, { 
             image: { url: "https://cdn.dorratz.com/files/1740367799142.jpg" }, 
