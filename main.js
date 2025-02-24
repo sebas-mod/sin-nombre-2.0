@@ -107,7 +107,77 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-        
+ case "menu": {
+    try {
+        // Reacción antes de enviar el menú
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "📜", key: msg.key } 
+        });
+
+        // Construcción del menú con formato limpio, prefijo dinámico e imagen
+        const menuMessage = `╭─「 *🤖 AZURA ULTRA 2.0 BOT* 」─╮
+│ 🔹 *Bienvenido al Menú* 🔹  
+│ 📌 *Prefijo actual:* ${global.prefix}  
+╰──────────────────────╯
+
+📥 *Comandos de Descarga* 📥  
+   
+${global.prefix}play  
+${global.prefix}play2  
+${global.prefix}ytmp3  
+${global.prefix}ytmp4  
+${global.prefix}tiktok  
+${global.prefix}fb  
+${global.prefix}ig  
+
+━━━━━━━━━━━━━━━━━━━  
+
+👥 *Comandos de Grupo* 👥  
+
+${global.prefix}cerrargrupo  
+${global.prefix}abrirgrupo  
+${global.prefix}kick  
+
+━━━━━━━━━━━━━━━━━━━  
+
+🔍 *Otros Comandos* 🔍  
+
+${global.prefix}ver  
+${global.prefix}perfil  
+${global.prefix}get  
+${global.prefix}ping  
+${global.prefix}creador  
+${global.prefix}info  
+
+━━━━━━━━━━━━━━━━━━━  
+
+📂 *Comandos de Multimedia* 📂  
+
+${global.prefix}guar  
+${global.prefix}g  
+${global.prefix}kill  
+${global.prefix}clavelista  
+
+━━━━━━━━━━━━━━━━━━━  
+
+📢 *Este bot está desarrollado desde cero y se irán agregando más comandos poco a poco.*  
+
+🌐 *Azura Ultra 2.0 Bot - Desarrollado por Russell*`;
+
+        // Enviar la imagen con el menú
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: "https://cdn.dorratz.com/files/1740367799142.jpg" }, 
+            caption: menuMessage 
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error al enviar el menú:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al mostrar el menú. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}       
 
 
 case "ping":
@@ -192,25 +262,18 @@ case "setprefix":
             return;
         }
 
+        // 🟢 Enviar reacción antes de procesar el cambio
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "⚙️", key: msg.key } // Engranaje para indicar que está cambiando el prefijo
+        });
+
         // Cambiar el prefijo globalmente
         setPrefix(args[0]);
 
         // Confirmar el cambio en el chat donde se ejecutó el comando
         await sock.sendMessage(msg.key.remoteJid, { 
             text: `✅ *Prefijo global cambiado a:* *${args[0]}* 🚀`
-        });
-
-        // 📌 Obtener lista de todos los grupos donde está el bot
-        const chats = await sock.groupFetchAllParticipating();
-        const groupIds = Object.keys(chats);
-
-        // 📌 Enviar notificación en todos los grupos
-        for (const groupId of groupIds) {
-            await sock.sendMessage(groupId, { 
-                text: `🔔 *Aviso Importante:*\n\n⚠️ *El prefijo global ha cambiado.*\n📌 *Nuevo prefijo:* *${args[0]}*\n\nPara ver los comandos disponibles, usa: *${args[0]}menu* 🚀`
-            });
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Pequeño delay para evitar spam
-        }
+        }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando setprefix:", error);
