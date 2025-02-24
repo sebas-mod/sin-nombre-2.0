@@ -107,6 +107,7 @@ return buffer;
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+
 case "menu": {
     try {
         // Reacción antes de enviar el menú
@@ -119,6 +120,11 @@ case "menu": {
 ┃  🤖 *AZURA ULTRA 2.0 BOT*  
 ┃  🚀 *Tu Asistente Inteligente*  
 ┗━━━━━━━━━━━━━━━┛
+
+📌 *Usa los siguientes comandos para ver más menús:*  
+${global.prefix}allmenu  
+${global.prefix}info  
+${global.prefix}menu2  
 
 🌟 *Prefijo actual:* ${global.prefix}  
 💡 *Usa ${global.prefix} antes de cada comando.*
@@ -172,26 +178,107 @@ ${global.prefix}clavelista → Ver todas las claves guardadas.
         }, { quoted: msg });
     }
     break;
-} 
-    
+}
+        
+case "menu2": {
+    try {
+        // Reacción antes de enviar el menú
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "📂", key: msg.key } 
+        });
+
+        // Verificar si el archivo guar.json existe
+        if (!fs.existsSync("./guar.json")) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ *Error:* No hay multimedia guardado aún. Usa `.guar` para guardar algo primero." },
+                { quoted: msg }
+            );
+        }
+
+        // Leer archivo guar.json
+        let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
+        
+        let listaMensaje = `┏━━━━━━━━━━━━━━━┓
+┃  📂 *MENÚ DE MULTIMEDIA*  
+┃  🔑 *Palabras Clave Guardadas*  
+┗━━━━━━━━━━━━━━━┛
+
+📌 *¿Cómo recuperar un archivo guardado?*  
+Usa el comando:  
+➡️ _${global.prefix}g palabra_clave_  
+
+📂 *Lista de palabras clave guardadas:*  
+━━━━━━━━━━━━━━━━━━━\n`;
+
+        let claves = Object.keys(guarData);
+        
+        if (claves.length === 0) {
+            listaMensaje += "🚫 *No hay palabras clave guardadas.*\n";
+        } else {
+            claves.forEach((clave, index) => {
+                listaMensaje += `*${index + 1}.* ${clave}\n`;
+            });
+        }
+
+        listaMensaje += `\n━━━━━━━━━━━━━━━━━━━  
+📥 *Otros Comandos de Multimedia*  
+
+${global.prefix}guar → Guarda archivos con una clave.  
+${global.prefix}g → Recupera archivos guardados.  
+${global.prefix}kill → Elimina un archivo guardado.  
+
+💡 *Azura Ultra 2.0 sigue mejorando. Pronto más funciones.*  
+⚙️ *Desarrollado por Russell* 🚀`;
+
+        // Enviar el menú con video como GIF
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: "https://cdn.dorratz.com/files/1740372045635.mp4" }, 
+            gifPlayback: true, // Esto hace que se reproduzca como GIF
+            caption: listaMensaje 
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error al enviar el menú2:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al mostrar el menú2. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}    
 
 
 case "ping":
     try {
-        // Obtener información del sistema
-        const uptime = os.uptime(); // Tiempo de actividad en segundos
-        const freeMem = os.freemem(); // Memoria RAM libre
-        const totalMem = os.totalmem(); // Memoria RAM total
-        const cpuModel = os.cpus()[0].model; // Modelo de CPU
-        const cpuUsage = execSync("top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}'").toString().trim(); // Uso de CPU
-        const loadAvg = os.loadavg()[0].toFixed(2); // Promedio de carga del sistema
-        const diskUsage = execSync("df -h / | awk 'NR==2 {print $3 \" / \" $2}'").toString().trim(); // Uso de disco
+        // Obtener la fecha y hora actual
+        const now = new Date();
+        const options = { 
+            weekday: "long", 
+            year: "numeric", 
+            month: "long", 
+            day: "numeric", 
+            hour: "2-digit", 
+            minute: "2-digit", 
+            second: "2-digit", 
+            timeZoneName: "short" 
+        };
+        const formattedDate = now.toLocaleDateString("es-ES", options);
 
-        // Formatear uptime a horas, minutos y segundos
-        const uptimeHours = Math.floor(uptime / 3600);
-        const uptimeMinutes = Math.floor((uptime % 3600) / 60);
-        const uptimeSeconds = Math.floor(uptime % 60);
-        const uptimeFormatted = `${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`;
+        // Obtener el tiempo activo en segundos y convertirlo a días, horas, minutos y segundos
+        const uptime = os.uptime();
+        const uptimeDays = Math.floor(uptime / 86400); // Días
+        const uptimeHours = Math.floor((uptime % 86400) / 3600); // Horas
+        const uptimeMinutes = Math.floor((uptime % 3600) / 60); // Minutos
+        const uptimeSeconds = Math.floor(uptime % 60); // Segundos
+        const uptimeFormatted = `${uptimeDays} días, ${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`;
+
+        // Obtener información del sistema
+        const freeMem = os.freemem(); 
+        const totalMem = os.totalmem(); 
+        const cpuModel = os.cpus()[0].model; 
+        const cpuUsage = execSync("top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}'").toString().trim();
+        const loadAvg = os.loadavg()[0].toFixed(2); 
+        const diskUsage = execSync("df -h / | awk 'NR==2 {print $3 \" / \" $2}'").toString().trim(); 
 
         // Formatear memoria RAM
         const freeMemGB = (freeMem / 1024 / 1024 / 1024).toFixed(2);
@@ -205,18 +292,20 @@ case "ping":
             }
         });
 
-        // Enviar mensaje respondiendo al usuario
+        // Enviar mensaje con imagen y detalles del servidor
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `🏓 *Pong! El bot está activo.*\n\n` +
-                  `💻 *Información del Servidor:*\n` +
-                  `🔹 *Uptime:* ${uptimeFormatted}\n` +
-                  `🔹 *CPU:* ${cpuModel}\n` +
-                  `🔹 *Uso de CPU:* ${cpuUsage}%\n` +
-                  `🔹 *Carga del sistema:* ${loadAvg}\n` +
-                  `🔹 *RAM:* ${freeMemGB}GB / ${totalMemGB}GB\n` +
-                  `🔹 *Disco:* ${diskUsage}\n\n` +
-                  `🌐 *Alojado en:* *Sky Ultra Plus* 🚀\n` +
-                  `📌 *Proveedor de Hosting de Confianza*`,
+            image: { url: "https://cdn.dorratz.com/files/1740372224017.jpg" }, 
+            caption: `🏓 *Pong! El bot está activo.*\n\n` +
+                     `📅 *Fecha y hora actual:* ${formattedDate}\n\n` +
+                     `🕒 *Tiempo Activo:* ${uptimeFormatted}\n\n` +
+                     `💻 *Información del Servidor:*\n` +
+                     `🔹 *CPU:* ${cpuModel}\n` +
+                     `🔹 *Uso de CPU:* ${cpuUsage}%\n` +
+                     `🔹 *Carga del sistema:* ${loadAvg}\n` +
+                     `🔹 *RAM:* ${freeMemGB}GB / ${totalMemGB}GB\n` +
+                     `🔹 *Disco:* ${diskUsage}\n\n` +
+                     `🌐 *Alojado en:* *Sky Ultra Plus* 🚀\n` +
+                     `📌 *Proveedor de Hosting de Confianza*`,
             quoted: msg // Responder citando al mensaje original
         });
 
