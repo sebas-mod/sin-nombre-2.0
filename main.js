@@ -15,7 +15,23 @@ if (fs.existsSync("./config.json")) {
     global.prefix = ".";
 }
 //orivado
+const path = "./activos.json";
 
+// 📂 Cargar configuración de modos desde el archivo JSON
+function cargarModos() {
+    if (!fs.existsSync(path)) {
+        fs.writeFileSync(path, JSON.stringify({ modoPrivado: false, modoAdmins: {} }, null, 2));
+    }
+    return JSON.parse(fs.readFileSync(path, "utf-8"));
+}
+
+// 📂 Guardar configuración de modos en el archivo JSON
+function guardarModos(data) {
+    fs.writeFileSync(path, JSON.stringify(data, null, 2));
+}
+
+// Definir la variable `modos` globalmente
+let modos = cargarModos();
 // Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
 //modoprivado ariba
