@@ -87,6 +87,30 @@ function isUrl(url) {
         return false;
     }
 }
+//renicio
+async function notifyRestart() {
+    const restarterFile = "./lastRestarter.json";
+
+    if (fs.existsSync(restarterFile)) {
+        try {
+            const data = JSON.parse(fs.readFileSync(restarterFile, "utf-8"));
+
+            if (data.chatId && typeof sock !== "undefined") {
+                await sock.sendMessage(data.chatId, {
+                    text: "✅ *El bot está en línea nuevamente tras el reinicio.* 🚀"
+                });
+
+                console.log(chalk.green("📢 Notificación enviada al chat del reinicio."));
+
+                // 🔄 Borrar el archivo después de enviar el mensaje
+                fs.unlinkSync(restarterFile);
+            }
+        } catch (error) {
+            console.error("❌ Error al procesar lastRestarter.json:", error);
+        }
+    }
+}
+
 
 async function handleCommand(sock, msg, command, args, sender) {
 sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
