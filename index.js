@@ -199,17 +199,34 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     }
 });
             
-            sock.ev.on("connection.update", async (update) => {
-                const { connection, lastDisconnect, qr } = update;
-                if (connection === "connecting") {
-                    console.log(chalk.blue("🔄 Conectando a WhatsApp..."));
-                } else if (connection === "open") {
-                    console.log(chalk.green("✅ ¡Conexión establecida con éxito!"));
-                } else if (connection === "close") {
-                    console.log(chalk.red("❌ Conexión cerrada. Intentando reconectar en 5 segundos..."));
-                    setTimeout(startBot, 5000); // Intentar reconectar después de 5 segundos
+
+sock.ev.on("connection.update", async (update) => {
+    const { connection, lastDisconnect, qr } = update;
+
+    if (connection === "connecting") {
+        console.log(chalk.blue("🔄 Conectando a WhatsApp..."));
+    } else if (connection === "open") {
+        console.log(chalk.green("✅ ¡Conexión establecida con éxito!"));
+
+        // 📌 Comprobar si hay un chat donde avisar cuando el bot se inicie
+        if (fs.existsSync(lastRestarterFile)) {
+            try {
+                const data = JSON.parse(fs.readFileSync(lastRestarterFile));
+                if (data.chatId) {
+                    await sock.sendMessage(data.chatId, {
+                        text: "✅ *¡El bot está en línea nuevamente!* 🚀"
+                    });
                 }
-            });
+                fs.unlinkSync(lastRestarterFile); // Eliminar el archivo después de avisar
+            } catch (error) {
+                console.error(chalk.red("❌ Error al intentar leer lastRestarter.json:"), error);
+            }
+        }
+    } else if (connection === "close") {
+        console.log(chalk.red("❌ Conexión cerrada. Intentando reconectar en 5 segundos..."));
+        setTimeout(startBot, 5000); // Intentar reconectar después de 5 segundos
+    }
+});
 
             sock.ev.on("creds.update", saveCreds);
 
