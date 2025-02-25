@@ -10,7 +10,7 @@
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 //privado y admins
-const onlineUsers = {};
+
 const path = "./activos.json";
 
 // 📂 Cargar configuración de modos desde el archivo JSON
@@ -88,7 +88,9 @@ let modos = cargarModos();
             }
 // Almacenar los usuarios en línea por cada grupo
 
-
+// Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
+global.onlineUsers = {};
+// Detectar cambios de presencia (quién está en línea y quién no)
 // Detectar cambios de presencia (quién está en línea y quién no)
 sock.ev.on("presence.update", async (presence) => {
     const chatId = presence.id;
@@ -97,10 +99,10 @@ sock.ev.on("presence.update", async (presence) => {
     if (!chatId.endsWith("@g.us")) return; // Solo en grupos
 
     if (presence.presence === "available") {
-        if (!onlineUsers[chatId]) onlineUsers[chatId] = new Set();
-        onlineUsers[chatId].add(userId);
+        if (!global.onlineUsers[chatId]) global.onlineUsers[chatId] = new Set();
+        global.onlineUsers[chatId].add(userId);
     } else if (presence.presence === "unavailable" || presence.presence === "composing") {
-        if (onlineUsers[chatId]) onlineUsers[chatId].delete(userId);
+        if (global.onlineUsers[chatId]) global.onlineUsers[chatId].delete(userId);
     }
 });
 
