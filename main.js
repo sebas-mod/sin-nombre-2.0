@@ -170,9 +170,9 @@ case "sendpack":
             return;
         }
 
-        // Enviar cada sticker uno por uno desde la carpeta 'stickers/'
+        // Enviar cada sticker desde la carpeta 'stickers/'
         for (let stickerFileName of stickerPaths) {
-            let stickerPath = path.join(stickersDir, stickerFileName);
+            let stickerPath = path.join(stickersDir, stickerFileName); // Asegurar la ruta correcta
 
             // Verificar si el archivo del sticker existe en la carpeta
             if (fs.existsSync(stickerPath)) {
