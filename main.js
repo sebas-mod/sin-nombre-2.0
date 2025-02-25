@@ -182,8 +182,8 @@ case "ss":
 
         // Formato bonito para la metadata del sticker 🌟
         let metadata = {
-            packname: `🎨 *Creado por:* ${senderName}`,
-            author: `🤖 *Bot:* Azura Ultra 2.0\n🗓️ *Fecha:* ${fecha}`
+            packname: `🎨 Creado por: ${senderName}`,
+            author: `🤖Bot: Azura Ultra 2.0\n🗓️ Fecha: ${fecha}`
         };
 
         let stickerBuffer;
