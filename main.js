@@ -23,7 +23,7 @@ if (!fs.existsSync(stickersFile)) {
     fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
 }
 //sistema de sktikerz ariba
-const AdmZip = require("adm-zip"); // Librería para crear ZIP
+
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
 
