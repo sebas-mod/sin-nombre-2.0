@@ -307,48 +307,66 @@ case "sendpack":
 case "exportpack":
     try {
         if (!args[0]) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes especificar el nombre del paquete.*\nEjemplo: `.exportpack Memes`" }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Debes especificar el nombre del paquete.*\nEjemplo: `.exportpack Memes`" 
+            }, { quoted: msg });
             return;
         }
 
         let packName = args.join(" ");
 
+        // Cargar los paquetes de stickers desde el JSON
+        let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
+
         // Verificar si el paquete existe
         if (!stickerData[packName]) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ese paquete no existe.* Usa `.listpacks` para ver los disponibles." }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Ese paquete no existe.* Usa `.listpacks` para ver los disponibles." 
+            }, { quoted: msg });
             return;
         }
 
         let stickerPaths = stickerData[packName];
 
         if (stickerPaths.length === 0) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este paquete no tiene stickers guardados.* Usa `.addsticker <paquete>` para añadir." }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Este paquete no tiene stickers guardados.* Usa `.addsticker <paquete>` para añadir." 
+            }, { quoted: msg });
             return;
         }
 
-        // Crear ZIP con los stickers
-        let zip = new AdmZip();
-        stickerPaths.forEach((filePath, index) => {
-            zip.addLocalFile(filePath, "", `sticker${index + 1}.webp`);
-        });
+        // Crear un archivo ZIP con los stickers del paquete
+        const zip = new AdmZip();
+        let tempZipPath = path.join(stickersDir, `${packName}.zip`);
 
-        // Guardar el ZIP
-        let zipFilePath = `./stickers/${packName}.zip`;
-        zip.writeZip(zipFilePath);
+        for (let stickerFileName of stickerPaths) {
+            let stickerPath = path.join(stickersDir, stickerFileName);
 
-        // Enviar el archivo ZIP al usuario
+            if (fs.existsSync(stickerPath)) {
+                zip.addLocalFile(stickerPath);
+            } else {
+                console.warn(`⚠️ Sticker no encontrado: ${stickerPath}`);
+            }
+        }
+
+        zip.writeZip(tempZipPath);
+
+        // Enviar el paquete ZIP
         await sock.sendMessage(msg.key.remoteJid, { 
-            document: { url: zipFilePath }, 
-            mimetype: "application/zip", 
-            fileName: `${packName}.zip`, 
-            caption: `📦 *Paquete de stickers '${packName}' listo para importar en WhatsApp.*`
+            document: { url: tempZipPath },
+            mimetype: "application/zip",
+            fileName: `${packName}.zip`,
+            caption: `✅ *Paquete de stickers '${packName}' exportado con éxito.*\n💾 Descárgalo y agrégalo a tu WhatsApp.`
         }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .exportpack:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al generar el paquete de stickers.*" }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al exportar el paquete de stickers.*" 
+        }, { quoted: msg });
     }
-    break;        
+    break;
+
         
 case "addsticker":
     try {
