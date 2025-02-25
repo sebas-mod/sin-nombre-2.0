@@ -280,13 +280,13 @@ case "addsticker":
         }
 
         let fileName = `${Date.now()}.webp`;
-        let filePath = path.join(stickersDir, fileName);
+        let filePath = path.join(stickersDir, fileName); // Asegurar la ruta correcta
 
         // Guardar el sticker en la carpeta
         fs.writeFileSync(filePath, buffer);
 
-        // Agregar el sticker al paquete en el JSON
-        stickerData[packName].push(filePath);
+        // Agregar el sticker al paquete en el JSON (solo el nombre del archivo, no la ruta completa)
+        stickerData[packName].push(fileName);
         fs.writeFileSync(stickersFile, JSON.stringify(stickerData, null, 2));
 
         await sock.sendMessage(msg.key.remoteJid, { 
