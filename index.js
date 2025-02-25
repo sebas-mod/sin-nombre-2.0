@@ -10,7 +10,7 @@
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 //privado y admins
-
+const onlineUsers = {};
 const path = "./activos.json";
 
 // 📂 Cargar configuración de modos desde el archivo JSON
@@ -87,7 +87,7 @@ let modos = cargarModos();
                 }
             }
 // Almacenar los usuarios en línea por cada grupo
-const onlineUsers = {};
+
 
 // Detectar cambios de presencia (quién está en línea y quién no)
 sock.ev.on("presence.update", async (presence) => {
