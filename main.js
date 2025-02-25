@@ -304,27 +304,45 @@ case "addsticker":
 case "newpack":
     try {
         if (!args[0]) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes especificar un nombre para el paquete.*\n\n📌 _Ejemplo: `.newpack MiPaquete`_" }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Debes especificar un nombre para el paquete.*\nEjemplo: `.newpack Memes`" 
+            }, { quoted: msg });
             return;
         }
 
         let packName = args.join(" ");
 
-        // 📌 Verificar si el paquete ya existe
+        // Verificar si el archivo stickers.json existe, si no, crearlo
+        if (!fs.existsSync(stickersFile)) {
+            fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
+        }
+
+        // Leer el archivo JSON
+        let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
+
+        // Verificar si el paquete ya existe
         if (stickerData[packName]) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ese paquete ya existe. Usa otro nombre.*" }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Ese paquete ya existe. Usa otro nombre.*" 
+            }, { quoted: msg });
             return;
         }
 
-        // 📌 Crear el paquete y guardarlo en stickers.json
+        // Crear el paquete de stickers
         stickerData[packName] = [];
+
+        // Guardar la estructura en el JSON
         fs.writeFileSync(stickersFile, JSON.stringify(stickerData, null, 2));
 
-        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *Paquete de stickers '${packName}' creado.*` }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✅ *Paquete de stickers '${packName}' creado exitosamente.*` 
+        }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .newpack:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al crear el paquete de stickers.*" }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al crear el paquete de stickers.*" 
+        }, { quoted: msg });
     }
     break;
         
