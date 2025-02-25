@@ -140,6 +140,88 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "sendpack":
+    try {
+        if (!args[0]) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes especificar el nombre del paquete.*\nEjemplo: `.sendpack Memes`" }, { quoted: msg });
+            return;
+        }
+
+        let packName = args.join(" ");
+        
+        // Verificar si el paquete existe
+        if (!stickerData[packName]) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ese paquete no existe.* Usa `.listpacks` para ver los paquetes disponibles." }, { quoted: msg });
+            return;
+        }
+
+        let stickerPaths = stickerData[packName];
+
+        if (stickerPaths.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este paquete no tiene stickers guardados.* Usa `.addsticker <paquete>` para añadir." }, { quoted: msg });
+            return;
+        }
+
+        // Enviar los stickers uno por uno
+        for (let stickerPath of stickerPaths) {
+            await sock.sendMessage(msg.key.remoteJid, { sticker: { url: stickerPath } }, { quoted: msg });
+            await new Promise(resolve => setTimeout(resolve, 500)); // Pequeña pausa para evitar bloqueo
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *Paquete '${packName}' enviado con éxito.*` }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .sendpack:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al enviar el paquete de stickers.*" }, { quoted: msg });
+    }
+    break;
+            
+case "exportpack":
+    try {
+        if (!args[0]) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes especificar el nombre del paquete.*\nEjemplo: `.exportpack Memes`" }, { quoted: msg });
+            return;
+        }
+
+        let packName = args.join(" ");
+
+        // Verificar si el paquete existe
+        if (!stickerData[packName]) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ese paquete no existe.* Usa `.listpacks` para ver los disponibles." }, { quoted: msg });
+            return;
+        }
+
+        let stickerPaths = stickerData[packName];
+
+        if (stickerPaths.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este paquete no tiene stickers guardados.* Usa `.addsticker <paquete>` para añadir." }, { quoted: msg });
+            return;
+        }
+
+        // Crear ZIP con los stickers
+        let zip = new AdmZip();
+        stickerPaths.forEach((filePath, index) => {
+            zip.addLocalFile(filePath, "", `sticker${index + 1}.webp`);
+        });
+
+        // Guardar el ZIP
+        let zipFilePath = `./stickers/${packName}.zip`;
+        zip.writeZip(zipFilePath);
+
+        // Enviar el archivo ZIP al usuario
+        await sock.sendMessage(msg.key.remoteJid, { 
+            document: { url: zipFilePath }, 
+            mimetype: "application/zip", 
+            fileName: `${packName}.zip`, 
+            caption: `📦 *Paquete de stickers '${packName}' listo para importar en WhatsApp.*`
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .exportpack:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al generar el paquete de stickers.*" }, { quoted: msg });
+    }
+    break;        
+        
 case "addsticker":
     try {
         if (!args[0]) {
