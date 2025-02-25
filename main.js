@@ -177,7 +177,7 @@ case "listpacks":
     }
     break;
 
-case "ss":
+case "s":
     try {
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
@@ -247,75 +247,6 @@ case "ss":
     }
     break;
             
-case "s":
-    try {
-        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        if (!quoted) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Responde a una imagen o video con el comando `.ss` para crear un sticker.*" 
-            }, { quoted: msg });
-            return;
-        }
-
-        let mediaType = quoted.imageMessage ? "image" : quoted.videoMessage ? "video" : null;
-        if (!mediaType) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Solo puedes convertir imágenes o videos en stickers.*" 
-            }, { quoted: msg });
-            return;
-        }
-
-        // Obtener el nombre del usuario
-        let senderName = msg.pushName || "Usuario Desconocido";
-
-        // Obtener la fecha actual con emojis 📅
-        let now = new Date();
-        let fecha = `📅 ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-
-        // Mensaje de reacción mientras se crea el sticker ⚙️
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🛠️", key: msg.key } 
-        });
-
-        let mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of mediaStream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        if (buffer.length === 0) {
-            throw new Error("❌ Error: No se pudo descargar el archivo.");
-        }
-
-        // Formato bonito para la metadata del sticker 🌟
-        let metadata = {
-            packname: `🎨 Hecho por: ${senderName}`,
-            author: `🤖Bot Creador: Azura Ultra 2.0\n🗓️ Fecha: ${fecha}`
-        };
-
-        let stickerBuffer;
-        if (mediaType === "image") {
-            stickerBuffer = await writeExifImg(buffer, metadata);
-        } else {
-            stickerBuffer = await writeExifVid(buffer, metadata);
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            sticker: { url: stickerBuffer } 
-        }, { quoted: msg });
-
-        // Confirmación final con reacción ✅
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .ss:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Hubo un error al procesar el sticker. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
         
 case "sendpack":
     try {
