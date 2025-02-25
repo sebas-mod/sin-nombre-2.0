@@ -13,28 +13,7 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
 
-// Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
-const lastRestarterFile = "./lastRestarter.json";
 
-// 📌 Comprobar si hay un chat donde avisar cuando el bot se inicie
-if (fs.existsSync(lastRestarterFile)) {
-    const data = JSON.parse(fs.readFileSync(lastRestarterFile));
-    if (data.chatId) {
-        await sock.sendMessage(data.chatId, {
-            text: "✅ *¡El bot está en línea nuevamente!*"
-        });
-    }
-    fs.unlinkSync(lastRestarterFile); // Eliminar el archivo después de avisar
-}
-// Función para leer el prefijo guardado
-function loadPrefix() {
-    if (fs.existsSync(configFilePath)) {
-        let configData = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
-        global.prefix = configData.prefix || ".";
-    } else {
-        global.prefix = ".";
-    }
-}
 
 // Cargar el prefijo al iniciar el bot
 loadPrefix();
