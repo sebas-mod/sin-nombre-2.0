@@ -12,17 +12,28 @@
     
 //privado y admins
 // Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
-const lastRestarterFile = "./lastRestarter.json";
+// 📌 Función para enviar el mensaje solo si el bot se reinició con `.rest`
+async function notifyRestart() {
+    const restarterFile = "./lastRestarter.json";
 
-// 📌 Comprobar si hay un chat donde avisar cuando el bot se inicie
-if (fs.existsSync(lastRestarterFile)) {
-    const data = JSON.parse(fs.readFileSync(lastRestarterFile));
-    if (data.chatId) {
-        await sock.sendMessage(data.chatId, {
-            text: "✅ *¡El bot está en línea nuevamente!*"
-        });
+    if (fs.existsSync(restarterFile)) {
+        try {
+            const data = JSON.parse(fs.readFileSync(restarterFile, "utf-8"));
+
+            if (data.chatId && typeof sock !== "undefined") {
+                await sock.sendMessage(data.chatId, {
+                    text: "✅ *El bot está en línea nuevamente tras el reinicio.* 🚀"
+                });
+
+                console.log(chalk.green("📢 Notificación enviada al chat del reinicio."));
+
+                // 🔄 Borrar el archivo después de enviar el mensaje
+                fs.unlinkSync(restarterFile);
+            }
+        } catch (error) {
+            console.error("❌ Error al procesar lastRestarter.json:", error);
+        }
     }
-    fs.unlinkSync(lastRestarterFile); // Eliminar el archivo después de avisar
 }
 // Función para leer el prefijo guardado
 function loadPrefix() {
@@ -230,27 +241,14 @@ sock.ev.on("connection.update", async (update) => {
     } else if (connection === "open") {
         console.log(chalk.green("✅ ¡Conexión establecida con éxito!"));
 
-        // 📌 Verificar si el bot fue reiniciado por el comando .rest
-        const restarterFile = "./lastRestarter.json";
-
-        if (fs.existsSync(restarterFile)) {
-            try {
-                const data = JSON.parse(fs.readFileSync(restarterFile, "utf-8"));
-
-                // 📌 Verificar que hay un `chatId` válido y que `sock` está definido
-                if (data.chatId && typeof sock !== "undefined") {
-                    await sock.sendMessage(data.chatId, {
-                        text: "✅ *El bot está en línea nuevamente tras el reinicio.* 🚀"
-                    });
-
-                    console.log(chalk.green("📢 Notificación enviada al chat del reinicio."));
-
-                    // 🔄 Borrar el archivo después de enviar el mensaje (para evitar que se repita en reinicios manuales)
-                    fs.unlinkSync(restarterFile);
-                }
-            } catch (error) {
-                console.error("❌ Error al procesar lastRestarter.json:", error);
-            }
+        // 📌 Esperar a que `sock` esté disponible antes de usarlo
+        if (typeof sock === "undefined") {
+            console.log(chalk.red("⚠️ `sock` aún no está definido. Esperando inicialización..."));
+            setTimeout(() => {
+                notifyRestart();
+            }, 5000); // Esperar 5 segundos antes de intentar de nuevo
+        } else {
+            notifyRestart();
         }
     } else if (connection === "close") {
         console.log(chalk.red("❌ Conexión cerrada. Intentando reconectar en 5 segundos..."));
