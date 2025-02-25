@@ -28,7 +28,8 @@ global.owner = [
     ["573012482694"],
     ["50582340051"]
 ];
-
+// Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
+global.onlineUsers = {};
 // Lista de prefijos permitidos
 global.allowedPrefixes = [
     ".", "!", "#", "?", "-", "+", "*", "~", "$", "&", "%", "=", "🔥", "💀", "✅", "🥰",
