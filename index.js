@@ -224,29 +224,32 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
 sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect, qr } = update;
-    
+
     if (connection === "connecting") {
         console.log(chalk.blue("🔄 Conectando a WhatsApp..."));
     } else if (connection === "open") {
         console.log(chalk.green("✅ ¡Conexión establecida con éxito!"));
 
-        // 📌 Leer el archivo donde se guardó el último chat que usó .rest
+        // 📌 Verificar si el bot fue reiniciado por el comando .rest
         const restarterFile = "./lastRestarter.json";
+
         if (fs.existsSync(restarterFile)) {
             try {
                 const data = JSON.parse(fs.readFileSync(restarterFile, "utf-8"));
-                
-                // 📌 Enviar mensaje de que el bot está de vuelta
-                if (data.chatId) {
-                    await sock.sendMessage(data.chatId, { 
-                        text: "✅ *El bot está en línea nuevamente y listo para usar.* 🚀" 
+
+                // 📌 Verificar que hay un `chatId` válido y que `sock` está definido
+                if (data.chatId && typeof sock !== "undefined") {
+                    await sock.sendMessage(data.chatId, {
+                        text: "✅ *El bot está en línea nuevamente tras el reinicio.* 🚀"
                     });
-                    
-                    // 🔄 Borrar el archivo después de enviar el mensaje
+
+                    console.log(chalk.green("📢 Notificación enviada al chat del reinicio."));
+
+                    // 🔄 Borrar el archivo después de enviar el mensaje (para evitar que se repita en reinicios manuales)
                     fs.unlinkSync(restarterFile);
                 }
             } catch (error) {
-                console.error("❌ Error al leer lastRestarter.json:", error);
+                console.error("❌ Error al procesar lastRestarter.json:", error);
             }
         }
     } else if (connection === "close") {
@@ -254,7 +257,6 @@ sock.ev.on("connection.update", async (update) => {
         setTimeout(startBot, 5000); // Intentar reconectar después de 5 segundos
     }
 });
-
             sock.ev.on("creds.update", saveCreds);
 
             // Manejo de errores global para evitar que el bot se detenga
