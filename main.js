@@ -10,7 +10,7 @@ const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
 // Cargar prefijo desde archivo de configuración
 
-}
+
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
 
