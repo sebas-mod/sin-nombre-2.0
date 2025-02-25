@@ -158,6 +158,18 @@ case "ss":
             return;
         }
 
+        // Obtener el nombre del usuario
+        let senderName = msg.pushName || "Usuario Desconocido";
+
+        // Obtener la fecha actual
+        let now = new Date();
+        let fecha = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+        // Mensaje de reacción mientras se crea el sticker
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🛠️", key: msg.key } 
+        });
+
         let mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
         let buffer = Buffer.alloc(0);
         for await (const chunk of mediaStream) {
@@ -170,14 +182,25 @@ case "ss":
 
         let stickerBuffer;
         if (mediaType === "image") {
-            stickerBuffer = await imageToWebp(buffer);
+            stickerBuffer = await writeExifImg(buffer, {
+                packname: `Creado por ${senderName}`,
+                author: `Azura Ultra 2.0 Bot - ${fecha}`
+            });
         } else {
-            stickerBuffer = await videoToWebp(buffer);
+            stickerBuffer = await writeExifVid(buffer, {
+                packname: `Creado por ${senderName}`,
+                author: `Azura Ultra 2.0 Bot - ${fecha}`
+            });
         }
 
         await sock.sendMessage(msg.key.remoteJid, { 
-            sticker: stickerBuffer 
+            sticker: { url: stickerBuffer } 
         }, { quoted: msg });
+
+        // Confirmación final con reacción ✅
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
 
     } catch (error) {
         console.error("❌ Error en el comando .ss:", error);
