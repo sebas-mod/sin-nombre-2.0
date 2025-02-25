@@ -127,15 +127,24 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 // 💾 Manejo del comando "setprefix"
 case "setprefix":
     try {
-        // Verificar si el remitente es el dueño del bot
-        if (!isOwner(sender)) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⛔ *Solo los dueños del bot pueden cambiar el prefijo.*" }, { quoted: msg });
+        // Obtener el número del bot
+        const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net";
+
+        // Verificar si el remitente es un dueño autorizado o el mismo bot
+        const isBotMessage = msg.key.fromMe || sender === botNumber;
+
+        if (!isOwner(sender) && !isBotMessage) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo los dueños del bot o el bot mismo pueden cambiar el prefijo.*" 
+            }, { quoted: msg });
             return;
         }
 
         // Verificar si el usuario proporcionó un nuevo prefijo
         if (!args[0]) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes especificar un nuevo prefijo.*\nEjemplo: `.setprefix !`" }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Debes especificar un nuevo prefijo.*\nEjemplo: `.setprefix !`" 
+            }, { quoted: msg });
             return;
         }
 
@@ -143,7 +152,9 @@ case "setprefix":
 
         // Verificar si el nuevo prefijo está permitido
         if (!allowedPrefixes.includes(newPrefix)) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Prefijo inválido.* Usa un solo carácter o emoji permitido." }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Prefijo inválido.* Usa un solo carácter o emoji permitido." 
+            }, { quoted: msg });
             return;
         }
 
@@ -154,13 +165,17 @@ case "setprefix":
         global.prefix = newPrefix;
 
         // Confirmación del cambio
-        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *Prefijo cambiado a:* *${newPrefix}*` }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✅ *Prefijo cambiado a:* *${newPrefix}*` 
+        }, { quoted: msg });
 
         console.log(`🔄 Prefijo cambiado a: ${newPrefix}`);
 
     } catch (error) {
         console.error("❌ Error en el comando .setprefix:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error al cambiar el prefijo.*" }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Error al cambiar el prefijo.*" 
+        }, { quoted: msg });
     }
     break;
         
