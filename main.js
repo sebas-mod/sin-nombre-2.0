@@ -140,6 +140,43 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "listpacks":
+    try {
+        // Leer el archivo donde se guardan los paquetes de stickers
+        let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
+        let packNames = Object.keys(stickerData);
+
+        if (packNames.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No hay paquetes de stickers creados aún.*\nUsa `.newpack <nombre>` para crear uno." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Crear una lista bonita con emojis 🌟
+        let packList = `📦 *Paquetes de Stickers Disponibles:*\n\n`;
+        packNames.forEach((pack, index) => {
+            packList += `🔹 *${index + 1}.* ${pack}\n`;
+        });
+
+        packList += `\n📌 Usa *${global.prefix}sendpack <nombre>* para enviar un paquete.`;
+
+        // Reaccionar antes de enviar la lista 📜
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "📜", key: msg.key } 
+        });
+
+        // Enviar la lista de paquetes al usuario 📩
+        await sock.sendMessage(msg.key.remoteJid, { text: packList }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .listpacks:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al obtener la lista de paquetes. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+        
 case "s":
     try {
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -182,8 +219,8 @@ case "s":
 
         // Formato bonito para la metadata del sticker 🌟
         let metadata = {
-            packname: `🎨 Creado por: ${senderName}`,
-            author: `🤖Bot: Azura Ultra 2.0\n🗓️ Fecha: ${fecha}`
+            packname: `🎨 Hecho por: ${senderName}`,
+            author: `🤖Bot Creador: Azura Ultra 2.0\n🗓️ Fecha: ${fecha}`
         };
 
         let stickerBuffer;
