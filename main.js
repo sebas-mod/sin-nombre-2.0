@@ -13,18 +13,22 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
 
-// Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
-const lastRestarterFile = "./lastRestarter.json";
-
+// Función para leer el prefijo guardado
+function loadPrefix() {
+    if (fs.existsSync(configFilePath)) {
+        let configData = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
+        global.prefix = configData.prefix || ".";
+    } else {
+        global.prefix = ".";
+    }
+}
 
 // Cargar el prefijo al iniciar el bot
 loadPrefix();
 console.log(`📌 Prefijo actual: ${global.prefix}`);
-//orivado
-// Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
 
-
-// Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
+// Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
+const lastRestarterFile = "./lastRestarter.json";
 
 //modoprivado ariba
 const guarFilePath = "./guar.json";
