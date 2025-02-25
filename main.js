@@ -113,7 +113,41 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "online":
+    try {
+        // Verificar si el comando se ejecuta en un grupo
+        if (!msg.key.remoteJid.endsWith("@g.us")) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+            return;
+        }
 
+        // Obtener los datos del grupo
+        const chatId = msg.key.remoteJid;
+        const groupMetadata = await sock.groupMetadata(chatId);
+        const participants = groupMetadata.participants;
+
+        // Obtener la lista de usuarios en línea
+        let onlineUsers = [];
+        for (let participant of participants) {
+            const presence = await sock.presenceSubscribe(participant.id);
+            if (presence && presence.lastKnownPresence === "available") {
+                onlineUsers.push(`👤 @${participant.id.split("@")[0]}`);
+            }
+        }
+
+        // Verificar si hay usuarios en línea
+        if (onlineUsers.length === 0) {
+            await sock.sendMessage(chatId, { text: "👥 *No hay usuarios en línea en este momento.*" }, { quoted: msg });
+        } else {
+            // Enviar la lista de usuarios en línea
+            const message = `🌐 *Usuarios en línea (${onlineUsers.length}):*\n\n${onlineUsers.join("\n")}`;
+            await sock.sendMessage(chatId, { text: message, mentions: onlineUsers.map(u => u.replace("👤 @", "") ) }, { quoted: msg });
+        }
+    } catch (error) {
+        console.error("❌ Error en el comando .online:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al obtener la lista de usuarios en línea.*" }, { quoted: msg });
+    }
+    break;
             
 case "git":
     try {
