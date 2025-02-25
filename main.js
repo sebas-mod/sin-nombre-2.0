@@ -147,9 +147,6 @@ case "addsticker":
         let packName = args.join(" ");
 
         // Verificar si el paquete existe
-        if (!fs.existsSync(stickersFile)) {
-            fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2)); // Crear el archivo si no existe
-        }
         let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
 
         if (!stickerData[packName]) {
@@ -169,12 +166,17 @@ case "addsticker":
         }
 
         // Descargar el sticker
-        let stickerBuffer = await downloadContentFromMessage(quoted.stickerMessage, "sticker");
+        let stream = await downloadContentFromMessage(quoted.stickerMessage, "sticker");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
         let fileName = `${Date.now()}.webp`;
         let filePath = path.join(stickersDir, fileName);
 
         // Guardar el sticker en la carpeta
-        fs.writeFileSync(filePath, stickerBuffer);
+        fs.writeFileSync(filePath, buffer);
 
         // Agregar el sticker al paquete en el JSON
         stickerData[packName].push(filePath);
