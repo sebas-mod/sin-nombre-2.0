@@ -161,11 +161,11 @@ case "ss":
         // Obtener el nombre del usuario
         let senderName = msg.pushName || "Usuario Desconocido";
 
-        // Obtener la fecha actual
+        // Obtener la fecha actual con emojis 📅
         let now = new Date();
-        let fecha = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+        let fecha = `📅 ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
-        // Mensaje de reacción mientras se crea el sticker
+        // Mensaje de reacción mientras se crea el sticker ⚙️
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "🛠️", key: msg.key } 
         });
@@ -180,17 +180,17 @@ case "ss":
             throw new Error("❌ Error: No se pudo descargar el archivo.");
         }
 
+        // Formato bonito para la metadata del sticker 🌟
+        let metadata = {
+            packname: `🎨 *Creado por:* ${senderName}`,
+            author: `🤖 *Bot:* Azura Ultra 2.0\n🗓️ *Fecha:* ${fecha}`
+        };
+
         let stickerBuffer;
         if (mediaType === "image") {
-            stickerBuffer = await writeExifImg(buffer, {
-                packname: `Creado por ${senderName}`,
-                author: `Azura Ultra 2.0 Bot - ${fecha}`
-            });
+            stickerBuffer = await writeExifImg(buffer, metadata);
         } else {
-            stickerBuffer = await writeExifVid(buffer, {
-                packname: `Creado por ${senderName}`,
-                author: `Azura Ultra 2.0 Bot - ${fecha}`
-            });
+            stickerBuffer = await writeExifVid(buffer, metadata);
         }
 
         await sock.sendMessage(msg.key.remoteJid, { 
