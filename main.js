@@ -9,15 +9,20 @@ const { execSync } = require("child_process");
 const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
 // Ruta del archivo donde se guardan los paquetes de stickers
+
+// 📂 Definir la ruta de almacenamiento de stickers
+const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 
-// Si el archivo no existe, crearlo con un objeto vacío
+// 📂 Crear la carpeta `stickers/` si no existe
+if (!fs.existsSync(stickersDir)) {
+    fs.mkdirSync(stickersDir, { recursive: true });
+}
+
+// 📂 Crear el archivo `stickers.json` si no existe
 if (!fs.existsSync(stickersFile)) {
     fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
 }
-
-// Cargar datos de paquetes de stickers
-let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
 //sistema de sktikerz ariba
 
 // 🛠️ Ruta del archivo de configuración
