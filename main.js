@@ -9,7 +9,6 @@ const { execSync } = require("child_process");
 const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
 // Ruta del archivo donde se guardan los paquetes de stickers
-const AdmZip = require("adm-zip"); // Librería para crear ZIP
 // 📂 Definir la ruta de almacenamiento de stickers
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
