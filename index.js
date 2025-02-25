@@ -9,6 +9,7 @@
     const { handleCommand } = require("./main"); 
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
+    
 //privado y admins
 // Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
 const lastRestarterFile = "./lastRestarter.json";
@@ -223,24 +224,29 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
 sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect, qr } = update;
-
+    
     if (connection === "connecting") {
         console.log(chalk.blue("🔄 Conectando a WhatsApp..."));
     } else if (connection === "open") {
         console.log(chalk.green("✅ ¡Conexión establecida con éxito!"));
 
-        // 📌 Comprobar si hay un chat donde avisar cuando el bot se inicie
-        if (fs.existsSync(lastRestarterFile)) {
+        // 📌 Leer el archivo donde se guardó el último chat que usó .rest
+        const restarterFile = "./lastRestarter.json";
+        if (fs.existsSync(restarterFile)) {
             try {
-                const data = JSON.parse(fs.readFileSync(lastRestarterFile));
+                const data = JSON.parse(fs.readFileSync(restarterFile, "utf-8"));
+                
+                // 📌 Enviar mensaje de que el bot está de vuelta
                 if (data.chatId) {
-                    await sock.sendMessage(data.chatId, {
-                        text: "✅ *¡El bot está en línea nuevamente!* 🚀"
+                    await sock.sendMessage(data.chatId, { 
+                        text: "✅ *El bot está en línea nuevamente y listo para usar.* 🚀" 
                     });
+                    
+                    // 🔄 Borrar el archivo después de enviar el mensaje
+                    fs.unlinkSync(restarterFile);
                 }
-                fs.unlinkSync(lastRestarterFile); // Eliminar el archivo después de avisar
             } catch (error) {
-                console.error(chalk.red("❌ Error al intentar leer lastRestarter.json:"), error);
+                console.error("❌ Error al leer lastRestarter.json:", error);
             }
         }
     } else if (connection === "close") {
