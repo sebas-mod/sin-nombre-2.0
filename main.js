@@ -139,6 +139,48 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "ss":
+try {
+    let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quoted) {
+        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Responde a una imagen o video/GIF con `.ss` para crear un sticker.*" }, { quoted: msg });
+        return;
+    }
+
+    let mime = quoted.imageMessage?.mimetype || quoted.videoMessage?.mimetype;
+
+    if (/image/.test(mime)) {
+        // 🖼️ Si es imagen, crear sticker normal
+        let mediaStream = await downloadContentFromMessage(quoted.imageMessage, "image");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        let stickerBuffer = await imageToWebp(buffer);
+        await sock.sendMessage(msg.key.remoteJid, { sticker: { url: stickerBuffer } }, { quoted: msg });
+
+    } else if (/video/.test(mime) || quoted.videoMessage?.seconds <= 8) {
+        // 🎥 Si es video o GIF, crear sticker animado (máx. 8 seg)
+        let mediaStream = await downloadContentFromMessage(quoted.videoMessage, "video");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        let stickerBuffer = await videoToWebp(buffer);
+        await sock.sendMessage(msg.key.remoteJid, { sticker: { url: stickerBuffer } }, { quoted: msg });
+
+    } else {
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Formato no soportado. Solo imágenes, videos o GIFs de máximo 8 segundos.*" }, { quoted: msg });
+    }
+
+} catch (error) {
+    console.error("❌ Error en el comando .ss:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al crear el sticker.*" }, { quoted: msg });
+}
+break;
+        
 case "sendpack":
     try {
         if (!args[0]) {
