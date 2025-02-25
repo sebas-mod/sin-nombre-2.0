@@ -13,6 +13,19 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
 
+// Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
+const lastRestarterFile = "./lastRestarter.json";
+
+// 📌 Comprobar si hay un chat donde avisar cuando el bot se inicie
+if (fs.existsSync(lastRestarterFile)) {
+    const data = JSON.parse(fs.readFileSync(lastRestarterFile));
+    if (data.chatId) {
+        await sock.sendMessage(data.chatId, {
+            text: "✅ *¡El bot está en línea nuevamente!*"
+        });
+    }
+    fs.unlinkSync(lastRestarterFile); // Eliminar el archivo después de avisar
+}
 // Función para leer el prefijo guardado
 function loadPrefix() {
     if (fs.existsSync(configFilePath)) {
@@ -125,6 +138,53 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "rest":
+    try {
+        const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
+        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
+        const isBotMessage = msg.key.fromMe; // True si el mensaje es del bot
+
+        if (!isOwner(senderNumber) && !isBotMessage) { 
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo los dueños del bot o el bot mismo pueden reiniciar el servidor.*"
+            }, { quoted: msg });
+            return;
+        }
+
+        // 🟢 Enviar reacción antes de reiniciar
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🔄", key: msg.key } // Emoji de reinicio
+        });
+
+        // Enviar mensaje de confirmación
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "🔄 *Reiniciando el servidor...* \nEspera unos segundos..."
+        }, { quoted: msg });
+
+        // Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
+        const lastRestarterFile = "./lastRestarter.json";
+
+        // Verificar si el archivo existe, si no, crearlo
+        if (!fs.existsSync(lastRestarterFile)) {
+            fs.writeFileSync(lastRestarterFile, JSON.stringify({ chatId: "" }, null, 2));
+        }
+
+        // Guardar el chat donde se usó el comando para avisar cuando el bot esté en línea
+        fs.writeFileSync(lastRestarterFile, JSON.stringify({ chatId: msg.key.remoteJid }, null, 2));
+
+        // Esperar unos segundos antes de reiniciar
+        setTimeout(() => {
+            process.exit(1); // Reiniciar el bot (depende de tu gestor de procesos)
+        }, 3000);
+
+    } catch (error) {
+        console.error("❌ Error en el comando rest:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Error al intentar reiniciar el servidor.*"
+        }, { quoted: msg });
+    }
+    break;
+        
 case "setprefix":
     try {
         // Obtener el número del bot
@@ -178,31 +238,7 @@ case "setprefix":
         }, { quoted: msg });
     }
     break;
-        
-        
-case "online":
-    try {
-        if (!msg.key.remoteJid.endsWith("@g.us")) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
-            return;
-        }
-
-        const chatId = msg.key.remoteJid;
-        if (!global.onlineUsers[chatId] || global.onlineUsers[chatId].size === 0) {
-            await sock.sendMessage(chatId, { text: "👥 *No hay usuarios en línea en este momento.*" }, { quoted: msg });
-            return;
-        }
-
-        let userList = [...global.onlineUsers[chatId]].map(user => `👤 @${user.split("@")[0]}`).join("\n");
-        const message = `🌐 *Usuarios en línea (${global.onlineUsers[chatId].size}):*\n\n${userList}`;
-
-        await sock.sendMessage(chatId, { text: message, mentions: [...global.onlineUsers[chatId]] }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .online:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al obtener la lista de usuarios en línea.*" }, { quoted: msg });
-    }
-    break;
+               
             
 case "git":
     try {
@@ -254,46 +290,6 @@ case "git":
     }
     break;
         
-        
-case "rest":
-    try {
-        // Obtener el número del remitente
-        const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
-
-        // Obtener el número del bot
-        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
-
-        // Verificar si el mensaje fue enviado por el bot o por un dueño autorizado
-        const isBotMessage = msg.key.fromMe; // True si el mensaje es del bot
-        if (!isOwner(senderNumber) && !isBotMessage) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los dueños del bot o el bot mismo pueden reiniciar el servidor.*"
-            }, { quoted: msg });
-            return;
-        }
-
-        // 🟢 Enviar reacción antes de reiniciar
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "🔄", key: msg.key } // Emoji de reinicio
-        });
-
-        // Enviar mensaje de confirmación
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "🔄 *Reiniciando el servidor...* \nEspera unos segundos..."
-        }, { quoted: msg });
-
-        // Esperar unos segundos antes de reiniciar
-        setTimeout(() => {
-            process.exit(1); // Reiniciar el bot (depende de tu gestor de procesos)
-        }, 3000);
-
-    } catch (error) {
-        console.error("❌ Error en el comando rest:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Error al intentar reiniciar el servidor.*"
-        }, { quoted: msg });
-    }
-    break;
 
         
         
