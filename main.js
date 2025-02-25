@@ -198,9 +198,9 @@ case "s":
         // Obtener el nombre del usuario
         let senderName = msg.pushName || "Usuario Desconocido";
 
-        // Obtener la fecha exacta de creación 📅✨
+        // Obtener la fecha exacta de creación 📅
         let now = new Date();
-        let fechaCreacion = `📅✨ Fecha de Creación de Stickerz: ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} 🕒 ${now.getHours()}:${now.getMinutes()}`;
+        let fechaCreacion = `📅 Fecha de Creación de Stickerz: ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} 🕒 ${now.getHours()}:${now.getMinutes()}`;
 
         // Mensaje de reacción mientras se crea el sticker ⚙️
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -219,8 +219,8 @@ case "s":
 
         // 🌟 Formato llamativo para la metadata del sticker 🌟
         let metadata = {
-            packname: `✨ Creado por: ${senderName} ✨`,
-            author: `🤖 Bot: Azura Ultra 2.0\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 💻\n${fechaCreacion}`
+            packname: `✨ Lo Mando Hacer: ${senderName} ✨`,
+            author: `🤖 Bot Creador: Azura Ultra 2.0\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 💻\n${fechaCreacion}`
         };
 
         let stickerBuffer;
