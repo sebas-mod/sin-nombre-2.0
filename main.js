@@ -1170,52 +1170,7 @@ case 'creador': {
 
     break;
 }
-        
-  case "s":
-  case "sticker": {
-    try {
-      const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-      const mime = quoted?.imageMessage?.mimetype || quoted?.videoMessage?.mimetype;
-
-      if (quoted && /image/.test(mime)) {
-        const mediaStream = await downloadContentFromMessage(quoted.imageMessage, "image");
-        let encmedia = await sock.sendImageAsSticker(msg.key.remoteJid, mediaStream, {
-          quoted: msg,
-          packname: "",
-          author: JSON.stringify({
-            Dueño: "rusell xz",
-            Developer: "by EliasarYT",
-            Bot: "azúra bot"
-          })
-        });
-        await fs.unlinkSync(encmedia);
-      } else if (quoted && /video/.test(mime)) {
-        const videoMessage = quoted.videoMessage;
-        if ((videoMessage?.seconds || 0) > 20) {
-          sock.sendMessage(msg.key.remoteJid, { text: 'El video no puede durar más de 20 segundos.' }, { quoted: msg });
-        } else {
-          const mediaStream = await downloadContentFromMessage(videoMessage, "video");
-          let encmedia = await sock.sendVideoAsSticker(msg.key.remoteJid, mediaStream, {
-            quoted: msg,
-            packname: "",
-            author: JSON.stringify({
-              Dueño: "rusell xz",
-              Developer: "by EliasarYT",
-              Bot: "azúra bot"
-            })
-          });
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          await fs.unlinkSync(encmedia);
-        }
-      } else {
-        sock.sendMessage(msg.key.remoteJid, { text: 'Por favor responde a una imagen o video para convertirlo en sticker.' }, { quoted: msg });
-      }
-    } catch (err) {
-      console.error('Error al enviar el sticker:', err);
-      sock.sendMessage(msg.key.remoteJid, { text: 'Hubo un error al procesar tu solicitud.' }, { quoted: msg });
-    }
-    break;
-  }
+    
             
 case 'verco': {
     const fs = require("fs");
