@@ -16,7 +16,8 @@ if (fs.existsSync("./config.json")) {
     global.prefix = ".";
 }
 //orivado
-
+// Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
+global.onlineUsers = {};
 
 // Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
@@ -121,15 +122,15 @@ case "online":
         }
 
         const chatId = msg.key.remoteJid;
-        if (!onlineUsers[chatId] || onlineUsers[chatId].size === 0) {
+        if (!global.onlineUsers[chatId] || global.onlineUsers[chatId].size === 0) {
             await sock.sendMessage(chatId, { text: "👥 *No hay usuarios en línea en este momento.*" }, { quoted: msg });
             return;
         }
 
-        let userList = [...onlineUsers[chatId]].map(user => `👤 @${user.split("@")[0]}`).join("\n");
-        const message = `🌐 *Usuarios en línea (${onlineUsers[chatId].size}):*\n\n${userList}`;
+        let userList = [...global.onlineUsers[chatId]].map(user => `👤 @${user.split("@")[0]}`).join("\n");
+        const message = `🌐 *Usuarios en línea (${global.onlineUsers[chatId].size}):*\n\n${userList}`;
 
-        await sock.sendMessage(chatId, { text: message, mentions: [...onlineUsers[chatId]] }, { quoted: msg });
+        await sock.sendMessage(chatId, { text: message, mentions: [...global.onlineUsers[chatId]] }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .online:", error);
