@@ -13,6 +13,8 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
 
+// Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
+const lastRestarterFile = "./lastRestarter.json";
 
 
 // Cargar el prefijo al iniciar el bot
