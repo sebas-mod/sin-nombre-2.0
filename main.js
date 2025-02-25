@@ -10,7 +10,6 @@ const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
 // Cargar prefijo desde archivo de configuración
 
-
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
 
@@ -27,9 +26,11 @@ function loadPrefix() {
 // Cargar el prefijo al iniciar el bot
 loadPrefix();
 console.log(`📌 Prefijo actual: ${global.prefix}`);
+//orivado
+// Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
 
-// Definir la ruta del archivo donde se guardará el último chat que ejecutó .rest
-const lastRestarterFile = "./lastRestarter.json";
+
+// Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
 //modoprivado ariba
 const guarFilePath = "./guar.json";
@@ -89,8 +90,6 @@ function isUrl(url) {
     }
 }
 
-
-
 async function handleCommand(sock, msg, command, args, sender) {
 sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
   let buff = Buffer.isBuffer(path) 
@@ -122,7 +121,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
 
     switch (lowerCommand) {
-
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
