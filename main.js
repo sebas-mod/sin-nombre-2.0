@@ -140,7 +140,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
-case "ss":
+case "s":
     try {
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
