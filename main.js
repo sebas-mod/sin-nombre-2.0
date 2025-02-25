@@ -8,7 +8,17 @@ const os = require("os");
 const { execSync } = require("child_process");
 const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
-// Cargar prefijo desde archivo de configuración
+// Ruta del archivo donde se guardan los paquetes de stickers
+const stickersFile = "./stickers.json";
+
+// Si el archivo no existe, crearlo con un objeto vacío
+if (!fs.existsSync(stickersFile)) {
+    fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
+}
+
+// Cargar datos de paquetes de stickers
+let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
+//sistema de sktikerz ariba
 
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
@@ -125,6 +135,33 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "newpack":
+    try {
+        if (!args[0]) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes especificar un nombre para el paquete.*\n\n📌 _Ejemplo: `.newpack MiPaquete`_" }, { quoted: msg });
+            return;
+        }
+
+        let packName = args.join(" ");
+
+        // 📌 Verificar si el paquete ya existe
+        if (stickerData[packName]) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ese paquete ya existe. Usa otro nombre.*" }, { quoted: msg });
+            return;
+        }
+
+        // 📌 Crear el paquete y guardarlo en stickers.json
+        stickerData[packName] = [];
+        fs.writeFileSync(stickersFile, JSON.stringify(stickerData, null, 2));
+
+        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *Paquete de stickers '${packName}' creado.*` }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .newpack:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al crear el paquete de stickers.*" }, { quoted: msg });
+    }
+    break;
+        
 case "rest":
     try {
         const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
@@ -227,29 +264,6 @@ case "setprefix":
     break;
         
         
-case "online":
-    try {
-        if (!msg.key.remoteJid.endsWith("@g.us")) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
-            return;
-        }
-
-        const chatId = msg.key.remoteJid;
-        if (!global.onlineUsers[chatId] || global.onlineUsers[chatId].size === 0) {
-            await sock.sendMessage(chatId, { text: "👥 *No hay usuarios en línea en este momento.*" }, { quoted: msg });
-            return;
-        }
-
-        let userList = [...global.onlineUsers[chatId]].map(user => `👤 @${user.split("@")[0]}`).join("\n");
-        const message = `🌐 *Usuarios en línea (${global.onlineUsers[chatId].size}):*\n\n${userList}`;
-
-        await sock.sendMessage(chatId, { text: message, mentions: [...global.onlineUsers[chatId]] }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .online:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al obtener la lista de usuarios en línea.*" }, { quoted: msg });
-    }
-    break;
             
 case "git":
     try {
