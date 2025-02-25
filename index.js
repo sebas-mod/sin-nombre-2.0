@@ -86,7 +86,25 @@ let modos = cargarModos();
                     return false;
                 }
             }
+// Almacenar los usuarios en línea por cada grupo
+const onlineUsers = {};
 
+// Detectar cambios de presencia (quién está en línea y quién no)
+sock.ev.on("presence.update", async (presence) => {
+    const chatId = presence.id;
+    const userId = presence.participant;
+
+    if (!chatId.endsWith("@g.us")) return; // Solo en grupos
+
+    if (presence.presence === "available") {
+        if (!onlineUsers[chatId]) onlineUsers[chatId] = new Set();
+        onlineUsers[chatId].add(userId);
+    } else if (presence.presence === "unavailable" || presence.presence === "composing") {
+        if (onlineUsers[chatId]) onlineUsers[chatId].delete(userId);
+    }
+});
+
+            
             // 🟢 Consola de mensajes entrantes con diseño
 sock.ev.on("messages.upsert", async (messageUpsert) => {
     try {
