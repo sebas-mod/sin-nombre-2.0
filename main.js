@@ -44,13 +44,6 @@ console.log(`📌 Prefijo actual: ${global.prefix}`);
 // Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
 
 // Definir la carpeta temporal dentro del bot
-const tempDir = path.join(__dirname, "temp");
-
-// Verificar si la carpeta "temp" existe, si no, crearla
-if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true }); // `recursive: true` crea subcarpetas si es necesario
-    console.log("📁 Carpeta 'temp/' creada automáticamente.");
-}
 
 // Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
