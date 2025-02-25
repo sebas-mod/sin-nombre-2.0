@@ -142,36 +142,57 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 case "sendpack":
     try {
         if (!args[0]) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes especificar el nombre del paquete.*\nEjemplo: `.sendpack Memes`" }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Debes especificar el nombre del paquete.*\nEjemplo: `.sendpack Memes`" 
+            }, { quoted: msg });
             return;
         }
 
         let packName = args.join(" ");
-        
+
+        // Cargar los paquetes de stickers desde el JSON
+        let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
+
         // Verificar si el paquete existe
         if (!stickerData[packName]) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ese paquete no existe.* Usa `.listpacks` para ver los paquetes disponibles." }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Ese paquete no existe.* Usa `.listpacks` para ver los disponibles." 
+            }, { quoted: msg });
             return;
         }
 
         let stickerPaths = stickerData[packName];
 
         if (stickerPaths.length === 0) {
-            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Este paquete no tiene stickers guardados.* Usa `.addsticker <paquete>` para añadir." }, { quoted: msg });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Este paquete no tiene stickers guardados.* Usa `.addsticker <paquete>` para añadir." 
+            }, { quoted: msg });
             return;
         }
 
-        // Enviar los stickers uno por uno
-        for (let stickerPath of stickerPaths) {
-            await sock.sendMessage(msg.key.remoteJid, { sticker: { url: stickerPath } }, { quoted: msg });
-            await new Promise(resolve => setTimeout(resolve, 500)); // Pequeña pausa para evitar bloqueo
+        // Enviar cada sticker uno por uno desde la carpeta 'stickers/'
+        for (let stickerFileName of stickerPaths) {
+            let stickerPath = path.join(stickersDir, stickerFileName);
+
+            // Verificar si el archivo del sticker existe en la carpeta
+            if (fs.existsSync(stickerPath)) {
+                await sock.sendMessage(msg.key.remoteJid, { 
+                    sticker: { url: stickerPath } 
+                }, { quoted: msg });
+            } else {
+                console.warn(`⚠️ Sticker no encontrado: ${stickerPath}`);
+            }
         }
 
-        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *Paquete '${packName}' enviado con éxito.*` }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✅ *Paquete de stickers '${packName}' enviado.*` 
+        }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .sendpack:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al enviar el paquete de stickers.*" }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al enviar el paquete de stickers.*" 
+        }, { quoted: msg });
     }
     break;
             
