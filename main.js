@@ -135,6 +135,63 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+case "addsticker":
+    try {
+        if (!args[0]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Debes especificar el nombre del paquete al que quieres agregar el sticker.*\nEjemplo: `.addsticker Memes`" 
+            }, { quoted: msg });
+            return;
+        }
+
+        let packName = args.join(" ");
+
+        // Verificar si el paquete existe
+        if (!fs.existsSync(stickersFile)) {
+            fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2)); // Crear el archivo si no existe
+        }
+        let stickerData = JSON.parse(fs.readFileSync(stickersFile, "utf-8"));
+
+        if (!stickerData[packName]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Ese paquete no existe. Crea uno primero con `.newpack <nombre>`*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Verificar si el usuario respondió a un sticker
+        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quoted || !quoted.stickerMessage) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Responde a un sticker con `.addsticker <nombre>` para agregarlo al paquete.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Descargar el sticker
+        let stickerBuffer = await downloadContentFromMessage(quoted.stickerMessage, "sticker");
+        let fileName = `${Date.now()}.webp`;
+        let filePath = path.join(stickersDir, fileName);
+
+        // Guardar el sticker en la carpeta
+        fs.writeFileSync(filePath, stickerBuffer);
+
+        // Agregar el sticker al paquete en el JSON
+        stickerData[packName].push(filePath);
+        fs.writeFileSync(stickersFile, JSON.stringify(stickerData, null, 2));
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✅ *Sticker agregado al paquete '${packName}'*` 
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .addsticker:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al agregar el sticker al paquete.*" 
+        }, { quoted: msg });
+    }
+    break;
+        
 case "newpack":
     try {
         if (!args[0]) {
