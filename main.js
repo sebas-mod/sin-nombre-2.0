@@ -140,11 +140,12 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 case 'toimggif': {
     const fs = require('fs');
     const path = require('path');
-    const { exec } = require('child_process');
+    const axios = require('axios');
+    const FormData = require('form-data');
 
     if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ *Debes responder a un sticker animado para convertirlo en GIF.*" 
+            text: "⚠️ *Responde a un sticker animado para convertirlo en GIF.*" 
         }, { quoted: msg });
     }
 
@@ -167,47 +168,47 @@ case 'toimggif': {
         }, { quoted: msg });
     }
 
+    // Guardar el sticker animado temporalmente
     const tmpDir = path.join(__dirname, 'tmp');
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
     const stickerPath = path.join(tmpDir, `${Date.now()}.webp`);
-    const gifPath = path.join(tmpDir, `${Date.now()}.gif`);
+    fs.writeFileSync(stickerPath, buffer);
 
-    fs.writeFileSync(stickerPath, buffer); // Guardar el sticker animado temporalmente
+    // **Subir el sticker animado a gif.ski para convertirlo en GIF**
+    try {
+        const form = new FormData();
+        form.append("file", fs.createReadStream(stickerPath));
 
-    // **Convertir WebP animado a GIF usando FFmpeg**
-    const ffmpegCmd = `ffmpeg -i "${stickerPath}" -filter_complex "[0:v] scale=512:-1:flags=lanczos,split [a][b];[a] palettegen [p];[b][p] paletteuse" -loop 0 "${gifPath}"`;
+        const uploadResponse = await axios.post("https://gif.ski/api/upload", form, {
+            headers: { ...form.getHeaders() },
+        });
 
-    exec(ffmpegCmd, async (error, stdout, stderr) => {
-        if (error) {
-            console.error("❌ Error al convertir el sticker animado en GIF:", error);
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No se pudo convertir el sticker en GIF.*" 
-            }, { quoted: msg });
+        if (!uploadResponse.data.success) {
+            throw new Error("No se pudo subir el sticker.");
         }
 
-        // **Verificar si el archivo se generó correctamente**
-        if (!fs.existsSync(gifPath)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *Hubo un problema al crear el GIF.*" 
-            }, { quoted: msg });
-        }
+        const gifUrl = uploadResponse.data.url; // URL del GIF generado
 
         // **Enviar el GIF generado**
         await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: gifPath }, 
+            video: { url: gifUrl }, 
             caption: "🎥 *Aquí está tu GIF convertido del sticker animado.*" 
         }, { quoted: msg });
-
-        // **Eliminar archivos temporales**
-        fs.unlinkSync(stickerPath);
-        fs.unlinkSync(gifPath);
 
         // **Reacción de éxito ✅**
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
-    });
+
+        // **Eliminar archivo temporal**
+        fs.unlinkSync(stickerPath);
+    } catch (error) {
+        console.error("❌ Error al convertir sticker a GIF:", error);
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *No se pudo convertir el sticker en GIF. Inténtalo más tarde.*" 
+        }, { quoted: msg });
+    }
 
     break;
 }
