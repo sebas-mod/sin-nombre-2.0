@@ -137,64 +137,65 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 
-
-// ESCUCHAR REACCIONES AL MENSAJE
-// 💾 Manejo del comando "setprefix"
-            case 'tourl': {
+case 'tourl': {
     const fs = require('fs');
     const axios = require('axios');
     const FormData = require('form-data');
     const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
-    if (!msg.quoted) {
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text: "⚠️ *Aviso:* Por favor, responde a una imagen o video para generar un enlace URL. 📷📹"
-            },
-            { quoted: msg }
-        );
-    }
-
-    let mediaMessage;
-    if (msg.quoted.message.imageMessage) {
-        mediaMessage = msg.quoted.message.imageMessage;
-    } else if (msg.quoted.message.videoMessage) {
-        mediaMessage = msg.quoted.message.videoMessage;
-    } else {
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text: "❌ *Error:* El tipo de media no se pudo determinar. 📂"
-            },
-            { quoted: msg }
-        );
-    }
-
-    const mediaType = mediaMessage.mimetype;
-    if (!mediaType) {
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text: "❌ *Error:* El tipo de media no se pudo determinar. 📂"
-            },
-            { quoted: msg }
-        );
-    }
-
-    const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType.split('/')[0]);
-    let mediaBuffer = Buffer.alloc(0);
-    for await (const chunk of mediaStream) {
-        mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
-    }
-
-    const formData = new FormData();
-    formData.append('file', mediaBuffer, {
-        filename: 'file',
-        contentType: mediaType
-    });
-
     try {
+        if (!msg.quoted) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "⚠️ *Aviso:* Responde a cualquier archivo multimedia (imagen, video, audio, documento, sticker) para generar un enlace URL. 🔗" },
+                { quoted: msg }
+            );
+        }
+
+        // 📌 Verificar el tipo de mensaje multimedia
+        let mediaMessage;
+        let mediaType;
+        if (msg.quoted.message.imageMessage) {
+            mediaMessage = msg.quoted.message.imageMessage;
+            mediaType = "image";
+        } else if (msg.quoted.message.videoMessage) {
+            mediaMessage = msg.quoted.message.videoMessage;
+            mediaType = "video";
+        } else if (msg.quoted.message.audioMessage) {
+            mediaMessage = msg.quoted.message.audioMessage;
+            mediaType = "audio";
+        } else if (msg.quoted.message.documentMessage) {
+            mediaMessage = msg.quoted.message.documentMessage;
+            mediaType = "document";
+        } else if (msg.quoted.message.stickerMessage) {
+            mediaMessage = msg.quoted.message.stickerMessage;
+            mediaType = "sticker";
+        } else {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ *Error:* El tipo de archivo no es compatible. 📂" },
+                { quoted: msg }
+            );
+        }
+
+        // 🔄 Reacción mientras procesa
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "⏳", key: msg.key } });
+
+        const mimetype = mediaMessage.mimetype || `${mediaType}/unknown`;
+        const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
+        let mediaBuffer = Buffer.alloc(0);
+
+        for await (const chunk of mediaStream) {
+            mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+        }
+
+        // 📤 Subir el archivo
+        const formData = new FormData();
+        formData.append('file', mediaBuffer, {
+            filename: `file.${mimetype.split('/')[1] || 'bin'}`,
+            contentType: mimetype
+        });
+
         const response = await axios.post('https://cdn.dorratz.com/upload34', formData, {
             headers: {
                 ...formData.getHeaders(),
@@ -207,38 +208,39 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
         const shareLink = response.data.link;
 
-        return sock.sendMessage(
+        // ✅ Confirmación con enlace
+        await sock.sendMessage(
             msg.key.remoteJid,
             {
-                text: `✅ *Listo:* Se ha generado un enlace URL para el multimedia. 🔗\n\nPuedes compartir este enlace: ${shareLink}`
+                text: `✅ *Enlace generado con éxito:* 🔗\n\n📤 *Archivo:* ${mediaType.toUpperCase()}\n🌐 *URL:* ${shareLink}`
             },
             { quoted: msg }
         );
+
+        // ✔️ Reacción de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
+
     } catch (error) {
-        if (error.response && error.response.status === 413) {
+        console.error("❌ Error en el comando .tourl:", error);
+
+        if (error.response?.status === 413) {
             return sock.sendMessage(
                 msg.key.remoteJid,
-                {
-                    text: "❌ *Error:* El tamaño del archivo excede el límite permitido por el servidor. 🚫"
-                },
+                { text: "❌ *Error:* El archivo es demasiado grande. 🚫" },
                 { quoted: msg }
             );
         }
-        if (error.response && error.response.status === 401) {
+        if (error.response?.status === 401) {
             return sock.sendMessage(
                 msg.key.remoteJid,
-                {
-                    text: "❌ *Error:* Clave de acceso no válida. Acceso denegado. 🔑"
-                },
+                { text: "❌ *Error:* Clave de acceso no válida. 🔑" },
                 { quoted: msg }
             );
         }
-        console.error(error);
+
         return sock.sendMessage(
             msg.key.remoteJid,
-            {
-                text: "❌ *Error:* No se pudo generar el enlace URL. Inténtalo de nuevo más tarde. 🚫"
-            },
+            { text: "❌ *Error:* No se pudo generar el enlace URL. Inténtalo de nuevo más tarde. 🚫" },
             { quoted: msg }
         );
     }
