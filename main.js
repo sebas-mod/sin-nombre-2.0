@@ -154,83 +154,75 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
-case 'addmascota': {
+case "addmascota":
     try {
-        // Verificar si el usuario tiene permisos (puedes ajustar esta lógica)
-        if (!isOwner(sender)) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los administradores del bot pueden agregar mascotas a la tienda.*" 
-            }, { quoted: msg });
-            return;
-        }
-
-        // Verificar si se enviaron todos los parámetros
         if (args.length < 5) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\nEjemplo: `.addmascota 🐕Perro rápido protector https://cdn.example.com/perro.jpg 3000`" 
+                text: "⚠️ *Formato incorrecto.*\n\nEjemplo: `.addmascota 🐕Perro Lealtad inquebrantable Olfato agudo [URL_IMAGEN] 2500`"
             }, { quoted: msg });
             return;
         }
 
-        // Extraer los datos ingresados
-        let nombre = args[0]; // Emoji + Nombre
-        let habilidad1 = args[1]; // Primera habilidad
-        let habilidad2 = args[2]; // Segunda habilidad
-        let urlImagen = args[3]; // URL de la imagen o GIF
-        let precio = parseInt(args[4]); // Precio en 💎 Diamantes
+        // Extraer los argumentos
+        let [emojiNombre, ...rest] = args;
+        let nombre = emojiNombre.slice(1); // Eliminar el emoji del nombre
+        let habilidades = rest.slice(0, -2); // Extraer habilidades
+        let imagen = rest[rest.length - 2]; // Extraer URL de imagen
+        let precio = parseInt(rest[rest.length - 1]); // Extraer precio
 
-        // Validar que el precio sea un número
         if (isNaN(precio) || precio < 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *El precio debe ser un número válido mayor o igual a 0.*" 
+                text: "❌ *El precio debe ser un número válido.*"
             }, { quoted: msg });
             return;
         }
 
-        // Leer o crear el archivo rpg.json
-        const rpgFile = "./rpg.json";
-        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : {};
-        
-        // Si no existe la tienda, crearla
-        if (!rpgData.tiendaMascotas) {
-            rpgData.tiendaMascotas = [];
-        }
+        // Cargar el archivo rpg.json o crearlo si no existe
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { "TiendaMascotas": {} };
 
         // Verificar si la mascota ya está en la tienda
-        let mascotaExistente = rpgData.tiendaMascotas.find(m => m.nombre === nombre);
-        if (mascotaExistente) {
+        if (rpgData.TiendaMascotas[emojiNombre]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Esa mascota ya está en la tienda.* Usa otro nombre." 
+                text: `⚠️ *La mascota ${emojiNombre} ya está en la tienda.*`
             }, { quoted: msg });
             return;
         }
 
-        // Crear el objeto de la nueva mascota
+        // Crear la estructura de la mascota con niveles
         let nuevaMascota = {
-            nombre: nombre,
-            habilidades: [habilidad1, habilidad2],
-            imagen: urlImagen,
-            precio: precio
+            "nombre": nombre,
+            "emoji": emojiNombre[0], // Obtener solo el emoji
+            "habilidades": {},
+            "nivel": 1,
+            "imagen": imagen,
+            "precio": precio
         };
 
+        // Asignar habilidades con nivel inicial 1
+        habilidades.forEach(habilidad => {
+            nuevaMascota.habilidades[habilidad] = { "nivel": 1 };
+        });
+
         // Agregar la mascota a la tienda
-        rpgData.tiendaMascotas.push(nuevaMascota);
+        rpgData.TiendaMascotas[emojiNombre] = nuevaMascota;
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-        // Enviar confirmación con la imagen
-        await sock.sendMessage(msg.key.remoteJid, { 
-            image: { url: urlImagen },
-            caption: `✅ *Nueva Mascota Agregada a la Tienda*\n\n🐾 *Nombre:* ${nombre}\n✨ *Habilidades:* ${habilidad1}, ${habilidad2}\n💎 *Precio:* ${precio} diamantes\n\n🔹 ¡Disponible en la tienda ahora!`
-        }, { quoted: msg });
+        // 🟢 Respuesta bonita con detalles de la mascota agregada
+        let mensajeConfirmacion = `✅ *¡Mascota agregada a la tienda con éxito!*\n\n` +
+            `📌 *Nombre:* ${nuevaMascota.emoji} *${nuevaMascota.nombre}*\n` +
+            `🎖️ *Nivel:* 1\n` +
+            `💰 *Precio:* ${nuevaMascota.precio} 💎\n` +
+            `🌟 *Habilidades:*\n` +
+            Object.keys(nuevaMascota.habilidades).map(hab => `   🔹 *${hab}* (Nivel 1)`).join("\n") +
+            `\n🖼️ *Imagen:*`;
+
+        await sock.sendMessage(msg.key.remoteJid, { text: mensajeConfirmacion, image: { url: nuevaMascota.imagen } }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .addmascota:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al agregar la mascota. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al agregar la mascota.*" }, { quoted: msg });
     }
     break;
-}        
         
 case 'toimg': {
     const axios = require('axios');
