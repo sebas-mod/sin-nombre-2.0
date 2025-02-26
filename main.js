@@ -137,14 +137,14 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
-case 'toimgvideo': {
+case 'toimggif': {
     const fs = require('fs');
     const path = require('path');
     const { exec } = require('child_process');
 
     if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ *Debes responder a un sticker animado para convertirlo en video.*" 
+            text: "⚠️ *Debes responder a un sticker animado para convertirlo en GIF.*" 
         }, { quoted: msg });
     }
 
@@ -171,46 +171,33 @@ case 'toimgvideo': {
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
     const stickerPath = path.join(tmpDir, `${Date.now()}.webp`);
-    const framesPath = path.join(tmpDir, 'frames-%03d.png');
-    const videoPath = stickerPath.replace('.webp', '.mp4');
+    const gifPath = stickerPath.replace('.webp', '.gif');
 
     fs.writeFileSync(stickerPath, buffer); // Guardar el sticker animado temporalmente
 
-    // 1️⃣ Convertir WebP animado a una secuencia de imágenes PNG
-    exec(`ffmpeg -i "${stickerPath}" "${framesPath}"`, async (error) => {
+    // Convertir WebP animado a GIF
+    exec(`ffmpeg -i "${stickerPath}" -vf "scale=320:-1:flags=lanczos" -gifflags -transdiff -y "${gifPath}"`, async (error) => {
         if (error) {
-            console.error("❌ Error al extraer los frames del sticker:", error);
+            console.error("❌ Error al convertir sticker a GIF:", error);
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No se pudo convertir el sticker en video.*" 
+                text: "❌ *No se pudo convertir el sticker en GIF.*" 
             }, { quoted: msg });
         }
 
-        // 2️⃣ Ensamblar las imágenes en un video MP4
-        exec(`ffmpeg -framerate 15 -i "${tmpDir}/frames-%03d.png" -movflags faststart -pix_fmt yuv420p "${videoPath}"`, async (error) => {
-            if (error) {
-                console.error("❌ Error al convertir imágenes a video:", error);
-                return sock.sendMessage(msg.key.remoteJid, { 
-                    text: "❌ *No se pudo ensamblar el video.*" 
-                }, { quoted: msg });
-            }
+        // Enviar el GIF convertido
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: gifPath }, // WhatsApp trata los GIF como videos
+            gifPlayback: true,
+            caption: "🎥 *Aquí está tu GIF convertido del sticker animado.*"
+        }, { quoted: msg });
 
-            // Enviar el video resultante
-            await sock.sendMessage(msg.key.remoteJid, { 
-                video: { url: videoPath },
-                caption: "🎥 *Aquí está tu video convertido del sticker animado.*"
-            }, { quoted: msg });
+        // Eliminar archivos temporales después de enviarlos
+        fs.unlinkSync(stickerPath);
+        fs.unlinkSync(gifPath);
 
-            // Eliminar archivos temporales después de enviarlos
-            fs.unlinkSync(stickerPath);
-            fs.unlinkSync(videoPath);
-            fs.readdirSync(tmpDir).forEach(file => {
-                if (file.startsWith('frames-')) fs.unlinkSync(path.join(tmpDir, file));
-            });
-
-            // Enviar reacción de éxito ✅
-            await sock.sendMessage(msg.key.remoteJid, { 
-                react: { text: "✅", key: msg.key } 
-            });
+        // Enviar reacción de éxito ✅
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
         });
     });
 
