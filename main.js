@@ -148,18 +148,19 @@ case "listpacks":
 
         if (packNames.length === 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No hay paquetes de stickers creados aún.*\nUsa `.newpack <nombre>` para crear uno." 
+                text: "❌ *No hay paquetes de stickers creados aún.*\n🛠️ Usa `.newpack <nombre>` para crear uno." 
             }, { quoted: msg });
             return;
         }
 
-        // Crear una lista bonita con emojis 🌟
+        // Crear una lista con los paquetes y la cantidad de stickers 📦
         let packList = `📦 *Paquetes de Stickers Disponibles:*\n\n`;
         packNames.forEach((pack, index) => {
-            packList += `🔹 *${index + 1}.* ${pack}\n`;
+            let stickerCount = stickerData[pack].length; // Cantidad de stickers en el paquete
+            packList += `🔹 *${index + 1}.* ${pack}  📌 (${stickerCount} stickers)\n`;
         });
 
-        packList += `\n📌 Usa *${global.prefix}sendpack <nombre>* para enviar un paquete.`;
+        packList += `\n📌 Usa *${global.prefix}sendpack <nombre>* para enviar un paquete.\n💡 Usa *${global.prefix}addsticker <nombre>* para agregar más stickers.`;
 
         // Reaccionar antes de enviar la lista 📜
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -1160,7 +1161,7 @@ case "perfil": {
         
 case 'creador': {
     const ownerNumber = "15167096032@s.whatsapp.net"; // Número del dueño en formato WhatsApp
-    const ownerName = "Russell 🤖"; // Nombre del dueño
+    const ownerName = "Russell xz 🤖"; // Nombre del dueño
     const messageText = "📞 *Contacto del Creador:*\n\nSi tienes dudas, preguntas o sugerencias sobre el bot, puedes contactar a mi creador.\n\n📌 *Nombre:* Russell\n📌 *Número:* +1 (516) 709-6032\n💬 *Mensaje directo:* Pulsa sobre el contacto y chatea con él.";
 
     // Enviar mensaje con el contacto del dueño
@@ -1435,7 +1436,7 @@ case 'clavelista': {
     }
 
     // Construir el mensaje con la lista de palabras clave y quién las guardó
-    let listaMensaje = "📜 *Lista de palabras clave guardadas:*\n\n";
+    let listaMensaje = "📜 *Lista de palabras clave guardadas para sacar el multimedia:*\n\n";
     let mentions = [];
 
     for (let clave in guarData) {
@@ -1447,6 +1448,11 @@ case 'clavelista': {
 
         listaMensaje += `🔹 *${clave}* → Guardado por: @${user}\n`;
     }
+
+    // Agregar explicación de cómo recuperar multimedia
+    listaMensaje += `\n💡 *Para recuperar un archivo, usa el siguiente comando:*\n`;
+    listaMensaje += `📥 *${global.prefix}g <palabra clave>*\n`;
+    listaMensaje += `🛠️ Usa *${global.prefix}delclave <palabra>* para eliminar una clave.\n`;
 
     // Enviar la lista de palabras clave mencionando a los usuarios
     return sock.sendMessage(
