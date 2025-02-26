@@ -137,7 +137,30 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'speedtest':
+case 'speed': {
+    const cp = require('child_process');
+    const { promisify } = require('util');
+    const exec = promisify(cp.exec).bind(cp);
 
+    await sock.sendMessage(msg.key.remoteJid, {
+        text: '🚀 Prueba de velocidad',
+        mentions: [msg.key.participant || msg.key.remoteJid],
+    }, { quoted: msg });
+
+    let o;
+    try {
+        o = await exec('python3 speed.py --secure --share');
+    } catch (e) {
+        o = e;
+    } finally {
+        const { stdout, stderr } = o;
+        if (stdout.trim()) await sock.sendMessage(msg.key.remoteJid, { text: stdout });
+        if (stderr.trim()) await sock.sendMessage(msg.key.remoteJid, { text: stderr });
+        console.log(stderr);
+    }
+    break;
+}
 case 'tourl': {
     const fs = require('fs');
     const axios = require('axios');
