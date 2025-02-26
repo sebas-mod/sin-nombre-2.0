@@ -451,7 +451,7 @@ case 'speed': {
 }
 
             
-case 'tourl': {
+case 'link': {
     const fs = require('fs');
     const axios = require('axios');
     const FormData = require('form-data');
@@ -608,7 +608,7 @@ case "s":
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Responde a una imagen o video con el comando `.ss` para crear un sticker.*" 
+                text: "⚠️ *Responde a una imagen o video con el comando `.s` para crear un sticker.*" 
             }, { quoted: msg });
             return;
         }
