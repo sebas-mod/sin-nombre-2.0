@@ -154,6 +154,83 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'qc': {
+    try {
+        let texto = args.join(" ");
+        let userName = msg.pushName || "Usuario Desconocido";
+        let quotedMessage = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        
+        // Si el usuario responde a un mensaje, tomar el texto de ese mensaje
+        if (quotedMessage && quotedMessage.conversation) {
+            texto = quotedMessage.conversation;
+            userName = msg.message.extendedTextMessage.contextInfo.participant.split("@")[0]; // Nombre del usuario citado
+        }
+
+        if (!texto) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Debes escribir un texto o responder a un mensaje para crear el sticker.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 🖌️ Crear una imagen con el texto y el nombre del usuario
+        const { createCanvas } = require('canvas');
+        const fs = require('fs');
+        const path = require("path");
+
+        const canvas = createCanvas(512, 512);
+        const ctx = canvas.getContext("2d");
+
+        // Fondo blanco con bordes redondeados
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Agregar texto del sticker
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 35px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(texto, 256, 230, 450);
+
+        // Agregar nombre del usuario
+        ctx.fillStyle = "#555555";
+        ctx.font = "italic 25px Arial";
+        ctx.fillText(`- ${userName}`, 256, 400);
+
+        // Guardar imagen temporalmente
+        const stickerPath = path.join(__dirname, `tmp/sticker_${Date.now()}.png`);
+        fs.writeFileSync(stickerPath, canvas.toBuffer());
+
+        // Convertir la imagen en sticker
+        const { imageToWebp } = require("./libs/functions");
+        const stickerBuffer = await imageToWebp(fs.readFileSync(stickerPath));
+
+        // Enviar el sticker generado
+        await sock.sendMessage(msg.key.remoteJid, { 
+            sticker: stickerBuffer 
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+        // Eliminar la imagen temporal
+        fs.unlinkSync(stickerPath);
+
+    } catch (error) {
+        console.error("❌ Error en el comando .qc:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al generar el sticker. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
+        
 case 'nivelmascota': {
     try {
         // 🔄 Enviar reacción mientras se procesa el comando
