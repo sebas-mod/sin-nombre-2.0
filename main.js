@@ -154,6 +154,71 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'tiendamascotas': {
+    try {
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🐾", key: msg.key } // Emoji de mascota 🐾
+        });
+
+        // Leer el archivo RPG JSON
+        const rpgFile = "./rpg.json";
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { tiendaMascotas: [] };
+
+        // Verificar si hay mascotas en la tienda
+        if (!rpgData.tiendaMascotas || rpgData.tiendaMascotas.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Actualmente no hay mascotas en la tienda.*\n🔹 Usa `.addmascota` para agregar nuevas mascotas." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Explicación sobre la compra de mascotas 📜
+        let mensaje = `🏪 *Tienda de Mascotas - Azura Ultra* 🏪\n\n`;
+        mensaje += `🐶 *Aquí puedes comprar mascotas para mejorar tu equipo.*\n`;
+        mensaje += `🛍️ *Para comprar una mascota, usa:* \n`;
+        mensaje += `   📌 \`${global.prefix}compra <nombre_mascota>\`\n`;
+        mensaje += `   📌 \`${global.prefix}compra <número_mascota>\`\n\n`;
+        mensaje += `📜 Usa \`${global.prefix}menurpg\` para más información.\n\n`;
+
+        // Mostrar todas las mascotas disponibles 🐾
+        rpgData.tiendaMascotas.forEach((mascota, index) => {
+            mensaje += `🔹 *${index + 1}. ${mascota.nombre}*\n`;
+            mensaje += `   🎚️ *Nivel Inicial:* ${mascota.nivel || 1}\n`; 
+            mensaje += `   ❤️ *Vida:* ${mascota.vida} HP\n`;
+            mensaje += `   ✨ *Habilidades:*\n`;
+            mensaje += `      🌀 ${mascota.habilidades[0]} (Nivel 1)\n`;
+            mensaje += `      🔥 ${mascota.habilidades[1]} (Nivel 1)\n`;
+            mensaje += `   💎 *Precio:* ${mascota.precio} diamantes\n\n`;
+        });
+
+        // Enviar mensaje con el **video como GIF** 🎥
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: "https://cdn.dorratz.com/files/1740573307122.mp4" },
+            gifPlayback: true, // Se reproduce como GIF
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Confirmación con reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .tiendamascotas:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al cargar la tienda de mascotas. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
+        
 case 'tiendaper': {
     try {
         // 🔄 Enviar reacción de carga mientras se procesa el comando
