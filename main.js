@@ -140,6 +140,110 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
 // ESCUCHAR REACCIONES AL MENSAJE
 // 💾 Manejo del comando "setprefix"
+            case 'tourl': {
+    const fs = require('fs');
+    const axios = require('axios');
+    const FormData = require('form-data');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+
+    if (!msg.quoted) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: "⚠️ *Aviso:* Por favor, responde a una imagen o video para generar un enlace URL. 📷📹"
+            },
+            { quoted: msg }
+        );
+    }
+
+    let mediaMessage;
+    if (msg.quoted.message.imageMessage) {
+        mediaMessage = msg.quoted.message.imageMessage;
+    } else if (msg.quoted.message.videoMessage) {
+        mediaMessage = msg.quoted.message.videoMessage;
+    } else {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: "❌ *Error:* El tipo de media no se pudo determinar. 📂"
+            },
+            { quoted: msg }
+        );
+    }
+
+    const mediaType = mediaMessage.mimetype;
+    if (!mediaType) {
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: "❌ *Error:* El tipo de media no se pudo determinar. 📂"
+            },
+            { quoted: msg }
+        );
+    }
+
+    const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType.split('/')[0]);
+    let mediaBuffer = Buffer.alloc(0);
+    for await (const chunk of mediaStream) {
+        mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+    }
+
+    const formData = new FormData();
+    formData.append('file', mediaBuffer, {
+        filename: 'file',
+        contentType: mediaType
+    });
+
+    try {
+        const response = await axios.post('https://cdn.dorratz.com/upload34', formData, {
+            headers: {
+                ...formData.getHeaders(),
+                'x-api-key': 'dv-aws78',
+                'Content-Length': formData.getLengthSync()
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        });
+
+        const shareLink = response.data.link;
+
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: `✅ *Listo:* Se ha generado un enlace URL para el multimedia. 🔗\n\nPuedes compartir este enlace: ${shareLink}`
+            },
+            { quoted: msg }
+        );
+    } catch (error) {
+        if (error.response && error.response.status === 413) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: "❌ *Error:* El tamaño del archivo excede el límite permitido por el servidor. 🚫"
+                },
+                { quoted: msg }
+            );
+        }
+        if (error.response && error.response.status === 401) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: "❌ *Error:* Clave de acceso no válida. Acceso denegado. 🔑"
+                },
+                { quoted: msg }
+            );
+        }
+        console.error(error);
+        return sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: "❌ *Error:* No se pudo generar el enlace URL. Inténtalo de nuevo más tarde. 🚫"
+            },
+            { quoted: msg }
+        );
+    }
+    break;
+}
 case "listpacks":
     try {
         // Leer el archivo donde se guardan los paquetes de stickers
