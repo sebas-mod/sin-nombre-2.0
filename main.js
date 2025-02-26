@@ -390,12 +390,7 @@ case 'deleterpg': {
         
 case 'addper': {
     try {
-        // 🔄 Reacción antes de agregar el personaje
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🎭", key: msg.key } // Emoji de personaje 🎭
-        });
-
-        // Verificar permisos (Solo Owner puede agregar personajes)
+        // Verificar si el usuario tiene permisos (solo owner)
         if (!isOwner(sender)) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "⛔ *Solo el propietario del bot puede agregar personajes a la tienda.*" 
@@ -404,15 +399,15 @@ case 'addper': {
         }
 
         // Verificar si se enviaron todos los parámetros
-        if (args.length < 5) {
+        if (args.length < 4) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\nEjemplo: `.addper 🔥Gojo Ilusión Portal https://cdn.example.com/gojo.jpg 5000`" 
+                text: "⚠️ *Uso incorrecto.*\nEjemplo: `.addper Goku Kamehameha UltraInstinto https://cdn.example.com/goku.jpg 5000`" 
             }, { quoted: msg });
             return;
         }
 
         // Extraer los datos ingresados
-        let nombre = args[0]; // Emoji + Nombre
+        let nombre = args[0]; // Nombre del personaje
         let habilidad1 = args[1]; // Primera habilidad
         let habilidad2 = args[2]; // Segunda habilidad
         let urlImagen = args[3]; // URL de la imagen o GIF
@@ -428,10 +423,15 @@ case 'addper': {
 
         // Leer o crear el archivo rpg.json
         const rpgFile = "./rpg.json";
-        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { tiendaPersonajes: [] };
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : {};
+
+        // Si no existe la tienda de personajes, crearla
+        if (!rpgData.tiendaPersonajes) {
+            rpgData.tiendaPersonajes = [];
+        }
 
         // Verificar si el personaje ya está en la tienda
-        let personajeExistente = rpgData.tiendaPersonajes.find(p => p.nombre === nombre);
+        let personajeExistente = rpgData.tiendaPersonajes.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
         if (personajeExistente) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "⚠️ *Ese personaje ya está en la tienda.* Usa otro nombre." 
@@ -439,15 +439,12 @@ case 'addper': {
             return;
         }
 
-        // Crear el objeto del nuevo personaje
+        // Crear el objeto del nuevo personaje con vida y nivel
         let nuevoPersonaje = {
             nombre: nombre,
             nivel: 1, // Nivel inicial
-            habilidades: {
-                [habilidad1]: 1,
-                [habilidad2]: 1
-            },
             vida: 100, // Vida inicial
+            habilidades: [habilidad1, habilidad2],
             imagen: urlImagen,
             precio: precio
         };
@@ -459,14 +456,24 @@ case 'addper': {
         // Enviar confirmación con la imagen
         await sock.sendMessage(msg.key.remoteJid, { 
             image: { url: urlImagen },
-            caption: `✅ *Nuevo Personaje Agregado a la Tienda*\n\n🎭 *Nombre:* ${nombre}\n🎚️ *Nivel:* 1\n✨ *Habilidades:*\n   🔹 ${habilidad1} (Nivel 1)\n   🔹 ${habilidad2} (Nivel 1)\n❤️ *Vida:* 100\n💎 *Precio:* ${precio} diamantes\n\n🔹 ¡Disponible en la tienda ahora!`
+            caption: `✅ *Nuevo Personaje Agregado a la Tienda*\n\n🎭 *Nombre:* ${nombre}\n🎚️ *Nivel Inicial:* 1\n❤️ *Vida:* 100 HP\n✨ *Habilidades:*\n   🔹 ${habilidad1} (Nivel 1)\n   🔹 ${habilidad2} (Nivel 1)\n💎 *Precio:* ${precio} diamantes\n\n📌 Ahora disponible en la tienda de personajes.`
         }, { quoted: msg });
+
+        // ✅ Reacción de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key }
+        });
 
     } catch (error) {
         console.error("❌ Error en el comando .addper:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Ocurrió un error al agregar el personaje. Inténtalo de nuevo.*" 
         }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key }
+        });
     }
     break;
 }
