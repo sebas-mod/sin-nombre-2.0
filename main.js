@@ -148,7 +148,7 @@ case 'toimggif': {
         }, { quoted: msg });
     }
 
-    // Enviar reacción de proceso ⏳
+    // Enviar reacción ⏳
     await sock.sendMessage(msg.key.remoteJid, { 
         react: { text: "⏳", key: msg.key } 
     });
@@ -163,7 +163,7 @@ case 'toimggif': {
 
     if (buffer.length === 0) {
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Error al procesar el sticker animado.*" 
+            text: "❌ *Error al descargar el sticker animado.*" 
         }, { quoted: msg });
     }
 
@@ -171,31 +171,39 @@ case 'toimggif': {
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
     const stickerPath = path.join(tmpDir, `${Date.now()}.webp`);
-    const gifPath = stickerPath.replace('.webp', '.gif');
+    const gifPath = path.join(tmpDir, `${Date.now()}.gif`);
 
     fs.writeFileSync(stickerPath, buffer); // Guardar el sticker animado temporalmente
 
-    // Convertir WebP animado a GIF
-    exec(`ffmpeg -i "${stickerPath}" -vf "scale=320:-1:flags=lanczos" -gifflags -transdiff -y "${gifPath}"`, async (error) => {
+    // **Convertir WebP animado a GIF usando FFmpeg**
+    const ffmpegCmd = `ffmpeg -i "${stickerPath}" -filter_complex "[0:v] scale=512:-1:flags=lanczos,split [a][b];[a] palettegen [p];[b][p] paletteuse" -loop 0 "${gifPath}"`;
+
+    exec(ffmpegCmd, async (error, stdout, stderr) => {
         if (error) {
-            console.error("❌ Error al convertir sticker a GIF:", error);
+            console.error("❌ Error al convertir el sticker animado en GIF:", error);
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *No se pudo convertir el sticker en GIF.*" 
             }, { quoted: msg });
         }
 
-        // Enviar el GIF convertido
+        // **Verificar si el archivo se generó correctamente**
+        if (!fs.existsSync(gifPath)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Hubo un problema al crear el GIF.*" 
+            }, { quoted: msg });
+        }
+
+        // **Enviar el GIF generado**
         await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: gifPath }, // WhatsApp trata los GIF como videos
-            gifPlayback: true,
-            caption: "🎥 *Aquí está tu GIF convertido del sticker animado.*"
+            video: { url: gifPath }, 
+            caption: "🎥 *Aquí está tu GIF convertido del sticker animado.*" 
         }, { quoted: msg });
 
-        // Eliminar archivos temporales después de enviarlos
+        // **Eliminar archivos temporales**
         fs.unlinkSync(stickerPath);
         fs.unlinkSync(gifPath);
 
-        // Enviar reacción de éxito ✅
+        // **Reacción de éxito ✅**
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
