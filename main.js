@@ -154,6 +154,50 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'deleterpg': {
+    try {
+        // Archivo JSON donde se guardan los datos del RPG
+        const rpgFile = "./rpg.json";
+        
+        // Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *No hay datos de RPG guardados.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Cargar los datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // Verificar si el usuario está registrado
+        if (!rpgData.usuarios[msg.key.participant]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No tienes un registro en el gremio Azura Ultra.*\n\n📜 Usa `"+global.prefix+"rpg <nombre> <edad>` para registrarte." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Eliminar el usuario del JSON
+        delete rpgData.usuarios[msg.key.participant];
+
+        // Guardar los cambios en el archivo JSON
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // Confirmar eliminación
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "🗑️ *Tu registro ha sido eliminado exitosamente del gremio Azura Ultra.*\n\n🔹 Puedes volver a registrarte usando `"+global.prefix+"rpg <nombre> <edad>` si lo deseas." 
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .deleterpg:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al eliminar tu registro. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+        
 case 'addper': {
     try {
         // Verificar si el usuario es Owner del bot
@@ -260,27 +304,37 @@ case 'rpg': {
             return;
         }
 
-        // Listas de habilidades y rangos posibles
-        const habilidadesDisponibles = ["⚔️ Espadachín", "🛡️ Defensor", "🔥 Mago", "🏹 Arquero", "🌀 Sanador", "⚡ Ninja", "💀 Asesino"];
-        const rangosDisponibles = ["🌟 Novato", "⚔️ Guerrero", "🔥 Maestro", "👑 Élite", "🌀 Legendario"];
+        // Lista de rangos según el nivel
+        const rangosPorNivel = [
+            { nivel: 1, rango: "🌱 Novato" },
+            { nivel: 10, rango: "⚔️ Guerrero" },
+            { nivel: 20, rango: "🔥 Maestro" },
+            { nivel: 30, rango: "👑 Élite" },
+            { nivel: 50, rango: "🌀 Legendario" }
+        ];
 
-        // Asignar habilidades y rango aleatorios
+        // Asignar rango inicial basado en nivel 1
+        let rangoInicial = rangosPorNivel.find(r => r.nivel === 1).rango;
+
+        // Lista de habilidades disponibles
+        const habilidadesDisponibles = ["⚔️ Espadachín", "🛡️ Defensor", "🔥 Mago", "🏹 Arquero", "🌀 Sanador", "⚡ Ninja", "💀 Asesino"];
+
+        // Asignar habilidades aleatorias
         let habilidad1 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
         let habilidad2 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
-        let rango = rangosDisponibles[Math.floor(Math.random() * rangosDisponibles.length)];
 
         // Obtener una mascota aleatoria de la tienda
         let mascotasTienda = rpgData.tiendaMascotas || [];
         let mascotaAleatoria = mascotasTienda.length > 0 ? mascotasTienda[Math.floor(Math.random() * mascotasTienda.length)] : null;
 
-        // Crear perfil del usuario con vida inicial de 100 ❤️
+        // Crear perfil del usuario con vida inicial de 100 ❤️ y nivel 1
         let nuevoUsuario = {
             nombre: nombreUsuario,
             edad: edadUsuario,
             nivel: 1,
             experiencia: 0,
             vida: 100, // Vida inicial de 100 ❤️
-            rango: rango,
+            rango: rangoInicial,
             habilidades: { 
                 [habilidad1]: { nivel: 1 },
                 [habilidad2]: { nivel: 1 }
@@ -314,7 +368,8 @@ case 'rpg': {
         
 🌟 *Jugador:* ${nombreUsuario}
 🎂 *Edad:* ${edadUsuario} años
-⚔️ *Rango Inicial:* ${rango}
+📈 *Nivel:* 1  
+⚔️ *Rango Inicial:* ${rangoInicial}
 ❤️ *Vida:* 100  
 🛠️ *Habilidades:*  
    ✨ ${habilidad1} (Nivel 1)  
@@ -332,7 +387,7 @@ case 'rpg': {
 🔹 Usa *${global.prefix}tiendamascotas* para ver mascotas disponibles.  
 🔹 Usa *${global.prefix}tiendaper* para ver personajes de anime disponibles.  
 🔹 Usa *${global.prefix}bal* o *${global.prefix}saldo* para ver tu saldo actual.  
-🔹 Usa *${global.prefix}nivel* para ver tu nivel y estadísticas.  
+🔹 Usa *${global.prefix}nivel* para ver tu nivel, rango y estadísticas.  
 🔹 Usa *${global.prefix}menurpg* para ver todos los comandos y aprender cómo progresar.  
 🔹 Usa estos comandos para subir de nivel y ganar diamantes:  
    *${global.prefix}minar*, *${global.prefix}picar*, *${global.prefix}crime*, *${global.prefix}work*,  
@@ -354,7 +409,8 @@ case 'rpg': {
         }, { quoted: msg });
     }
     break;
-}        
+}
+
         
 
 case 'addmascota': {
