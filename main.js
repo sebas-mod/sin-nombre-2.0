@@ -631,7 +631,7 @@ case 'rpg': {
 
         let nombreUsuario = args[0]; // Nombre
         let edadUsuario = parseInt(args[1]); // Edad
-        let userId = msg.key.participant || msg.key.remoteJid; // Guardar ID del usuario
+        let userId = msg.key.participant || msg.key.remoteJid; // ID del usuario
 
         if (isNaN(edadUsuario) || edadUsuario <= 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
@@ -650,6 +650,29 @@ case 'rpg': {
             return;
         }
 
+        // 🔄 Enviar reacción de carga
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "⏳", key: msg.key } 
+        });
+
+        // Mensajes de registro dinámico con intervalo
+        let registroMensaje = await sock.sendMessage(msg.key.remoteJid, { text: `📝 *Registrando en el Gremio Azura Ultra...*` }, { quoted: msg });
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await sock.sendMessage(msg.key.remoteJid, { 
+            edit: registroMensaje.key, 
+            text: `📜 *Nombre:* ${nombreUsuario}\n🎂 *Edad:* ${edadUsuario}\n\n⏳ *Procesando...*` 
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await sock.sendMessage(msg.key.remoteJid, { 
+            edit: registroMensaje.key, 
+            text: `🔍 *Buscando rango y habilidades...*` 
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Selección de habilidades y rango
         const habilidadesDisponibles = ["⚔️ Espadachín", "🛡️ Defensor", "🔥 Mago", "🏹 Arquero", "🌀 Sanador", "⚡ Ninja", "💀 Asesino"];
         const rangosDisponibles = ["🌟 Novato", "⚔️ Guerrero", "🔥 Maestro", "👑 Élite", "🌀 Legendario"];
 
@@ -657,9 +680,25 @@ case 'rpg': {
         let habilidad2 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
         let rango = "🌟 Novato"; // Todos comienzan como novatos
 
+        // Asignar una mascota aleatoria
         let mascotasTienda = rpgData.tiendaMascotas || [];
         let mascotaAleatoria = mascotasTienda.length > 0 ? mascotasTienda[Math.floor(Math.random() * mascotasTienda.length)] : null;
 
+        let nuevaMascota = null;
+        if (mascotaAleatoria) {
+            nuevaMascota = {
+                nombre: mascotaAleatoria.nombre,
+                imagen: mascotaAleatoria.imagen, // URL de la imagen
+                nivel: 1,
+                vida: 100,
+                habilidades: {
+                    [mascotaAleatoria.habilidades[0]]: { nivel: 1 },
+                    [mascotaAleatoria.habilidades[1]]: { nivel: 1 }
+                }
+            };
+        }
+
+        // Crear perfil del usuario
         let nuevoUsuario = {
             id: userId, // Guardar ID de WhatsApp
             nombre: nombreUsuario,
@@ -674,29 +713,21 @@ case 'rpg': {
             },
             diamantes: 0,
             diamantesGuardados: 0,
-            mascotas: mascotaAleatoria ? [{ 
-                nombre: mascotaAleatoria.nombre, 
-                nivel: 1,
-                vida: 100,
-                habilidades: {
-                    [mascotaAleatoria.habilidades[0]]: { nivel: 1 },
-                    [mascotaAleatoria.habilidades[1]]: { nivel: 1 }
-                }
-            }] : []
+            mascotas: nuevaMascota ? [nuevaMascota] : []
         };
 
         rpgData.usuarios[userId] = nuevoUsuario;
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
+        // Mensaje final de confirmación con GIF
         let habilidadesMascota = "";
-        if (mascotaAleatoria) {
+        if (nuevaMascota) {
             habilidadesMascota = `🔹 *Habilidades:*  
-   🌀 ${mascotaAleatoria.habilidades[0]} (Nivel 1)  
-   🔥 ${mascotaAleatoria.habilidades[1]} (Nivel 1)`;
+   🌀 ${Object.keys(nuevaMascota.habilidades)[0]} (Nivel 1)  
+   🔥 ${Object.keys(nuevaMascota.habilidades)[1]} (Nivel 1)`;
         }
 
-        let bienvenida = `🎉 *¡Bienvenido al Gremio Azura Ultra!* 🎉
-        
+        let mensajeFinal = `🎉 *¡Registro Completado!* 🎉\n\n
 🌟 *Jugador:* ${nombreUsuario}
 🎂 *Edad:* ${edadUsuario} años
 ⚔️ *Rango Inicial:* ${rango}
@@ -706,9 +737,9 @@ case 'rpg': {
    ✨ ${habilidad1} (Nivel 1)  
    ✨ ${habilidad2} (Nivel 1)  
 
-🐾 *Mascota Inicial:* ${mascotaAleatoria ? `🦴 ${mascotaAleatoria.nombre}` : "❌ Ninguna (No hay en la tienda)"}
-   🎚️ *Nivel:* 1  
-   ❤️ *Vida:* 100 HP  
+🐾 *Mascota Inicial:* ${nuevaMascota ? `🦴 ${nuevaMascota.nombre}` : "❌ Ninguna (No hay en la tienda)"}
+   🎚️ *Nivel:* ${nuevaMascota ? nuevaMascota.nivel : "❌"}  
+   ❤️ *Vida:* ${nuevaMascota ? nuevaMascota.vida : "❌"}  
    ${habilidadesMascota}
 
 💎 *Diamantes:* 0
@@ -724,21 +755,38 @@ case 'rpg': {
 
 🚀 ¡Prepárate para la aventura en *Azura Ultra*! 🏆`;
 
+        // Editar el mensaje final y enviar el GIF
+        await sock.sendMessage(msg.key.remoteJid, { 
+            edit: registroMensaje.key, 
+            text: "✅ *¡Registro completado!* Generando tu tarjeta de jugador..."
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
         await sock.sendMessage(msg.key.remoteJid, { 
             video: { url: "https://cdn.dorratz.com/files/1740560637895.mp4" }, 
             gifPlayback: true, 
-            caption: bienvenida
+            caption: mensajeFinal
         }, { quoted: msg });
+
+        // ✅ Enviar reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🎮", key: msg.key } 
+        });
 
     } catch (error) {
         console.error("❌ Error en el comando .rpg:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Ocurrió un error al registrarte en el gremio. Inténtalo de nuevo.*" 
         }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
 }
-
         
 case 'addmascota': {
     try {
