@@ -381,6 +381,7 @@ case 'addper': {
     break;
 }
             
+
 case 'rpg': {
     try {
         // Verificar que se ingresen nombre y edad
@@ -402,49 +403,43 @@ case 'rpg': {
             return;
         }
 
+        // Obtener el ID de WhatsApp del usuario
+        let userId = msg.key.participant || msg.key.remoteJid;
+
         // Archivo JSON donde se guardan los datos del RPG
         const rpgFile = "./rpg.json";
         let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { usuarios: {} };
 
         // Verificar si el usuario ya está registrado
-        if (rpgData.usuarios[msg.key.participant]) {
+        if (rpgData.usuarios[userId]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Ya estás registrado en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}menurpg\` para ver todos los comandos disponibles y aprender cómo progresar en el juego.` 
+                text: `⚠️ *Ya estás registrado en el Gremio Azura Ultra.* Usa \`${global.prefix}menurpg\` para ver tus opciones.` 
             }, { quoted: msg });
             return;
         }
 
-        // Lista de rangos según el nivel
-        const rangosPorNivel = [
-            { nivel: 1, rango: "🌱 Novato" },
-            { nivel: 10, rango: "⚔️ Guerrero" },
-            { nivel: 20, rango: "🔥 Maestro" },
-            { nivel: 30, rango: "👑 Élite" },
-            { nivel: 50, rango: "🌀 Legendario" }
-        ];
-
-        // Asignar rango inicial basado en nivel 1
-        let rangoInicial = rangosPorNivel.find(r => r.nivel === 1).rango;
-
-        // Lista de habilidades disponibles
+        // Listas de habilidades y rangos posibles
         const habilidadesDisponibles = ["⚔️ Espadachín", "🛡️ Defensor", "🔥 Mago", "🏹 Arquero", "🌀 Sanador", "⚡ Ninja", "💀 Asesino"];
+        const rangosDisponibles = ["🌟 Novato", "⚔️ Guerrero", "🔥 Maestro", "👑 Élite", "🌀 Legendario"];
 
-        // Asignar habilidades aleatorias
+        // Asignar habilidades y rango aleatorios
         let habilidad1 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
         let habilidad2 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
+        let rango = "🌟 Novato"; // Todos inician con el rango Novato
 
         // Obtener una mascota aleatoria de la tienda
         let mascotasTienda = rpgData.tiendaMascotas || [];
         let mascotaAleatoria = mascotasTienda.length > 0 ? mascotasTienda[Math.floor(Math.random() * mascotasTienda.length)] : null;
 
-        // Crear perfil del usuario con vida inicial de 100 ❤️ y nivel 1
+        // Crear perfil del usuario
         let nuevoUsuario = {
+            id: userId, // Guardar el ID del usuario
             nombre: nombreUsuario,
             edad: edadUsuario,
             nivel: 1,
             experiencia: 0,
-            vida: 100, // Vida inicial de 100 ❤️
-            rango: rangoInicial,
+            rango: rango,
+            vida: 100, // Vida inicial
             habilidades: { 
                 [habilidad1]: { nivel: 1 },
                 [habilidad2]: { nivel: 1 }
@@ -461,8 +456,8 @@ case 'rpg': {
             }] : []
         };
 
-        // Guardar en JSON
-        rpgData.usuarios[msg.key.participant] = nuevoUsuario;
+        // Guardar en JSON con el ID de usuario como clave
+        rpgData.usuarios[userId] = nuevoUsuario;
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
         // Formato ordenado para mostrar las habilidades de la mascota
@@ -478,10 +473,9 @@ case 'rpg': {
         
 🌟 *Jugador:* ${nombreUsuario}
 🎂 *Edad:* ${edadUsuario} años
-📈 *Nivel:* 1  
-⚔️ *Rango Inicial:* ${rangoInicial}
-❤️ *Vida:* 100  
-🛠️ *Habilidades:*  
+🏅 *Rango Inicial:* ${rango}
+❤️ *Vida:* 100
+⚔️ *Habilidades:*  
    ✨ ${habilidad1} (Nivel 1)  
    ✨ ${habilidad2} (Nivel 1)  
 
@@ -496,9 +490,8 @@ case 'rpg': {
 🔹 Usa *${global.prefix}vermascotas* para ver tu mascota actual y las que compres.  
 🔹 Usa *${global.prefix}tiendamascotas* para ver mascotas disponibles.  
 🔹 Usa *${global.prefix}tiendaper* para ver personajes de anime disponibles.  
-🔹 Usa *${global.prefix}bal* o *${global.prefix}saldo* para ver tu saldo actual.  
-🔹 Usa *${global.prefix}nivel* para ver tu nivel, rango y estadísticas.  
-🔹 Usa *${global.prefix}menurpg* para ver todos los comandos y aprender cómo progresar.  
+🔹 Usa *${global.prefix}nivel* para ver tu nivel actual y estadísticas.  
+🔹 Usa *${global.prefix}saldo* para ver tu saldo de diamantes.  
 🔹 Usa estos comandos para subir de nivel y ganar diamantes:  
    *${global.prefix}minar*, *${global.prefix}picar*, *${global.prefix}crime*, *${global.prefix}work*,  
    *${global.prefix}claim*, *${global.prefix}cofre*, *${global.prefix}minar2*, *${global.prefix}robar*  
