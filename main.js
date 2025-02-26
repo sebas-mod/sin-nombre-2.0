@@ -137,7 +137,72 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'toimg': {
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { writeFileSync } = fs;
+    const { exec } = require('child_process');
 
+    if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "⚠️ *Debes responder a un sticker para convertirlo en imagen.*" 
+        }, { quoted: msg });
+    }
+
+    // Enviar reacción de proceso ⏳
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    let quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage;
+    let stickerStream = await downloadContentFromMessage(quoted, "sticker");
+
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stickerStream) {
+        buffer = Buffer.concat([buffer, chunk]);
+    }
+
+    if (buffer.length === 0) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Error al procesar el sticker.*" 
+        }, { quoted: msg });
+    }
+
+    const stickerPath = path.join(__dirname, 'tmp', `${Date.now()}.webp`);
+    const imagePath = stickerPath.replace('.webp', '.jpg');
+
+    writeFileSync(stickerPath, buffer); // Guardar el sticker temporalmente
+
+    // Convertir de WebP a JPG con ffmpeg
+    exec(`ffmpeg -i "${stickerPath}" "${imagePath}"`, async (error) => {
+        if (error) {
+            console.error("❌ Error al convertir sticker a imagen:", error);
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No se pudo convertir el sticker en imagen.*" 
+            }, { quoted: msg });
+        }
+
+        // Enviar la imagen resultante
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: imagePath },
+            caption: "🖼️ *Aquí está tu imagen convertida del sticker.*"
+        }, { quoted: msg });
+
+        // Eliminar archivos temporales después de enviarlos
+        fs.unlinkSync(stickerPath);
+        fs.unlinkSync(imagePath);
+
+        // Enviar reacción de éxito ✅
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+    });
+
+    break;
+}
+
+            
 case 'ytmp3': {
     const fs = require('fs');
     const path = require('path');
