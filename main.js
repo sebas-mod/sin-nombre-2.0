@@ -136,6 +136,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
 
     switch (lowerCommand) {
+//agrega nuevos comando abajo
 
 case 'tourl': {
     const fs = require('fs');
@@ -144,7 +145,9 @@ case 'tourl': {
     const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
     try {
-        if (!msg.quoted) {
+        let quotedMessage = msg.message.extendedTextMessage?.contextInfo?.quotedMessage || msg.quoted?.message;
+
+        if (!quotedMessage) {
             return sock.sendMessage(
                 msg.key.remoteJid,
                 { text: "⚠️ *Aviso:* Responde a cualquier archivo multimedia (imagen, video, audio, documento, sticker) para generar un enlace URL. 🔗" },
@@ -152,28 +155,29 @@ case 'tourl': {
             );
         }
 
-        // 📌 Verificar el tipo de mensaje multimedia
+        // 📌 Detectar el tipo de multimedia (imagen, video, audio, documento, sticker)
         let mediaMessage;
         let mediaType;
-        if (msg.quoted.message.imageMessage) {
-            mediaMessage = msg.quoted.message.imageMessage;
+        
+        if (quotedMessage.imageMessage) {
+            mediaMessage = quotedMessage.imageMessage;
             mediaType = "image";
-        } else if (msg.quoted.message.videoMessage) {
-            mediaMessage = msg.quoted.message.videoMessage;
+        } else if (quotedMessage.videoMessage) {
+            mediaMessage = quotedMessage.videoMessage;
             mediaType = "video";
-        } else if (msg.quoted.message.audioMessage) {
-            mediaMessage = msg.quoted.message.audioMessage;
+        } else if (quotedMessage.audioMessage) {
+            mediaMessage = quotedMessage.audioMessage;
             mediaType = "audio";
-        } else if (msg.quoted.message.documentMessage) {
-            mediaMessage = msg.quoted.message.documentMessage;
+        } else if (quotedMessage.documentMessage) {
+            mediaMessage = quotedMessage.documentMessage;
             mediaType = "document";
-        } else if (msg.quoted.message.stickerMessage) {
-            mediaMessage = msg.quoted.message.stickerMessage;
+        } else if (quotedMessage.stickerMessage) {
+            mediaMessage = quotedMessage.stickerMessage;
             mediaType = "sticker";
         } else {
             return sock.sendMessage(
                 msg.key.remoteJid,
-                { text: "❌ *Error:* El tipo de archivo no es compatible. 📂" },
+                { text: "❌ *Error:* No se detectó un archivo multimedia válido. 📂" },
                 { quoted: msg }
             );
         }
@@ -246,6 +250,8 @@ case 'tourl': {
     }
     break;
 }
+
+            
 case "listpacks":
     try {
         // Leer el archivo donde se guardan los paquetes de stickers
