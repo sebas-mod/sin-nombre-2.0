@@ -137,6 +137,70 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'toimgvideo': {
+    const fs = require('fs');
+    const path = require('path');
+    const { exec } = require('child_process');
+
+    if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "⚠️ *Debes responder a un sticker animado para convertirlo en video.*" 
+        }, { quoted: msg });
+    }
+
+    // Enviar reacción de proceso ⏳
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    let quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage;
+    let stickerStream = await downloadContentFromMessage(quoted, "sticker");
+
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stickerStream) {
+        buffer = Buffer.concat([buffer, chunk]);
+    }
+
+    if (buffer.length === 0) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Error al procesar el sticker animado.*" 
+        }, { quoted: msg });
+    }
+
+    const stickerPath = path.join(__dirname, 'tmp', `${Date.now()}.webp`);
+    const videoPath = stickerPath.replace('.webp', '.mp4');
+
+    fs.writeFileSync(stickerPath, buffer); // Guardar el sticker temporalmente
+
+    // Convertir de WebP animado a MP4 con ffmpeg
+    exec(`ffmpeg -i "${stickerPath}" -movflags faststart -pix_fmt yuv420p -vsync 2 "${videoPath}"`, async (error) => {
+        if (error) {
+            console.error("❌ Error al convertir sticker a video:", error);
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No se pudo convertir el sticker en video.*" 
+            }, { quoted: msg });
+        }
+
+        // Enviar el video resultante
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: videoPath },
+            caption: "🎥 *Aquí está tu video convertido del sticker animado.*"
+        }, { quoted: msg });
+
+        // Eliminar archivos temporales después de enviarlos
+        fs.unlinkSync(stickerPath);
+        fs.unlinkSync(videoPath);
+
+        // Enviar reacción de éxito ✅
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+    });
+
+    break;
+}
+        
+        
 case 'toimg': {
     const axios = require('axios');
     const fs = require('fs');
