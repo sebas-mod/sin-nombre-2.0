@@ -154,6 +154,83 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'nivelmascota': {
+    try {
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "📊", key: msg.key } // Emoji de estadísticas 📊
+        });
+
+        // Archivo JSON donde se guardan los datos del RPG
+        const rpgFile = "./rpg.json";
+
+        // Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No tienes una mascota registrada.*\n\n🔹 Usa `.rpg <nombre> <edad>` para registrarte y obtener una mascota inicial." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Cargar los datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // Verificar si el usuario está registrado
+        if (!rpgData.usuarios[msg.key.participant]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa `.rpg <nombre> <edad>` para registrarte." 
+            }, { quoted: msg });
+            return;
+        }
+
+        let usuario = rpgData.usuarios[msg.key.participant];
+
+        // Verificar si el usuario tiene mascotas
+        if (!usuario.mascotas || usuario.mascotas.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No tienes una mascota actualmente.*\n\n🔹 Usa `.tiendamascotas` para comprar una." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Obtener la mascota actual
+        let mascotaActual = usuario.mascotas[0]; // La primera en la lista (se puede cambiar si hay múltiples)
+
+        // Construir mensaje de estadísticas 📜
+        let mensaje = `📊 *Estadísticas de tu Mascota* 📊\n\n`;
+        mensaje += `🐾 *Nombre:* ${mascotaActual.nombre}\n`;
+        mensaje += `🎚️ *Nivel:* ${mascotaActual.nivel}\n`;
+        mensaje += `❤️ *Vida:* ${mascotaActual.vida} HP\n`;
+        mensaje += `✨ *Habilidades:*\n`;
+        Object.entries(mascotaActual.habilidades).forEach(([habilidad, datos]) => {
+            mensaje += `   🔹 ${habilidad} (Nivel ${datos.nivel})\n`;
+        });
+
+        // Enviar mensaje con la imagen de la mascota 📷
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: mascotaActual.imagen }, 
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Confirmación con reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .nivelmascota:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al obtener la información de tu mascota. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
 case 'tiendamascotas': {
     try {
         // 🔄 Enviar reacción mientras se procesa el comando
