@@ -154,6 +154,80 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'addper': {
+    try {
+        // Verificar si el usuario es Owner del bot
+        if (!isOwner(sender)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo los dueños del bot pueden agregar personajes a la tienda.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Verificar que se ingresen los parámetros necesarios
+        if (args.length < 4) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}addper 🌀Gojo 🌀Infinito 🔥Hollow_Purple https://cdn.dorratz.com/files/Gojo.jpg 7000\`` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Extraer los datos ingresados
+        let nombre = args[0]; 
+        let habilidad1 = args[1]; 
+        let habilidad2 = args[2]; 
+        let urlImagen = args[3]; 
+        let precio = parseInt(args[4]); 
+
+        if (isNaN(precio) || precio < 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *El precio debe ser un número válido mayor o igual a 0.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Leer o crear el archivo rpg.json
+        const rpgFile = "./rpg.json";
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : {};
+
+        if (!rpgData.tiendaPersonajes) {
+            rpgData.tiendaPersonajes = [];
+        }
+
+        let personajeExistente = rpgData.tiendaPersonajes.find(p => p.nombre === nombre);
+        if (personajeExistente) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Ese personaje ya está en la tienda.* Usa otro nombre." 
+            }, { quoted: msg });
+            return;
+        }
+
+        let nuevoPersonaje = {
+            nombre: nombre,
+            habilidades: { [habilidad1]: 1, [habilidad2]: 1 }, 
+            imagen: urlImagen,
+            precio: precio,
+            vida: 100 
+        };
+
+        rpgData.tiendaPersonajes.push(nuevoPersonaje);
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: urlImagen },
+            caption: `✅ *Nuevo Personaje Agregado a la Tienda*\n\n🎭 *Nombre:* ${nombre}\n✨ *Habilidades:* \n   🔹 ${habilidad1} (Nivel 1) \n   🔹 ${habilidad2} (Nivel 1)\n❤️ *Vida Inicial:* 100\n💎 *Precio:* ${precio} diamantes\n\n🔹 ¡Disponible en la tienda ahora!`
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .addper:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al agregar el personaje. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+            
+        
 case 'rpg': {
     try {
         // Verificar que se ingresen nombre y edad
@@ -278,32 +352,32 @@ case 'rpg': {
     break;
 }
         
+
 case 'addmascota': {
     try {
-        // Verificar si el usuario tiene permisos
-        if (!isOwner(sender)) {
+        // Verificar si el usuario es Owner del bot o Admin del grupo
+        const isAdmin = msg.key.remoteJid.endsWith("@g.us") && (await sock.groupMetadata(msg.key.remoteJid)).participants.find(p => p.id === sender && p.admin);
+
+        if (!isOwner(sender) && !isAdmin) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los administradores del bot pueden agregar mascotas a la tienda.*" 
+                text: "⛔ *Solo los administradores del grupo o dueños del bot pueden agregar mascotas a la tienda.*" 
             }, { quoted: msg });
             return;
         }
 
-        // Verificar si se enviaron todos los parámetros
-        if (args.length < 5) {
+        if (args.length < 4) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\nEjemplo: `.addmascota 🐕Perro rápido protector https://cdn.example.com/perro.jpg 3000`" 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}addmascota 🐕Perro rápido protector https://cdn.example.com/perro.jpg 3000\`` 
             }, { quoted: msg });
             return;
         }
 
-        // Extraer los datos ingresados
-        let nombre = args[0]; // Emoji + Nombre
-        let habilidad1 = args[1]; // Primera habilidad
-        let habilidad2 = args[2]; // Segunda habilidad
-        let urlImagen = args[3]; // URL de la imagen o GIF
-        let precio = parseInt(args[4]); // Precio en 💎 Diamantes
+        let nombre = args[0]; 
+        let habilidad1 = args[1]; 
+        let habilidad2 = args[2]; 
+        let urlImagen = args[3]; 
+        let precio = parseInt(args[4]); 
 
-        // Validar que el precio sea un número
         if (isNaN(precio) || precio < 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *El precio debe ser un número válido mayor o igual a 0.*" 
@@ -311,54 +385,35 @@ case 'addmascota': {
             return;
         }
 
-        // Leer o crear el archivo rpg.json
         const rpgFile = "./rpg.json";
         let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : {};
 
-        // Si no existe la tienda, crearla como lista
         if (!rpgData.tiendaMascotas) {
             rpgData.tiendaMascotas = [];
         }
 
-        // Verificar si la mascota ya está en la tienda
         let mascotaExistente = rpgData.tiendaMascotas.find(m => m.nombre === nombre);
         if (mascotaExistente) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *La mascota ${nombre} ya está en la tienda.*` 
+                text: "⚠️ *Esa mascota ya está en la tienda.* Usa otro nombre." 
             }, { quoted: msg });
             return;
         }
 
-        // Crear el objeto de la nueva mascota con niveles
         let nuevaMascota = {
             nombre: nombre,
-            nivel: 1, // Nivel inicial
-            habilidades: {
-                [habilidad1]: { nivel: 1 },
-                [habilidad2]: { nivel: 1 }
-            },
+            habilidades: { [habilidad1]: 1, [habilidad2]: 1 },
             imagen: urlImagen,
-            precio: precio
+            precio: precio,
+            nivel: 1 
         };
 
-        // Agregar la mascota a la tienda
         rpgData.tiendaMascotas.push(nuevaMascota);
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-        // Enviar confirmación con la imagen y detalles bien formateados
-        let mensajeConfirmacion = `✅ *¡Nueva Mascota Agregada a la Tienda!*\n\n` +
-            `🐾 *Nombre:* ${nombre}\n` +
-            `🎖️ *Nivel Inicial:* 1\n` +
-            `💎 *Precio:* ${precio} diamantes\n\n` +
-            `🌟 *Habilidades:*\n` +
-            Object.entries(nuevaMascota.habilidades)
-                .map(([habilidad, stats]) => `   🔹 *${habilidad}* (Nivel ${stats.nivel})`)
-                .join("\n") +
-            `\n📌 *Disponible en la tienda ahora.*`;
-
         await sock.sendMessage(msg.key.remoteJid, { 
             image: { url: urlImagen },
-            caption: mensajeConfirmacion
+            caption: `✅ *Nueva Mascota Agregada a la Tienda*\n\n🐾 *Nombre:* ${nombre}\n✨ *Habilidades:* \n   🔹 ${habilidad1} (Nivel 1) \n   🔹 ${habilidad2} (Nivel 1)\n💎 *Precio:* ${precio} diamantes\n🎚️ *Nivel:* 1\n\n🔹 ¡Disponible en la tienda ahora!`
         }, { quoted: msg });
 
     } catch (error) {
