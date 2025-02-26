@@ -225,6 +225,11 @@ case 'speed': {
     
     const exec = promisify(cp.exec).bind(cp);
 
+    // Enviar una reacción antes de procesar el comando ⏳
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
     await sock.sendMessage(msg.key.remoteJid, {
         text: '🚀 Prueba de velocidad en curso... ⏳',
         mentions: [msg.key.participant || msg.key.remoteJid],
@@ -276,6 +281,11 @@ case 'speed': {
             await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ Error en Speedtest:\n\n${stderr}` }, { quoted: msg });
             console.log(stderr);
         }
+
+        // Enviar una reacción de confirmación ✅ después de completar la prueba
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
     }
     break;
 }
