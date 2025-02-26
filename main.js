@@ -227,7 +227,6 @@ case 'addper': {
     break;
 }
             
-        
 case 'rpg': {
     try {
         // Verificar que se ingresen nombre y edad
@@ -256,7 +255,7 @@ case 'rpg': {
         // Verificar si el usuario ya está registrado
         if (rpgData.usuarios[msg.key.participant]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Ya estás registrado en el gremio Azura Ultra.*" 
+                text: `⚠️ *Ya estás registrado en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}menurpg\` para ver todos los comandos disponibles y aprender cómo progresar en el juego.` 
             }, { quoted: msg });
             return;
         }
@@ -274,17 +273,18 @@ case 'rpg': {
         let mascotasTienda = rpgData.tiendaMascotas || [];
         let mascotaAleatoria = mascotasTienda.length > 0 ? mascotasTienda[Math.floor(Math.random() * mascotasTienda.length)] : null;
 
-        // Crear perfil del usuario
+        // Crear perfil del usuario con vida inicial de 100 ❤️
         let nuevoUsuario = {
             nombre: nombreUsuario,
             edad: edadUsuario,
             nivel: 1,
             experiencia: 0,
+            vida: 100, // Vida inicial de 100 ❤️
             rango: rango,
             habilidades: { 
                 [habilidad1]: { nivel: 1 },
                 [habilidad2]: { nivel: 1 }
-            }, // Nivel inicial de habilidades
+            },
             diamantes: 0, // Inician con 0 diamantes
             diamantesGuardados: 0, // Diamantes en el gremio
             mascotas: mascotaAleatoria ? [{ 
@@ -315,6 +315,7 @@ case 'rpg': {
 🌟 *Jugador:* ${nombreUsuario}
 🎂 *Edad:* ${edadUsuario} años
 ⚔️ *Rango Inicial:* ${rango}
+❤️ *Vida:* 100  
 🛠️ *Habilidades:*  
    ✨ ${habilidad1} (Nivel 1)  
    ✨ ${habilidad2} (Nivel 1)  
@@ -330,6 +331,9 @@ case 'rpg': {
 🔹 Usa *${global.prefix}vermascotas* para ver tu mascota actual y las que compres.  
 🔹 Usa *${global.prefix}tiendamascotas* para ver mascotas disponibles.  
 🔹 Usa *${global.prefix}tiendaper* para ver personajes de anime disponibles.  
+🔹 Usa *${global.prefix}bal* o *${global.prefix}saldo* para ver tu saldo actual.  
+🔹 Usa *${global.prefix}nivel* para ver tu nivel y estadísticas.  
+🔹 Usa *${global.prefix}menurpg* para ver todos los comandos y aprender cómo progresar.  
 🔹 Usa estos comandos para subir de nivel y ganar diamantes:  
    *${global.prefix}minar*, *${global.prefix}picar*, *${global.prefix}crime*, *${global.prefix}work*,  
    *${global.prefix}claim*, *${global.prefix}cofre*, *${global.prefix}minar2*, *${global.prefix}robar*  
@@ -350,7 +354,7 @@ case 'rpg': {
         }, { quoted: msg });
     }
     break;
-}
+}        
         
 
 case 'addmascota': {
