@@ -1556,7 +1556,7 @@ case 'clavelista': {
     // Agregar explicación de cómo recuperar multimedia
     listaMensaje += `\n💡 *Para recuperar un archivo, usa el siguiente comando:*\n`;
     listaMensaje += `📥 *${global.prefix}g <palabra clave>*\n`;
-    listaMensaje += `🛠️ Usa *${global.prefix}delclave <palabra>* para eliminar una clave.\n`;
+    listaMensaje += `🛠️ Usa *${global.prefix}kill <palabra>* para eliminar Multimedia guardados✨️.\n`;
 
     // Enviar la lista de palabras clave mencionando a los usuarios
     return sock.sendMessage(
