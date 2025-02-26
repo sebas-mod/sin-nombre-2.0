@@ -154,6 +154,69 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'tiendaper': {
+    try {
+        // 🔄 Enviar reacción de carga mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🛍️", key: msg.key } // Emoji de tienda 🛍️
+        });
+
+        // Leer el archivo RPG JSON
+        const rpgFile = "./rpg.json";
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { tiendaPersonajes: [] };
+
+        // Verificar si hay personajes en la tienda
+        if (!rpgData.tiendaPersonajes || rpgData.tiendaPersonajes.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Actualmente no hay personajes en la tienda.*\n🔹 Usa `.addper` para agregar nuevos personajes." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Crear la lista de personajes disponibles 📜
+        let mensaje = `🏪 *Tienda de Personajes - Azura Ultra* 🏪\n\n`;
+        mensaje += `🎭 *Compra personajes de anime y mejora sus habilidades.*\n\n`;
+        
+        rpgData.tiendaPersonajes.forEach((personaje, index) => {
+            mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;
+            mensaje += `   ✨ *Habilidades:*\n`;
+            mensaje += `      ⚔️ ${personaje.habilidades[0]} (Nivel 1)\n`;
+            mensaje += `      🛡️ ${personaje.habilidades[1]} (Nivel 1)\n`;
+            mensaje += `   🎚️ *Nivel Inicial:* ${personaje.nivel || 1}\n`; // Nivel agregado
+            mensaje += `   ❤️ *Vida:* ${personaje.vida} HP\n`;
+            mensaje += `   💎 *Precio:* ${personaje.precio} diamantes\n\n`;
+        });
+
+        mensaje += `🛒 *Para comprar un personaje usa:* \n`;
+        mensaje += `   📌 \`${global.prefix}comprar <nombre_personaje>\`\n`;
+        mensaje += `📜 Usa \`${global.prefix}menurpg\` para más información.\n`;
+
+        // Enviar mensaje con el video como GIF 🎥
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: "https://cdn.dorratz.com/files/1740568203122.mp4" },
+            gifPlayback: true, // Se reproduce como GIF
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Confirmación con reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .tiendaper:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al cargar la tienda de personajes. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
 case 'topuser': {
     try {
         const rpgFile = "./rpg.json";
@@ -277,6 +340,11 @@ case 'gremio': {
         
 case 'deleterpg': {
     try {
+        // 🔄 Enviar una única reacción antes de procesar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🗑️", key: msg.key } // Emoji de basura 🗑️
+        });
+
         // Archivo JSON donde se guardan los datos del RPG
         const rpgFile = "./rpg.json";
         
