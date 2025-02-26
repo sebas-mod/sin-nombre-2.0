@@ -220,7 +220,7 @@ case "s":
         // 🌟 Formato llamativo para la metadata del sticker 🌟
         let metadata = {
             packname: `✨ Lo Mandó Hacer: ${senderName} ✨`,
-            author: `🤖 Bot Creador: Azura Ultra 2.0\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 💻\n${fechaCreacion}`
+            author: `🤖 Bot Creador: Azura Ultra 2.0\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz💻\n${fechaCreacion}`
         };
 
         let stickerBuffer;
@@ -631,7 +631,7 @@ case "info":
         // Construcción del mensaje con información del bot
         const infoMessage = `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
 │ 🔹 *Prefijo actual:* ${global.prefix}
-│ 👑 *Dueño:* Russell
+│ 👑 *Dueño:* Russell xz
 │ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
 │ 🚀 *Creado por:* Russell
 │  
@@ -740,7 +740,7 @@ ${global.prefix}kill → Eliminar un archivo guardado.
 ${global.prefix}clavelista → Ver todas las claves guardadas.  
 
 💡 *Azura Ultra 2.0 está en constante desarrollo. Se agregarán más funciones pronto.*  
-⚙️ *Desarrollado por Russell* 🚀`;
+⚙️ *Desarrollado por Russell xz* 🚀`;
 
         // Enviar el archivo local como video/GIF con el menú
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -807,7 +807,7 @@ ${global.prefix}g → Recupera archivos guardados.
 ${global.prefix}kill → Elimina un archivo guardado.  
 
 💡 *Azura Ultra 2.0 sigue mejorando. Pronto más funciones.*  
-⚙️ *Desarrollado por Russell* 🚀`;
+⚙️ *Desarrollado por Russell xz* 🚀`;
 
         // Enviar el menú con video como GIF
         await sock.sendMessage(msg.key.remoteJid, { 
