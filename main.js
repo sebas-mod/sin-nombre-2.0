@@ -478,15 +478,8 @@ case 'addper': {
     break;
 }
             
-
 case 'rpg': {
     try {
-        // 🔄 Reacción al ejecutar el comando
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🛡️", key: msg.key } // Emoji de escudo 🛡️
-        });
-
-        // Verificar que se ingresen nombre y edad
         if (args.length < 2) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}rpg Russell 26\`` 
@@ -496,8 +489,8 @@ case 'rpg': {
 
         let nombreUsuario = args[0]; // Nombre
         let edadUsuario = parseInt(args[1]); // Edad
+        let userId = msg.key.participant || msg.key.remoteJid; // Guardar ID del usuario
 
-        // Validar que la edad sea un número válido
         if (isNaN(edadUsuario) || edadUsuario <= 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *La edad debe ser un número válido mayor que 0.*" 
@@ -505,106 +498,93 @@ case 'rpg': {
             return;
         }
 
-        // Archivo JSON donde se guardan los datos del RPG
         const rpgFile = "./rpg.json";
         let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { usuarios: {} };
 
-        // Verificar si el usuario ya está registrado
-        if (rpgData.usuarios[msg.key.participant]) {
+        if (rpgData.usuarios[userId]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Ya estás registrado en el gremio Azura Ultra.*\nUsa \`${global.prefix}menurpg\` para ver los comandos disponibles.` 
+                text: `⚠️ *Ya estás registrado en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}menurpg\` para ver tus opciones.` 
             }, { quoted: msg });
             return;
         }
 
-        // Listas de habilidades y rangos posibles
         const habilidadesDisponibles = ["⚔️ Espadachín", "🛡️ Defensor", "🔥 Mago", "🏹 Arquero", "🌀 Sanador", "⚡ Ninja", "💀 Asesino"];
         const rangosDisponibles = ["🌟 Novato", "⚔️ Guerrero", "🔥 Maestro", "👑 Élite", "🌀 Legendario"];
 
-        // Asignar habilidades y rango aleatorios
         let habilidad1 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
         let habilidad2 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
-        let rango = "🌟 Novato"; // Todos empiezan en Novato
+        let rango = "🌟 Novato"; // Todos comienzan como novatos
 
-        // Obtener una mascota aleatoria de la tienda
         let mascotasTienda = rpgData.tiendaMascotas || [];
         let mascotaAleatoria = mascotasTienda.length > 0 ? mascotasTienda[Math.floor(Math.random() * mascotasTienda.length)] : null;
 
-        // Crear perfil del usuario
         let nuevoUsuario = {
-            id: msg.key.participant,
+            id: userId, // Guardar ID de WhatsApp
             nombre: nombreUsuario,
             edad: edadUsuario,
             nivel: 1,
             experiencia: 0,
             rango: rango,
-            vida: 100, // Vida inicial del usuario
-            habilidades: {
-                [habilidad1]: 1,
-                [habilidad2]: 1
+            vida: 100,
+            habilidades: { 
+                [habilidad1]: { nivel: 1 },
+                [habilidad2]: { nivel: 1 }
             },
-            diamantes: 0, // Inician con 0 diamantes
-            diamantesGuardados: 0, // Diamantes en el gremio
+            diamantes: 0,
+            diamantesGuardados: 0,
             mascotas: mascotaAleatoria ? [{ 
                 nombre: mascotaAleatoria.nombre, 
                 nivel: 1,
-                vida: 100, // Vida inicial de la mascota
+                vida: 100,
                 habilidades: {
-                    [mascotaAleatoria.habilidades[0]]: 1,
-                    [mascotaAleatoria.habilidades[1]]: 1
+                    [mascotaAleatoria.habilidades[0]]: { nivel: 1 },
+                    [mascotaAleatoria.habilidades[1]]: { nivel: 1 }
                 }
             }] : []
         };
 
-        // Guardar en JSON
-        rpgData.usuarios[msg.key.participant] = nuevoUsuario;
+        rpgData.usuarios[userId] = nuevoUsuario;
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-        // Formato ordenado para mostrar las habilidades de la mascota
         let habilidadesMascota = "";
         if (mascotaAleatoria) {
             habilidadesMascota = `🔹 *Habilidades:*  
-   ✨ ${mascotaAleatoria.habilidades[0]} (Nivel 1)  
-   ✨ ${mascotaAleatoria.habilidades[1]} (Nivel 1)`;
+   🌀 ${mascotaAleatoria.habilidades[0]} (Nivel 1)  
+   🔥 ${mascotaAleatoria.habilidades[1]} (Nivel 1)`;
         }
 
-        // Mensaje de bienvenida 🎉
         let bienvenida = `🎉 *¡Bienvenido al Gremio Azura Ultra!* 🎉
         
-🌟 *Jugador:* ${nombreUsuario}  
-🎂 *Edad:* ${edadUsuario} años  
-🏅 *Rango:* ${rango}  
-🎚️ *Nivel:* 1  
-❤️ *Vida:* 100  
-⚔️ *Habilidades:*  
+🌟 *Jugador:* ${nombreUsuario}
+🎂 *Edad:* ${edadUsuario} años
+⚔️ *Rango Inicial:* ${rango}
+🎚️ *Nivel:* 1
+❤️ *Vida:* 100 HP
+🛠️ *Habilidades:*  
    ✨ ${habilidad1} (Nivel 1)  
    ✨ ${habilidad2} (Nivel 1)  
 
-🐾 *Mascota Inicial:* ${mascotaAleatoria ? `🦴 ${mascotaAleatoria.nombre}` : "❌ Ninguna (No hay en la tienda)"}  
+🐾 *Mascota Inicial:* ${mascotaAleatoria ? `🦴 ${mascotaAleatoria.nombre}` : "❌ Ninguna (No hay en la tienda)"}
    🎚️ *Nivel:* 1  
-   ❤️ *Vida:* 100  
+   ❤️ *Vida:* 100 HP  
    ${habilidadesMascota}
 
-💎 *Diamantes:* 0  
-🏦 *Diamantes en Gremio:* 0  
+💎 *Diamantes:* 0
+🏦 *Diamantes en Gremio:* 0
 
 📜 *Comandos Básicos:*  
 🔹 Usa *${global.prefix}vermascotas* para ver tu mascota actual y las que compres.  
 🔹 Usa *${global.prefix}tiendamascotas* para ver mascotas disponibles.  
 🔹 Usa *${global.prefix}tiendaper* para ver personajes de anime disponibles.  
-🔹 Usa *${global.prefix}menurpg* para ver los comandos del juego.  
-🔹 Usa *${global.prefix}bal* o *${global.prefix}saldo* para ver tu saldo.  
-🔹 Usa *${global.prefix}nivel* para ver tus estadísticas actuales.  
 🔹 Usa estos comandos para subir de nivel y ganar diamantes:  
    *${global.prefix}minar*, *${global.prefix}picar*, *${global.prefix}crime*, *${global.prefix}work*,  
    *${global.prefix}claim*, *${global.prefix}cofre*, *${global.prefix}minar2*, *${global.prefix}robar*  
 
 🚀 ¡Prepárate para la aventura en *Azura Ultra*! 🏆`;
 
-        // Enviar mensaje con el **video como GIF** 🎥
         await sock.sendMessage(msg.key.remoteJid, { 
             video: { url: "https://cdn.dorratz.com/files/1740560637895.mp4" }, 
-            gifPlayback: true, // Hace que el video se reproduzca como GIF
+            gifPlayback: true, 
             caption: bienvenida
         }, { quoted: msg });
 
