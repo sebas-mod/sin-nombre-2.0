@@ -25,7 +25,6 @@ if (!fs.existsSync(stickersFile)) {
 //juego rpg abajo
 
 // Ruta del archivo RPG
-
 const rpgFile = "./rpg.json";
 
 // Si el archivo no existe, crearlo con la estructura básica
@@ -33,7 +32,8 @@ if (!fs.existsSync(rpgFile)) {
     const rpgDataInicial = {
         usuarios: {},
         tiendaMascotas: [],
-        tiendaPersonajes: []
+        tiendaPersonajes: [],
+        mercadoPersonajes: [] // Nueva tienda para que los usuarios puedan vender personajes
     };
     fs.writeFileSync(rpgFile, JSON.stringify(rpgDataInicial, null, 2));
 }
