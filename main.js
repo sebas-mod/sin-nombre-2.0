@@ -236,6 +236,7 @@ case 'qc': {
     break;
 }
         
+
 case 'nivelmascota': {
     try {
         // 🔄 Enviar reacción mientras se procesa el comando
@@ -249,7 +250,7 @@ case 'nivelmascota': {
         // Verificar si el archivo existe
         if (!fs.existsSync(rpgFile)) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No tienes una mascota registrada.*\n\n🔹 Usa `.rpg <nombre> <edad>` para registrarte y obtener una mascota inicial." 
+                text: `❌ *No tienes una mascota registrada.*\n\n🔹 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte y obtener una mascota inicial.` 
             }, { quoted: msg });
             return;
         }
@@ -260,7 +261,7 @@ case 'nivelmascota': {
         // Verificar si el usuario está registrado
         if (!rpgData.usuarios[msg.key.participant]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa `.rpg <nombre> <edad>` para registrarte." 
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
             }, { quoted: msg });
             return;
         }
@@ -270,23 +271,32 @@ case 'nivelmascota': {
         // Verificar si el usuario tiene mascotas
         if (!usuario.mascotas || usuario.mascotas.length === 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No tienes una mascota actualmente.*\n\n🔹 Usa `.tiendamascotas` para comprar una." 
+                text: `❌ *No tienes una mascota actualmente.*\n\n🔹 Usa \`${global.prefix}tiendamascotas\` para comprar una.` 
             }, { quoted: msg });
             return;
         }
 
-        // Obtener la mascota actual
-        let mascotaActual = usuario.mascotas[0]; // La primera en la lista (se puede cambiar si hay múltiples)
+        // Obtener la mascota actual (la primera en la lista)
+        let mascotaActual = usuario.mascotas[0];
 
-        // Construir mensaje de estadísticas 📜
-        let mensaje = `📊 *Estadísticas de tu Mascota* 📊\n\n`;
+        // Construcción del mensaje de estadísticas 📜
+        let mensaje = `📊 *Estadísticas de tu Mascota Principal* 📊\n\n`;
         mensaje += `🐾 *Nombre:* ${mascotaActual.nombre}\n`;
-        mensaje += `🎚️ *Nivel:* ${mascotaActual.nivel}\n`;
+        mensaje += `🎚️ *Nivel:* ${mascotaActual.nivel} 🆙\n`;
         mensaje += `❤️ *Vida:* ${mascotaActual.vida} HP\n`;
-        mensaje += `✨ *Habilidades:*\n`;
+        mensaje += `✨ *Experiencia:* ${mascotaActual.experiencia || 0} / 500 XP\n`;
+        mensaje += `📊 *Rango:* ${mascotaActual.rango || "Principiante"}\n`;
+        mensaje += `🌟 *Habilidades:*\n`;
         Object.entries(mascotaActual.habilidades).forEach(([habilidad, datos]) => {
-            mensaje += `   🔹 ${habilidad} (Nivel ${datos.nivel})\n`;
+            mensaje += `   🔹 ${habilidad} (Nivel ${datos.nivel || 1})\n`;
         });
+
+        // 📢 **Mensaje motivacional para seguir entrenando** 
+        mensaje += `\n🚀 *Sigue subiendo de nivel a tu mascota con estos comandos:* 🔽\n`;
+        mensaje += `   🥤 \`${global.prefix}daragua\` | 🍖 \`${global.prefix}darcomida\` | ❤️ \`${global.prefix}darcariño\`\n`;
+        mensaje += `   🚶 \`${global.prefix}pasear\` | 🎯 \`${global.prefix}cazar\` | 🏋️ \`${global.prefix}entrenar\`\n`;
+        mensaje += `   🌟 \`${global.prefix}presumir\` | 🦸 \`${global.prefix}supermascota\`\n\n`;
+        mensaje += `🔥 ¡Entrena a tu mascota y conviértela en la más fuerte del gremio! 💪🐾\n`;
 
         // Enviar mensaje con la imagen de la mascota 📷
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -302,7 +312,7 @@ case 'nivelmascota': {
     } catch (error) {
         console.error("❌ Error en el comando .nivelmascota:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener la información de tu mascota. Inténtalo de nuevo.*" 
+            text: `❌ *Ocurrió un error al obtener la información de tu mascota. Inténtalo de nuevo.*` 
         }, { quoted: msg });
 
         // ❌ Enviar reacción de error
@@ -342,12 +352,15 @@ case 'tiendamascotas': {
 
         // Mostrar todas las mascotas disponibles 🐾
         rpgData.tiendaMascotas.forEach((mascota, index) => {
+            let habilidadesMascota = Object.entries(mascota.habilidades)
+                .map(([habilidad, datos]) => `      🔹 ${habilidad} (Nivel ${datos.nivel || 1})`)
+                .join("\n");
+
             mensaje += `🔹 *${index + 1}. ${mascota.nombre}*\n`;
             mensaje += `   🎚️ *Nivel Inicial:* ${mascota.nivel || 1}\n`; 
-            mensaje += `   ❤️ *Vida:* ${mascota.vida} HP\n`;
-            mensaje += `   ✨ *Habilidades:*\n`;
-            mensaje += `      🌀 ${mascota.habilidades[0]} (Nivel 1)\n`;
-            mensaje += `      🔥 ${mascota.habilidades[1]} (Nivel 1)\n`;
+            mensaje += `   ❤️ *Vida:* ${mascota.vida || 100} HP\n`;
+            mensaje += `   ✨ *Experiencia:* ${mascota.experiencia || 0} / 500 XP\n`;
+            mensaje += `   🌟 *Habilidades:*\n${habilidadesMascota}\n`;
             mensaje += `   💎 *Precio:* ${mascota.precio} diamantes\n\n`;
         });
 
@@ -377,7 +390,6 @@ case 'tiendamascotas': {
     break;
 }
         
-        
 case 'tiendaper': {
     try {
         // 🔄 Enviar reacción de carga mientras se procesa el comando
@@ -397,22 +409,25 @@ case 'tiendaper': {
             return;
         }
 
-        // Explicación de compra al inicio
+        // Explicación de compra al inicio 📜
         let mensaje = `🏪 *Tienda de Personajes - Azura Ultra* 🏪\n\n`;
         mensaje += `🎭 *Compra personajes de anime y mejora sus habilidades.*\n`;
         mensaje += `🛒 *Para comprar un personaje usa:* \n`;
-        mensaje += `   📌 \`${global.prefix}comprar <nombre_personaje>\`\n`;
-        mensaje += `   📌 \`${global.prefix}comprar <número_personaje>\`\n`;
+        mensaje += `   📌 \`${global.prefix}compra <nombre_personaje>\`\n`;
+        mensaje += `   📌 \`${global.prefix}compra <número_personaje>\`\n`;
         mensaje += `📜 Usa \`${global.prefix}menurpg\` para más información.\n\n`;
 
         // Crear la lista de personajes disponibles 📜
         rpgData.tiendaPersonajes.forEach((personaje, index) => {
+            let habilidadesPersonaje = Object.entries(personaje.habilidades)
+                .map(([habilidad, datos]) => `      🔹 ${habilidad} (Nivel ${datos.nivel || 1})`)
+                .join("\n");
+
             mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;
-            mensaje += `   🎚️ *Nivel Inicial:* ${personaje.nivel || 1}\n`; // Nivel agregado
-            mensaje += `   ❤️ *Vida:* ${personaje.vida} HP\n`;
-            mensaje += `   ✨ *Habilidades:*\n`;
-            mensaje += `      ⚔️ ${personaje.habilidades[0]} (Nivel 1)\n`;
-            mensaje += `      🛡️ ${personaje.habilidades[1]} (Nivel 1)\n`;
+            mensaje += `   🎚️ *Nivel Inicial:* ${personaje.nivel || 1}\n`;
+            mensaje += `   ❤️ *Vida:* ${personaje.vida || 100} HP\n`;
+            mensaje += `   ✨ *Experiencia:* ${personaje.experiencia || 0} / 1000 XP\n`;
+            mensaje += `   🌟 *Habilidades:*\n${habilidadesPersonaje}\n`;
             mensaje += `   💎 *Precio:* ${personaje.precio} diamantes\n\n`;
         });
 
@@ -440,7 +455,8 @@ case 'tiendaper': {
         });
     }
     break;
-}
+}        
+
         
 case 'topuser': {
     try {
