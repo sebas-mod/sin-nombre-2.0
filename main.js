@@ -200,7 +200,7 @@ case 'verper': {
 
         // Recorrer todos los personajes del usuario
         usuario.personajes.forEach((personaje, index) => {
-            mensaje += `*═══════════════════════*\n`; // Línea de separación
+            mensaje += `*═════════════════════*\n`; // Línea de separación
             mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;
             mensaje += `   🏅 *Rango:* ${personaje.rango}\n`;
             mensaje += `   🎚️ *Nivel:* ${personaje.nivel}\n`;
@@ -716,7 +716,6 @@ case 'nivelper': {
     break;
 }
      
-        
 case 'bal':
 case 'saldo': {
     try {
@@ -769,9 +768,11 @@ case 'saldo': {
 🚀 ¡Administra bien tu economía y conviértete en el más rico del gremio! 🏆
 `;
 
-        // Enviar mensaje con la información de la cartera
+        // Enviar mensaje con el **video como GIF** 🎥
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: mensaje,
+            video: { url: "https://cdn.dorratz.com/files/1740652887134.mp4" },
+            gifPlayback: true, // Se reproduce como GIF
+            caption: mensaje,
             mentions: [userId] // Menciona al usuario
         }, { quoted: msg });
 
@@ -792,7 +793,8 @@ case 'saldo': {
         });
     }
     break;
-}
+}        
+
         
 case 'dame': {
     try {
@@ -987,16 +989,27 @@ case 'tiendamascotas': {
         // Mostrar todas las mascotas disponibles 🐾
         rpgData.tiendaMascotas.forEach((mascota, index) => {
             let habilidadesMascota = Object.entries(mascota.habilidades)
-                .map(([habilidad, datos]) => `      🔹 ${habilidad} (Nivel ${datos.nivel || 1})`)
+                .map(([habilidad, nivel]) => `      🔹 ${habilidad} (Nivel ${nivel})`)
                 .join("\n");
 
+            mensaje += `╔══════════════════╗\n`;
             mensaje += `🔹 *${index + 1}. ${mascota.nombre}*\n`;
+            mensaje += `   📊 *Rango:* ${mascota.rango}\n`;
             mensaje += `   🎚️ *Nivel Inicial:* ${mascota.nivel || 1}\n`; 
             mensaje += `   ❤️ *Vida:* ${mascota.vida || 100} HP\n`;
-            mensaje += `   ✨ *Experiencia:* ${mascota.experiencia || 0} / 500 XP\n`;
+            mensaje += `   ✨ *Experiencia:* ${mascota.experiencia || 0} / ${mascota.xpMax} XP\n`;
             mensaje += `   🌟 *Habilidades:*\n${habilidadesMascota}\n`;
-            mensaje += `   💎 *Precio:* ${mascota.precio} diamantes\n\n`;
+            mensaje += `   💎 *Precio:* ${mascota.precio} diamantes\n`;
+            mensaje += `╚══════════════════╝\n\n`;
         });
+
+        // Explicación Final 📜
+        mensaje += `📜 **Explicación Final:**\n`;
+        mensaje += `🔹 Usa *${global.prefix}compra <nombre_mascota>* para comprar la mascota que quieras.\n`;
+        mensaje += `🔹 También puedes usar *${global.prefix}compra <número_mascota>* si prefieres usar el número de la lista.\n`;
+        mensaje += `🔹 Usa *${global.prefix}vermascotas* para ver todas las mascotas que has comprado.\n`;
+        mensaje += `🔹 Usa *${global.prefix}mascota <número>* para cambiar tu mascota principal.\n\n`;
+        mensaje += `🚀 **¡Colecciona y entrena las mejores mascotas en el Gremio Azura Ultra!** 🏆`;
 
         // Enviar mensaje con el **video como GIF** 🎥
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -1057,12 +1070,14 @@ case 'tiendaper': {
                 .map(([habilidad, datos]) => `      🔹 ${habilidad} (Nivel ${datos.nivel || 1})`)
                 .join("\n");
 
+            mensaje += `*╔══════════════════╗*\n`;
             mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;
             mensaje += `   🎚️ *Nivel Inicial:* ${personaje.nivel || 1}\n`;
             mensaje += `   ❤️ *Vida:* ${personaje.vida || 100} HP\n`;
             mensaje += `   ✨ *Experiencia:* ${personaje.experiencia || 0} / 1000 XP\n`;
             mensaje += `   🌟 *Habilidades:*\n${habilidadesPersonaje}\n`;
-            mensaje += `   💎 *Precio:* ${personaje.precio} diamantes\n\n`;
+            mensaje += `   💎 *Precio:* ${personaje.precio} diamantes\n`;
+            mensaje += `*╚══════════════════╝*\n\n`;
         });
 
         // Enviar mensaje con el video como GIF 🎥
@@ -1089,7 +1104,7 @@ case 'tiendaper': {
         });
     }
     break;
-}        
+}
 
         
 case 'topuser': {
