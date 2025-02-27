@@ -159,6 +159,87 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'verper': {
+    try {
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🎭", key: msg.key } // Emoji de personaje 🎭
+        });
+
+        const rpgFile = "./rpg.json";
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { usuarios: {} };
+        let userId = msg.key.participant || msg.key.remoteJid;
+
+        // Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No estás registrado en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // Verificar si el usuario tiene personajes
+        if (!usuario.personajes || usuario.personajes.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes personajes en tu colección.*\n📜 Usa \`${global.prefix}tiendaper\` para comprar alguno.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Mensaje principal con explicación 📜
+        let mensaje = `🎭 *Personajes Comprados - Azura Ultra* 🎭\n\n`;
+        mensaje += `🔹 Aquí puedes ver la lista de personajes que has adquirido.\n`;
+        mensaje += `🔹 Usa los siguientes comandos para subir de nivel a tus personajes:\n`;
+        mensaje += `   🏆 \`${global.prefix}luchar\`, \`${global.prefix}poder\`, \`${global.prefix}volar\`, \n`;
+        mensaje += `   🔥 \`${global.prefix}otromundo\`, \`${global.prefix}otrouniverso\`, \`${global.prefix}mododios\`,\n`;
+        mensaje += `   😈 \`${global.prefix}mododiablo\`, \`${global.prefix}enemigos\`, \`${global.prefix}podermaximo\`\n\n`;
+        
+        // Recorrer todos los personajes del usuario
+        usuario.personajes.forEach((personaje, index) => {
+            mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;
+            mensaje += `   🏅 *Rango:* ${personaje.rango}\n`;
+            mensaje += `   🎚️ *Nivel:* ${personaje.nivel}\n`;
+            mensaje += `   ❤️ *Vida:* ${personaje.vida} HP\n`;
+            mensaje += `   ✨ *Experiencia:* ${personaje.experiencia} / ${personaje.xpMax} XP\n`;
+            mensaje += `   🌟 *Habilidades:*\n`;
+
+            // Listar correctamente las habilidades
+            Object.entries(personaje.habilidades).forEach(([habilidad, nivel]) => {
+                mensaje += `      🔹 ${habilidad} (Nivel ${nivel})\n`;
+            });
+
+            mensaje += `   💎 *Valor:* ${personaje.precio} diamantes\n\n`;
+        });
+
+        // Enviar el mensaje con la imagen del primer personaje 📜
+        let primerPersonaje = usuario.personajes[0];
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: primerPersonaje.imagen }, 
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Enviar reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .verper:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al obtener la lista de personajes. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key }
+        });
+    }
+    break;
+}
+        
 case 'comprar': {
     try {
         // Verificar si el usuario ingresó un personaje o número
