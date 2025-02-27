@@ -195,6 +195,8 @@ case 'verper': {
         mensaje += `   🏆 \`${global.prefix}luchar\`, \`${global.prefix}poder\`, \`${global.prefix}volar\`, \n`;
         mensaje += `   🔥 \`${global.prefix}otromundo\`, \`${global.prefix}otrouniverso\`, \`${global.prefix}mododios\`,\n`;
         mensaje += `   😈 \`${global.prefix}mododiablo\`, \`${global.prefix}enemigos\`, \`${global.prefix}podermaximo\`\n\n`;
+        mensaje += `🔄 *¿Quieres cambiar tu personaje principal?*\n`;
+        mensaje += `   📌 Usa \`${global.prefix}per <número_personaje>\` para cambiarlo.\n\n`;
 
         // Recorrer todos los personajes del usuario
         usuario.personajes.forEach((personaje, index) => {
