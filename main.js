@@ -159,6 +159,177 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'dar': {
+    try {
+        // 🔒 Verificar si el usuario que ejecuta el comando es el Owner
+        if (!isOwner(sender)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo el propietario del bot puede dar diamantes a otros jugadores.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 📌 Verificar si se ingresó un número de usuario o se citó un mensaje
+        let targetUser;
+        if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+            targetUser = msg.message.extendedTextMessage.contextInfo.participant; // Usuario citado
+        } else if (mentionedJid.length > 0) {
+            targetUser = mentionedJid[0]; // Usuario mencionado
+        } else {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dar @usuario 5000\` o citando su mensaje.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 📌 Verificar si se ingresó la cantidad de diamantes
+        if (args.length < 1 || isNaN(args[0]) || parseInt(args[0]) <= 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Debes ingresar una cantidad válida de diamantes a dar.*\nEjemplo: `dar @usuario 5000`" 
+            }, { quoted: msg });
+            return;
+        }
+
+        const cantidad = parseInt(args[0]); // Cantidad de diamantes a dar
+        const rpgFile = "./rpg.json";
+
+        // 🔄 Enviar reacción de carga mientras se procesa
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "💎", key: msg.key } // Emoji de diamantes 💎
+        });
+
+        // 📂 Verificar si el archivo RPG existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *No hay datos de RPG guardados.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 📂 Cargar datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // 📌 Verificar si el usuario está registrado en el RPG
+        if (!rpgData.usuarios[targetUser]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *El usuario no tiene una cuenta en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarlo.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 💎 Añadir diamantes al usuario objetivo
+        rpgData.usuarios[targetUser].diamantes += cantidad;
+
+        // 💾 Guardar cambios en el archivo JSON
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📩 Confirmar transferencia
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `💎 *Se han enviado ${cantidad} diamantes a @${targetUser.replace("@s.whatsapp.net", "")}.*\n✨ Usa \`${global.prefix}bal\` para ver tu saldo.`,
+            mentions: [targetUser] // Mencionar al usuario que recibió los diamantes
+        }, { quoted: msg });
+
+        // ✅ Reacción de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .dar:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al dar diamantes. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
+case 'deleteuser': {
+    try {
+        // Verificar si el usuario que ejecuta el comando es Owner
+        if (!isOwner(sender)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo el propietario del bot puede eliminar la cuenta de otros jugadores.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Verificar si se ingresó un número de usuario
+        if (args.length < 1) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}deleteuser <número_de_usuario>\`` 
+            }, { quoted: msg });
+            return;
+        }
+
+        const userId = args[0].replace(/[^0-9]/g, '') + "@s.whatsapp.net"; // Formato correcto del ID de usuario
+        const rpgFile = "./rpg.json";
+
+        // 🔄 Enviar reacción de carga mientras se procesa
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🗑️", key: msg.key } // Emoji de eliminación 🗑️
+        });
+
+        // Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *No hay datos de RPG guardados.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Cargar datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *El usuario no tiene una cuenta registrada en el gremio Azura Ultra.*` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Recuperar personajes del usuario y devolverlos a la tienda
+        let usuario = rpgData.usuarios[userId];
+        if (usuario.personajes && usuario.personajes.length > 0) {
+            rpgData.tiendaPersonajes.push(...usuario.personajes);
+        }
+
+        // Eliminar el usuario del JSON
+        delete rpgData.usuarios[userId];
+
+        // Guardar los cambios en el archivo JSON
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // Confirmar eliminación
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `🗑️ *La cuenta de @${args[0]} ha sido eliminada exitosamente del gremio Azura Ultra.*\n\n🔹 Sus personajes han sido devueltos a la tienda.`,
+            mentions: [userId] // Mencionar al usuario eliminado
+        }, { quoted: msg });
+
+        // ✅ Reacción de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .deleteuser:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al eliminar la cuenta del usuario. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
 case 'deleterpg': {
     try {
         const userId = msg.key.participant || msg.key.remoteJid;
