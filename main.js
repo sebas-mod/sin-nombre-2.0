@@ -159,6 +159,71 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'gremio': {
+    try {
+        const rpgFile = "./rpg.json";
+
+        // 🔄 Enviar una única reacción antes de procesar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🏰", key: msg.key } // Emoji de castillo 🏰
+        });
+
+        // Verificar si el archivo RPG existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *El gremio aún no tiene miembros.* Usa `"+global.prefix+"rpg <nombre> <edad>` para registrarte." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Cargar datos del gremio
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        if (!rpgData.usuarios || Object.keys(rpgData.usuarios).length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "📜 *No hay miembros registrados en el Gremio Azura Ultra.*\nUsa `"+global.prefix+"rpg <nombre> <edad>` para unirte." 
+            }, { quoted: msg });
+            return;
+        }
+
+        let miembros = Object.values(rpgData.usuarios);
+        let listaMiembros = `🏰 *Gremio Azura Ultra - Miembros Registrados* 🏰\n\n`;
+
+        // Ordenar por nivel (de mayor a menor)
+        miembros.sort((a, b) => b.nivel - a.nivel);
+
+        // Construir la lista con los datos de cada usuario
+        miembros.forEach((usuario, index) => {
+            let numMascotas = usuario.mascotas ? usuario.mascotas.length : 0;
+            let numPersonajes = usuario.personajes ? usuario.personajes.length : 0;
+
+            listaMiembros += `══════════════════════\n`;
+            listaMiembros += `🔹 *${index + 1}.* ${usuario.nombre}\n`;
+            listaMiembros += `   🏅 *Rango:* ${usuario.rango}\n`;
+            listaMiembros += `   🎚️ *Nivel:* ${usuario.nivel}\n`;
+            listaMiembros += `   🎂 *Edad:* ${usuario.edad} años\n`;
+            listaMiembros += `   🐾 *Mascotas:* ${numMascotas}\n`;
+            listaMiembros += `   🎭 *Personajes:* ${numPersonajes}\n`;
+        });
+
+        listaMiembros += `══════════════════════\n🏆 *Total de miembros:* ${miembros.length}`;
+
+        // Enviar el video como GIF con el listado 📜
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: "https://cdn.dorratz.com/files/1740565316697.mp4" }, 
+            gifPlayback: true, 
+            caption: listaMiembros
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .gremio:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al obtener la lista del gremio. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+        
 case 'rpg': { 
     try { 
         if (args.length < 2) { 
@@ -1406,65 +1471,7 @@ case 'topuser': {
     break;
 }
         
-case 'gremio': {
-    try {
-        const rpgFile = "./rpg.json";
-        
-        // 🔄 Enviar una única reacción antes de procesar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🏰", key: msg.key } // Emoji de castillo 🏰
-        });
-
-        // Verificar si el archivo RPG existe
-        if (!fs.existsSync(rpgFile)) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *El gremio aún no tiene miembros.* Usa `.rpg <nombre> <edad>` para registrarte." 
-            }, { quoted: msg });
-            return;
-        }
-
-        // Cargar datos del gremio
-        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-
-        if (!rpgData.usuarios || Object.keys(rpgData.usuarios).length === 0) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "📜 *No hay miembros registrados en el Gremio Azura Ultra.*\nUsa `.rpg <nombre> <edad>` para unirte." 
-            }, { quoted: msg });
-            return;
-        }
-
-        let miembros = Object.values(rpgData.usuarios);
-        let listaMiembros = `🏰 *Gremio Azura Ultra - Miembros Registrados* 🏰\n\n`;
-
-        // Ordenar por nivel (de mayor a menor)
-        miembros.sort((a, b) => b.nivel - a.nivel);
-
-        // Construir la lista con los datos de cada usuario
-        miembros.forEach((usuario, index) => {
-            listaMiembros += `🔹 *${index + 1}.* ${usuario.nombre}  
-   🏅 *Rango:* ${usuario.rango}  
-   🎚️ *Nivel:* ${usuario.nivel}  
-   🎂 *Edad:* ${usuario.edad} años\n\n`;
-        });
-
-        listaMiembros += `🏆 *Total de miembros:* ${miembros.length}`;
-
-        // Enviar el video como GIF con el listado 📜
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740565316697.mp4" }, 
-            gifPlayback: true, 
-            caption: listaMiembros
-        }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .gremio:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Hubo un error al obtener la lista del gremio. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
-}
-        
+      
 
         
 case 'addper': {
