@@ -159,78 +159,209 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
-case 'qc': {
+case 'dame': {
     try {
-        let texto = args.join(" ");
-        let userName = msg.pushName || "Usuario Desconocido";
-        let quotedMessage = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        
-        // Si el usuario responde a un mensaje, tomar el texto de ese mensaje
-        if (quotedMessage && quotedMessage.conversation) {
-            texto = quotedMessage.conversation;
-            userName = msg.message.extendedTextMessage.contextInfo.participant.split("@")[0]; // Nombre del usuario citado
-        }
-
-        if (!texto) {
+        // Verificar si el usuario es el owner
+        if (!isOwner(sender)) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Debes escribir un texto o responder a un mensaje para crear el sticker.*" 
+                text: "⛔ *Este comando solo puede ser usado por el owner del bot.*" 
             }, { quoted: msg });
             return;
         }
 
-        // 🖌️ Crear una imagen con el texto y el nombre del usuario
-        const { createCanvas } = require('canvas');
-        const fs = require('fs');
-        const path = require("path");
+        // Verificar que se haya ingresado la cantidad
+        if (args.length === 0 || isNaN(args[0]) || parseInt(args[0]) <= 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dame 5000\`` 
+            }, { quoted: msg });
+            return;
+        }
 
-        const canvas = createCanvas(512, 512);
-        const ctx = canvas.getContext("2d");
+        let cantidad = parseInt(args[0]);
 
-        // Fondo blanco con bordes redondeados
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, 512, 512);
+        // Archivo JSON donde se guardan los datos del RPG
+        const rpgFile = "./rpg.json";
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No hay datos de jugadores registrados.*" 
+            }, { quoted: msg });
+            return;
+        }
 
-        // Agregar texto del sticker
-        ctx.fillStyle = "#000000";
-        ctx.font = "bold 35px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(texto, 256, 230, 450);
+        // Cargar los datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
 
-        // Agregar nombre del usuario
-        ctx.fillStyle = "#555555";
-        ctx.font = "italic 25px Arial";
-        ctx.fillText(`- ${userName}`, 256, 400);
+        // Verificar si el owner está registrado
+        let userId = msg.key.participant || msg.key.remoteJid;
+        if (!rpgData.usuarios[userId]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+            return;
+        }
 
-        // Guardar imagen temporalmente
-        const stickerPath = path.join(__dirname, `tmp/sticker_${Date.now()}.png`);
-        fs.writeFileSync(stickerPath, canvas.toBuffer());
+        // Dar los diamantes al owner
+        rpgData.usuarios[userId].diamantes += cantidad;
 
-        // Convertir la imagen en sticker
-        const { imageToWebp } = require("./libs/functions");
-        const stickerBuffer = await imageToWebp(fs.readFileSync(stickerPath));
+        // Guardar cambios en el archivo JSON
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-        // Enviar el sticker generado
+        // Mensaje de confirmación 💎
+        let mensaje = `🎉 *¡Diamantes añadidos con éxito!* 🎉\n\n`;
+        mensaje += `💰 *Has recibido:* ${cantidad} diamantes\n`;
+        mensaje += `💎 *Total actual:* ${rpgData.usuarios[userId].diamantes} diamantes\n\n`;
+        mensaje += `📜 Usa \`${global.prefix}bal\` para ver tu saldo.`;
+
+        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+
+        // ✅ Reacción de confirmación
         await sock.sendMessage(msg.key.remoteJid, { 
-            sticker: stickerBuffer 
-        }, { quoted: msg });
-
-        // ✅ Reacción de éxito
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
+            react: { text: "💎", key: msg.key } // Emoji de diamante 💎
         });
 
-        // Eliminar la imagen temporal
-        fs.unlinkSync(stickerPath);
-
     } catch (error) {
-        console.error("❌ Error en el comando .qc:", error);
+        console.error("❌ Error en el comando .dame:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Hubo un error al generar el sticker. Inténtalo de nuevo.*" 
+            text: `❌ *Ocurrió un error al intentar añadir diamantes. Inténtalo de nuevo.*` 
         }, { quoted: msg });
 
-        // ❌ Reacción de error
+        // ❌ Enviar reacción de error
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
+case 'comprar': {
+    try {
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🛒", key: msg.key } // Emoji de compra 🛒
+        });
+
+        // Verificar que el usuario ingrese el nombre o número del personaje
+        if (args.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}comprar Goku\` o \`${global.prefix}comprar 2\`` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Archivo JSON donde se guardan los datos del RPG
+        const rpgFile = "./rpg.json";
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No hay personajes disponibles en la tienda.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Cargar los datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // Verificar si hay personajes en la tienda
+        if (!rpgData.tiendaPersonajes || rpgData.tiendaPersonajes.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Actualmente no hay personajes en la tienda.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Verificar si el usuario está registrado
+        let userId = msg.key.participant || msg.key.remoteJid;
+        if (!rpgData.usuarios[userId]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        let personajeSeleccionado = null;
+        let input = args.join(" ").toLowerCase().replace(/[^a-z0-9 ]/g, ""); // Normalizar entrada
+
+        // Buscar por número en la tienda
+        if (!isNaN(input) && parseInt(input) > 0 && parseInt(input) <= rpgData.tiendaPersonajes.length) {
+            personajeSeleccionado = rpgData.tiendaPersonajes[parseInt(input) - 1];
+        } else {
+            // Buscar por nombre ignorando mayúsculas y caracteres especiales
+            personajeSeleccionado = rpgData.tiendaPersonajes.find(p => 
+                p.nombre.toLowerCase().replace(/[^a-z0-9 ]/g, "") === input
+            );
+        }
+
+        // Si el personaje no se encontró
+        if (!personajeSeleccionado) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No se encontró el personaje.*\n📜 Usa \`${global.prefix}tiendaper\` para ver la lista de personajes disponibles.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Verificar si el usuario tiene suficientes diamantes
+        if (usuario.diamantes < personajeSeleccionado.precio) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes suficientes diamantes.*\n💎 *Tu saldo:* ${usuario.diamantes} diamantes\n💰 *Precio del personaje:* ${personajeSeleccionado.precio} diamantes` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Descontar diamantes al usuario
+        usuario.diamantes -= personajeSeleccionado.precio;
+
+        // Agregar el personaje al inventario del usuario
+        if (!usuario.personajes) usuario.personajes = [];
+        usuario.personajes.push({
+            nombre: personajeSeleccionado.nombre,
+            nivel: 1,
+            vida: personajeSeleccionado.vida,
+            habilidades: {
+                [personajeSeleccionado.habilidades[0]]: { nivel: 1 },
+                [personajeSeleccionado.habilidades[1]]: { nivel: 1 }
+            },
+            imagen: personajeSeleccionado.imagen
+        });
+
+        // Eliminar el personaje de la tienda
+        rpgData.tiendaPersonajes = rpgData.tiendaPersonajes.filter(p => p.nombre !== personajeSeleccionado.nombre);
+
+        // Guardar cambios en el archivo JSON
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // Mensaje de confirmación 📜
+        let mensaje = `🎉 *¡Has comprado un nuevo personaje!* 🎉\n\n`;
+        mensaje += `🎭 *Nombre:* ${personajeSeleccionado.nombre}\n`;
+        mensaje += `🎚️ *Nivel Inicial:* 1\n`;
+        mensaje += `❤️ *Vida:* ${personajeSeleccionado.vida} HP\n`;
+        mensaje += `✨ *Habilidades:*\n`;
+        Object.entries(usuario.personajes[usuario.personajes.length - 1].habilidades).forEach(([habilidad, datos]) => {
+            mensaje += `   🔹 ${habilidad} (Nivel ${datos.nivel})\n`;
+        });
+        mensaje += `💎 *Saldo Actual:* ${usuario.diamantes} diamantes\n\n`;
+        mensaje += `📜 Usa \`${global.prefix}nivel\` para ver tu progreso.\n`;
+
+        // Enviar mensaje con la imagen del personaje 📷
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: personajeSeleccionado.imagen }, 
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Reacción de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .comprar:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Ocurrió un error al intentar comprar el personaje. Inténtalo de nuevo.*` 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
         });
     }
     break;
