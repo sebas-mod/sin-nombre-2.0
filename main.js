@@ -195,9 +195,10 @@ case 'verper': {
         mensaje += `   🏆 \`${global.prefix}luchar\`, \`${global.prefix}poder\`, \`${global.prefix}volar\`, \n`;
         mensaje += `   🔥 \`${global.prefix}otromundo\`, \`${global.prefix}otrouniverso\`, \`${global.prefix}mododios\`,\n`;
         mensaje += `   😈 \`${global.prefix}mododiablo\`, \`${global.prefix}enemigos\`, \`${global.prefix}podermaximo\`\n\n`;
-        
+
         // Recorrer todos los personajes del usuario
         usuario.personajes.forEach((personaje, index) => {
+            mensaje += `*═══════════════════════*\n`; // Línea de separación
             mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;
             mensaje += `   🏅 *Rango:* ${personaje.rango}\n`;
             mensaje += `   🎚️ *Nivel:* ${personaje.nivel}\n`;
@@ -213,11 +214,10 @@ case 'verper': {
             mensaje += `   💎 *Valor:* ${personaje.precio} diamantes\n\n`;
         });
 
-        // Enviar el mensaje con la imagen del primer personaje 📜
-        let primerPersonaje = usuario.personajes[0];
-
+        // Enviar el mensaje con el **video como GIF** 🎥
         await sock.sendMessage(msg.key.remoteJid, { 
-            image: { url: primerPersonaje.imagen }, 
+            video: { url: "https://cdn.dorratz.com/files/1740651987117.mp4" },
+            gifPlayback: true, // Se reproduce como GIF
             caption: mensaje
         }, { quoted: msg });
 
