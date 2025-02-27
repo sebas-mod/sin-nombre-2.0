@@ -206,17 +206,17 @@ case 'vermascotas': {
 
         usuario.mascotas.forEach((mascota, index) => {
             let habilidadesMascota = Object.entries(mascota.habilidades)
-                .map(([habilidad, nivel]) => `      🔹 ${habilidad} (Nivel ${nivel})`)
+                .map(([habilidad, data]) => `      🔹 ${habilidad} (Nivel ${data.nivel || 1})`)
                 .join("\n");
 
-            mensaje += `══════════════════════\n`;
+            mensaje += `═════════════════════\n`;
             mensaje += `🔹 *${index + 1}. ${mascota.nombre}*\n`;
-            mensaje += `   📊 *Rango:* ${mascota.rango}\n`;
-            mensaje += `   🎚️ *Nivel:* ${mascota.nivel}\n`;
-            mensaje += `   ❤️ *Vida:* ${mascota.vida} HP\n`;
-            mensaje += `   ✨ *Experiencia:* ${mascota.experiencia || 0} / ${mascota.xpMax} XP\n`;
+            mensaje += `   📊 *Rango:* ${mascota.rango || "Sin Rango"}\n`;
+            mensaje += `   🎚️ *Nivel:* ${mascota.nivel || 1}\n`;
+            mensaje += `   ❤️ *Vida:* ${mascota.vida || 100} HP\n`;
+            mensaje += `   ✨ *Experiencia:* ${mascota.experiencia || 0} / ${mascota.xpMax || 500} XP\n`;
             mensaje += `   🌟 *Habilidades:*\n${habilidadesMascota}\n`;
-            mensaje += `══════════════════════\n\n`;
+            mensaje += `═════════════════════\n\n`;
         });
 
         // Explicación Final 📜
@@ -252,6 +252,7 @@ case 'vermascotas': {
     }
     break;
 }
+
         
 case 'verper': {
     try {
