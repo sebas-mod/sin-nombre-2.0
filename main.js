@@ -159,6 +159,104 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'per': {
+    try {
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🎭", key: msg.key } // Emoji de personaje 🎭
+        });
+
+        // Archivo JSON donde se guardan los datos del RPG
+        const rpgFile = "./rpg.json";
+
+        // Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Cargar los datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // Verificar si el usuario está registrado
+        let userId = msg.key.participant || msg.key.remoteJid;
+        if (!rpgData.usuarios[userId]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // Verificar si el usuario tiene personajes comprados
+        if (!usuario.personajes || usuario.personajes.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes personajes en tu inventario.*\n🔹 Usa \`${global.prefix}tiendaper\` para comprar uno.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Verificar si el usuario ingresó un número válido
+        if (args.length < 1 || isNaN(args[0]) || parseInt(args[0]) <= 0 || parseInt(args[0]) > usuario.personajes.length) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}per <número>\`\n🔹 Usa \`${global.prefix}verper\` para ver la lista de personajes y sus números.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Obtener el personaje seleccionado
+        let nuevoPersonajePrincipal = usuario.personajes[parseInt(args[0]) - 1];
+
+        // Mover el personaje seleccionado al primer lugar
+        usuario.personajes = usuario.personajes.filter((p, index) => index !== parseInt(args[0]) - 1);
+        usuario.personajes.unshift(nuevoPersonajePrincipal);
+
+        // Guardar los cambios en el archivo JSON
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // Construir mensaje de confirmación 📜
+        let mensaje = `🎭 *¡Has cambiado tu personaje principal!* 🎭\n\n`;
+        mensaje += `🔹 *Nuevo Personaje Principal:* ${nuevoPersonajePrincipal.nombre}\n`;
+        mensaje += `📊 *Rango:* ${nuevoPersonajePrincipal.rango}\n`;
+        mensaje += `🎚️ *Nivel:* ${nuevoPersonajePrincipal.nivel}\n`;
+        mensaje += `❤️ *Vida:* ${nuevoPersonajePrincipal.vida} HP\n`;
+        mensaje += `✨ *Experiencia:* ${nuevoPersonajePrincipal.experiencia} / ${nuevoPersonajePrincipal.xpMax} XP\n`;
+        mensaje += `🌟 *Habilidades:*\n`;
+        Object.entries(nuevoPersonajePrincipal.habilidades).forEach(([habilidad, datos]) => {
+            mensaje += `      🔹 ${habilidad} (Nivel ${datos.nivel})\n`;
+        });
+
+        mensaje += `\n📜 Usa \`${global.prefix}nivelper\` para ver sus estadísticas.\n`;
+
+        // Enviar mensaje con la imagen del personaje 📷
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: nuevoPersonajePrincipal.imagen }, 
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Confirmación con reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .per:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al cambiar tu personaje principal. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
+        
 case 'mascota': {
     try {
         // 🔄 Enviar reacción mientras se procesa el comando
