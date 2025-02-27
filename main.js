@@ -159,6 +159,91 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'nivelper': {
+    try {
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "📜", key: msg.key } // Emoji de estadísticas 📜
+        });
+
+        // Archivo JSON donde se guardan los datos del RPG
+        const rpgFile = "./rpg.json";
+
+        // Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes un personaje registrado.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte y obtener un personaje inicial.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Cargar los datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // Verificar si el usuario está registrado
+        let userId = msg.key.participant || msg.key.remoteJid;
+        if (!rpgData.usuarios[userId]) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // Verificar si el usuario tiene personajes
+        if (!usuario.personajes || usuario.personajes.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes un personaje actualmente.*\n\n🔹 Usa \`${global.prefix}tiendaper\` para comprar uno.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Obtener el personaje principal (el primero en la lista)
+        let personajeActual = usuario.personajes[0];
+
+        // Construir mensaje de estadísticas 📜
+        let mensaje = `
+📜 *Estadísticas de tu Personaje* 📜
+
+🔹 *Nombre:* ${personajeActual.nombre}
+🎚️ *Nivel:* ${personajeActual.nivel}
+❤️ *Vida:* ${personajeActual.vida} HP
+✨ *Experiencia:* ${personajeActual.experiencia} / 1000 XP
+🌟 *Habilidades:*
+   🔹 ${Object.keys(personajeActual.habilidades)[0]} (Nivel ${Object.values(personajeActual.habilidades)[0].nivel})
+   🔹 ${Object.keys(personajeActual.habilidades)[1]} (Nivel ${Object.values(personajeActual.habilidades)[1].nivel})
+
+🚀 *Sigue entrenando a tu personaje con:*  
+   🔥 \`${global.prefix}entrenar\`, \`${global.prefix}combate\`, \`${global.prefix}superentrenamiento\`  
+   🏆 ¡Hazlo más fuerte para que domine el gremio Azura Ultra!`;
+
+        // Enviar mensaje con la imagen del personaje 📷
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: personajeActual.imagen }, 
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Confirmación con reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .nivelper:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al obtener la información de tu personaje. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        });
+    }
+    break;
+}
+        
+        
 case 'bal':
 case 'saldo': {
     try {
@@ -192,13 +277,7 @@ case 'saldo': {
 
         let usuario = rpgData.usuarios[userId];
 
-        // Construir habilidades del usuario
-        let habilidadesUsuario = "✨ *Habilidades:*\n";
-        Object.entries(usuario.habilidades).forEach(([habilidad, datos]) => {
-            habilidadesUsuario += `   🔹 ${habilidad} (Nivel ${datos.nivel})\n`;
-        });
-
-        // Construir mensaje de cartera 📜
+        // Construir mensaje de saldo 📜
         let mensaje = `
 *╔═══❖•ೋ° °ೋ•❖═══╗*
 🎒 *Bienvenido a tu Cartera* 🎒
@@ -207,29 +286,15 @@ case 'saldo': {
 💰 *SALDO DE:* @${userId.replace("@s.whatsapp.net", "")}
 
 ⊰᯽⊱┈──╌❊╌──┈⊰᯽⊱
-📜 *Detalles de tu Cuenta:*
-👤 *Nombre:* ${usuario.nombre}
-🏆 *Rango:* ${usuario.rango}
-🎚️ *Nivel:* ${usuario.nivel}
-💖 *Vida:* ${usuario.vida} HP
-✨ *Experiencia:* ${usuario.experiencia} / ${usuario.nivel * 1000} XP
-
-${habilidadesUsuario}
-
-⊰᯽⊱┈──╌❊╌──┈⊰᯽⊱
-💰 *Tu Economía:*
 💎 *Diamantes disponibles:* ${usuario.diamantes}
 🏦 *Diamantes guardados en el gremio:* ${usuario.diamantesGuardados}
-
 ⊰᯽⊱┈──╌❊╌──┈⊰᯽⊱
-📜 *¿Cómo ganar más diamantes?*
-🔹 Usa *${global.prefix}menurpg* para conocer todas las opciones.
-🔹 Completa misiones con *${global.prefix}work*, *${global.prefix}crime*, *${global.prefix}minar*, *${global.prefix}picar* y más.
-🔹 Guarda tus diamantes en el gremio con *${global.prefix}depositar <cantidad>*.
 
-🚀 *¡Sigue explorando y conviértete en el más fuerte de Azura Ultra!* 🏆
-⊰᯽⊱┈──╌❊╌──┈⊰᯽⊱
-        `;
+📜 *¿Cómo guardar tus diamantes en el gremio?*  
+🔹 Usa \`${global.prefix}dep <cantidad>\` o \`${global.prefix}depositar <cantidad>\` para almacenar diamantes en el gremio.  
+🔹 Los diamantes guardados están protegidos y no pueden ser robados.  
+🚀 ¡Administra bien tu economía y conviértete en el más rico del gremio! 🏆
+`;
 
         // Enviar mensaje con la información de la cartera
         await sock.sendMessage(msg.key.remoteJid, { 
