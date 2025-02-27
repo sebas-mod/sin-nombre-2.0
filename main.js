@@ -232,6 +232,10 @@ case 'comprar': {
         // 💰 Restar los diamantes del usuario
         usuario.diamantes -= personajeComprado.precio;
 
+        // 📌 Manejo correcto de habilidades
+        let habilidad1 = personajeComprado.habilidades[0] || "Sin habilidad";
+        let habilidad2 = personajeComprado.habilidades[1] || "Sin habilidad";
+
         // 🛍️ Crear una copia del personaje con su precio original y habilidades
         let nuevoPersonaje = {
             nombre: personajeComprado.nombre,
@@ -239,8 +243,8 @@ case 'comprar': {
             vida: personajeComprado.vida,
             experiencia: 0,
             habilidades: {
-                [personajeComprado.habilidades[0]]: { nivel: 1 },
-                [personajeComprado.habilidades[1]]: { nivel: 1 }
+                [habilidad1]: { nivel: 1 },
+                [habilidad2]: { nivel: 1 }
             },
             precio: personajeComprado.precio, // 📌 Guardar el precio original
             imagen: personajeComprado.imagen // URL de la imagen
@@ -263,9 +267,8 @@ case 'comprar': {
         mensajeCompra += `   ❤️ *Vida:* ${nuevoPersonaje.vida} HP\n`;
         mensajeCompra += `   ✨ *Experiencia:* 0 / 1000 XP\n`;
         mensajeCompra += `   🌟 *Habilidades:*\n`;
-        Object.keys(nuevoPersonaje.habilidades).forEach((habilidad) => {
-            mensajeCompra += `      🔹 ${habilidad} (Nivel 1)\n`;
-        });
+        mensajeCompra += `      🔹 ${habilidad1} (Nivel 1)\n`;
+        mensajeCompra += `      🔹 ${habilidad2} (Nivel 1)\n`;
         mensajeCompra += `\n💎 *Costo:* ${nuevoPersonaje.precio} diamantes\n`;
         mensajeCompra += `📜 Usa \`${global.prefix}nivelper\` para ver sus estadísticas.\n`;
         mensajeCompra += `📜 Usa \`${global.prefix}verper\` para ver todos tus personajes comprados.\n`;
@@ -293,6 +296,7 @@ case 'comprar': {
     }
     break;
 }
+        
         
 case 'dar': {
     try {
