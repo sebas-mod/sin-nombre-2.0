@@ -161,60 +161,69 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 //agrega nuevos comando abajo
 case 'nivelper': {
     try {
+        // 🔄 Reacción al procesar
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "📜", key: msg.key } });
+
         const rpgFile = "./rpg.json";
 
         if (!fs.existsSync(rpgFile)) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes un personaje registrado.*\n\n🔹 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte y obtener un personaje inicial.` 
+                text: `❌ *No tienes personajes registrados.*\n📌 Usa \`${global.prefix}comprar <nombre>\` para obtener uno.` 
             }, { quoted: msg });
             return;
         }
 
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let userId = msg.key.participant || msg.key.remoteJid;
 
-        if (!rpgData.usuarios[userId]) {
+        if (!rpgData.usuarios[msg.key.participant]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+                text: `❌ *No tienes cuenta en Azura Ultra.*\n📌 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
             }, { quoted: msg });
             return;
         }
 
-        let usuario = rpgData.usuarios[userId];
+        let usuario = rpgData.usuarios[msg.key.participant];
 
         if (!usuario.personajes || usuario.personajes.length === 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes ningún personaje actualmente.*\n\n🔹 Usa \`${global.prefix}tiendaper\` para comprar uno.` 
+                text: `❌ *No tienes personajes.*\n📌 Usa \`${global.prefix}tiendaper\` para comprar.` 
             }, { quoted: msg });
             return;
         }
 
         let personajeActual = usuario.personajes[0];
 
-        let mensaje = `📊 *Estadísticas de tu Personaje* 📊\n\n`;
-        mensaje += `🎭 *Nombre:* ${personajeActual.nombre}\n`;
-        mensaje += `   🎚️ *Nivel:* ${personajeActual.nivel}\n`;
-        mensaje += `   ❤️ *Vida:* ${personajeActual.vida} HP\n`;
-        mensaje += `   ✨ *Experiencia:* ${personajeActual.experiencia} / ${personajeActual.xpMax} XP\n`;
-        mensaje += `   🌟 *Habilidades:*\n`;
-        Object.entries(personajeActual.habilidades).forEach(([habilidad, data]) => {
-            mensaje += `      🔹 ${habilidad} (Nivel ${data.nivel})\n`;
+        // Construcción del mensaje claro con ambas habilidades
+        let mensaje = `🎭 *Estadísticas de tu Personaje Principal* 🎭\n\n`;
+        mensaje += `🔹 *Nombre:* ${personajeActual.nombre}\n`;
+        mensaje += `🎚️ *Nivel:* ${personajeActual.nivel}\n`;
+        mensaje += `❤️ *Vida:* ${personajeActual.vida} HP\n`;
+        mensaje += `✨ *Experiencia:* ${personajeActual.experiencia || 0} / 1000 XP\n`;
+        mensaje += `🌟 *Habilidades:*\n`;
+
+        // Mostrar claramente ambas habilidades con sus niveles
+        Object.entries(personajeActual.habilidades).forEach(([habilidad, datos]) => {
+            mensaje += `   🔸 ${habilidad} (Nivel ${datos.nivel})\n`;
         });
 
+        mensaje += `\n📜 Usa \`${global.prefix}verper\` para ver todos tus personajes.\n`;
+
+        // Enviar imagen y mensaje
         await sock.sendMessage(msg.key.remoteJid, { 
             image: { url: personajeActual.imagen }, 
             caption: mensaje
         }, { quoted: msg });
 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key }
-        });
+        // ✅ Confirmación
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
 
     } catch (error) {
-        console.error("❌ Error en el comando .nivelper:", error);
+        console.error("❌ Error en .nivelper:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener la información de tu personaje. Inténtalo de nuevo.*" 
+            text: "❌ *Error al obtener estadísticas. Intenta otra vez.*" 
         }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key } });
     }
     break;
 }
@@ -425,6 +434,12 @@ case 'comprar': {
         if (!usuario.personajes) {
             usuario.personajes = [];
         }
+
+        // Extraer habilidades correctamente
+        let habilidadesPersonaje = personajeSeleccionado.habilidades || {};
+        let habilidad1 = Object.keys(habilidadesPersonaje)[0] || "Habilidad Desconocida";
+        let habilidad2 = Object.keys(habilidadesPersonaje)[1] || "Habilidad Desconocida";
+
         usuario.personajes.push({
             nombre: personajeSeleccionado.nombre,
             nivel: personajeSeleccionado.nivel,
@@ -432,8 +447,8 @@ case 'comprar': {
             experiencia: 0,
             xpMax: personajeSeleccionado.xpMax,
             habilidades: {
-                [personajeSeleccionado.habilidades[0]]: { nivel: 1 },
-                [personajeSeleccionado.habilidades[1]]: { nivel: 1 }
+                [habilidad1]: { nivel: 1 },
+                [habilidad2]: { nivel: 1 }
             },
             imagen: personajeSeleccionado.imagen
         });
@@ -447,9 +462,9 @@ case 'comprar': {
         mensaje += `   ❤️ *Vida:* ${personajeSeleccionado.vida} HP\n`;
         mensaje += `   ✨ *Experiencia:* 0 / ${personajeSeleccionado.xpMax} XP\n`;
         mensaje += `   🌟 *Habilidades:*\n`;
-        mensaje += `      🔹 ${personajeSeleccionado.habilidades[0]} (Nivel 1)\n`;
-        mensaje += `      🔹 ${personajeSeleccionado.habilidades[1]} (Nivel 1)\n`;
-        mensaje += `\n💎 *Costo:* ${personajeSeleccionado.precio} diamantes\n📜 Usa \`${global.prefix}nivelper\` para ver sus estadísticas.`;
+        mensaje += `      🔹 ${habilidad1} (Nivel 1)\n`;
+        mensaje += `      🔹 ${habilidad2} (Nivel 1)\n`;
+        mensaje += `\n💎 *Costo:* ${personajeSeleccionado.precio} diamantes\n📜 Usa \`${global.prefix}nivelper\` para ver sus estadísticas.\n📜 Usa \`${global.prefix}verper\` para ver todos tus personajes comprados.`;
 
         await sock.sendMessage(msg.key.remoteJid, { 
             image: { url: personajeSeleccionado.imagen }, 
@@ -472,7 +487,6 @@ case 'comprar': {
     }
     break;
 }
-
 
         
 
