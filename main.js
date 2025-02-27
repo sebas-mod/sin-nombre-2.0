@@ -250,7 +250,7 @@ case 'dar': {
         
 case 'deleteuser': {
     try {
-        // Verificar si el usuario que ejecuta el comando es Owner
+        // 🔒 Verificar si el usuario que ejecuta el comando es Owner
         if (!isOwner(sender)) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "⛔ *Solo el propietario del bot puede eliminar la cuenta de otros jugadores.*" 
@@ -258,10 +258,10 @@ case 'deleteuser': {
             return;
         }
 
-        // Verificar si se ingresó un número de usuario
-        if (args.length < 1) {
+        // 📌 Verificar si se ingresó un número válido
+        if (args.length < 1 || isNaN(args[0])) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}deleteuser <número_de_usuario>\`` 
+                text: `⚠️ *Uso incorrecto.*\n\n📌 *Ejemplo de uso:* \n🔹 \`${global.prefix}deleteuser 50212345678\` (Número sin @ ni espacios)\n\n🔹 *Este comando eliminará la cuenta del usuario y devolverá sus personajes a la tienda.*` 
             }, { quoted: msg });
             return;
         }
@@ -274,7 +274,7 @@ case 'deleteuser': {
             react: { text: "🗑️", key: msg.key } // Emoji de eliminación 🗑️
         });
 
-        // Verificar si el archivo existe
+        // 📂 Verificar si el archivo RPG existe
         if (!fs.existsSync(rpgFile)) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "⚠️ *No hay datos de RPG guardados.*" 
@@ -282,32 +282,33 @@ case 'deleteuser': {
             return;
         }
 
-        // Cargar datos del RPG
+        // 📂 Cargar datos del RPG
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
 
-        // Verificar si el usuario está registrado
+        // 📌 Verificar si el usuario está registrado en el RPG
         if (!rpgData.usuarios[userId]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *El usuario no tiene una cuenta registrada en el gremio Azura Ultra.*` 
+                text: `❌ *El usuario @${args[0]} no tiene una cuenta registrada en el gremio Azura Ultra.*`,
+                mentions: [userId]
             }, { quoted: msg });
             return;
         }
 
-        // Recuperar personajes del usuario y devolverlos a la tienda
+        // 🏷️ Recuperar personajes del usuario y devolverlos a la tienda
         let usuario = rpgData.usuarios[userId];
         if (usuario.personajes && usuario.personajes.length > 0) {
             rpgData.tiendaPersonajes.push(...usuario.personajes);
         }
 
-        // Eliminar el usuario del JSON
+        // ❌ Eliminar el usuario del JSON
         delete rpgData.usuarios[userId];
 
-        // Guardar los cambios en el archivo JSON
+        // 💾 Guardar cambios en el archivo JSON
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-        // Confirmar eliminación
+        // 📩 Confirmar eliminación
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `🗑️ *La cuenta de @${args[0]} ha sido eliminada exitosamente del gremio Azura Ultra.*\n\n🔹 Sus personajes han sido devueltos a la tienda.`,
+            text: `🗑️ *La cuenta de @${args[0]} ha sido eliminada exitosamente del gremio Azura Ultra.*\n\n🔹 *Sus personajes han sido devueltos a la tienda.*`,
             mentions: [userId] // Mencionar al usuario eliminado
         }, { quoted: msg });
 
