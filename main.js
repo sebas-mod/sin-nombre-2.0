@@ -609,7 +609,12 @@ case 'deleterpg': {
         
 case 'addper': {
     try {
-        // Verificar si el usuario tiene permisos (solo owner)
+        // 🔄 Reacción antes de agregar el personaje
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🎭", key: msg.key } // Emoji de personaje 🎭
+        });
+
+        // Verificar permisos (Solo Owner)
         if (!isOwner(sender)) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "⛔ *Solo el propietario del bot puede agregar personajes a la tienda.*" 
@@ -618,9 +623,9 @@ case 'addper': {
         }
 
         // Verificar si se enviaron todos los parámetros
-        if (args.length < 4) {
+        if (args.length < 5) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\nEjemplo: `.addper Goku Kamehameha UltraInstinto https://cdn.example.com/goku.jpg 5000`" 
+                text: `⚠️ *Uso incorrecto.*\n\n📌 Ejemplo: \`${global.prefix}addper Goku Kamehameha UltraInstinto https://cdn.example.com/goku.jpg 5000\`` 
             }, { quoted: msg });
             return;
         }
@@ -640,14 +645,16 @@ case 'addper': {
             return;
         }
 
+        // Definir los rangos de los personajes
+        const rangosPersonajes = [
+            "🌟 Principiante", "⚔️ Guerrero", "🔥 Maestro", "👑 Élite", "🌀 Legendario", "💀 Dios de la Batalla"
+        ];
+        
+        let rangoInicial = rangosPersonajes[0]; // Todos los personajes empiezan con rango Principiante
+
         // Leer o crear el archivo rpg.json
         const rpgFile = "./rpg.json";
-        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : {};
-
-        // Si no existe la tienda de personajes, crearla
-        if (!rpgData.tiendaPersonajes) {
-            rpgData.tiendaPersonajes = [];
-        }
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { tiendaPersonajes: [] };
 
         // Verificar si el personaje ya está en la tienda
         let personajeExistente = rpgData.tiendaPersonajes.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
@@ -658,12 +665,18 @@ case 'addper': {
             return;
         }
 
-        // Crear el objeto del nuevo personaje con vida y nivel
+        // Crear el objeto del nuevo personaje con nivel, vida y experiencia
         let nuevoPersonaje = {
             nombre: nombre,
+            rango: rangoInicial,
             nivel: 1, // Nivel inicial
+            experiencia: 0, // Exp inicial
+            xpMax: 1000, // Exp máxima inicial
             vida: 100, // Vida inicial
-            habilidades: [habilidad1, habilidad2],
+            habilidades: { 
+                [habilidad1]: 1,
+                [habilidad2]: 1
+            },
             imagen: urlImagen,
             precio: precio
         };
@@ -675,7 +688,17 @@ case 'addper': {
         // Enviar confirmación con la imagen
         await sock.sendMessage(msg.key.remoteJid, { 
             image: { url: urlImagen },
-            caption: `✅ *Nuevo Personaje Agregado a la Tienda*\n\n🎭 *Nombre:* ${nombre}\n🎚️ *Nivel Inicial:* 1\n❤️ *Vida:* 100 HP\n✨ *Habilidades:*\n   🔹 ${habilidad1} (Nivel 1)\n   🔹 ${habilidad2} (Nivel 1)\n💎 *Precio:* ${precio} diamantes\n\n📌 Ahora disponible en la tienda de personajes.`
+            caption: `✅ *Nuevo Personaje Agregado a la Tienda* ✅\n\n` +
+                     `🎭 *Nombre:* ${nombre}\n` +
+                     `📊 *Rango:* ${rangoInicial}\n` +
+                     `🆙 *Nivel:* 1\n` +
+                     `❤️ *Vida:* 100 HP\n` +
+                     `✨ *Experiencia:* 0 / 1000 XP\n` +
+                     `🌟 *Habilidades:*\n` +
+                     `   🔹 ${habilidad1} (Nivel 1)\n` +
+                     `   🔹 ${habilidad2} (Nivel 1)\n` +
+                     `💎 *Precio:* ${precio} diamantes\n\n` +
+                     `📌 ¡Disponible en la tienda de personajes ahora!`
         }, { quoted: msg });
 
         // ✅ Reacción de confirmación
@@ -697,6 +720,7 @@ case 'addper': {
     break;
 }
             
+
 case 'rpg': {
     try {
         if (args.length < 2) {
@@ -729,30 +753,26 @@ case 'rpg': {
 
         // 🔄 Enviar reacción de carga
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "⏳", key: msg.key } 
+            react: { text: "⏳", key: msg.key }
         });
 
-        // Mensajes de registro dinámico con intervalo
+        // Mensajes de registro dinámico con intervalos
         let registroMensaje = await sock.sendMessage(msg.key.remoteJid, { text: `📝 *Registrando en el Gremio Azura Ultra...*` }, { quoted: msg });
-
         await new Promise(resolve => setTimeout(resolve, 1500));
         await sock.sendMessage(msg.key.remoteJid, { 
-            edit: registroMensaje.key, 
-            text: `📜 *Nombre:* ${nombreUsuario}\n🎂 *Edad:* ${edadUsuario}\n\n⏳ *Procesando...*` 
+            edit: registroMensaje.key,
+            text: `📜 *Nombre:* ${nombreUsuario}\n🎂 *Edad:* ${edadUsuario}\n\n⏳ *Procesando...*`
         });
-
         await new Promise(resolve => setTimeout(resolve, 1500));
         await sock.sendMessage(msg.key.remoteJid, { 
-            edit: registroMensaje.key, 
-            text: `🔍 *Buscando rango y habilidades...*` 
+            edit: registroMensaje.key,
+            text: `🔍 *Buscando rango y habilidades...*`
         });
-
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         // Selección de habilidades y rango
         const habilidadesDisponibles = ["⚔️ Espadachín", "🛡️ Defensor", "🔥 Mago", "🏹 Arquero", "🌀 Sanador", "⚡ Ninja", "💀 Asesino"];
         const rangosDisponibles = ["🌟 Novato", "⚔️ Guerrero", "🔥 Maestro", "👑 Élite", "🌀 Legendario"];
-
         let habilidad1 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
         let habilidad2 = habilidadesDisponibles[Math.floor(Math.random() * habilidadesDisponibles.length)];
         let rango = "🌟 Novato"; // Todos comienzan como novatos
@@ -768,6 +788,8 @@ case 'rpg': {
                 imagen: mascotaAleatoria.imagen, // URL de la imagen
                 nivel: 1,
                 vida: 100,
+                xp: 0,
+                xpMax: 500,
                 habilidades: {
                     [mascotaAleatoria.habilidades[0]]: { nivel: 1 },
                     [mascotaAleatoria.habilidades[1]]: { nivel: 1 }
@@ -782,6 +804,7 @@ case 'rpg': {
             edad: edadUsuario,
             nivel: 1,
             experiencia: 0,
+            xpMax: 1000,
             rango: rango,
             vida: 100,
             habilidades: { 
@@ -804,23 +827,26 @@ case 'rpg': {
    🔥 ${Object.keys(nuevaMascota.habilidades)[1]} (Nivel 1)`;
         }
 
-        let mensajeFinal = `🎉 *¡Registro Completado!* 🎉\n\n
-🌟 *Jugador:* ${nombreUsuario}
-🎂 *Edad:* ${edadUsuario} años
-⚔️ *Rango Inicial:* ${rango}
-🎚️ *Nivel:* 1
-❤️ *Vida:* 100 HP
+        let mensajeFinal = `🎉 *¡Registro Completado!* 🎉
+
+🌟 *Jugador:* ${nombreUsuario}  
+🎂 *Edad:* ${edadUsuario} años  
+⚔️ *Rango Inicial:* ${rango}  
+🎚️ *Nivel:* 1  
+❤️ *Vida:* 100 HP  
+✨ *Experiencia:* 0 / 1000 XP  
 🛠️ *Habilidades:*  
    ✨ ${habilidad1} (Nivel 1)  
    ✨ ${habilidad2} (Nivel 1)  
 
-🐾 *Mascota Inicial:* ${nuevaMascota ? `🦴 ${nuevaMascota.nombre}` : "❌ Ninguna (No hay en la tienda)"}
+🐾 *Mascota Inicial:* ${nuevaMascota ? `🦴 ${nuevaMascota.nombre}` : "❌ Ninguna (No hay en la tienda)"}  
    🎚️ *Nivel:* ${nuevaMascota ? nuevaMascota.nivel : "❌"}  
    ❤️ *Vida:* ${nuevaMascota ? nuevaMascota.vida : "❌"}  
+   ✨ *Experiencia:* ${nuevaMascota ? nuevaMascota.xp : "❌"} / ${nuevaMascota ? nuevaMascota.xpMax : "❌"} XP  
    ${habilidadesMascota}
 
-💎 *Diamantes:* 0
-🏦 *Diamantes en Gremio:* 0
+💎 *Diamantes:* 0  
+🏦 *Diamantes en Gremio:* 0  
 
 📜 *Comandos Básicos:*  
 🔹 Usa *${global.prefix}vermascotas* para ver tu mascota actual y las que compres.  
@@ -834,12 +860,10 @@ case 'rpg': {
 
         // Editar el mensaje final y enviar el GIF
         await sock.sendMessage(msg.key.remoteJid, { 
-            edit: registroMensaje.key, 
+            edit: registroMensaje.key,
             text: "✅ *¡Registro completado!* Generando tu tarjeta de jugador..."
         });
-
         await new Promise(resolve => setTimeout(resolve, 2000));
-
         await sock.sendMessage(msg.key.remoteJid, { 
             video: { url: "https://cdn.dorratz.com/files/1740560637895.mp4" }, 
             gifPlayback: true, 
@@ -848,24 +872,25 @@ case 'rpg': {
 
         // ✅ Enviar reacción de éxito
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🎮", key: msg.key } 
+            react: { text: "🎮", key: msg.key }
         });
 
     } catch (error) {
         console.error("❌ Error en el comando .rpg:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al registrarte en el gremio. Inténtalo de nuevo.*" 
+            text: "❌ *Ocurrió un error al registrarte en el gremio. Inténtalo de nuevo.*"
         }, { quoted: msg });
 
         // ❌ Enviar reacción de error
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
+            react: { text: "❌", key: msg.key }
         });
     }
     break;
 }
+
         
-case 'addmascota': {
+case 'addmascota': { 
     try {
         // 🔄 Reacción antes de agregar la mascota
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -883,7 +908,7 @@ case 'addmascota': {
         // Verificar si se enviaron todos los parámetros
         if (args.length < 5) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\nEjemplo: `.addmascota 🐕Perro rápido protector https://cdn.example.com/perro.jpg 3000`" 
+                text: `⚠️ *Uso incorrecto.*\n\n📌 Ejemplo: \`${global.prefix}addmascota 🐕Perro rápido protector https://cdn.example.com/perro.jpg 3000\`` 
             }, { quoted: msg });
             return;
         }
@@ -903,6 +928,14 @@ case 'addmascota': {
             return;
         }
 
+        // Definir los rangos de las mascotas
+        const rangosMascotas = [
+            "🐣 Principiante", "🐾 Novato", "🦴 Aprendiz", "🐕 Iniciado", "🦊 Experimentado",
+            "🐅 Avanzado", "🐉 Veterano", "🦅 Élite", "🦄 Legendario", "🔥 Divino"
+        ];
+        
+        let rangoInicial = rangosMascotas[0]; // Todas las mascotas empiezan con rango Principiante
+
         // Leer o crear el archivo rpg.json
         const rpgFile = "./rpg.json";
         let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { tiendaMascotas: [] };
@@ -919,8 +952,11 @@ case 'addmascota': {
         // Crear el objeto de la nueva mascota
         let nuevaMascota = {
             nombre: nombre,
+            rango: rangoInicial,
             nivel: 1, // Nivel inicial
-            habilidades: {
+            experiencia: 0, // Exp inicial
+            xpMax: 500, // Exp máxima inicial
+            habilidades: { 
                 [habilidad1]: 1,
                 [habilidad2]: 1
             },
@@ -936,14 +972,34 @@ case 'addmascota': {
         // Enviar confirmación con la imagen
         await sock.sendMessage(msg.key.remoteJid, { 
             image: { url: urlImagen },
-            caption: `✅ *Nueva Mascota Agregada a la Tienda*\n\n🐾 *Nombre:* ${nombre}\n🎚️ *Nivel:* 1\n✨ *Habilidades:*\n   🔹 ${habilidad1} (Nivel 1)\n   🔹 ${habilidad2} (Nivel 1)\n❤️ *Vida:* 100\n💎 *Precio:* ${precio} diamantes\n\n🔹 ¡Disponible en la tienda ahora!`
+            caption: `✅ *Nueva Mascota Agregada a la Tienda* ✅\n\n` +
+                     `🦴 *Nombre:* ${nombre}\n` +
+                     `📊 *Rango:* ${rangoInicial}\n` +
+                     `🆙 *Nivel:* 1\n` +
+                     `❤️ *Vida:* 100\n` +
+                     `✨ *Experiencia:* 0 / 500 XP\n` +
+                     `🌟 *Habilidades:*\n` +
+                     `   🔹 ${habilidad1} (Nivel 1)\n` +
+                     `   🔹 ${habilidad2} (Nivel 1)\n` +
+                     `💎 *Precio:* ${precio} diamantes\n\n` +
+                     `🔹 ¡Disponible en la tienda ahora!`
         }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
 
     } catch (error) {
         console.error("❌ Error en el comando .addmascota:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Ocurrió un error al agregar la mascota. Inténtalo de nuevo.*" 
         }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
 }
