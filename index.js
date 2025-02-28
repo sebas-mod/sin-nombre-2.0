@@ -108,44 +108,43 @@ sock.ev.on("presence.update", async (presence) => {
 
             
             // 🟢 Consola de mensajes entrantes con diseño
+
 sock.ev.on("messages.upsert", async (messageUpsert) => {
     try {
         const msg = messageUpsert.messages[0];
         if (!msg) return;
 
-        const chatId = msg.key.remoteJid; // ID del grupo o usuario
-        const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
+        const chatId = msg.key.remoteJid;
+        const isGroup = chatId.endsWith("@g.us");
         const sender = msg.key.participant ? msg.key.participant.replace(/[^0-9]/g, "") : msg.key.remoteJid.replace(/[^0-9]/g, "");
-        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
-        const fromMe = msg.key.fromMe || sender === botNumber; // Verifica si el mensaje es del bot
+        const botNumber = sock.user.id.split(":")[0];
+        const fromMe = msg.key.fromMe || sender === botNumber;
         let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-        let messageType = Object.keys(msg.message || {})[0]; // Tipo de mensaje (text, image, video, etc.)
+        let messageType = Object.keys(msg.message || {})[0];
 
-        // 🔥 Detectar si el mensaje fue eliminado
+        // 🔥 Detectar mensaje eliminado
         if (msg.message?.protocolMessage?.type === 0) {
-            console.log(chalk.red(`🗑️ Un mensaje fue eliminado por ${sender}`));
+            console.log(`🗑️ Un mensaje fue eliminado por ${sender}`);
             return;
         }
 
         // 🔍 Mostrar en consola el mensaje recibido
-        console.log(chalk.yellow(`\n📩 Nuevo mensaje recibido`));
-        console.log(chalk.green(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${chalk.bold(sender)}`));
-        console.log(chalk.cyan(`💬 Tipo: ${messageType}`));
-        console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
-        console.log(chalk.gray("──────────────────────────"));
+        console.log(`📩 Nuevo mensaje recibido`);
+        console.log(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${sender}`);
+        console.log(`💬 Tipo: ${messageType}`);
+        console.log(`💬 Mensaje: ${messageText || "📂 (Mensaje multimedia)"}`);
+        console.log(`──────────────────────────`);
 
         // ⚠️ Si el "modo privado" está activado y el usuario no es dueño ni el bot, ignorar mensaje
         if (modos.modoPrivado && !isOwner(sender) && !fromMe) return;
 
-        // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
+        // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o owner
         if (isGroup && modos.modoAdmins[chatId]) {
             const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
             if (chatMetadata) {
                 const participant = chatMetadata.participants.find(p => p.id.includes(sender));
                 const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
-                if (!isAdmin && !isOwner(sender) && !fromMe) {
-                    return; // Ignorar mensaje si no es admin ni owner
-                }
+                if (!isAdmin && !isOwner(sender) && !fromMe) return;
             }
         }
 
@@ -154,39 +153,35 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
             const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
             const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
 
-            // ⚙️ Comando para activar/desactivar "modo privado"
-            if (command === "modoprivado" && (isOwner(sender) || fromMe)) {
-                if (!["on", "off"].includes(args[0])) {
-                    await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
-                    return;
-                }
-                modos.modoPrivado = args[0] === "on";
-                guardarModos(modos);
-                await sock.sendMessage(chatId, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
-                return;
-            }
+            // ⚙️ Comando para activar/desactivar Gemini en este chat
+            if (command === "geminis") {
+                let activosData = cargarActivos();
 
-            // ⚙️ Comando para activar/desactivar "modo admins" (solo en grupos)
-            if (command === "modoadmins" && isGroup) {
-                const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
-                if (!chatMetadata) return;
-                const participant = chatMetadata.participants.find(p => p.id.includes(sender));
-                const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
-                if (!isAdmin && !isOwner(sender) && !fromMe) {
-                    await sock.sendMessage(chatId, { text: "⚠️ *Solo los administradores pueden usar este comando.*" });
+                if (args.length < 1) {
+                    await sock.sendMessage(chatId, { 
+                        text: `⚠️ *Uso incorrecto.*\n\n📌 Usa:\n   🔹 \`${global.prefix}geminis on\` para activarlo.\n   🔹 \`${global.prefix}geminis off\` para desactivarlo.` 
+                    }, { quoted: msg });
                     return;
                 }
-                if (!["on", "off"].includes(args[0])) {
-                    await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off` en un grupo." });
-                    return;
-                }
-                if (args[0] === "on") {
-                    modos.modoAdmins[chatId] = true; // Activar en este grupo
+
+                const estado = args[0].toLowerCase();
+                if (estado === 'on') {
+                    activosData.activos[chatId] = true;
+                    guardarActivos(activosData);
+                    await sock.sendMessage(chatId, { 
+                        text: "✅ *Gemini ha sido activado en este chat.*\n\n🤖 Ahora responderá automáticamente a todos los mensajes."
+                    }, { quoted: msg });
+                } else if (estado === 'off') {
+                    delete activosData.activos[chatId];
+                    guardarActivos(activosData);
+                    await sock.sendMessage(chatId, { 
+                        text: "🛑 *Gemini ha sido desactivado en este chat.*\n\n🤖 Ya no responderá automáticamente."
+                    }, { quoted: msg });
                 } else {
-                    delete modos.modoAdmins[chatId]; // Desactivar en este grupo
+                    await sock.sendMessage(chatId, { 
+                        text: "❌ *Opción inválida.* Usa `on` para activar o `off` para desactivar." 
+                    }, { quoted: msg });
                 }
-                guardarModos(modos);
-                await sock.sendMessage(chatId, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` });
                 return;
             }
 
@@ -194,11 +189,34 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
             handleCommand(sock, msg, command, args, sender);
         }
 
+        // **🔹 Interceptar mensajes y responder con Gemini si está activado 🔹**
+        let activosData = cargarActivos();
+        if (activosData.activos[chatId]) {
+            if (!messageText) return; // Ignorar si no es texto
+
+            // 🔄 Reacción mientras procesa la respuesta
+            await sock.sendMessage(chatId, { react: { text: "🤖", key: msg.key } });
+
+            try {
+                const respuesta = await fetch(`https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(messageText)}`);
+                const data = await respuesta.json();
+
+                if (data && data.response) {
+                    await sock.sendMessage(chatId, { text: `🤖 *Gemini:* ${data.response}` }, { quoted: msg });
+                } else {
+                    await sock.sendMessage(chatId, { text: "❌ *No pude generar una respuesta en este momento.*" }, { quoted: msg });
+                }
+            } catch (error) {
+                console.error("❌ Error al conectar con Gemini:", error);
+                await sock.sendMessage(chatId, { text: "❌ *Error: No se pudo obtener una respuesta de Gemini.*" }, { quoted: msg });
+            }
+        }
     } catch (error) {
         console.error("❌ Error en el evento messages.upsert:", error);
     }
-});
-            
+});    
+
+    //coneccion        
             sock.ev.on("connection.update", async (update) => {
     const { connection } = update;
 
