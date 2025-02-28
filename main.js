@@ -187,29 +187,25 @@ case 'tiktok2': {
 
     try {
         const response = await fetch(apiUrl);
-
-        // Verificar si la API responde con éxito
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-
         const json = await response.json();
 
-        // Validar si la API responde correctamente con un video
+        // 🔍 Verificar que la API devuelve datos correctos
         if (!json || !json.video || json.video.trim() === "") {
-            throw new Error("No se encontró un video en la respuesta de la API.");
+            throw new Error("La API no devolvió un video válido.");
         }
 
         let videoUrl = json.video.trim();
         let username = json.username || "Usuario Desconocido";
         let description = json.description || "Sin descripción";
 
+        // 📜 Mensaje con la información del video
         let mensaje = `🎥 *Video de TikTok Descargado* 🎥\n\n`;
         mensaje += `👤 *Usuario:* @${username}\n`;
         mensaje += `📜 *Descripción:* ${description}\n\n`;
         mensaje += `🚀 *Disfruta tu video y sigue usando Azura Ultra 2.0 Bot!* 💎✨\n\n`;
         mensaje += `───────\n© Azura Ultra 2.0 Bot`;
 
+        // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: videoUrl },
             caption: mensaje
@@ -4642,34 +4638,6 @@ case 'ytmp4': {
             }
             break;
 
-        case "tiktok":
-        case "tt":
-            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://vm.tiktok.com/ZMjdrFCtg/` });
-            if (!isUrl(args[0]) || !args[0].includes('tiktok')) return sock.sendMessage(msg.key.remoteJid, { text: "❌ Enlace de TikTok inválido." }, { quoted: msg });
-
-            try {
-                sock.sendMessage(msg.key.remoteJid, {
-        react: {
-          text: '⏱️',
-          key: msg.key,
-        },
-      });
-                const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
-                const videoData = response.data.data.media;
-                const videoUrl = videoData.org;
-                const videoDetails = `*Título*: ${response.data.data.title}\n` +
-                                    `*Autor*: ${response.data.data.author.nickname}\n` +
-                                    `*Duración*: ${response.data.data.duration}s\n` +
-                                    `*Likes*: ${response.data.data.like}\n` +
-                                    `*Comentarios*: ${response.data.data.comment}`;
-
-                await sock.sendMessage(msg.key.remoteJid, { video: { url: videoUrl }, caption: videoDetails }, { quoted: msg });
-               
-            } catch (error) {
-                console.error(error);
-                await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al procesar el enlace de TikTok." });
-            }
-            break;
 
         case "instagram":
         case "ig":
