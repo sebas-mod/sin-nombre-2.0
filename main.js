@@ -4322,47 +4322,82 @@ case 'play3': {
             
                        
             
-            case 'ytmp4': {
+case 'ytmp4': {
     const fetch = require('node-fetch');
 
-    if (!text) return sock.sendMessage(msg.key.remoteJid, { text: 'Proporciona un enlace de YouTube válido.' });
+    // Verificar si se proporcionó un enlace
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: '❌ *Debes proporcionar un enlace de YouTube.*\n\nEjemplo: `.ytmp4 <url>`' 
+        });
+        return;
+    }
+
     const url = args[0];
 
-    if (!url.includes('youtu')) return sock.sendMessage(msg.key.remoteJid, { text: 'Proporciona un enlace válido de YouTube.' });
+    // Verificar si el enlace es de YouTube
+    if (!url.includes('youtu')) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: '❌ *Proporciona un enlace válido de YouTube.*' 
+        });
+        return;
+    }
 
-    await sock.sendMessage(msg.key.remoteJid, { text: '🔄 Obteniendo información del video...' });
+    // Enviar reacción de carga
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
+
+    // Mensaje inicial de procesamiento
+    await sock.sendMessage(msg.key.remoteJid, { text: '🔄 *Obteniendo información del video...*' });
 
     try {
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: {
-                text: '⏱️',
-                key: msg.key,
-            },
-        });
-        
+        // Obtener información del video
         const infoResponse = await fetch(`https://ytdownloader.nvlgroup.my.id/info?url=${url}`);
         const info = await infoResponse.json();
 
         if (!info.resolutions || info.resolutions.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { text: '❌ No se encontraron resoluciones disponibles.' });
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: '❌ *No se encontraron resoluciones disponibles para este video.*' 
+            });
+            return;
         }
 
-        const randomResolution = info.resolutions[Math.floor(Math.random() * info.resolutions.length)];
-        const selectedHeight = randomResolution.height;
+        // Filtrar resoluciones disponibles (priorizando 720p, 480p o 320p)
+        const resoluciones = info.resolutions.map(r => r.height).sort((a, b) => b - a);
+        let selectedHeight = resoluciones.includes(720) ? 720 : 
+                             resoluciones.includes(480) ? 480 : 
+                             resoluciones.includes(320) ? 320 : 
+                             Math.max(...resoluciones);
 
-        await sock.sendMessage(msg.key.remoteJid, { text: `🔄 Descargando el video en ${selectedHeight}p, espera...` });
+        // Confirmación de descarga con la resolución seleccionada
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `📥 *Descargando el video en ${selectedHeight}p, por favor espera...*` 
+        });
 
+        // Construir la URL de descarga con la resolución elegida
         const videoUrl = `https://ytdownloader.nvlgroup.my.id/download?url=${url}&resolution=${selectedHeight}`;
 
+        // Enviar el video descargado
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: videoUrl },
-            caption: `✅ Aquí está tu video en ${selectedHeight}p.`,
+            caption: `✅ *Aquí está tu video en ${selectedHeight}p.*\n\n🎥 *Fuente:* ${url}`,
         }, { quoted: msg });
+
+        // ✅ Enviar reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
+
     } catch (e) {
-        await sock.sendMessage(msg.key.remoteJid, { text: `❌ Error: ${e.message}\n\nNo se pudo obtener información del video.` });
+        console.error("❌ Error en el comando .ytmp4:", e);
+        
+        // Enviar mensaje de error con explicación
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Ocurrió un error al descargar el video.*\n\n📜 *Error:* ${e.message}\n🔹 *Inténtalo de nuevo más tarde.*` 
+        });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: '❌', key: msg.key } });
     }
     break;
-}
+}            
        
 
             
