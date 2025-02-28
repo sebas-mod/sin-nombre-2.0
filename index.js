@@ -11,22 +11,25 @@
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 //privado y admins
 
-const path = "./activos.json";
-// 📂 Cargar archivo de activación
-// 📂 Función para cargar la configuración del bot
-const cargarActivos = () => {
+// Ruta del archivo JSON de configuración
+const activosFile = "./activos.json";
+
+// Función para cargar el archivo `activos.json`
+function cargarActivos() {
     if (!fs.existsSync(activosFile)) {
-        fs.writeFileSync(activosFile, JSON.stringify({ modoPrivado: false, modoAdmins: {}, geminiActivos: {} }, null, 2));
+        const datosIniciales = { modoPrivado: false, modoAdmins: {}, geminiActivos: {} };
+        fs.writeFileSync(activosFile, JSON.stringify(datosIniciales, null, 2));
     }
     return JSON.parse(fs.readFileSync(activosFile, "utf-8"));
-};
+}
 
-// 📂 Función para guardar la configuración del bot
-const guardarActivos = (data) => {
-    fs.writeFileSync(activosFile, JSON.stringify(data, null, 2));
-};
+// Función para guardar cambios en `activos.json`
+function guardarActivos(datos) {
+    fs.writeFileSync(activosFile, JSON.stringify(datos, null, 2));
+}
 
-let modos = cargarModos();
+// Cargar los datos al iniciar el bot
+let activos = cargarActivos();
     
     // Configuración de consola
     console.log(chalk.cyan(figlet.textSync("Azura Ultra Bot", { font: "Standard" })));    
