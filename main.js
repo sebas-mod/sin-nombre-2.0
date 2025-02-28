@@ -4353,24 +4353,7 @@ case 'ytmp4': {
         }
 
         const videoInfo = ytSearch.all[0];
-
-        // Función para formatear duración
-        function formatDuration(seconds) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = seconds % 60;
-            return [h, m, s]
-                .map(v => v < 10 ? `0${v}` : v)
-                .filter((v, i) => v !== '00' || i > 0)
-                .join(':');
-        }
-
-        // Extraer datos del video
         const titulo = videoInfo.title || "Desconocido";
-        const artista = videoInfo.author.name || "Desconocido";
-        const fecha = videoInfo.timestamp ? formatDuration(videoInfo.timestamp) : "No disponible";
-        const vistas = videoInfo.views ? videoInfo.views.toLocaleString() : "No disponible";
-        const thumbnail = videoInfo.thumbnail || "https://default-thumbnail.jpg";
 
         // Obtener información de resolución
         const infoResponse = await fetch(`https://ytdownloader.nvlgroup.my.id/info?url=${url}`);
@@ -4395,16 +4378,10 @@ case 'ytmp4': {
             text: `📥 *Descargando video en ${selectedHeight}p, espera por favor...*` 
         });
 
-        // Enviar el video con la información correcta
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: thumbnail },
-            caption: `✅ *Aquí tienes tu video:*\n\n🎬 *Título:* ${titulo}\n🎤 *Artista:* ${artista}\n⏳ *Duración:* ${fecha}\n👁️ *Vistas:* ${vistas}\n📽️ *Calidad:* ${selectedHeight}p\n\n📥 *Descargando...*`,
-        }, { quoted: msg });
-
-        // Enviar el video
+        // Enviar el video con solo el título y calidad
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: videoUrl },
-            caption: `🎬 *${titulo}*\n✅ *Descarga completa en ${selectedHeight}p!*`
+            caption: `🎬 *${titulo}*\n✅ *Calidad:* ${selectedHeight}p`
         }, { quoted: msg });
 
         // ✅ Confirmación de éxito
