@@ -116,98 +116,58 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         const msg = messageUpsert.messages[0];
         if (!msg) return;
 
-        const chatId = msg.key.remoteJid; // ID del chat o grupo
-        const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
-        const sender = msg.key.participant ? msg.key.participant.replace(/[^0-9]/g, "") : msg.key.remoteJid.replace(/[^0-9]/g, "");
-        const botNumber = sock.user.id.split(":")[0];
-        const fromMe = msg.key.fromMe || sender === botNumber;
+        const chatId = msg.key.remoteJid; // ID del grupo o usuario
+        const sender = msg.key.participant || msg.key.remoteJid; // Usuario que envía el mensaje
+        const isGroup = chatId.endsWith("@g.us"); // Verificar si es un grupo
         let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-        let messageType = Object.keys(msg.message || {})[0];
+        
+        // ✅ Verificar si Gemini está activado en este chat
+        if (activos.geminiActivos[chatId]) {
+            const fetch = require('node-fetch');
+            const geminiUrl = `https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(messageText)}`;
 
-        // 🔥 Detectar mensaje eliminado
-        if (msg.message?.protocolMessage?.type === 0) {
-            console.log(`🗑️ Un mensaje fue eliminado por ${sender}`);
+            await sock.sendMessage(chatId, { react: { text: "🤖", key: msg.key } });
+
+            try {
+                const response = await fetch(geminiUrl);
+                const json = await response.json();
+                let respuestaGemini = json.response || "❌ *Error al obtener respuesta de Gemini.*";
+
+                await sock.sendMessage(chatId, { text: respuestaGemini }, { quoted: msg });
+            } catch (error) {
+                await sock.sendMessage(chatId, { text: "❌ *Ocurrió un error con Gemini.*" }, { quoted: msg });
+            }
             return;
         }
 
-        // 🔍 Mostrar en consola el mensaje recibido
-        console.log(`📩 Nuevo mensaje recibido`);
-        console.log(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${sender}`);
-        console.log(`💬 Tipo: ${messageType}`);
-        console.log(`💬 Mensaje: ${messageText || "📂 (Mensaje multimedia)"}`);
-        console.log(`──────────────────────────`);
-
-        // 🔽 Cargar configuraciones
-        let activosData = cargarActivos();
-
-        // ⚠️ Si el "modo privado" está activado y el usuario no es dueño ni el bot, ignorar mensaje
-        if (activosData.modoPrivado && !isOwner(sender) && !fromMe) return;
-
-        // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o owner
-        if (isGroup && activosData.modoAdmins[chatId]) {
-            const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
-            if (chatMetadata) {
-                const participant = chatMetadata.participants.find(p => p.id.includes(sender));
-                const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
-                if (!isAdmin && !isOwner(sender) && !fromMe) return;
-            }
-        }
-
-        // ✅ Detectar si es un comando
+        // ✅ Detectar comandos (solo si no es respuesta de Gemini)
         if (messageText.startsWith(global.prefix)) {
             const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
             const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
 
-            // ⚙️ Comando para activar/desactivar Gemini en este chat
+            // ✅ Activar o Desactivar Gemini en un chat
             if (command === "geminis") {
                 if (!["on", "off"].includes(args[0])) {
-                    await sock.sendMessage(chatId, { 
-                        text: `⚠️ *Uso incorrecto.*\n\n📌 Usa:\n   🔹 \`${global.prefix}geminis on\` para activarlo.\n   🔹 \`${global.prefix}geminis off\` para desactivarlo.` 
-                    }, { quoted: msg });
+                    await sock.sendMessage(chatId, { text: `⚠️ *Uso correcto:*\n📌 \`${global.prefix}geminis on\` (Activa Gemini)\n📌 \`${global.prefix}geminis off\` (Desactiva Gemini)` });
                     return;
                 }
 
-                if (args[0] === 'on') {
-                    activosData.geminiActivos[chatId] = true;
-                    guardarActivos(activosData);
-                    await sock.sendMessage(chatId, { 
-                        text: "✅ *Gemini ha sido activado en este chat.*\n\n🤖 Ahora responderá automáticamente a todos los mensajes."
-                    }, { quoted: msg });
-                } else if (args[0] === 'off') {
-                    delete activosData.geminiActivos[chatId];
-                    guardarActivos(activosData);
-                    await sock.sendMessage(chatId, { 
-                        text: "🛑 *Gemini ha sido desactivado en este chat.*\n\n🤖 Ya no responderá automáticamente."
-                    }, { quoted: msg });
+                if (args[0] === "on") {
+                    activos.geminiActivos[chatId] = true;
+                    await sock.sendMessage(chatId, { text: "✅ *Gemini ha sido activado en este chat.*" });
+                } else {
+                    delete activos.geminiActivos[chatId];
+                    await sock.sendMessage(chatId, { text: "❌ *Gemini ha sido desactivado en este chat.*" });
                 }
+
+                guardarActivos(activos); // Guardar cambios en el JSON
                 return;
             }
 
-            // 🔄 Enviar el comando a `main.js`
+            // ✅ Enviar el comando a `main.js`
             handleCommand(sock, msg, command, args, sender);
         }
 
-        // **🔹 Interceptar mensajes y responder con Gemini si está activado en este chat 🔹**
-        if (activosData.geminiActivos[chatId]) {
-            if (!messageText) return; // Ignorar si no es texto
-
-            // 🔄 Reacción mientras procesa la respuesta
-            await sock.sendMessage(chatId, { react: { text: "🤖", key: msg.key } });
-
-            try {
-                const respuesta = await fetch(`https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(messageText)}`);
-                const data = await respuesta.json();
-
-                if (data && data.response) {
-                    await sock.sendMessage(chatId, { text: `🤖 *Gemini:* ${data.response}` }, { quoted: msg });
-                } else {
-                    await sock.sendMessage(chatId, { text: "❌ *No pude generar una respuesta en este momento.*" }, { quoted: msg });
-                }
-            } catch (error) {
-                console.error("❌ Error al conectar con Gemini:", error);
-                await sock.sendMessage(chatId, { text: "❌ *Error: No se pudo obtener una respuesta de Gemini.*" }, { quoted: msg });
-            }
-        }
     } catch (error) {
         console.error("❌ Error en el evento messages.upsert:", error);
     }
