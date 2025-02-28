@@ -4322,9 +4322,9 @@ case 'play3': {
             
                        
             
+
 case 'ytmp4': {
     const fetch = require('node-fetch');
-    const yts = require('yt-search');
 
     if (!text || text.trim() === '') {
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -4342,20 +4342,11 @@ case 'ytmp4': {
         return;
     }
 
-    // Reacción de proceso
+    // Reacción de proceso ⏳
     await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
 
     try {
-        // Buscar información del video con yt-search
-        const ytSearch = await yts(url);
-        if (!ytSearch || ytSearch.all.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *No se encontraron detalles del video.*' });
-        }
-
-        const videoInfo = ytSearch.all[0];
-        const titulo = videoInfo.title || "Desconocido";
-
-        // Obtener información de resolución
+        // Obtener información de resoluciones disponibles 📥
         const infoResponse = await fetch(`https://ytdownloader.nvlgroup.my.id/info?url=${url}`);
         const info = await infoResponse.json();
 
@@ -4363,25 +4354,25 @@ case 'ytmp4': {
             return sock.sendMessage(msg.key.remoteJid, { text: '❌ *No se encontraron resoluciones disponibles.*' });
         }
 
-        // Priorizar resoluciones disponibles (720p > 480p > 320p)
+        // Elegir la mejor calidad posible (720p, 480p, 320p)
         const resoluciones = info.resolutions.map(r => r.height).sort((a, b) => b - a);
         let selectedHeight = resoluciones.includes(720) ? 720 : 
                              resoluciones.includes(480) ? 480 : 
                              resoluciones.includes(320) ? 320 : 
                              Math.max(...resoluciones);
 
-        // Construir la URL de descarga con la resolución elegida
-        const videoUrl = `https://ytdownloader.nvlgroup.my.id/download?url=${url}&resolution=${selectedHeight}`;
-
-        // Confirmar resolución seleccionada
+        // Confirmación de descarga 📥
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `📥 *Descargando video en ${selectedHeight}p, espera por favor...*` 
+            text: `📥 *Descargando tu video en calidad ${selectedHeight}p, espera un momento...*` 
         });
 
-        // Enviar el video con solo el título y calidad
+        // Construcción del enlace de descarga
+        const videoUrl = `https://ytdownloader.nvlgroup.my.id/download?url=${url}&resolution=${selectedHeight}`;
+
+        // Enviar el video con un mensaje bonito ✨
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: videoUrl },
-            caption: `🎬 *${titulo}*\n✅ *Calidad:* ${selectedHeight}p`
+            caption: `🎬 *Aquí tienes tu video en calidad ${selectedHeight}p!* 📺\n\n💙 *Gracias por usar Azura Ultra 2.0 Bot.* 💎✨`
         }, { quoted: msg });
 
         // ✅ Confirmación de éxito
@@ -4397,8 +4388,7 @@ case 'ytmp4': {
         await sock.sendMessage(msg.key.remoteJid, { react: { text: '❌', key: msg.key } });
     }
     break;
-}
-       
+}       
 
             
 
