@@ -116,7 +116,6 @@ sock.ev.on("presence.update", async (presence) => {
 
             
             // 🟢 Consola de mensajes entrantes con diseño
-
 sock.ev.on("messages.upsert", async (messageUpsert) => {
     try {
         const msg = messageUpsert.messages[0];
@@ -180,7 +179,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
                         text: "✅ *Gemini ha sido activado en este chat.*\n\n🤖 Ahora responderá automáticamente a todos los mensajes."
                     }, { quoted: msg });
                 } else if (estado === 'off') {
-                    delete activosData.activos[chatId];
+                    delete activosData.activos[Id];
                     guardarActivos(activosData);
                     await sock.sendMessage(chatId, { 
                         text: "🛑 *Gemini ha sido desactivado en este chat.*\n\n🤖 Ya no responderá automáticamente."
@@ -222,7 +221,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     } catch (error) {
         console.error("❌ Error en el evento messages.upsert:", error);
     }
-});    
+});
+
 
     //coneccion        
             sock.ev.on("connection.update", async (update) => {
