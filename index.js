@@ -13,21 +13,18 @@
 
 const path = "./activos.json";
 // 📂 Cargar archivo de activación
-
-
-    
-// 📂 Cargar configuración de modos desde el archivo JSON
-function cargarModos() {
-    if (!fs.existsSync(path)) {
-        fs.writeFileSync(path, JSON.stringify({ modoPrivado: false, modoAdmins: {} }, null, 2));
+// 📂 Función para cargar la configuración del bot
+const cargarActivos = () => {
+    if (!fs.existsSync(activosFile)) {
+        fs.writeFileSync(activosFile, JSON.stringify({ modoPrivado: false, modoAdmins: {}, geminiActivos: {} }, null, 2));
     }
-    return JSON.parse(fs.readFileSync(path, "utf-8"));
-}
+    return JSON.parse(fs.readFileSync(activosFile, "utf-8"));
+};
 
-// 📂 Guardar configuración de modos en el archivo JSON
-function guardarModos(data) {
-    fs.writeFileSync(path, JSON.stringify(data, null, 2));
-}
+// 📂 Función para guardar la configuración del bot
+const guardarActivos = (data) => {
+    fs.writeFileSync(activosFile, JSON.stringify(data, null, 2));
+};
 
 let modos = cargarModos();
     
@@ -116,8 +113,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         const msg = messageUpsert.messages[0];
         if (!msg) return;
 
-        const chatId = msg.key.remoteJid;
-        const isGroup = chatId.endsWith("@g.us");
+        const chatId = msg.key.remoteJid; // ID del chat o grupo
+        const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
         const sender = msg.key.participant ? msg.key.participant.replace(/[^0-9]/g, "") : msg.key.remoteJid.replace(/[^0-9]/g, "");
         const botNumber = sock.user.id.split(":")[0];
         const fromMe = msg.key.fromMe || sender === botNumber;
@@ -137,11 +134,14 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.log(`💬 Mensaje: ${messageText || "📂 (Mensaje multimedia)"}`);
         console.log(`──────────────────────────`);
 
+        // 🔽 Cargar configuraciones
+        let activosData = cargarActivos();
+
         // ⚠️ Si el "modo privado" está activado y el usuario no es dueño ni el bot, ignorar mensaje
-        if (modos.modoPrivado && !isOwner(sender) && !fromMe) return;
+        if (activosData.modoPrivado && !isOwner(sender) && !fromMe) return;
 
         // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o owner
-        if (isGroup && modos.modoAdmins[chatId]) {
+        if (isGroup && activosData.modoAdmins[chatId]) {
             const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
             if (chatMetadata) {
                 const participant = chatMetadata.participants.find(p => p.id.includes(sender));
@@ -157,31 +157,24 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
             // ⚙️ Comando para activar/desactivar Gemini en este chat
             if (command === "geminis") {
-                let activosData = cargarActivos();
-
-                if (args.length < 1) {
+                if (!["on", "off"].includes(args[0])) {
                     await sock.sendMessage(chatId, { 
                         text: `⚠️ *Uso incorrecto.*\n\n📌 Usa:\n   🔹 \`${global.prefix}geminis on\` para activarlo.\n   🔹 \`${global.prefix}geminis off\` para desactivarlo.` 
                     }, { quoted: msg });
                     return;
                 }
 
-                const estado = args[0].toLowerCase();
-                if (estado === 'on') {
-                    activosData.activos[chatId] = true;
+                if (args[0] === 'on') {
+                    activosData.geminiActivos[chatId] = true;
                     guardarActivos(activosData);
                     await sock.sendMessage(chatId, { 
                         text: "✅ *Gemini ha sido activado en este chat.*\n\n🤖 Ahora responderá automáticamente a todos los mensajes."
                     }, { quoted: msg });
-                } else if (estado === 'off') {
-                    delete activosData.activos[Id];
+                } else if (args[0] === 'off') {
+                    delete activosData.geminiActivos[chatId];
                     guardarActivos(activosData);
                     await sock.sendMessage(chatId, { 
                         text: "🛑 *Gemini ha sido desactivado en este chat.*\n\n🤖 Ya no responderá automáticamente."
-                    }, { quoted: msg });
-                } else {
-                    await sock.sendMessage(chatId, { 
-                        text: "❌ *Opción inválida.* Usa `on` para activar o `off` para desactivar." 
                     }, { quoted: msg });
                 }
                 return;
@@ -191,9 +184,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
             handleCommand(sock, msg, command, args, sender);
         }
 
-        // **🔹 Interceptar mensajes y responder con Gemini si está activado 🔹**
-        let activosData = cargarActivos();
-        if (activosData.activos[chatId]) {
+        // **🔹 Interceptar mensajes y responder con Gemini si está activado en este chat 🔹**
+        if (activosData.geminiActivos[chatId]) {
             if (!messageText) return; // Ignorar si no es texto
 
             // 🔄 Reacción mientras procesa la respuesta
