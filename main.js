@@ -195,13 +195,16 @@ case "tt":
         const videoComments = videoData.comment || "0";
 
         // 📜 Mensaje con la información del video
-        let mensaje = `🎥 *Video de TikTok* 🎥\n\n`;
+        let mensaje = `🎥 *Video de TikTok Descargado* 🎥\n\n`;
         mensaje += `📌 *Título:* ${videoTitle}\n`;
         mensaje += `👤 *Autor:* ${videoAuthor}\n`;
         mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
-        mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;     
-        mensaje += `🍧API utilizada: https://api.dorratz.com`;
-        mensaje += `© Azura Ultra 2.0 Bot\n`;
+        mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
+        
+        // 📢 Agregar la API utilizada y marca de agua con buen formato
+        mensaje += `───────\n🍧 *API utilizada:* https://api.dorratz.com\n`;
+        mensaje += `© Azura Ultra 2.0 Bot`;
+
         // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: videoUrl },
