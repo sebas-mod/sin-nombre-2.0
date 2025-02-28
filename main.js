@@ -159,6 +159,81 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+case 'tiktok2': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}tiktok <enlace_tiktok>\`\n\n🔹 _Proporciona un enlace de TikTok válido para descargar el video._` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const tiktokUrl = args[0];
+    
+    if (!tiktokUrl.includes("tiktok.com")) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *El enlace proporcionado no es un enlace válido de TikTok.*" 
+        }, { quoted: msg });
+        return;
+    }
+
+    const apiUrl = `https://api.dorratz.com/v2/tiktok-dl?url=${encodeURIComponent(tiktokUrl)}`;
+
+    // 🔄 Enviar reacción de carga mientras se obtiene el video
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "🎬", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+
+        // Verificar si la API responde con éxito
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const json = await response.json();
+
+        // Validar si la API responde correctamente con un video
+        if (!json || !json.video || json.video.trim() === "") {
+            throw new Error("No se encontró un video en la respuesta de la API.");
+        }
+
+        let videoUrl = json.video.trim();
+        let username = json.username || "Usuario Desconocido";
+        let description = json.description || "Sin descripción";
+
+        let mensaje = `🎥 *Video de TikTok Descargado* 🎥\n\n`;
+        mensaje += `👤 *Usuario:* @${username}\n`;
+        mensaje += `📜 *Descripción:* ${description}\n\n`;
+        mensaje += `🚀 *Disfruta tu video y sigue usando Azura Ultra 2.0 Bot!* 💎✨\n\n`;
+        mensaje += `───────\n© Azura Ultra 2.0 Bot`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: videoUrl },
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .tiktok:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al descargar el video de TikTok:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
+        
 case 'geminis':
 case 'gemini': {
     const fetch = require('node-fetch');
