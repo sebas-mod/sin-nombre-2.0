@@ -188,11 +188,15 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
             }
       case 'toaudio':
 case 'tomp3': {
-    if (!/video/.test(mime) && !/audio/.test(mime)) {
+    if (!msg.quoted) {
         return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, responde a un video o audio para convertirlo a MP3." }, { quoted: msg });
     }
 
-    if (!msg.quoted) {
+    const quotedMsg = msg.quoted.message;
+    const isVideo = quotedMsg.videoMessage || quotedMsg.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage;
+    const isAudio = quotedMsg.audioMessage || quotedMsg.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
+
+    if (!isVideo && !isAudio) {
         return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, responde a un video o audio para convertirlo a MP3." }, { quoted: msg });
     }
 
@@ -206,7 +210,7 @@ case 'tomp3': {
     }, { quoted: msg });
 
     break;
-}      
+}
 case "tiktok":
 case "tt":
     if (!text) {
