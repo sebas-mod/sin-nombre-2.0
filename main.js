@@ -199,11 +199,10 @@ case "tt":
         mensaje += `📌 *Título:* ${videoTitle}\n`;
         mensaje += `👤 *Autor:* ${videoAuthor}\n`;
         mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
-        mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
+        mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;     
+        mensaje += `🍧API utilizada: https://api.dorratz.com`;
         mensaje += `───────\n`;
         mensaje += `© Azura Ultra 2.0 Bot\n`;
-        mensaje += `🍧API utilizada: https://api.dorratz.com`;
-
         // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: videoUrl },
@@ -4655,7 +4654,7 @@ case "ig":
         }
 
         // 📜 Construcción del mensaje con marca de agua
-        const caption = `🌍 *Video de Instagram descargado*\n\n> 🚀 Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra 2.0 Bot`;
+        const caption = `🎬 *Video de Instagram*\n\n> 🍧Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra 2.0 Bot`;
 
         // 📩 Enviar cada video descargado con la marca de agua
         for (let item of data) {
