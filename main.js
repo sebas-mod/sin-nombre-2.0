@@ -159,6 +159,54 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+
+case 'geminis':
+case 'gemini': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}geminis ¿Cuál es la capital de Japón?\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    let pregunta = args.join(" ");
+    const geminiUrl = `https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(pregunta)}`;
+
+    // 🔄 Reacción mientras procesa la respuesta
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "🤖", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(geminiUrl);
+        const json = await response.json();
+        let respuestaGemini = json.response || "❌ *Error al obtener respuesta de Gemini.*";
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✨ *Respuesta de Gemini:*\n\n${respuestaGemini}` 
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .geminis:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al obtener la respuesta. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}        
+        
 case 'topuser': {
     try {
         const rpgFile = "./rpg.json";
