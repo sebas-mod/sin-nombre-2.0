@@ -242,6 +242,7 @@ case 'gemini': {
 
     let pregunta = args.join(" ");
     const geminiUrl = `https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(pregunta)}`;
+    let userId = msg.key.participant || msg.key.remoteJid; // Obtener ID del usuario
 
     await sock.sendMessage(msg.key.remoteJid, { 
         react: { text: "🤖", key: msg.key } 
@@ -263,7 +264,8 @@ case 'gemini': {
         let respuestaGemini = json.message.trim();
 
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✨ *Respuesta de Gemini:*\n\n${respuestaGemini}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖` 
+            text: `✨ *Respuesta de Gemini para @${userId.replace("@s.whatsapp.net", "")}:*\n\n${respuestaGemini}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖`,
+            mentions: [userId] // Menciona al usuario en la respuesta
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -282,7 +284,6 @@ case 'gemini': {
     }
     break;
 }
-
         
 case 'topuser': {
     try {
