@@ -195,14 +195,14 @@ case "tt":
         const videoComments = videoData.comment || "0";
 
         // 📜 Mensaje con la información del video
-        let mensaje = `🎥 *Video de TikTok Descargado* 🎥\n\n`;
+        let mensaje = `🎥 *Video de TikTok* 🎥\n\n`;
         mensaje += `📌 *Título:* ${videoTitle}\n`;
         mensaje += `👤 *Autor:* ${videoAuthor}\n`;
         mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
         mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
         mensaje += `───────\n`;
-        mensaje += `🔗 *API utilizada:* api.dorratz.com\n`;
-        mensaje += `© Azura Ultra 2.0 Bot`;
+        mensaje += `© Azura Ultra 2.0 Bot\n`;
+        mensaje += `🔗 API utilizada: (https://api.dorratz.com)`;
 
         // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
@@ -228,44 +228,40 @@ case "tt":
     }
     break;
         
-case 'geminis':
-case 'gemini': {
-    const fetch = require('node-fetch');
-
-    if (!args.length) {
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}geminis ¿Cuál es la capital de Japón?\`` 
-        }, { quoted: msg });
-        return;
+case "geminis":
+case "gemini":
+    if (!text) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ *Ejemplo de uso:*\n📌 ${global.prefix + command} ¿Qué es la inteligencia artificial?`
+        });
     }
 
-    let pregunta = args.join(" ");
-    const geminiUrl = `https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(pregunta)}`;
-
-    // 🔄 Enviar reacción de carga mientras se obtiene respuesta
-    await sock.sendMessage(msg.key.remoteJid, { 
-        react: { text: "🤖", key: msg.key } 
-    });
-
     try {
-        const response = await fetch(geminiUrl);
-
-        // Verificar si la API responde con éxito
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-
-        const json = await response.json();
-
-        // Validar si la API responde correctamente con un texto válido
-        if (!json || !json.response || json.response.trim() === "") {
-            throw new Error("Respuesta vacía de Gemini.");
-        }
-
-        let respuestaGemini = json.response.trim();
-
+        // ⏱️ Reacción de carga mientras se procesa el comando
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✨ *Respuesta de Gemini:*\n\n${respuestaGemini}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖` 
+            react: { text: '🤖', key: msg.key } 
+        });
+
+        const axios = require('axios');
+        const response = await axios.get(`https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(text)}`);
+
+        if (!response.data || !response.data.response) {
+            throw new Error("La API no devolvió una respuesta válida.");
+        }
+
+        const respuestaAI = response.data.response;
+
+        // 📜 Mensaje con la respuesta de Gemini AI
+        let mensaje = `🤖 *Gemini AI - Respuesta* 🤖\n\n`;
+        mensaje += `💬 *Pregunta:* ${text}\n\n`;
+        mensaje += `🧠 *Respuesta:*\n${respuestaAI}\n\n`;
+        mensaje += `───────\n`;
+        mensaje += `© Azura Ultra 2.0 Bot\n`;
+        mensaje += `🔗 API utilizada: (https://api.dorratz.com)`;
+
+        // 📩 Enviar la respuesta
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: mensaje
         }, { quoted: msg });
 
         // ✅ Reacción de éxito
@@ -276,7 +272,7 @@ case 'gemini': {
     } catch (error) {
         console.error("❌ Error en el comando .geminis:", error.message);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Error al obtener respuesta de Gemini:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+            text: "❌ *Ocurrió un error al obtener la respuesta de Gemini.*\n🔹 _Inténtalo más tarde._" 
         }, { quoted: msg });
 
         // ❌ Reacción de error
@@ -285,7 +281,6 @@ case 'gemini': {
         });
     }
     break;
-}
 
         
 case 'topuser': {
