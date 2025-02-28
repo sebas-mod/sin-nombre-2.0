@@ -159,7 +159,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
-
 case 'geminis':
 case 'gemini': {
     const fetch = require('node-fetch');
@@ -182,10 +181,15 @@ case 'gemini': {
     try {
         const response = await fetch(geminiUrl);
         const json = await response.json();
-        let respuestaGemini = json.response || "❌ *Error al obtener respuesta de Gemini.*";
+
+        if (!json || !json.response) {
+            throw new Error("Respuesta vacía de Gemini.");
+        }
+
+        let respuestaGemini = json.response;
 
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✨ *Respuesta de Gemini:*\n\n${respuestaGemini}` 
+            text: `✨ *Respuesta de Gemini:*\n\n${respuestaGemini}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖` 
         }, { quoted: msg });
 
         // ✅ Reacción de éxito
@@ -196,7 +200,7 @@ case 'gemini': {
     } catch (error) {
         console.error("❌ Error en el comando .geminis:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener la respuesta. Inténtalo de nuevo.*" 
+            text: "❌ *Ocurrió un error al obtener la respuesta de Gemini. Inténtalo de nuevo más tarde.*" 
         }, { quoted: msg });
 
         // ❌ Reacción de error
@@ -205,7 +209,8 @@ case 'gemini': {
         });
     }
     break;
-}        
+}
+
         
 case 'topuser': {
     try {
