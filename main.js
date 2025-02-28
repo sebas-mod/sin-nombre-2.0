@@ -200,14 +200,25 @@ case 'tomp3': {
         return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, responde a un video o audio para convertirlo a MP3." }, { quoted: msg });
     }
 
-    const { toAudio } = require('../libs/converter.js');
-    const media = await sock.downloadMediaMessage(msg.quoted);
-    const audio = await toAudio(media, 'mp4');
+    try {
+        const media = await sock.downloadMediaMessage(msg.quoted);
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        audio: audio,
-        mimetype: 'audio/mpeg',
-    }, { quoted: msg });
+        if (!media) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "No se pudo descargar el contenido multimedia." }, { quoted: msg });
+        }
+
+        const { toAudio } = require('../libs/converter.js');
+        const audio = await toAudio(media, 'mp4');
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: audio,
+            mimetype: 'audio/mpeg',
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("Error en el comando .toaudio:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "Ocurrió un error al convertir el contenido a MP3." }, { quoted: msg });
+    }
 
     break;
 }
