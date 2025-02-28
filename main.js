@@ -171,7 +171,7 @@ case 'gemini': {
     }
 
     let pregunta = args.join(" ");
-    const geminiUrl = `https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(pregunta)}`;
+    const geminiUrl = `https://api.dorratz.com/ai/gemini?prompt=hola${encodeURIComponent(pregunta)}`;
 
     // 🔄 Reacción mientras procesa la respuesta
     await sock.sendMessage(msg.key.remoteJid, { 
