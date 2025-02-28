@@ -4324,18 +4324,17 @@ case 'play3': {
             
 case 'ytmp4': {
     const fetch = require('node-fetch');
+    const yts = require('yt-search');
 
-    // Verificar si se proporcionó un enlace
-    if (!text) {
+    if (!text || text.trim() === '') {
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Debes proporcionar un enlace de YouTube.*\n\n📜 *Ejemplo:* \`${global.prefix}ytmp4 <url>\`` 
+            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: \`${global.prefix}ytmp4 <url>\`\n🔗 _Proporciona un enlace de YouTube válido._` 
         });
         return;
     }
 
     const url = args[0];
 
-    // Verificar si el enlace es de YouTube
     if (!url.includes('youtu')) {
         await sock.sendMessage(msg.key.remoteJid, { 
             text: `❌ *Proporciona un enlace válido de YouTube.*\n\n📜 *Ejemplo:* \`${global.prefix}ytmp4 <url>\`` 
@@ -4343,22 +4342,45 @@ case 'ytmp4': {
         return;
     }
 
-    // Enviar reacción de carga
+    // Reacción de proceso
     await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
 
     try {
-        // Obtener información del video
+        // Buscar información del video con yt-search
+        const ytSearch = await yts(url);
+        if (!ytSearch || ytSearch.all.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *No se encontraron detalles del video.*' });
+        }
+
+        const videoInfo = ytSearch.all[0];
+
+        // Función para formatear duración
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return [h, m, s]
+                .map(v => v < 10 ? `0${v}` : v)
+                .filter((v, i) => v !== '00' || i > 0)
+                .join(':');
+        }
+
+        // Extraer datos del video
+        const titulo = videoInfo.title || "Desconocido";
+        const artista = videoInfo.author.name || "Desconocido";
+        const fecha = videoInfo.timestamp ? formatDuration(videoInfo.timestamp) : "No disponible";
+        const vistas = videoInfo.views ? videoInfo.views.toLocaleString() : "No disponible";
+        const thumbnail = videoInfo.thumbnail || "https://default-thumbnail.jpg";
+
+        // Obtener información de resolución
         const infoResponse = await fetch(`https://ytdownloader.nvlgroup.my.id/info?url=${url}`);
         const info = await infoResponse.json();
 
         if (!info.resolutions || info.resolutions.length === 0) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: '❌ *No se encontraron resoluciones disponibles para este video.*' 
-            });
-            return;
+            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *No se encontraron resoluciones disponibles.*' });
         }
 
-        // Filtrar resoluciones disponibles (priorizando 720p, 480p o 320p)
+        // Priorizar resoluciones disponibles (720p > 480p > 320p)
         const resoluciones = info.resolutions.map(r => r.height).sort((a, b) => b - a);
         let selectedHeight = resoluciones.includes(720) ? 720 : 
                              resoluciones.includes(480) ? 480 : 
@@ -4373,25 +4395,23 @@ case 'ytmp4': {
             text: `📥 *Descargando video en ${selectedHeight}p, espera por favor...*` 
         });
 
-        // Obtener detalles del video
-        let titulo = info.title || "Desconocido";
-        let artista = info.author || "Desconocido";
-        let fecha = info.upload_date || "Fecha no disponible";
-        let vistas = info.view_count ? info.view_count.toLocaleString() : "No disponible";
-
-        // Enviar el video descargado con los nuevos detalles
+        // Enviar el video con la información correcta
         await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: videoUrl },
-            caption: `✅ *Aquí tienes tu video:*\n\n🎵 *Título:* ${titulo}\n🎤 *Artista:* ${artista}\n📅 *Publicado el:* ${fecha}\n👁️ *Vistas:* ${vistas}\n📽️ *Calidad:* ${selectedHeight}p`,
+            image: { url: thumbnail },
+            caption: `✅ *Aquí tienes tu video:*\n\n🎬 *Título:* ${titulo}\n🎤 *Artista:* ${artista}\n⏳ *Duración:* ${fecha}\n👁️ *Vistas:* ${vistas}\n📽️ *Calidad:* ${selectedHeight}p\n\n📥 *Descargando...*`,
         }, { quoted: msg });
 
-        // ✅ Enviar reacción de éxito
+        // Enviar el video
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: videoUrl },
+            caption: `🎬 *${titulo}*\n✅ *Descarga completa en ${selectedHeight}p!*`
+        }, { quoted: msg });
+
+        // ✅ Confirmación de éxito
         await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
 
     } catch (e) {
         console.error("❌ Error en el comando .ytmp4:", e);
-        
-        // Enviar mensaje de error con explicación
         await sock.sendMessage(msg.key.remoteJid, { 
             text: `❌ *Ocurrió un error al descargar el video.*\n\n📜 *Error:* ${e.message}\n🔹 *Inténtalo de nuevo más tarde.*` 
         });
