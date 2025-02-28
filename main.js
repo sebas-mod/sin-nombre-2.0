@@ -229,43 +229,43 @@ case "tt":
     }
     break;
         
-case "geminis":
-case "gemini":
-    if (!text) {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ *Ejemplo de uso:*\n📌 ${global.prefix + command} ¿Qué es la inteligencia artificial?`
-        });
+case 'geminis':
+case 'gemini': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}geminis ¿Cuál es la capital de Japón?\`` 
+        }, { quoted: msg });
+        return;
     }
 
+    let pregunta = args.join(" ");
+    const geminiUrl = `https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(pregunta)}`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "🤖", key: msg.key } 
+    });
+
     try {
-        // ⏱️ Reacción de carga mientras se procesa el comando
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: '🤖', key: msg.key } 
-        });
+        const response = await fetch(geminiUrl);
 
-        const axios = require('axios');
-        const response = await axios.get(`https://api.dorratz.com/ai/gemini?prompt=${encodeURIComponent(text)}`);
-
-        if (!response.data || !response.data.response) {
-            throw new Error("La API no devolvió una respuesta válida.");
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
         }
 
-        const respuestaAI = response.data.response;
+        const json = await response.json();
 
-        // 📜 Mensaje con la respuesta de Gemini AI
-        let mensaje = `🤖 *Gemini AI - Respuesta* 🤖\n\n`;
-        mensaje += `💬 *Pregunta:* ${text}\n\n`;
-        mensaje += `🧠 *Respuesta:*\n${respuestaAI}\n\n`;
-        mensaje += `───────\n`;
-        mensaje += `© Azura Ultra 2.0 Bot\n`;
-        mensaje += `🔗 API utilizada: (https://api.dorratz.com)`;
+        if (!json || !json.message || json.message.trim() === "") {
+            throw new Error("Respuesta vacía de Gemini.");
+        }
 
-        // 📩 Enviar la respuesta
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: mensaje
+        let respuestaGemini = json.message.trim();
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✨ *Respuesta de Gemini:*\n\n${respuestaGemini}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖` 
         }, { quoted: msg });
 
-        // ✅ Reacción de éxito
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
@@ -273,15 +273,15 @@ case "gemini":
     } catch (error) {
         console.error("❌ Error en el comando .geminis:", error.message);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener la respuesta de Gemini.*\n🔹 _Inténtalo más tarde._" 
+            text: `❌ *Error al obtener respuesta de Gemini:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
         }, { quoted: msg });
 
-        // ❌ Reacción de error
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "❌", key: msg.key } 
         });
     }
     break;
+}
 
         
 case 'topuser': {
