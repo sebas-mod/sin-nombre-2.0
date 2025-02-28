@@ -4631,77 +4631,103 @@ case 'ytmp4': {
             }
             break;
 
+case "instagram":
+case "ig":
+    if (!text) return sock.sendMessage(msg.key.remoteJid, { 
+        text: `Ejemplo de uso:\n${global.prefix + command} https://www.instagram.com/p/CCoI4DQBGVQ/` 
+    }, { quoted: msg });
 
-        case "instagram":
-        case "ig":
-            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://www.instagram.com/p/CCoI4DQBGVQ/` }, { quoted: msg });
+    try {
+        // ⏳ Reacción de carga mientras se procesa
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '⏳', key: msg.key }
+        });
 
-            try {
-                sock.sendMessage(msg.key.remoteJid, {
-        react: {
-          text: '⏱️',
-          key: msg.key,
-        },
-      });
-                const apiUrl = `https://api.dorratz.com/igdl?url=${text}`;
-                const response = await axios.get(apiUrl);
-                const { data } = response.data;
-                const caption = `> 🌙 Solicitud procesada por api.dorratz.com`;
+        const axios = require('axios');
+        const apiUrl = `https://api.dorratz.com/igdl?url=${text}`;
+        const response = await axios.get(apiUrl);
+        const { data } = response.data;
 
-                for (let item of data) {
-                    await sock.sendMessage(msg.key.remoteJid, { video: { url: item.url }, caption: caption }, { quoted: msg });
-                }
-            } catch (error) {
-                console.error(error);
-                await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al procesar el enlace de Instagram." }, { quoted: msg });
-            }
-            break;
+        if (!data || data.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ No se pudo obtener el video de Instagram." 
+            });
+        }
 
+        // 📜 Construcción del mensaje con marca de agua
+        const caption = `🌍 *Video de Instagram descargado*\n\n> 🚀 Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra 2.0 Bot`;
+
+        // 📩 Enviar cada video descargado con la marca de agua
+        for (let item of data) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                video: { url: item.url }, 
+                caption: caption 
+            }, { quoted: msg });
+        }
+
+        // ✅ Confirmación con reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ Ocurrió un error al procesar el enlace de Instagram." 
+        }, { quoted: msg });
+    }
+    break;
         
 
-        case "facebook":
-        case "fb":
-            if (!text) return sock.sendMessage(msg.key.remoteJid, { text: `Ejemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/` }, { quoted: msg });
+        
+case "facebook":
+case "fb":
+    if (!text) return sock.sendMessage(msg.key.remoteJid, { 
+        text: `Ejemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/` 
+    }, { quoted: msg });
 
-            if (!text.match(/www.facebook.com|fb.watch/g)) {
-                return sock.sendMessage(msg.key.remoteJid, {
-                    text: `❌ Enlace de Facebook inválido.\nEjemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/`
-                });
-            }
+    if (!text.match(/www.facebook.com|fb.watch/g)) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ Enlace de Facebook inválido.\nEjemplo de uso:\n${global.prefix + command} https://fb.watch/ncowLHMp-x/`
+        });
+    }
 
-            try {
-                sock.sendMessage(msg.key.remoteJid, {
-        react: {
-          text: '⏱️',
-          key: msg.key,
-        },
-      });
-                const response = await axios.get(`https://api.dorratz.com/fbvideo?url=${encodeURIComponent(text)}`);
-                const results = response.data;
+    try {
+        // ⏳ Reacción de carga mientras se procesa
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '⏳', key: msg.key }
+        });
 
-                if (!results || results.length === 0) {
-                    return sock.sendMessage(msg.key.remoteJid, { text: "❌ No se pudo obtener el video." });
-                }
+        const axios = require('axios');
+        const response = await axios.get(`https://api.dorratz.com/fbvideo?url=${encodeURIComponent(text)}`);
+        const results = response.data;
 
-                const message = `Resoluciones disponibles:
-${results.map((res, index) => `- ${res.resolution}`).join('\n')}
+        if (!results || results.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "❌ No se pudo obtener el video." });
+        }
 
-🔥 Enviado en 720p
+        // 📜 Construcción del mensaje con resoluciones disponibles
+        const message = `Resoluciones disponibles:\n${results.map((res) => `- ${res.resolution}`).join('\n')}\n\n🔥 Enviado en 720p\n\n> 🍧 Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra 2.0 Bot`;
 
-> 🍧 Solicitud procesada por api.dorratz.com`.trim();
+        // 📩 Enviar el video con la marca de agua
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: results[0].url }, // Se envía en 720p por defecto
+            caption: message
+        }, { quoted: msg });
 
-                await sock.sendMessage(msg.key.remoteJid, {
-                    video: { url: results[0].url },
-                    caption: message
-                }, { quoted: msg });
+        // ✅ Confirmación con reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
 
-            } catch (error) {
-                console.error(error);
-                await sock.sendMessage(msg.key.remoteJid, {
-                    text: "❌ Ocurrió un error al procesar el enlace de Facebook."
-                });
-            }
-            break;
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Ocurrió un error al procesar el enlace de Facebook."
+        });
+    }
+    break;
+        
 
         default:
             break;
