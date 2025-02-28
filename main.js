@@ -159,6 +159,33 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+            case 'tts': {
+    if (!text) return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, proporciona un texto para convertir a voz." }, { quoted: msg });
+
+    await sock.sendPresenceUpdate('recording', msg.key.remoteJid);
+
+    let texttosay = text || (msg.quoted && msg.quoted.text) || msg.text;
+
+    const SpeakEngine = require("google-tts-api");
+    const texttospeechurl = SpeakEngine.getAudioUrl(texttosay, {
+        lang: "es",
+        slow: false,
+        host: "https://translate.google.com",
+    });
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        audio: { url: texttospeechurl },
+        ptt: true,
+        mimetype: 'audio/mpeg',
+        fileName: `tts.mp3`,
+    }, { quoted: msg });
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: "🗣️", key: msg.key },
+    });
+
+    break;
+            }
 case "tiktok":
 case "tt":
     if (!text) {
