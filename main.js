@@ -217,7 +217,7 @@ case 'tomp3': {
             throw new Error("❌ Error: No se pudo descargar el archivo.");
         }
 
-        const { toAudio } = require('../libs/converter.js');
+        const { toAudio } = require('./libs/converter.js');
         const audio = await toAudio(buffer, 'mp4');
 
         await sock.sendMessage(msg.key.remoteJid, {
