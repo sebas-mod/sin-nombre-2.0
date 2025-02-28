@@ -216,7 +216,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     try {
         const verdad = pickRandom(global.verdad); // Selecciona una verdad aleatoria
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: 'https://telegra.ph/file/2a2a3b03697dd33bfbb95.jpg' },
+            image: { url: 'https://cdn.dorratz.com/files/1740781671173.jpg' },
             caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘝𝘌𝘙𝘋𝘈𝘋*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${verdad}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱`
         }, { quoted: msg });
 
@@ -232,7 +232,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     try {
         const reto = pickRandom(global.reto); // Selecciona un reto aleatorio
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: 'https://i.ibb.co/gzfDZLv/unnamed.jpg' },
+            image: { url: 'https://cdn.dorratz.com/files/1740781675920.jpg' },
             caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘙𝘌𝘛𝘖*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${reto}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱`
         }, { quoted: msg });
 
