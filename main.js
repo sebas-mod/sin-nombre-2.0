@@ -159,51 +159,50 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
-case 'tiktok2': {
-    const fetch = require('node-fetch');
-
-    if (!args.length) {
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}tiktok <enlace_tiktok>\`\n\n🔹 _Proporciona un enlace de TikTok válido para descargar el video._` 
-        }, { quoted: msg });
-        return;
+case "tiktok":
+case "tt":
+    if (!text) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ *Ejemplo de uso:*\n📌 ${global.prefix + command} https://vm.tiktok.com/ZMjdrFCtg/`
+        });
     }
 
-    const tiktokUrl = args[0];
-    
-    if (!tiktokUrl.includes("tiktok.com")) {
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *El enlace proporcionado no es un enlace válido de TikTok.*" 
+    if (!isUrl(args[0]) || !args[0].includes('tiktok')) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Enlace de TikTok inválido.*" 
         }, { quoted: msg });
-        return;
     }
-
-    const apiUrl = `https://api.dorratz.com/v2/tiktok-dl?url=${encodeURIComponent(tiktokUrl)}`;
-
-    // 🔄 Enviar reacción de carga mientras se obtiene el video
-    await sock.sendMessage(msg.key.remoteJid, { 
-        react: { text: "🎬", key: msg.key } 
-    });
 
     try {
-        const response = await fetch(apiUrl);
-        const json = await response.json();
+        // ⏱️ Reacción de carga mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: '⏱️', key: msg.key } 
+        });
 
-        // 🔍 Verificar que la API devuelve datos correctos
-        if (!json || !json.video || json.video.trim() === "") {
+        const axios = require('axios');
+        const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
+
+        if (!response.data || !response.data.data || !response.data.data.media) {
             throw new Error("La API no devolvió un video válido.");
         }
 
-        let videoUrl = json.video.trim();
-        let username = json.username || "Usuario Desconocido";
-        let description = json.description || "Sin descripción";
+        const videoData = response.data.data;
+        const videoUrl = videoData.media.org;
+        const videoTitle = videoData.title || "Sin título";
+        const videoAuthor = videoData.author.nickname || "Desconocido";
+        const videoDuration = videoData.duration ? `${videoData.duration} segundos` : "No especificado";
+        const videoLikes = videoData.like || "0";
+        const videoComments = videoData.comment || "0";
 
-        // 📜 Mensaje con la información del video
+        // 📜 Mensaje con la información del video + Marca de agua
         let mensaje = `🎥 *Video de TikTok Descargado* 🎥\n\n`;
-        mensaje += `👤 *Usuario:* @${username}\n`;
-        mensaje += `📜 *Descripción:* ${description}\n\n`;
-        mensaje += `🚀 *Disfruta tu video y sigue usando Azura Ultra 2.0 Bot!* 💎✨\n\n`;
-        mensaje += `───────\n© Azura Ultra 2.0 Bot`;
+        mensaje += `📌 *Título:* ${videoTitle}\n`;
+        mensaje += `👤 *Autor:* ${videoAuthor}\n`;
+        mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
+        mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
+        mensaje += `🚀 *Descargado con Azura Ultra 2.0 Bot* 💎✨\n`;
+        mensaje += `🌐 *API utilizada:* [api.dorratz.com](https://api.dorratz.com)\n\n`;
+        mensaje += `───────\n© Azura Ultra 2.0 bot`;
 
         // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
@@ -219,7 +218,7 @@ case 'tiktok2': {
     } catch (error) {
         console.error("❌ Error en el comando .tiktok:", error.message);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Error al descargar el video de TikTok:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+            text: "❌ *Ocurrió un error al procesar el enlace de TikTok.*\n🔹 _Inténtalo más tarde._\n🌐 [api.dorratz.com](https://api.dorratz.com)" 
         }, { quoted: msg });
 
         // ❌ Reacción de error
@@ -228,7 +227,6 @@ case 'tiktok2': {
         });
     }
     break;
-}
         
 case 'geminis':
 case 'gemini': {
