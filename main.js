@@ -4372,7 +4372,7 @@ case 'ytmp4': {
         // Enviar el video con un mensaje bonito ✨
         await sock.sendMessage(msg.key.remoteJid, {
     video: { url: videoUrl },
-    caption: `🎬 *Aquí tienes tu video en calidad ${selectedHeight}p!* 📺\n\n💎✨ *Que lo disfrutes y sigue explorando el mundo digital.* 🚀🔥\n\n━━━━━━━❰❖❱━━━━━━━\n© 𝙰𝚣𝚞𝚛𝚊 𝚄𝚕𝚝𝚛𝚊 𝟸.𝟶 𝙱𝚘𝚝 🏆`
+    caption: `🎬 *Aquí tienes tu video en calidad ${selectedHeight}p!* 📺\n\n💎✨ *Que lo disfrutes y sigue explorando el mundo digital.* 🚀\n\n━━━━━━━❰❖❱━━━━━━━\n© 𝙰𝚣𝚞𝚛𝚊 𝚄𝚕𝚝𝚛𝚊 𝟸.𝟶 𝙱𝚘𝚝 🏆`
 }, { quoted: msg });
         // ✅ Confirmación de éxito
         await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
