@@ -484,7 +484,7 @@ case 'alaventa': {
         let mensaje = `🏪 *Mercado de Personajes - Azura Ultra* 🏪\n\n`;
         mensaje += `🎭 *Aquí puedes comprar personajes puestos a la venta por otros jugadores.*\n`;
         mensaje += `🛒 *Para comprar usa:* \n`;
-        mensaje += `   📌 \`${global.prefix}comprar <nombre_personaje>\`\n\n`;
+        mensaje += `   📌 \`${global.prefix}comprar2 <nombre_personaje>\`\n\n`;
         mensaje += `📜 Usa \`${global.prefix}menurpg\` para más información.\n\n`;
 
         // Recorrer los personajes en venta
