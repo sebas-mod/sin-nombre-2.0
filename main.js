@@ -201,7 +201,7 @@ case "tt":
         mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
         mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
         mensaje += `───────\n`;
-        mensaje += `🔗 *API utilizada para la descarga:* [api.dorratz.com](https://api.dorratz.com)\n`;
+        mensaje += `🔗 *API utilizada:* api.dorratz.com\n`;
         mensaje += `© Azura Ultra 2.0 Bot`;
 
         // 📩 Enviar el video con la información
