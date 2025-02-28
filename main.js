@@ -236,6 +236,29 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     break;
             }
+            case 'meme':
+            case 'memes': {
+    try {
+        const hispamemes = require("hispamemes");
+        const meme = hispamemes.meme();
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: meme },
+            caption: "🤣 *¡Aquí tienes un meme!*"
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "😆", key: msg.key }
+        });
+
+    } catch (e) {
+        console.error("❌ Error en el comando .memes:", e);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al obtener el meme. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
             case 'hd': {
     try {
         const FormData = require("form-data");
