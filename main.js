@@ -176,6 +176,9 @@ function isUrl(url) {
         return false;
     }
 }
+function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
 
 async function handleCommand(sock, msg, command, args, sender) {
 sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
@@ -209,6 +212,38 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+            case 'verdad': {
+    try {
+        const verdad = pickRandom(global.verdad); // Selecciona una verdad aleatoria
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: 'https://telegra.ph/file/2a2a3b03697dd33bfbb95.jpg' },
+            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘝𝘌𝘙𝘋𝘈𝘋*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${verdad}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱`
+        }, { quoted: msg });
+
+    } catch (e) {
+        console.error("❌ Error en el comando .verdad:", e);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al enviar la verdad. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+            }
+            case 'reto': {
+    try {
+        const reto = pickRandom(global.reto); // Selecciona un reto aleatorio
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: 'https://i.ibb.co/gzfDZLv/unnamed.jpg' },
+            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘙𝘌𝘛𝘖*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${reto}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱`
+        }, { quoted: msg });
+
+    } catch (e) {
+        console.error("❌ Error en el comando .reto:", e);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al enviar el reto. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+            }
             case 'tts': {
     if (!text) return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, proporciona un texto para convertir a voz." }, { quoted: msg });
 
