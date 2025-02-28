@@ -166,6 +166,7 @@ case 'vender': {
             react: { text: "💰", key: msg.key } // Emoji de venta 💰
         });
 
+        // Verificar que el usuario ingresó los parámetros correctos
         if (args.length < 2) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}vender <nombre_personaje> <precio>\`` 
@@ -173,7 +174,7 @@ case 'vender': {
             return;
         }
 
-        let nombrePersonaje = args.slice(0, -1).join("_").toLowerCase();
+        let nombrePersonaje = args.slice(0, -1).join("_").toLowerCase().replace(/[^a-zA-Z0-9_]/g, ""); // Limpiar emojis y caracteres especiales
         let precioVenta = parseInt(args[args.length - 1]);
         let userId = msg.key.participant || msg.key.remoteJid;
 
@@ -195,7 +196,7 @@ case 'vender': {
         }
 
         let usuario = rpgData.usuarios[userId];
-        let indexPersonaje = usuario.personajes.findIndex(p => p.nombre.toLowerCase() === nombrePersonaje);
+        let indexPersonaje = usuario.personajes.findIndex(p => p.nombre.toLowerCase().replace(/[^a-zA-Z0-9_]/g, "") === nombrePersonaje);
 
         if (indexPersonaje === -1) {
             await sock.sendMessage(msg.key.remoteJid, { 
@@ -205,17 +206,25 @@ case 'vender': {
         }
 
         let personajeVendido = usuario.personajes.splice(indexPersonaje, 1)[0];
-        personajeVendido.precio = precioVenta;
+        personajeVendido.precioOriginal = personajeVendido.precio; // Guardar precio original
+        personajeVendido.precio = precioVenta; // Precio de venta
         personajeVendido.vendedor = userId; // Guardar el ID del vendedor
 
         rpgData.mercadoPersonajes.push(personajeVendido);
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // Construcción del mensaje de venta
+        let habilidadesPersonaje = Object.entries(personajeVendido.habilidades)
+            .map(([habilidad, nivel]) => `   🔹 ${habilidad} (Nivel ${nivel})`)
+            .join("\n");
 
         let mensajeVenta = `💰 *¡Has puesto a la venta un personaje!* 💰\n\n`;
         mensajeVenta += `🎭 *Personaje:* ${personajeVendido.nombre}\n`;
         mensajeVenta += `🏅 *Rango:* ${personajeVendido.rango}\n`;
         mensajeVenta += `🎚️ *Nivel:* ${personajeVendido.nivel}\n`;
         mensajeVenta += `❤️ *Vida:* ${personajeVendido.vida} HP\n`;
+        mensajeVenta += `✨ *Experiencia:* ${personajeVendido.experiencia} / ${personajeVendido.xpMax} XP\n`;
+        mensajeVenta += `🌟 *Habilidades:*\n${habilidadesPersonaje}\n`;
         mensajeVenta += `💎 *Precio de Venta:* ${precioVenta} diamantes\n\n`;
         mensajeVenta += `📜 Usa \`${global.prefix}quitarventa <nombre_personaje>\` si deseas retirarlo del mercado.\n`;
 
@@ -236,10 +245,12 @@ case 'vender': {
         
 case 'quitarventa': {
     try {
+        // 🔄 Reacción de proceso
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "🛑", key: msg.key } 
         });
 
+        // Verificar si el usuario ingresó un nombre de personaje
         if (args.length < 1) {
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}quitarventa <nombre_personaje>\`` 
@@ -247,48 +258,91 @@ case 'quitarventa': {
             return;
         }
 
-        let nombrePersonaje = args.join("_").toLowerCase();
+        // 🔍 Limpiar nombre del personaje (ignora emojis, mayúsculas, minúsculas y caracteres especiales)
+        let nombrePersonaje = args.join("_").toLowerCase().replace(/[^a-zA-Z0-9_]/g, "");
         let userId = msg.key.participant || msg.key.remoteJid;
         const rpgFile = "./rpg.json";
 
+        // 📂 Cargar datos del RPG
         let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { usuarios: {}, mercadoPersonajes: [] };
 
+        // ❌ Verificar si el usuario tiene cuenta
         if (!rpgData.usuarios[userId]) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta registrada.*` 
+                text: `❌ *No tienes una cuenta registrada en el gremio.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
             }, { quoted: msg });
             return;
         }
 
-        let indexPersonaje = rpgData.mercadoPersonajes.findIndex(p => p.nombre.toLowerCase() === nombrePersonaje && p.vendedor === userId);
+        // 🔎 Buscar el personaje en la tienda de venta
+        let indexPersonaje = rpgData.mercadoPersonajes.findIndex(p => 
+            p.nombre.toLowerCase().replace(/[^a-zA-Z0-9_]/g, "") === nombrePersonaje && p.vendedor === userId
+        );
 
+        // ❌ Si el personaje no está en venta
         if (indexPersonaje === -1) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes ese personaje en venta.*` 
+                text: `❌ *No tienes ese personaje en venta o no te pertenece.*\n📜 Usa \`${global.prefix}alaventa\` para ver la lista de personajes en venta.` 
             }, { quoted: msg });
             return;
         }
 
+        // 📦 Recuperar personaje del mercado
         let personajeRecuperado = rpgData.mercadoPersonajes.splice(indexPersonaje, 1)[0];
-        delete personajeRecuperado.vendedor;
+        delete personajeRecuperado.vendedor; // Eliminar vendedor de los datos
+        personajeRecuperado.precio = personajeRecuperado.precioOriginal; // Restaurar precio original
 
+        // 📜 Agregarlo de nuevo a la cartera del usuario
+        if (!rpgData.usuarios[userId].personajes) {
+            rpgData.usuarios[userId].personajes = [];
+        }
         rpgData.usuarios[userId].personajes.push(personajeRecuperado);
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
+        // 📜 Construcción del mensaje con habilidades bien formateadas
+        let habilidadesPersonaje = Object.entries(personajeRecuperado.habilidades)
+            .map(([habilidad, nivel]) => `   🔹 ${habilidad} (Nivel ${nivel})`)
+            .join("\n");
+
+        // 📢 Mensaje de confirmación con imagen
+        let mensaje = `✅ *Has retirado a ${personajeRecuperado.nombre} del mercado y ha sido devuelto a tu cartera.*\n\n`;
+        mensaje += `🏅 *Rango:* ${personajeRecuperado.rango}\n`;
+        mensaje += `🎚️ *Nivel:* ${personajeRecuperado.nivel}\n`;
+        mensaje += `❤️ *Vida:* ${personajeRecuperado.vida} HP\n`;
+        mensaje += `✨ *Experiencia:* ${personajeRecuperado.experiencia} / ${personajeRecuperado.xpMax} XP\n`;
+        mensaje += `🌟 *Habilidades:*\n${habilidadesPersonaje}\n`;
+        mensaje += `💎 *Precio Original:* ${personajeRecuperado.precio} diamantes\n\n`;
+        mensaje += `📜 Usa \`${global.prefix}verper\` para ver tu lista de personajes.\n`;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: personajeRecuperado.imagen }, 
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Confirmación con reacción
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
 
     } catch (error) {
         console.error("❌ Error en el comando .quitarventa:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al retirar el personaje del mercado. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
 }
         
 case 'alaventa': {
     try {
+        // 🔄 Reacción de proceso
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🏪", key: msg.key } 
+            react: { text: "🛍️", key: msg.key } 
         });
 
         const rpgFile = "./rpg.json";
@@ -296,27 +350,47 @@ case 'alaventa': {
 
         if (!rpgData.mercadoPersonajes || rpgData.mercadoPersonajes.length === 0) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No hay personajes en venta actualmente.*" 
+                text: `❌ *No hay personajes en venta actualmente.*\n📜 Usa \`${global.prefix}vender <nombre_personaje> <precio>\` para vender uno.` 
             }, { quoted: msg });
             return;
         }
 
         let mensaje = `🏪 *Mercado de Personajes - Azura Ultra* 🏪\n\n`;
+        mensaje += `🎭 *Aquí puedes comprar personajes puestos a la venta por otros jugadores.*\n`;
+        mensaje += `🛒 *Para comprar usa:* \n`;
+        mensaje += `   📌 \`${global.prefix}comprar <nombre_personaje>\`\n\n`;
+        mensaje += `📜 Usa \`${global.prefix}menurpg\` para más información.\n\n`;
+
+        // Recorrer los personajes en venta
         rpgData.mercadoPersonajes.forEach((personaje, index) => {
+            let habilidadesPersonaje = Object.entries(personaje.habilidades)
+                .map(([habilidad, nivel]) => `   🔹 ${habilidad} (Nivel ${nivel})`)
+                .join("\n");
+
             mensaje += `═════════════════════\n`;
             mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;
-            mensaje += `   🏅 *Rango:* ${personaje.rango}\n`;
-            mensaje += `   🎚️ *Nivel:* ${personaje.nivel}\n`;
-            mensaje += `   ❤️ *Vida:* ${personaje.vida} HP\n`;
-            mensaje += `   💎 *Precio:* ${personaje.precio} diamantes\n`;
-            mensaje += `   🏷️ *Vendedor:* @${personaje.vendedor.replace("@s.whatsapp.net", "")}\n`;
+            mensaje += `🏅 *Rango:* ${personaje.rango}\n`;
+            mensaje += `🎚️ *Nivel:* ${personaje.nivel}\n`;
+            mensaje += `❤️ *Vida:* ${personaje.vida} HP\n`;
+            mensaje += `✨ *Experiencia:* ${personaje.experiencia} / ${personaje.xpMax} XP\n`;
+            mensaje += `🌟 *Habilidades:*\n${habilidadesPersonaje}\n`;
+            mensaje += `💎 *Precio:* ${personaje.precio} diamantes\n`;
+            mensaje += `🛒 *Vendedor:* @${personaje.vendedor.replace("@s.whatsapp.net", "")}\n`;
             mensaje += `═════════════════════\n\n`;
         });
 
+        // 📢 Enviar el mensaje con video como GIF 🎥
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: mensaje, 
-            mentions: rpgData.mercadoPersonajes.map(p => p.vendedor)
+            video: { url: "https://cdn.dorratz.com/files/1740655817564.mp4" }, 
+            gifPlayback: true, 
+            caption: mensaje, 
+            mentions: rpgData.mercadoPersonajes.map(p => p.vendedor) // Menciona a los vendedores
         }, { quoted: msg });
+
+        // ✅ Confirmación con reacción
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
 
     } catch (error) {
         console.error("❌ Error en el comando .alaventa:", error);
