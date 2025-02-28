@@ -186,6 +186,27 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     break;
             }
+      case 'toaudio':
+case 'tomp3': {
+    if (!/video/.test(mime) && !/audio/.test(mime)) {
+        return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, responde a un video o audio para convertirlo a MP3." }, { quoted: msg });
+    }
+
+    if (!msg.quoted) {
+        return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, responde a un video o audio para convertirlo a MP3." }, { quoted: msg });
+    }
+
+    const { toAudio } = require('../libs/converter.js');
+    const media = await sock.downloadMediaMessage(msg.quoted);
+    const audio = await toAudio(media, 'mp4');
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        audio: audio,
+        mimetype: 'audio/mpeg',
+    }, { quoted: msg });
+
+    break;
+}      
 case "tiktok":
 case "tt":
     if (!text) {
