@@ -3,6 +3,7 @@ const chalk = require("chalk");
 const { isOwner, setPrefix, allowedPrefixes } = require("./config");
 const axios = require("axios");
 const fetch = require("node-fetch");
+const FormData = require("form-data") 
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const os = require("os");
 const { execSync } = require("child_process");
@@ -96,7 +97,56 @@ module.exports = {
 function isValidPrefix(prefix) {
     return typeof prefix === "string" && (prefix.length === 1 || (prefix.length > 1 && [...prefix].length === 1));
 }
+async function remini(imageData, operation) {
+    return new Promise(async (resolve, reject) => {
+        const availableOperations = ["enhance", "recolor", "dehaze"];
+        if (!availableOperations.includes(operation)) {
+            operation = availableOperations[0]; // Usar "enhance" como operación por defecto
+        }
 
+        const baseUrl = `https://inferenceengine.vyro.ai/${operation}.vyro`;
+        const formData = new FormData();
+
+        formData.append("image", Buffer.from(imageData), { 
+            filename: "enhance_image_body.jpg", 
+            contentType: "image/jpeg" 
+        });
+        formData.append("model_version", 1, { 
+            "Content-Transfer-Encoding": "binary", 
+            contentType: "multipart/form-data; charset=utf-8" 
+        });
+
+        formData.submit({
+            url: baseUrl,
+            host: "inferenceengine.vyro.ai",
+            path: `/${operation}`,
+            protocol: "https:",
+            headers: {
+                "User-Agent": "okhttp/4.9.3",
+                "Connection": "Keep-Alive",
+                "Accept-Encoding": "gzip"
+            }
+        }, function (err, res) {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            const chunks = [];
+            res.on("data", function (chunk) {
+                chunks.push(chunk);
+            });
+
+            res.on("end", function () {
+                resolve(Buffer.concat(chunks));
+            });
+
+            res.on("error", function (err) {
+                reject(err);
+            });
+        });
+    });
+}
 async function isAdmin(sock, chatId, sender) {
     try {
         const groupMetadata = await sock.groupMetadata(chatId);
@@ -186,6 +236,64 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 
     break;
             }
+            case 'hd': {
+    try {
+        const FormData = require("form-data");
+        const Jimp = require("jimp");
+
+        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quoted) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Responde a una imagen con el comando `.hd` para mejorarla.*" 
+            }, { quoted: msg });
+        }
+
+        let mime = quoted.imageMessage?.mimetype || "";
+        if (!mime) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *El mensaje citado no contiene una imagen.*" 
+            }, { quoted: msg });
+        }
+
+        if (!/image\/(jpe?g|png)/.test(mime)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Solo se admiten imágenes en formato JPG o PNG.*" 
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🛠️", key: msg.key } 
+        });
+
+        let img = await downloadContentFromMessage(quoted.imageMessage, "image");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of img) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        if (buffer.length === 0) {
+            throw new Error("❌ Error: No se pudo descargar la imagen.");
+        }
+
+        let pr = await remini(buffer, "enhance");
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: pr,
+            caption: "✨ *Imagen mejorada con éxito.*"
+        }, { quoted: msg, ephemeralExpiration: 24 * 60 * 100, disappearingMessagesInChat: 24 * 60 * 100 });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (e) {
+        console.error("❌ Error en el comando .hd:", e);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al mejorar la imagen. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
       case 'toaudio':
 case 'tomp3': {
     try {
