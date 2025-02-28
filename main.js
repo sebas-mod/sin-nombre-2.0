@@ -202,7 +202,7 @@ case "tt":
         mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
         mensaje += `───────\n`;
         mensaje += `© Azura Ultra 2.0 Bot\n`;
-        mensaje += `🔗 API utilizada: (https://api.dorratz.com)`;
+        mensaje += `🍧API utilizada: https://api.dorratz.com`;
 
         // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
