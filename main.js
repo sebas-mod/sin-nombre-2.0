@@ -194,15 +194,15 @@ case "tt":
         const videoLikes = videoData.like || "0";
         const videoComments = videoData.comment || "0";
 
-        // 📜 Mensaje con la información del video + Marca de agua
+        // 📜 Mensaje con la información del video
         let mensaje = `🎥 *Video de TikTok Descargado* 🎥\n\n`;
         mensaje += `📌 *Título:* ${videoTitle}\n`;
         mensaje += `👤 *Autor:* ${videoAuthor}\n`;
         mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
         mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
-        mensaje += `🚀 *Descargado con Azura Ultra 2.0 Bot* 💎✨\n`;
-        mensaje += `🌐 *API utilizada:* [api.dorratz.com](https://api.dorratz.com)\n\n`;
-        mensaje += `───────\n© Azura Ultra 2.0 bot`;
+        mensaje += `───────\n`;
+        mensaje += `🔗 *API utilizada para la descarga:* [api.dorratz.com](https://api.dorratz.com)\n`;
+        mensaje += `© Azura Ultra 2.0 Bot`;
 
         // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
@@ -218,7 +218,7 @@ case "tt":
     } catch (error) {
         console.error("❌ Error en el comando .tiktok:", error.message);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al procesar el enlace de TikTok.*\n🔹 _Inténtalo más tarde._\n🌐 [api.dorratz.com](https://api.dorratz.com)" 
+            text: "❌ *Ocurrió un error al procesar el enlace de TikTok.*\n🔹 _Inténtalo más tarde._" 
         }, { quoted: msg });
 
         // ❌ Reacción de error
