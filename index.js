@@ -12,7 +12,15 @@
 //privado y admins
 
 const path = "./activos.json";
+// 📂 Cargar archivo de activación
+if (!fs.existsSync(activosFile)) {
+    fs.writeFileSync(activosFile, JSON.stringify({ activos: {} }, null, 2));
+}
 
+const cargarActivos = () => JSON.parse(fs.readFileSync(activosFile, "utf-8"));
+const guardarActivos = (data) => fs.writeFileSync(activosFile, JSON.stringify(data, null, 2));
+
+    
 // 📂 Cargar configuración de modos desde el archivo JSON
 function cargarModos() {
     if (!fs.existsSync(path)) {
