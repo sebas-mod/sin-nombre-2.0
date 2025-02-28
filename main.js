@@ -188,38 +188,53 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
             }
       case 'toaudio':
 case 'tomp3': {
-    if (!msg.quoted) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, responde a un video o audio para convertirlo a MP3." }, { quoted: msg });
-    }
-
-    const quotedMsg = msg.quoted.message;
-    const isVideo = quotedMsg.videoMessage || quotedMsg.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage;
-    const isAudio = quotedMsg.audioMessage || quotedMsg.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
-
-    if (!isVideo && !isAudio) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, responde a un video o audio para convertirlo a MP3." }, { quoted: msg });
-    }
-
     try {
-        const media = await sock.downloadMediaMessage(msg.quoted);
+        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quoted) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Responde a un video o audio con el comando `.toaudio` para convertirlo a MP3.*" 
+            }, { quoted: msg });
+        }
 
-        if (!media) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "No se pudo descargar el contenido multimedia." }, { quoted: msg });
+        let mediaType = quoted.videoMessage ? "video" : quoted.audioMessage ? "audio" : null;
+        if (!mediaType) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Solo puedes convertir videos o audios a MP3.*" 
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🛠️", key: msg.key } 
+        });
+
+        let mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        if (buffer.length === 0) {
+            throw new Error("❌ Error: No se pudo descargar el archivo.");
         }
 
         const { toAudio } = require('../libs/converter.js');
-        const audio = await toAudio(media, 'mp4');
+        const audio = await toAudio(buffer, 'mp4');
 
         await sock.sendMessage(msg.key.remoteJid, {
             audio: audio,
             mimetype: 'audio/mpeg',
         }, { quoted: msg });
 
-    } catch (error) {
-        console.error("Error en el comando .toaudio:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "Ocurrió un error al convertir el contenido a MP3." }, { quoted: msg });
-    }
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
 
+    } catch (error) {
+        console.error("❌ Error en el comando .toaudio:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al convertir el contenido a MP3. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
     break;
 }
 case "tiktok":
