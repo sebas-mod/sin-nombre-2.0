@@ -241,6 +241,11 @@ case 'nivel': {
         const userId = msg.key.participant || msg.key.remoteJid;
         const defaultImageUrl = "https://cdn.dorratz.com/files/1740822565780.jpg"; // Imagen por defecto
 
+        // 📜 Reacción antes de procesar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "📜", key: msg.key } 
+        });
+
         // 📂 Verificar si el archivo existe
         if (!fs.existsSync(rpgFile)) {
             return sock.sendMessage(msg.key.remoteJid, { 
@@ -300,11 +305,6 @@ case 'nivel': {
             image: { url: profilePictureUrl },
             caption: mensaje
         }, { quoted: msg });
-
-        // ✅ Reacción de éxito
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "📜", key: msg.key } 
-        });
 
     } catch (error) {
         console.error("❌ Error en el comando .nivel:", error);
