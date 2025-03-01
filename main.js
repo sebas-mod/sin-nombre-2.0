@@ -2147,6 +2147,9 @@ case 'vermascotas': {
         
 case 'dar': {
     try {
+        // Aseguramos que mentionedJid sea un array, aunque no haya menciones
+        const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+
         // 🔒 Verificar si el usuario que ejecuta el comando es el Owner
         if (!isOwner(sender)) {
             await sock.sendMessage(msg.key.remoteJid, { 
@@ -2155,19 +2158,19 @@ case 'dar': {
             return;
         }
 
-        // 🏷️ Determina el usuario objetivo, ya sea por cita o mención
+        // Determina el usuario objetivo, ya sea por cita o mención
         let targetUser;
-        
+
         // 1) Usuario al que se le respondió el mensaje
         if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
             targetUser = msg.message.extendedTextMessage.contextInfo.participant;
         
-        // 2) Usuario mencionado con @ 
+        // 2) Usuario mencionado con @
         } else if (mentionedJid.length > 0) {
             targetUser = mentionedJid[0];
         }
 
-        // Si no obtenemos un usuario por cita ni mención, falta info
+        // Si no obtenemos un usuario por cita ni mención, mostramos ejemplo de uso
         if (!targetUser) {
             await sock.sendMessage(msg.key.remoteJid, {
                 text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dar @usuario 5000\` o citando su mensaje.`
@@ -2175,8 +2178,7 @@ case 'dar': {
             return;
         }
 
-        // 🏆 Verificar si se ingresó la cantidad de diamantes en 'text'
-        // Supongamos que, después de "dar @usuario", la librería te pasa "5000" a 'text'
+        // Verificar si se ingresó la cantidad de diamantes en 'text'
         const cantidadStr = (text || "").trim();
 
         // Si no hay nada o no es un número válido
