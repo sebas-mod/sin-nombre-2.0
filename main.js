@@ -360,32 +360,10 @@ case 'memes': {
     try {
         const hispamemes = require("hispamemes");
         const meme = hispamemes.meme();
-        const axios = require("axios");
-        const fs = require("fs");
-        const Jimp = require("jimp");
 
-        // Descargar la imagen del meme
-        const response = await axios({
-            url: meme,
-            responseType: "arraybuffer"
-        });
-
-        const image = await Jimp.read(response.data);
-        
-        // 🔹 Agregar marca de agua con solo "Azura Ultra 2.0 Bot"
-        const watermarkText = "Azura Ultra 2.0 Bot";
-        const font = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
-
-        image.print(font, 10, image.getHeight() - 30, watermarkText);
-
-        // Guardar temporalmente la imagen con marca de agua
-        const outputPath = "/tmp/meme_con_marca.jpg";
-        await image.writeAsync(outputPath);
-
-        // Enviar el meme con la marca de agua
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: outputPath },
-            caption: "🤣 *¡Aquí tienes un meme!*"
+            image: { url: meme },
+            caption: "🤣 *¡Aquí tienes un meme!*\n\n© Azura Ultra 2.0 Bot"
         }, { quoted: msg });
 
         // ✅ Confirmación con reacción
@@ -402,9 +380,9 @@ case 'memes': {
     break;
 }
 
-
             
-            case 'hd': {
+
+case 'hd': {
     try {
         const FormData = require("form-data");
         const Jimp = require("jimp");
@@ -429,6 +407,7 @@ case 'memes': {
             }, { quoted: msg });
         }
 
+        // 🛠️ Reacción de proceso
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "🛠️", key: msg.key } 
         });
@@ -443,13 +422,23 @@ case 'memes': {
             throw new Error("❌ Error: No se pudo descargar la imagen.");
         }
 
+        // 📌 Procesar imagen mejorada
         let pr = await remini(buffer, "enhance");
 
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: pr,
-            caption: "✨ *Imagen mejorada con éxito.*"
-        }, { quoted: msg, ephemeralExpiration: 24 * 60 * 100, disappearingMessagesInChat: 24 * 60 * 100 });
+        // 🖼️ Agregar marca de agua
+        let image = await Jimp.read(pr);
+        let font = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
+        image.print(font, 10, image.getHeight() - 30, "© Azura Ultra 2.0 Bot");
 
+        let finalBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+
+        // 📤 Enviar imagen con la marca de agua
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: finalBuffer,
+            caption: "✨ *Imagen mejorada con éxito.*\n\n© Azura Ultra 2.0 Bot"
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
@@ -459,9 +448,17 @@ case 'memes': {
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Hubo un error al mejorar la imagen. Inténtalo de nuevo.*" 
         }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
 }
+
+
+            
       case 'toaudio':
 case 'tomp3': {
     try {
