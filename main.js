@@ -1267,7 +1267,7 @@ case 'per': {
 case 'mascota': {
     try {
         // 🔄 Enviar reacción mientras se procesa el comando
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, {
             react: { text: "🐾", key: msg.key } // Emoji de mascota 🐾
         });
 
@@ -1275,9 +1275,13 @@ case 'mascota': {
 
         // Verificar si el archivo RPG existe
         if (!fs.existsSync(rpgFile)) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
-            }, { quoted: msg });
+            await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.`
+                },
+                { quoted: msg }
+            );
             return;
         }
 
@@ -1285,33 +1289,50 @@ case 'mascota': {
         let userId = msg.key.participant || msg.key.remoteJid;
 
         if (!rpgData.usuarios[userId]) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta registrada.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
-            }, { quoted: msg });
+            await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: `❌ *No tienes una cuenta registrada.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.`
+                },
+                { quoted: msg }
+            );
             return;
         }
 
         let usuario = rpgData.usuarios[userId];
 
         if (!usuario.mascotas || usuario.mascotas.length === 0) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes mascotas en tu inventario.*\n🔹 Usa \`${global.prefix}tiendamascotas\` para comprar una.` 
-            }, { quoted: msg });
+            await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: `❌ *No tienes mascotas en tu inventario.*\n🔹 Usa \`${global.prefix}tiendamascotas\` para comprar una.`
+                },
+                { quoted: msg }
+            );
             return;
         }
 
-        // Si el usuario no ingresó un número válido
-        if (args.length < 1 || isNaN(args[0]) || parseInt(args[0]) <= 0 || parseInt(args[0]) > usuario.mascotas.length) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}mascota <número>\`\n🔹 Usa \`${global.prefix}vermascotas\` para ver la lista de mascotas.` 
-            }, { quoted: msg });
+        // Tomamos el valor introducido en "text"
+        const numeroMascota = parseInt(text);
+
+        // Validar que sea un número correcto
+        if (
+            isNaN(numeroMascota) ||
+            numeroMascota <= 0 ||
+            numeroMascota > usuario.mascotas.length
+        ) {
+            await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}mascota <número>\`\n🔹 Usa \`${global.prefix}vermascotas\` para ver la lista de mascotas.`
+                },
+                { quoted: msg }
+            );
             return;
         }
 
-        // Obtener la mascota seleccionada
-        let nuevaMascotaPrincipal = usuario.mascotas.splice(parseInt(args[0]) - 1, 1)[0];
-
-        // Mover la mascota seleccionada al primer lugar
+        // Obtener la mascota seleccionada (la pasamos al primer lugar del array)
+        let nuevaMascotaPrincipal = usuario.mascotas.splice(numeroMascota - 1, 1)[0];
         usuario.mascotas.unshift(nuevaMascotaPrincipal);
 
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
@@ -1326,30 +1347,39 @@ case 'mascota': {
         Object.entries(nuevaMascotaPrincipal.habilidades).forEach(([habilidad, datos]) => {
             mensaje += `      🔹 ${habilidad} (Nivel ${datos.nivel})\n`;
         });
-
         mensaje += `\n📜 Usa \`${global.prefix}nivelmascota\` para ver sus estadísticas.\n`;
 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            image: { url: nuevaMascotaPrincipal.imagen }, 
-            caption: mensaje
-        }, { quoted: msg });
+        // Enviar la imagen y el mensaje
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                image: { url: nuevaMascotaPrincipal.imagen },
+                caption: mensaje
+            },
+            { quoted: msg }
+        );
 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "✅", key: msg.key }
         });
 
     } catch (error) {
         console.error("❌ Error en el comando .mascota:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al cambiar tu mascota principal. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: "❌ *Ocurrió un error al cambiar tu mascota principal. Inténtalo de nuevo.*"
+            },
+            { quoted: msg }
+        );
 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "❌", key: msg.key }
         });
     }
     break;
-}        
+}
 
         
         
@@ -2115,32 +2145,37 @@ case 'deleteuser': {
     try {
         // 🔒 Verificar si el usuario que ejecuta el comando es Owner
         if (!isOwner(sender)) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo el propietario del bot puede eliminar la cuenta de otros jugadores.*" 
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "⛔ *Solo el propietario del bot puede eliminar la cuenta de otros jugadores.*"
             }, { quoted: msg });
             return;
         }
 
-        // 📌 Verificar si se ingresó un número válido
-        if (args.length < 1 || isNaN(args[0])) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Uso incorrecto.*\n\n📌 *Ejemplo de uso:* \n🔹 \`${global.prefix}deleteuser 50212345678\` (Número sin @ ni espacios)\n\n🔹 *Este comando eliminará la cuenta del usuario y devolverá sus personajes a la tienda.*` 
+        // 📌 Verificar si el usuario ingresó un número válido en "text"
+        // isNaN(text) detecta si NO es un número
+        if (!text || isNaN(text)) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `⚠️ *Uso incorrecto.*\n\n` +
+                      `📌 *Ejemplo de uso:* \n` +
+                      `🔹 \`${global.prefix}deleteuser 50212345678\` (Número sin @ ni espacios)\n\n` +
+                      `🔹 *Este comando eliminará la cuenta del usuario y devolverá sus personajes a la tienda.*`
             }, { quoted: msg });
             return;
         }
 
-        const userId = args[0].replace(/[^0-9]/g, '') + "@s.whatsapp.net"; // Formato correcto del ID de usuario
+        // Construimos el userId para WhatsApp
+        const userId = text.replace(/[^0-9]/g, "") + "@s.whatsapp.net"; // le quitamos todo excepto dígitos y agregamos @s.whatsapp.net
         const rpgFile = "./rpg.json";
 
-        // 🔄 Enviar reacción de carga mientras se procesa
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🗑️", key: msg.key } // Emoji de eliminación 🗑️
+        // 🔄 Enviar reacción de "eliminación" mientras se procesa
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🗑️", key: msg.key }
         });
 
         // 📂 Verificar si el archivo RPG existe
         if (!fs.existsSync(rpgFile)) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *No hay datos de RPG guardados.*" 
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *No hay datos de RPG guardados.*"
             }, { quoted: msg });
             return;
         }
@@ -2150,8 +2185,8 @@ case 'deleteuser': {
 
         // 📌 Verificar si el usuario está registrado en el RPG
         if (!rpgData.usuarios[userId]) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *El usuario @${args[0]} no tiene una cuenta registrada en el gremio Azura Ultra.*`,
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ *El usuario @${text} no tiene una cuenta registrada en el gremio Azura Ultra.*`,
                 mentions: [userId]
             }, { quoted: msg });
             return;
@@ -2170,25 +2205,26 @@ case 'deleteuser': {
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
         // 📩 Confirmar eliminación
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `🗑️ *La cuenta de @${args[0]} ha sido eliminada exitosamente del gremio Azura Ultra.*\n\n🔹 *Sus personajes han sido devueltos a la tienda.*`,
-            mentions: [userId] // Mencionar al usuario eliminado
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `🗑️ *La cuenta de @${text} ha sido eliminada exitosamente del gremio Azura Ultra.*\n\n` +
+                  `🔹 *Sus personajes han sido devueltos a la tienda.*`,
+            mentions: [userId]
         }, { quoted: msg });
 
         // ✅ Reacción de confirmación
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "✅", key: msg.key }
         });
 
     } catch (error) {
         console.error("❌ Error en el comando .deleteuser:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al eliminar la cuenta del usuario. Inténtalo de nuevo.*" 
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Ocurrió un error al eliminar la cuenta del usuario. Inténtalo de nuevo.*"
         }, { quoted: msg });
 
         // ❌ Enviar reacción de error
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "❌", key: msg.key }
         });
     }
     break;
@@ -4298,62 +4334,76 @@ case "perfil": {
     try {
         let userJid = null;
 
-        // Si no hay argumentos, menciones ni respuesta, mostrar la guía de uso
-        if (!msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length &&
-            !msg.message.extendedTextMessage?.contextInfo?.participant &&
-            args.length === 0) {
-            return await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🔍 *¿Cómo usar el comando .perfil?*\n\n` +
-                      `📌 *Ejemplos de uso:*\n\n` +
-                      `🔹 *Para obtener la foto de perfil de alguien:* \n` +
-                      `   - *Responde a su mensaje con:* _.perfil_\n\n` +
-                      `🔹 *Para obtener la foto de perfil de un número:* \n` +
-                      `   - _.perfil +1 555-123-4567_\n\n` +
-                      `🔹 *Para obtener la foto de perfil de un usuario mencionado:* \n` +
-                      `   - _.perfil @usuario_\n\n` +
-                      `⚠️ *Nota:* Algunos usuarios pueden tener su foto de perfil privada y el bot no podrá acceder a ella.`
-            }, { quoted: msg });
+        // Si no hay menciones, no hay participante y no hay texto, mostrar la guía de uso
+        const hasMention = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0;
+        const hasParticipant = msg.message.extendedTextMessage?.contextInfo?.participant;
+        const cleanText = (text || "").trim();
+
+        if (!hasMention && !hasParticipant && !cleanText) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: `🔍 *¿Cómo usar el comando .perfil?*\n\n` +
+                          `📌 *Ejemplos de uso:*\n\n` +
+                          `🔹 *Para obtener la foto de perfil de alguien:* \n` +
+                          `   - *Responde a su mensaje con:* _.perfil_\n\n` +
+                          `🔹 *Para obtener la foto de perfil de un número:* \n` +
+                          `   - _.perfil +1 555-123-4567_\n\n` +
+                          `🔹 *Para obtener la foto de perfil de un usuario mencionado:* \n` +
+                          `   - _.perfil @usuario_\n\n` +
+                          `⚠️ *Nota:* Algunos usuarios pueden tener su foto de perfil privada y el bot no podrá acceder a ella.`
+                },
+                { quoted: msg }
+            );
         }
 
         // Verifica si se mencionó un usuario
-        if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
+        if (hasMention) {
             userJid = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
         } 
         // Verifica si se respondió a un mensaje
-        else if (msg.message.extendedTextMessage?.contextInfo?.participant) {
+        else if (hasParticipant) {
             userJid = msg.message.extendedTextMessage.contextInfo.participant;
         } 
-        // Verifica si se ingresó un número
-        else if (args.length > 0) {
-            let number = args.join("").replace(/[^0-9]/g, ""); // Limpia el número de caracteres no numéricos
+        // Verifica si se ingresó un número en 'text'
+        else if (cleanText) {
+            let number = cleanText.replace(/[^0-9]/g, ""); // Limpia el número de caracteres no numéricos
             userJid = number + "@s.whatsapp.net";
         }
 
-        // Si no se encontró un usuario válido, termina la ejecución
+        // Si no se encontró un usuario válido, termina
         if (!userJid) return;
 
         // Intentar obtener la imagen de perfil
         let ppUrl;
         try {
-            ppUrl = await sock.profilePictureUrl(userJid, "image"); // "image" para foto de perfil normal
+            ppUrl = await sock.profilePictureUrl(userJid, "image");
         } catch {
-            ppUrl = "https://i.imgur.com/3J8M0wG.png"; // Imagen de perfil por defecto si el usuario no tiene foto
+            ppUrl = "https://i.imgur.com/3J8M0wG.png"; // Imagen de perfil por defecto
         }
 
-        // Enviar la imagen de perfil solo si se encontró un usuario válido
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: ppUrl },
-            caption: `🖼️ *Foto de perfil de:* @${userJid.split("@")[0]}`,
-            mentions: [userJid]
-        }, { quoted: msg });
+        // Enviar la imagen de perfil solo si se encontró un userJid
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                image: { url: ppUrl },
+                caption: `🖼️ *Foto de perfil de:* @${userJid.split("@")[0]}`,
+                mentions: [userJid]
+            },
+            { quoted: msg }
+        );
 
     } catch (error) {
         console.error("❌ Error en el comando perfil:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se pudo obtener la foto de perfil." }, { quoted: msg });
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "❌ *Error:* No se pudo obtener la foto de perfil." },
+            { quoted: msg }
+        );
     }
     break;
 }
-        
+
 case 'creador': {
     const ownerNumber = "15167096032@s.whatsapp.net"; // Número del dueño en formato WhatsApp
     const ownerName = "Russell xz 🤖"; // Nombre del dueño
