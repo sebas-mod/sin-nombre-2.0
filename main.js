@@ -215,7 +215,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
  case 'pixai': {
     try {
         if (!args.length) {
-            return conn.sendMessage(msg.key.remoteJid, { 
+            return sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Formato incorrecto.*\nEjemplo: \`${global.prefix}pixai chica anime estilo studio ghibli\``
             }, { quoted: msg });
         }
@@ -223,7 +223,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
         const prompt = args.join(" ");
         const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(prompt)}`;
 
-        await conn.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: '🔄', key: msg.key } 
         });
 
@@ -232,28 +232,28 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
         const { images } = await response.json();
 
         if (!images?.length) {
-            return conn.sendMessage(msg.key.remoteJid, { 
+            return sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *No se encontraron resultados.* Intenta con otra descripción."
             }, { quoted: msg });
         }
 
         for (const imageUrl of images.slice(0, 4)) {
-            await conn.sendMessage(msg.key.remoteJid, { 
+            await sock.sendMessage(msg.key.remoteJid, { 
                 image: { url: imageUrl },
                 caption: `🎨 Generado para: *${prompt}*`
             }, { quoted: msg });
         }
 
-        await conn.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
 
     } catch (error) {
         console.error("❌ Error en .pixai:", error);
-        await conn.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, { 
             text: `❌ Fallo al generar imágenes. Error: ${error.message}`
         }, { quoted: msg });
-        await conn.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "❌", key: msg.key } 
         });
     }
