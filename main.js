@@ -354,19 +354,43 @@ case 'vision': {
 
     break;
             }
-            case 'meme':
-            case 'memes': {
+
+case 'meme':
+case 'memes': {
     try {
         const hispamemes = require("hispamemes");
         const meme = hispamemes.meme();
+        const axios = require("axios");
+        const fs = require("fs");
+        const Jimp = require("jimp");
 
+        // Descargar la imagen del meme
+        const response = await axios({
+            url: meme,
+            responseType: "arraybuffer"
+        });
+
+        const image = await Jimp.read(response.data);
+        
+        // 🔹 Agregar marca de agua con solo "Azura Ultra 2.0 Bot"
+        const watermarkText = "Azura Ultra 2.0 Bot";
+        const font = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
+
+        image.print(font, 10, image.getHeight() - 30, watermarkText);
+
+        // Guardar temporalmente la imagen con marca de agua
+        const outputPath = "/tmp/meme_con_marca.jpg";
+        await image.writeAsync(outputPath);
+
+        // Enviar el meme con la marca de agua
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: meme },
+            image: { url: outputPath },
             caption: "🤣 *¡Aquí tienes un meme!*"
         }, { quoted: msg });
 
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "😆", key: msg.key }
+        // ✅ Confirmación con reacción
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "😆", key: msg.key } 
         });
 
     } catch (e) {
@@ -377,6 +401,9 @@ case 'vision': {
     }
     break;
 }
+
+
+            
             case 'hd': {
     try {
         const FormData = require("form-data");
