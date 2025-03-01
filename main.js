@@ -207,59 +207,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
   
   return buffer;
 };
-    async function sendAlbumMessage(conn, jid, medias, options) {
-    options = { ...options };
-    if (typeof jid !== "string") throw new TypeError(`jid debe ser una cadena, recibido: ${jid} (${jid?.constructor?.name})`);
-
-    for (const media of medias) {
-        if (!media.type || (media.type !== "image" && media.type !== "video")) {
-            throw new TypeError(`medias[i].type debe ser "image" o "video", recibido: ${media.type} (${media.type?.constructor?.name})`);
-        }
-        if (!media.data || (!media.data.url && !Buffer.isBuffer(media.data))) {
-            throw new TypeError(`medias[i].data debe ser un objeto con url o buffer, recibido: ${media.data} (${media.data?.constructor?.name})`);
-        }
-    }
-
-    if (medias.length < 2) throw new RangeError("Se requieren al menos 2 medios para crear un álbum.");
-
-    const caption = options.text || options.caption || "";
-    const delay = !isNaN(options.delay) ? options.delay : 500;
-    delete options.text;
-    delete options.caption;
-    delete options.delay;
-
-    const album = {
-        messageContextInfo: {},
-        albumMessage: {
-            expectedImageCount: medias.filter(media => media.type === "image").length,
-            expectedVideoCount: medias.filter(media => media.type === "video").length,
-            ...(options.quoted
-                ? {
-                      contextInfo: {
-                          remoteJid: options.quoted.key.remoteJid,
-                          fromMe: options.quoted.key.fromMe,
-                          stanzaId: options.quoted.key.id,
-                          participant: options.quoted.key.participant || options.quoted.key.remoteJid,
-                          quotedMessage: options.quoted.message,
-                      },
-                  }
-                : {}),
-        },
-    };
-
-    await conn.relayMessage(jid, album, { messageId: album.key?.id });
-
-    for (const i in medias) {
-        const { type, data } = medias[i];
-        const mediaMessage = {
-            [type]: data,
-            ...(i === "0" ? { caption } : {}),
-        };
-
-        await conn.relayMessage(jid, mediaMessage, { messageId: mediaMessage.key?.id });
-        await new Promise(resolve => setTimeout(resolve, delay));
-    }
-}
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
 
@@ -271,44 +218,41 @@ case 'pixai': {
                 text: `⚠️ *Formato incorrecto.*\nEjemplo: \`${global.prefix}pixai chica anime estilo studio ghibli\``
             }, { quoted: msg });
         }
+
         const prompt = args.join(" ");
         const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(prompt)}`;
-        
-        
+
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: '🔄', key: msg.key } 
         });
 
-        
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
         const { images } = await response.json();
 
-        
         if (!images?.length) {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *No se encontraron resultados.* Intenta con otra descripción."
             }, { quoted: msg });
         }
-        const mediaMessages = images.slice(0, 4).map(url => ({ 
+
+        const medias = images.slice(0, 4).map(url => ({ 
             type: "image", 
             data: { url } 
         }));
-        if (mediaMessages.length > 1) {
-            await sock.sendMessage(msg.key.remoteJid, {
-                album: {
-                    title: `🎨 Resultados para: ${prompt}`,
-                    messages: mediaMessages.map(media => ({
-                        image: media.data
-                    }))
-                }
-            }, { quoted: msg });
+
+        if (medias.length > 1) {
+            await sendAlbumMessage(sock, msg.key.remoteJid, medias, { 
+                caption: `🎨 Resultados para: *${prompt}*`,
+                quoted: msg 
+            });
         } else {
             await sock.sendMessage(msg.key.remoteJid, { 
                 image: { url: images[0] },
                 caption: `🎨 Generado para: *${prompt}*`
             }, { quoted: msg });
         }
+
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
@@ -323,6 +267,42 @@ case 'pixai': {
         });
     }
     break;
+}
+
+async function sendAlbumMessage(conn, jid, medias, options = {}) {
+    try {
+        if (typeof jid !== "string") throw new TypeError("jid debe ser una cadena.");
+        if (!Array.isArray(medias) || medias.length < 2) throw new RangeError("Se requieren al menos 2 medios para crear un álbum.");
+
+        const messages = medias.map((media, index) => {
+            if (!media.type || !media.data || !media.data.url) {
+                throw new TypeError("Cada medio debe tener un tipo y una URL válida.");
+            }
+            return {
+                [media.type]: media.data,
+                ...(index === 0 && options.caption ? { caption: options.caption } : {})
+            };
+        });
+
+        await conn.relayMessage(jid, {
+            albumMessage: {
+                messages,
+                ...(options.quoted ? {
+                    contextInfo: {
+                        remoteJid: options.quoted.key.remoteJid,
+                        fromMe: options.quoted.key.fromMe,
+                        stanzaId: options.quoted.key.id,
+                        participant: options.quoted.key.participant || options.quoted.key.remoteJid,
+                        quotedMessage: options.quoted.message,
+                    }
+                } : {})
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en sendAlbumMessage:", error);
+        throw error;
+    }
 }
             case 'verdad': {
     try {
