@@ -1114,10 +1114,18 @@ case 'quitarventa': {
         mensaje += `💎 *Precio Original:* ${personajeRecuperado.precio} diamantes\n\n`;
         mensaje += `📜 Usa \`${global.prefix}verper\` para ver tu lista de personajes.\n`;
 
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: personajeRecuperado.imagen },
-            caption: mensaje
-        }, { quoted: msg });
+        // 📷 Enviar la imagen si existe
+        if (personajeRecuperado.imagen && personajeRecuperado.imagen.startsWith("http")) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                image: { url: personajeRecuperado.imagen },
+                caption: mensaje
+            }, { quoted: msg });
+        } else {
+            // Si no tiene imagen, solo enviar el mensaje de texto
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: mensaje
+            }, { quoted: msg });
+        }
 
         // ✅ Reacción de confirmación
         await sock.sendMessage(msg.key.remoteJid, {
