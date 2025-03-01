@@ -218,13 +218,13 @@ case 'visión': {
             react: { text: '🎨', key: msg.key } // Reacción de pincel antes de generar la imagen
         });
 
-        if (!args) {
+        if (!text) {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Uso incorrecto del comando.*\n📌 Ejemplo: \`${global.prefix}visión un gato en el espacio\`\n\n🔹 *Escribe una descripción para generar una imagen personalizada.*`
             }, { quoted: msg });
         }
 
-        const query = args.join(" ");
+        const query = `${text}`
         const apiUrl = `https://api.dorratz.com/v3/ai-image?prompt=${encodeURIComponent(query)}`;
         const userMention = `@${msg.key.participant.replace(/[^0-9]/g, '')}`; // Extrae el número del usuario
 
