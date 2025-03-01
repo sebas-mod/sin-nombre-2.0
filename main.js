@@ -289,7 +289,7 @@ case 'nivel': {
         // 📊 Construir mensaje de estadísticas
         let mensaje = `🎖️ *Estadísticas de ${usuario.nombre}*\n\n`;
         mensaje += `🏅 *Rango:* ${usuario.rango}\n`;
-        mensaje += `🔹 *Nivel:* ${usuario.nivel}\n`;
+        mensaje += `🎚 *Nivel:* ${usuario.nivel}\n`;
         mensaje += `❤️ *Vida:* ${usuario.vida} HP\n`;
         mensaje += `✨ *XP:* ${usuario.experiencia} / ${(usuario.nivel * 1500)} XP\n\n`;
 
