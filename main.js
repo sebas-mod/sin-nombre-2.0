@@ -442,33 +442,57 @@ case 'reto': {
 }            
             
             
-            case 'tts': {
-    if (!text) return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, proporciona un texto para convertir a voz." }, { quoted: msg });
+case 'tts': {
+    try {
+        // 1) Envía primero la reacción (🗣️) indicando que se empieza a procesar
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🗣️", key: msg.key },
+        });
 
-    await sock.sendPresenceUpdate('recording', msg.key.remoteJid);
+        // 2) Obtiene el texto:
+        //    - Directamente de 'text'
+        //    - O del mensaje citado (si no hay 'text')
+        let textToSay = (text || "").trim();
+        if (!textToSay && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+            textToSay = msg.message.extendedTextMessage.contextInfo.quotedMessage.conversation || "";
+            textToSay = textToSay.trim();
+        }
 
-    let texttosay = text || (msg.quoted && msg.quoted.text) || msg.text;
+        // 3) Verifica si al final sí hay algo de texto
+        if (!textToSay) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "Por favor, proporciona un texto o cita un mensaje para convertir a voz."
+            }, { quoted: msg });
+            return;
+        }
 
-    const SpeakEngine = require("google-tts-api");
-    const texttospeechurl = SpeakEngine.getAudioUrl(texttosay, {
-        lang: "es",
-        slow: false,
-        host: "https://translate.google.com",
-    });
+        // 4) Indica que está "grabando" (opcional, para mostrar un indicador)
+        await sock.sendPresenceUpdate('recording', msg.key.remoteJid);
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        audio: { url: texttospeechurl },
-        ptt: true,
-        mimetype: 'audio/mpeg',
-        fileName: `tts.mp3`,
-    }, { quoted: msg });
+        // 5) Usa google-tts-api para obtener la URL del audio
+        const SpeakEngine = require("google-tts-api");
+        const textToSpeechUrl = SpeakEngine.getAudioUrl(textToSay, {
+            lang: "es",
+            slow: false,
+            host: "https://translate.google.com",
+        });
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: "🗣️", key: msg.key },
-    });
+        // 6) Envía el audio como nota de voz
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: { url: textToSpeechUrl },
+            ptt: true,
+            mimetype: 'audio/mpeg',
+            fileName: `tts.mp3`,
+        }, { quoted: msg });
 
+    } catch (error) {
+        console.error("❌ Error en el comando .tts:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Ocurrió un error al procesar la conversión a voz."
+        }, { quoted: msg });
+    }
     break;
-            }
+}
 
 case 'meme':
 case 'memes': {
