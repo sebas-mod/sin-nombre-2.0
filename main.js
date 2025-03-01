@@ -264,48 +264,63 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
 
     switch (lowerCommand) {
-//agrega nuevos comando abajo
-            case 'pixai': {
+case 'pixai': {
     try {
         if (!args.length) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Por favor, proporciona una consulta.*\nEjemplo: `.pixai paisaje`" 
+                text: `⚠️ *Formato incorrecto.*\nEjemplo: \`${global.prefix}pixai chica anime estilo studio ghibli\``
             }, { quoted: msg });
         }
-
-        const query = args.join(" ");
-        const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(query)}`;
-
+        const prompt = args.join(" ");
+        const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(prompt)}`;
+        
+        
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: '⏱️', key: msg.key } 
+            react: { text: '🔄', key: msg.key } 
         });
 
+        
         const response = await fetch(apiUrl);
-        if (!response.ok) {
-            throw new Error(`Error en la red: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        const { images } = await response.json();
 
-        const data = await response.json();
-        if (!data.images || data.images.length === 0) {
+        
+        if (!images?.length) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No se encontraron imágenes para la consulta.*" 
+                text: "❌ *No se encontraron resultados.* Intenta con otra descripción."
             }, { quoted: msg });
         }
-
-        const medias = data.images.map(imageUrl => ({
-            type: "image",
-            data: { url: imageUrl }
+        const mediaMessages = images.slice(0, 4).map(url => ({ 
+            type: "image", 
+            data: { url } 
         }));
-
-        const caption = "🌙 *Imágenes generadas por PixAI (api.dorratz.com)*";
-
-        await sendAlbumMessage(sock, msg.key.remoteJid, medias, { caption, quoted: msg });
+        if (mediaMessages.length > 1) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                album: {
+                    title: `🎨 Resultados para: ${prompt}`,
+                    messages: mediaMessages.map(media => ({
+                        image: media.data
+                    }))
+                }
+            }, { quoted: msg });
+        } else {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                image: { url: images[0] },
+                caption: `🎨 Generado para: *${prompt}*`
+            }, { quoted: msg });
+        }
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
 
     } catch (error) {
-        console.error("❌ Error en el comando .pixai:", error);
+        console.error("❌ Error en .pixai:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al procesar la solicitud. Inténtalo de nuevo más tarde.*" 
+            text: `❌ Fallo al generar imágenes. Error: ${error.message}`
         }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
 }
