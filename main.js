@@ -2173,7 +2173,7 @@ case 'dar': {
         // Si no obtenemos un usuario por cita ni mención, mostramos ejemplo de uso
         if (!targetUser) {
             await sock.sendMessage(msg.key.remoteJid, {
-                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dar @usuario 5000\` o citando su mensaje.`
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dar citando el mensaje y la cantidad 5000\` ok`
             }, { quoted: msg });
             return;
         }
@@ -2184,7 +2184,7 @@ case 'dar': {
         // Si no hay nada o no es un número válido
         if (!cantidadStr || isNaN(cantidadStr) || parseInt(cantidadStr) <= 0) {
             await sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Debes ingresar una cantidad válida de diamantes a dar.*\nEjemplo: `dar @usuario 5000`"
+                text: "⚠️ *Debes ingresar una cantidad válida de diamantes a dar.*\nEjemplo: `citando el mensaje y la cantidad 5000`"
             }, { quoted: msg });
             return;
         }
