@@ -220,7 +220,7 @@ case 'visión': {
 
         if (!args.length) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Uso incorrecto del comando.*\n📌 Ejemplo: \`${global.prefix}vision un gato en el espacio\`\n\n🔹 *Escribe una descripción para generar una imagen personalizada.*`
+                text: `⚠️ *Uso incorrecto del comando.*\n📌 Ejemplo: \`${global.prefix}visión un gato en el espacio\`\n\n🔹 *Escribe una descripción para generar una imagen personalizada.*`
             }, { quoted: msg });
         }
 
