@@ -209,9 +209,45 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 };
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
-
     switch (lowerCommand) {
 
+case 'vision': {
+    try {
+        if (!args.length) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "Escribe un texto para generar la imagen. Ejemplo: .vision un gato en el espacio"
+            }, { quoted: msg });
+        }
+
+        const query = args.join(" ");
+        const apiUrl = `https://api.dorratz.com/v3/ai-image?prompt=${encodeURIComponent(query)}`;
+        const response = await axios.get(apiUrl);
+
+        if (!response.data || !response.data.data || !response.data.data.image_link) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ No se pudo generar la imagen. Intenta con otro texto."
+            }, { quoted: msg });
+        }
+
+        const imageUrl = response.data.data.image_link;
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                image: { url: imageUrl },
+                caption: `🖼️ *Imagen generada para:* ${query}\n\n> 🌙 request answered by api.dorratz.com`,
+            },
+            { quoted: msg }
+        );
+
+    } catch (error) {
+        console.error("Error en .vision:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ Error al generar la imagen. Intenta de nuevo."
+        }, { quoted: msg });
+    }
+    break;
+}
  case 'pixai': {
     try {
         if (!args.length) {
