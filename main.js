@@ -215,55 +215,73 @@ case 'visión': {
     try {
         // 🔄 Reacción antes de procesar el comando
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: '🎨', key: msg.key } // Reacción de pincel antes de generar la imagen
+            react: { text: '🎨', key: msg.key } 
         });
 
-        if (!text) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Uso incorrecto del comando.*\n📌 Ejemplo: \`${global.prefix}visión un gato en el espacio\`\n\n🔹 *Escribe una descripción para generar una imagen personalizada.*`
-            }, { quoted: msg });
+        // Toma la variable "tex" y quita espacios
+        const query = (tex || '').trim();
+
+        // Si no hay contenido, muestra ejemplo y no genera imagen
+        if (!query) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: `⚠️ *Uso incorrecto del comando.*\n` +
+                          `📌 Ejemplo: \`${global.prefix}visión un gato en el espacio\`\n\n` +
+                          `🔹 *Escribe una descripción para generar una imagen personalizada.*`
+                },
+                { quoted: msg }
+            );
         }
 
-        const query = `${text}`
+        // Mención también en chats privados
+        const participant = msg.key.participant || msg.key.remoteJid;
+        const userMention = '@' + participant.replace(/[^0-9]/g, '');
+
         const apiUrl = `https://api.dorratz.com/v3/ai-image?prompt=${encodeURIComponent(query)}`;
-        const userMention = `@${msg.key.participant.replace(/[^0-9]/g, '')}`; // Extrae el número del usuario
 
         // 🔄 Reacción de carga mientras procesa
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: '🔄', key: msg.key } 
         });
 
+        // Petición al endpoint
         const response = await axios.get(apiUrl);
-
         if (!response.data || !response.data.data || !response.data.data.image_link) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ No se pudo generar la imagen. Intenta con otro texto."
-            }, { quoted: msg });
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ No se pudo generar la imagen. Intenta con otro texto." },
+                { quoted: msg }
+            );
         }
 
+        // Envía la imagen
         const imageUrl = response.data.data.image_link;
-
         await sock.sendMessage(
             msg.key.remoteJid,
             {
                 image: { url: imageUrl },
-                caption: `🖼️ *Imagen generada para:* ${userMention}\n📌 *Descripción:* ${query}\n\n🍧 API utilizada: https://api.dorratz.com\n© Azura Ultra 2.0 Bot`,
-                mentions: [msg.key.participant] // Menciona al usuario
+                caption: `🖼️ *Imagen generada para:* ${userMention}\n` +
+                         `📌 *Descripción:* ${query}\n\n` +
+                         `🍧 API utilizada: https://api.dorratz.com\n` +
+                         `© Azura Ultra 2.0 Bot`,
+                mentions: [participant]
             },
             { quoted: msg }
         );
 
         // ✅ Reacción de éxito
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
+            react: { text: '✅', key: msg.key } 
         });
 
     } catch (error) {
-        console.error("❌ Error en .vision:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ Error al generar la imagen. Intenta de nuevo."
-        }, { quoted: msg });
-
+        console.error("❌ Error en .visión:", error);
+        await sock.sendMessage(
+            msg.key.remoteJid, 
+            { text: "❌ Error al generar la imagen. Intenta de nuevo." },
+            { quoted: msg }
+        );
         // ❌ Reacción de error
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "❌", key: msg.key } 
