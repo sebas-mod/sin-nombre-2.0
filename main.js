@@ -232,6 +232,220 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'hospital':
+case 'hosp': {
+    try {
+        const fs = require("fs");
+        const rpgFile = "./rpg.json";
+        const userId = msg.key.participant || msg.key.remoteJid;
+        const costoCuracion = 500; // 💰 Precio por curarse
+
+        // 🚑 Reacción antes de procesar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🏥", key: msg.key } 
+        });
+
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Los datos del RPG no están disponibles.*" 
+            }, { quoted: msg });
+        }
+
+        // 📥 Cargar datos del usuario
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // ❌ Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId]) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // ❌ Verificar si el usuario tiene suficientes diamantes para curarse
+        if (usuario.diamantes < costoCuracion) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes suficientes diamantes para curarte.*\n💎 *Diamantes necesarios:* ${costoCuracion}\n💰 *Tu saldo actual:* ${usuario.diamantes} diamantes.` 
+            }, { quoted: msg });
+        }
+
+        // ❌ Verificar si el usuario ya tiene la vida llena
+        if (usuario.vida >= 100) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚕️ *Tu vida ya está completa.*\n❤️ *Vida actual:* ${usuario.vida} HP` 
+            }, { quoted: msg });
+        }
+
+        // 🏥 Curar al usuario
+        usuario.vida = 100; // Restaurar la vida a 100
+        usuario.diamantes -= costoCuracion; // Cobrar el costo de curación
+
+        // 📂 Guardar cambios en el archivo
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📜 Mensaje de confirmación
+        let mensaje = `🏥 *Has sido curado en el hospital.*\n\n`;
+        mensaje += `❤️ *Vida restaurada:* 100 HP\n`;
+        mensaje += `💰 *Costo de la curación:* ${costoCuracion} diamantes\n`;
+        mensaje += `💎 *Diamantes restantes:* ${usuario.diamantes}\n\n`;
+        mensaje += `🩹 *¡Vuelve cuando necesites más cuidados!*`;
+
+        // 📩 Enviar mensaje de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .hospital:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al intentar curarte. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+        
+case 'retirar':
+case 'ret': {
+    try {
+        const fs = require("fs");
+        const rpgFile = "./rpg.json";
+        const userId = msg.key.participant || msg.key.remoteJid;
+
+        // 🏦 Reacción antes de procesar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "💰", key: msg.key } 
+        });
+
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Los datos del RPG no están disponibles.*" 
+            }, { quoted: msg });
+        }
+
+        // 📥 Cargar datos del usuario
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // ❌ Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId]) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // 🔢 Verificar si el usuario ingresó una cantidad válida
+        let cantidad = parseInt(args[0]);
+        if (isNaN(cantidad) || cantidad <= 0) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}ret 500\`\n💎 Retira diamantes del gremio.` 
+            }, { quoted: msg });
+        }
+
+        // ❌ Verificar si el usuario tiene suficientes diamantes guardados
+        if (usuario.diamantesGuardados < cantidad) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes suficientes diamantes en el gremio.*\n🏦 *Diamantes guardados:* ${usuario.diamantesGuardados}` 
+            }, { quoted: msg });
+        }
+
+        // 🏦 Retirar los diamantes
+        usuario.diamantesGuardados -= cantidad;
+        usuario.diamantes += cantidad;
+
+        // 📂 Guardar cambios en el archivo
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📜 Mensaje de confirmación
+        let mensaje = `✅ *Has retirado ${cantidad} diamantes del gremio.*\n\n`;
+        mensaje += `💎 *Diamantes en inventario:* ${usuario.diamantes}\n`;
+        mensaje += `🏦 *Diamantes guardados en el gremio:* ${usuario.diamantesGuardados}\n`;
+        mensaje += `\n⚠️ *Recuerda que los diamantes fuera del gremio pueden ser robados.*`;
+
+        // 📩 Enviar mensaje de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .retirar:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al retirar diamantes. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+        
+case 'depositar':
+case 'dep': {
+    try {
+        const fs = require("fs");
+        const rpgFile = "./rpg.json";
+        const userId = msg.key.participant || msg.key.remoteJid;
+
+        // 🏦 Reacción antes de procesar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🏦", key: msg.key } 
+        });
+
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Los datos del RPG no están disponibles.*" 
+            }, { quoted: msg });
+        }
+
+        // 📥 Cargar datos del usuario
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // ❌ Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId]) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // 🔢 Verificar si el usuario ingresó una cantidad válida
+        let cantidad = parseInt(args[0]);
+        if (isNaN(cantidad) || cantidad <= 0) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}dep 500\`\n💎 Deposita diamantes en el gremio.` 
+            }, { quoted: msg });
+        }
+
+        // ❌ Verificar si el usuario tiene suficientes diamantes
+        if (usuario.diamantes < cantidad) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes suficientes diamantes para depositar.*\n💎 *Tus diamantes actuales:* ${usuario.diamantes}` 
+            }, { quoted: msg });
+        }
+
+        // 🏦 Depositar los diamantes
+        usuario.diamantes -= cantidad;
+        usuario.diamantesGuardados = (usuario.diamantesGuardados || 0) + cantidad;
+
+        // 📂 Guardar cambios en el archivo
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📜 Mensaje de confirmación
+        let mensaje = `✅ *Has depositado ${cantidad} diamantes en el gremio.*\n\n`;
+        mensaje += `💎 *Diamantes en inventario:* ${usuario.diamantes}\n`;
+        mensaje += `🏦 *Diamantes guardados en el gremio:* ${usuario.diamantesGuardados}\n`;
+        mensaje += `\n🔒 *Depositar protege tus diamantes de ser robados.*`;
+
+        // 📩 Enviar mensaje de confirmación
+        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .depositar:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al depositar diamantes. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+        
 case 'nivel': {
     try {
         const fs = require("fs");
