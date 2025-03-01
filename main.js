@@ -215,13 +215,15 @@ case 'visión': {
     try {
         // 🔄 Reacción antes de procesar el comando
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: '🎨', key: msg.key } 
+            react: { text: '🎨', key: msg.key } // Reacción de pincel antes de generar la imagen
         });
 
-        // Toma la variable "tex" y quita espacios
-        const query = (tex || '').trim();
+        // Asegúrate de tener la variable 'text' disponible aquí. 
+        // Si tu framework o tu código define 'text' en otro lado, no olvides 
+        // que tienes que capturar el valor que viene después de "visión".
+        const query = (text || "").trim();
 
-        // Si no hay contenido, muestra ejemplo y no genera imagen
+        // Si no hay contenido en 'query', muestra ejemplo y no genera imagen
         if (!query) {
             return sock.sendMessage(
                 msg.key.remoteJid,
@@ -234,7 +236,7 @@ case 'visión': {
             );
         }
 
-        // Mención también en chats privados
+        // Mención que no falle en chats privados
         const participant = msg.key.participant || msg.key.remoteJid;
         const userMention = '@' + participant.replace(/[^0-9]/g, '');
 
@@ -245,9 +247,15 @@ case 'visión': {
             react: { text: '🔄', key: msg.key } 
         });
 
-        // Petición al endpoint
+        // Llamada a la API
         const response = await axios.get(apiUrl);
-        if (!response.data || !response.data.data || !response.data.data.image_link) {
+
+        // Validación básica de la respuesta
+        if (
+          !response.data || 
+          !response.data.data || 
+          !response.data.data.image_link
+        ) {
             return sock.sendMessage(
                 msg.key.remoteJid,
                 { text: "❌ No se pudo generar la imagen. Intenta con otro texto." },
@@ -255,8 +263,10 @@ case 'visión': {
             );
         }
 
-        // Envía la imagen
+        // URL de la imagen generada
         const imageUrl = response.data.data.image_link;
+
+        // Enviar imagen
         await sock.sendMessage(
             msg.key.remoteJid,
             {
@@ -265,7 +275,7 @@ case 'visión': {
                          `📌 *Descripción:* ${query}\n\n` +
                          `🍧 API utilizada: https://api.dorratz.com\n` +
                          `© Azura Ultra 2.0 Bot`,
-                mentions: [participant]
+                mentions: [participant] // Menciona al usuario (o al bot mismo si fuera el caso)
             },
             { quoted: msg }
         );
@@ -282,6 +292,7 @@ case 'visión': {
             { text: "❌ Error al generar la imagen. Intenta de nuevo." },
             { quoted: msg }
         );
+
         // ❌ Reacción de error
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "❌", key: msg.key } 
@@ -290,6 +301,7 @@ case 'visión': {
     break;
 }
 
+        
 case 'pixai': {
     try {
         // 🔄 Reacción antes de procesar el comando
