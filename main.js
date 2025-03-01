@@ -15,12 +15,6 @@ const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 //para el juego rpg user
 const path = "./rpguser.json";
-
-// Función para guardar cambios en `rpguser.json`
-function guardarRpgUser(data) {
-    fs.writeFileSync(path, JSON.stringify(data, null, 2));
-}
-
 // Cargar datos iniciales del `rpguser.json`
 let rpgUserData = cargarRpgUser();
 
