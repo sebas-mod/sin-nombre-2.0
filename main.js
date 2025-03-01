@@ -280,7 +280,7 @@ case 'pixai': {
         });
 
         // Ajuste: verifica si "args" existe y si tiene longitud
-        if (!args || args.length === 0) {
+        if (!text) {
             return sock.sendMessage(
                 msg.key.remoteJid,
                 {
@@ -299,7 +299,7 @@ case 'pixai': {
         //     // Lógica adicional si el mensaje proviene del bot
         // }
 
-        const prompt = args.join(" ");
+        const prompt = `${text}`
         const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(prompt)}`;
 
         await sock.sendMessage(msg.key.remoteJid, {
