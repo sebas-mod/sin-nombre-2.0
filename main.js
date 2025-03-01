@@ -218,7 +218,7 @@ case 'visión': {
             react: { text: '🎨', key: msg.key } // Reacción de pincel antes de generar la imagen
         });
 
-        if (!args.length) {
+        if (!args) {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Uso incorrecto del comando.*\n📌 Ejemplo: \`${global.prefix}visión un gato en el espacio\`\n\n🔹 *Escribe una descripción para generar una imagen personalizada.*`
             }, { quoted: msg });
@@ -279,7 +279,7 @@ case 'pixai': {
             react: { text: '🎨', key: msg.key } // Reacción de pincel antes de generar la imagen
         });
 
-        if (!args.length) {
+        if (!args) {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Uso incorrecto del comando.*\n📌 Ejemplo: \`${global.prefix}pixai chica anime estilo studio ghibli\`\n\n🔹 *Escribe una descripción para generar una imagen personalizada.*`
             }, { quoted: msg });
