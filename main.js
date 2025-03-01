@@ -207,11 +207,108 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
   
   return buffer;
 };
+    async function sendAlbumMessage(conn, jid, medias, options) {
+    options = { ...options };
+    if (typeof jid !== "string") throw new TypeError(`jid debe ser una cadena, recibido: ${jid} (${jid?.constructor?.name})`);
+
+    for (const media of medias) {
+        if (!media.type || (media.type !== "image" && media.type !== "video")) {
+            throw new TypeError(`medias[i].type debe ser "image" o "video", recibido: ${media.type} (${media.type?.constructor?.name})`);
+        }
+        if (!media.data || (!media.data.url && !Buffer.isBuffer(media.data))) {
+            throw new TypeError(`medias[i].data debe ser un objeto con url o buffer, recibido: ${media.data} (${media.data?.constructor?.name})`);
+        }
+    }
+
+    if (medias.length < 2) throw new RangeError("Se requieren al menos 2 medios para crear un álbum.");
+
+    const caption = options.text || options.caption || "";
+    const delay = !isNaN(options.delay) ? options.delay : 500;
+    delete options.text;
+    delete options.caption;
+    delete options.delay;
+
+    const album = {
+        messageContextInfo: {},
+        albumMessage: {
+            expectedImageCount: medias.filter(media => media.type === "image").length,
+            expectedVideoCount: medias.filter(media => media.type === "video").length,
+            ...(options.quoted
+                ? {
+                      contextInfo: {
+                          remoteJid: options.quoted.key.remoteJid,
+                          fromMe: options.quoted.key.fromMe,
+                          stanzaId: options.quoted.key.id,
+                          participant: options.quoted.key.participant || options.quoted.key.remoteJid,
+                          quotedMessage: options.quoted.message,
+                      },
+                  }
+                : {}),
+        },
+    };
+
+    await conn.relayMessage(jid, album, { messageId: album.key?.id });
+
+    for (const i in medias) {
+        const { type, data } = medias[i];
+        const mediaMessage = {
+            [type]: data,
+            ...(i === "0" ? { caption } : {}),
+        };
+
+        await conn.relayMessage(jid, mediaMessage, { messageId: mediaMessage.key?.id });
+        await new Promise(resolve => setTimeout(resolve, delay));
+    }
+}
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
 
     switch (lowerCommand) {
 //agrega nuevos comando abajo
+            case 'pixai': {
+    try {
+        if (!args.length) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Por favor, proporciona una consulta.*\nEjemplo: `.pixai paisaje`" 
+            }, { quoted: msg });
+        }
+
+        const query = args.join(" ");
+        const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(query)}`;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: '⏱️', key: msg.key } 
+        });
+
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`Error en la red: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.images || data.images.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No se encontraron imágenes para la consulta.*" 
+            }, { quoted: msg });
+        }
+
+        const medias = data.images.map(imageUrl => ({
+            type: "image",
+            data: { url: imageUrl }
+        }));
+
+        const caption = "🌙 *Imágenes generadas por PixAI (api.dorratz.com)*";
+
+        await sendAlbumMessage(sock, msg.key.remoteJid, medias, { caption, quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .pixai:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al procesar la solicitud. Inténtalo de nuevo más tarde.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
             case 'verdad': {
     try {
         const verdad = pickRandom(global.verdad); // Selecciona una verdad aleatoria
