@@ -295,28 +295,46 @@ case 'vision': {
     }
     break;
 }
-        case 'verdad': {
+        
+case 'verdad': {
     try {
         const verdad = pickRandom(global.verdad); // Selecciona una verdad aleatoria
+
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: 'https://cdn.dorratz.com/files/1740781671173.jpg' },
-            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘝𝘌𝘙𝘋𝘈𝘋*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${verdad}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱`
+            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘝𝘌𝘙𝘋𝘈𝘋*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${verdad}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱\n\n© Azura Ultra 2.0 Bot`
         }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
 
     } catch (e) {
         console.error("❌ Error en el comando .verdad:", e);
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Hubo un error al enviar la verdad. Inténtalo de nuevo.*" 
         }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
-            }
-            case 'reto': {
+}
+
+case 'reto': {
     try {
         const reto = pickRandom(global.reto); // Selecciona un reto aleatorio
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🎲", key: msg.key } // Reacción al usar el comando
+        });
+
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: 'https://cdn.dorratz.com/files/1740781675920.jpg' },
-            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘙𝘌𝘛𝘖*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${reto}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱`
+            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘙𝘌𝘛𝘖*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${reto}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱\n\n© Azura Ultra 2.0 Bot`
         }, { quoted: msg });
 
     } catch (e) {
@@ -324,9 +342,15 @@ case 'vision': {
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Hubo un error al enviar el reto. Inténtalo de nuevo.*" 
         }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "❌", key: msg.key } // Reacción de error
+        });
     }
     break;
-            }
+}            
+            
+            
             case 'tts': {
     if (!text) return sock.sendMessage(msg.key.remoteJid, { text: "Por favor, proporciona un texto para convertir a voz." }, { quoted: msg });
 
@@ -385,7 +409,6 @@ case 'memes': {
 case 'hd': {
     try {
         const FormData = require("form-data");
-        const Jimp = require("jimp");
 
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
@@ -425,16 +448,9 @@ case 'hd': {
         // 📌 Procesar imagen mejorada
         let pr = await remini(buffer, "enhance");
 
-        // 🖼️ Agregar marca de agua
-        let image = await Jimp.read(pr);
-        let font = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
-        image.print(font, 10, image.getHeight() - 30, "© Azura Ultra 2.0 Bot");
-
-        let finalBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
-
-        // 📤 Enviar imagen con la marca de agua
+        // 📤 Enviar imagen con la marca de agua en el texto
         await sock.sendMessage(msg.key.remoteJid, {
-            image: finalBuffer,
+            image: pr,
             caption: "✨ *Imagen mejorada con éxito.*\n\n© Azura Ultra 2.0 Bot"
         }, { quoted: msg });
 
