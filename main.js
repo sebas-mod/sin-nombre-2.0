@@ -232,8 +232,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-
-
 case 'daragua': {
     try {
         const fs = require("fs");
@@ -328,65 +326,60 @@ case 'daragua': {
         // 📩 Enviar mensaje con información principal
         await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
 
-        // 📊 Verificar si la mascota sube de nivel
+        // 📊 Subida de nivel y manejo de XP máximo
         let nivelAnterior = mascota.nivel;
-        let xpMaxNivel = mascota.nivel * 1200; // Escala de XP por nivel
-        while (mascota.experiencia >= xpMaxNivel && mascota.nivel < 80) {
-            mascota.experiencia -= xpMaxNivel;
+        while (mascota.experiencia >= mascota.xpMax && mascota.nivel < 80) {
+            mascota.experiencia -= mascota.xpMax;
             mascota.nivel += 1;
-            xpMaxNivel = mascota.nivel * 1200; // Actualizar XP máximo
+            mascota.xpMax = mascota.nivel * 1200; // 🆙 Ajustar XP máximo
 
-            // 🆙 Enviar mensaje de subida de nivel
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: `🎉 *¡Felicidades! ${mascota.nombre} ha subido de nivel.* 🏆\n\n🏅 *Nivel actual:* ${mascota.nivel}` 
             }, { quoted: msg });
         }
 
-        // 🎖️ Subida aleatoria de habilidades
-        let habilidades = Object.keys(mascota.habilidades);
-        if (habilidades.length > 0) {
-            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
-            mascota.habilidades[habilidadSubida].nivel += Math.random() < 0.5 ? 1 : 0; // 50% probabilidad de subir
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `✨ *¡${mascota.nombre} ha mejorado su habilidad ${habilidadSubida}!* 🌟` 
-            }, { quoted: msg });
-        }
-
-        // 🏅 Rango basado en nivel
+        // 🎖️ Manejo de rangos
         const rangos = [
             { nivel: 1, rango: "🐣 Principiante" },
-            { nivel: 10, rango: "🐾 Aprendiz" },
-            { nivel: 20, rango: "⚔️ Guerrero Salvaje" },
-            { nivel: 40, rango: "🔥 Alfa de Batalla" },
-            { nivel: 60, rango: "👑 Rey de la Jungla" },
-            { nivel: 80, rango: "🚀 Leyenda Viviente" }
+            { nivel: 10, rango: "🦴 Aprendiz" },
+            { nivel: 20, rango: "🐕 Guerrero" },
+            { nivel: 40, rango: "🦁 Alfa" },
+            { nivel: 60, rango: "🐉 Mítico" },
+            { nivel: 80, rango: "🌌 Leyenda" }
         ];
         let nuevoRango = rangos.reduce((acc, curr) => (mascota.nivel >= curr.nivel ? curr.rango : acc), mascota.rango);
         if (nuevoRango !== mascota.rango) {
             mascota.rango = nuevoRango;
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🏅 *¡${mascota.nombre} ha alcanzado el rango de ${mascota.rango}!* 🎖️` 
+                text: `🏅 *¡${mascota.nombre} ha alcanzado un nuevo rango!* 🚀\n🎖️ *Nuevo rango:* ${mascota.rango}` 
             }, { quoted: msg });
+        }
+
+        // 📈 Subida aleatoria de habilidades (50% de probabilidad)
+        let habilidades = Object.keys(mascota.habilidades);
+        if (habilidades.length > 0) {
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            if (Math.random() < 0.5) {
+                mascota.habilidades[habilidadSubida].nivel += 1;
+                await sock.sendMessage(msg.key.remoteJid, { 
+                    text: `🌟 *${mascota.nombre} ha mejorado su habilidad!*\n🔹 *${habilidadSubida}:* Nivel ${mascota.habilidades[habilidadSubida].nivel}` 
+                }, { quoted: msg });
+            }
         }
 
         // 📂 Guardar cambios en el archivo
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-        // ✅ Reacción de confirmación después de ejecutar
+        // ✅ Reacción de confirmación
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
 
     } catch (error) {
         console.error("❌ Error en el comando .daragua:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al darle agua a tu mascota. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
     }
     break;
 }
-
-
         
 case 'hospital':
 case 'hosp': {
