@@ -476,15 +476,15 @@ case 'memes': {
         const hispamemes = require("hispamemes");
         const meme = hispamemes.meme();
 
+        // 🔄 Reacción antes de enviar el meme
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "😆", key: msg.key } 
+        });
+
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: meme },
             caption: "🤣 *¡Aquí tienes un meme!*\n\n© Azura Ultra 2.0 Bot"
         }, { quoted: msg });
-
-        // ✅ Confirmación con reacción
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "😆", key: msg.key } 
-        });
 
     } catch (e) {
         console.error("❌ Error en el comando .memes:", e);
@@ -2155,43 +2155,50 @@ case 'dar': {
             return;
         }
 
-        // 📌 Verificar si se ingresó un usuario (sea por mensaje citado o mención)
+        // 🏷️ Determina el usuario objetivo, ya sea por cita o mención
         let targetUser;
+        
+        // 1) Usuario al que se le respondió el mensaje
         if (msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
-            // Usuario al que se le respondió el mensaje
             targetUser = msg.message.extendedTextMessage.contextInfo.participant;
+        
+        // 2) Usuario mencionado con @ 
         } else if (mentionedJid.length > 0) {
-            // Usuario mencionado con @
             targetUser = mentionedJid[0];
-        } else {
-            // Si no hay citado ni mención, error
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dar @usuario 5000\` o citando su mensaje.` 
-            }, { quoted: msg });
-            return;
         }
 
-        // 📌 Verificar si se ingresó la cantidad en 'text'
-        // (El handler debe dejarnos en 'text' la cifra que el usuario puso tras @usuario)
-        if (!text || isNaN(text) || parseInt(text) <= 0) {
+        // Si no obtenemos un usuario por cita ni mención, falta info
+        if (!targetUser) {
             await sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Debes ingresar una cantidad válida de diamantes a dar.*\nEjemplo: `dar @usuario 5000`" 
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dar @usuario 5000\` o citando su mensaje.`
             }, { quoted: msg });
             return;
         }
 
-        const cantidad = parseInt(text); // Cantidad de diamantes a dar
-        const rpgFile = "./rpg.json";
+        // 🏆 Verificar si se ingresó la cantidad de diamantes en 'text'
+        // Supongamos que, después de "dar @usuario", la librería te pasa "5000" a 'text'
+        const cantidadStr = (text || "").trim();
 
-        // 🔄 Enviar reacción de “diamantes” mientras se procesa
-        await sock.sendMessage(msg.key.remoteJid, { 
+        // Si no hay nada o no es un número válido
+        if (!cantidadStr || isNaN(cantidadStr) || parseInt(cantidadStr) <= 0) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Debes ingresar una cantidad válida de diamantes a dar.*\nEjemplo: `dar @usuario 5000`"
+            }, { quoted: msg });
+            return;
+        }
+
+        const cantidad = parseInt(cantidadStr);
+
+        // 🔄 Reacción de “diamantes” mientras se procesa
+        await sock.sendMessage(msg.key.remoteJid, {
             react: { text: "💎", key: msg.key }
         });
 
         // 📂 Verificar si el archivo RPG existe
+        const rpgFile = "./rpg.json";
         if (!fs.existsSync(rpgFile)) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *No hay datos de RPG guardados.*" 
+                text: "⚠️ *No hay datos de RPG guardados.*"
             }, { quoted: msg });
             return;
         }
@@ -2214,29 +2221,29 @@ case 'dar': {
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
         // 📩 Confirmar transferencia
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, {
             text: `💎 *Se han enviado ${cantidad} diamantes a @${targetUser.replace("@s.whatsapp.net", "")}.*\n✨ Usa \`${global.prefix}bal\` para ver tu saldo.`,
             mentions: [targetUser]
         }, { quoted: msg });
 
         // ✅ Reacción de confirmación
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, {
             react: { text: "✅", key: msg.key }
         });
 
     } catch (error) {
         console.error("❌ Error en el comando .dar:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al dar diamantes. Inténtalo de nuevo.*" 
+            text: "❌ *Ocurrió un error al dar diamantes. Inténtalo de nuevo.*"
         }, { quoted: msg });
 
         // ❌ Enviar reacción de error
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(msg.key.remoteJid, {
             react: { text: "❌", key: msg.key }
         });
     }
     break;
-}        
+}
 
         
 case 'deleteuser': {
@@ -2590,31 +2597,35 @@ case 'saldo': {
 }        
 
         
+
 case 'dame': {
     try {
         // Verificar si el usuario es el owner
         if (!isOwner(sender)) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Este comando solo puede ser usado por el owner del bot.*" 
+                text: "⛔ *Este comando solo puede ser usado por el owner del bot.*"
             }, { quoted: msg });
             return;
         }
 
-        // Verificar que se haya ingresado la cantidad
-        if (args.length === 0 || isNaN(args[0]) || parseInt(args[0]) <= 0) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dame 5000\`` 
+        // Extraer la cantidad desde "text"
+        const inputCantidad = (text || "").trim();
+
+        // Verificar que se haya ingresado algo y que sea un número válido
+        if (!inputCantidad || isNaN(inputCantidad) || parseInt(inputCantidad) <= 0) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}dame 5000\``
             }, { quoted: msg });
             return;
         }
 
-        let cantidad = parseInt(args[0]);
+        let cantidad = parseInt(inputCantidad);
 
         // Archivo JSON donde se guardan los datos del RPG
         const rpgFile = "./rpg.json";
         if (!fs.existsSync(rpgFile)) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *No hay datos de jugadores registrados.*" 
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "❌ *No hay datos de jugadores registrados.*"
             }, { quoted: msg });
             return;
         }
@@ -2625,8 +2636,8 @@ case 'dame': {
         // Verificar si el owner está registrado
         let userId = msg.key.participant || msg.key.remoteJid;
         if (!rpgData.usuarios[userId]) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.`
             }, { quoted: msg });
             return;
         }
@@ -2647,23 +2658,22 @@ case 'dame': {
 
         // ✅ Reacción de confirmación
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "💎", key: msg.key } // Emoji de diamante 💎
+            react: { text: "💎", key: msg.key }
         });
 
     } catch (error) {
         console.error("❌ Error en el comando .dame:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Ocurrió un error al intentar añadir diamantes. Inténtalo de nuevo.*` 
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error al intentar añadir diamantes. Inténtalo de nuevo.*`
         }, { quoted: msg });
 
-        // ❌ Enviar reacción de error
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } // Emoji de error ❌
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "❌", key: msg.key }
         });
     }
     break;
-}
-        
+}        
 
         
 
