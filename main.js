@@ -232,6 +232,89 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'nivel': {
+    try {
+        const fs = require("fs");
+        const axios = require("axios");
+        const path = require("path");
+        const rpgFile = "./rpg.json";
+        const userId = msg.key.participant || msg.key.remoteJid;
+        const defaultImageUrl = "https://cdn.dorratz.com/files/1740822565780.jpg"; // Imagen por defecto
+
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Los datos del RPG no están disponibles.*" 
+            }, { quoted: msg });
+        }
+
+        // 📥 Cargar datos del usuario
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // ❌ Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId]) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // 📸 Obtener foto de perfil del usuario
+        let profilePictureUrl;
+        try {
+            profilePictureUrl = await sock.profilePictureUrl(userId, "image");
+        } catch {
+            profilePictureUrl = defaultImageUrl; // Usa imagen por defecto si no tiene foto de perfil
+        }
+
+        // 🏅 Rango basado en nivel
+        const rangos = [
+            { nivel: 1, rango: "🌟 Novato" },
+            { nivel: 5, rango: "⚔️ Guerrero Novato" },
+            { nivel: 10, rango: "🔥 Maestro Combatiente" },
+            { nivel: 20, rango: "👑 Élite Supremo" },
+            { nivel: 30, rango: "🌀 Legendario" },
+            { nivel: 40, rango: "💀 Dios de la Guerra" },
+            { nivel: 50, rango: "🚀 Titán Supremo" }
+        ];
+        let nuevoRango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
+        usuario.rango = nuevoRango;
+
+        // 📊 Construir mensaje de estadísticas
+        let mensaje = `🎖️ *Estadísticas de ${usuario.nombre}*\n\n`;
+        mensaje += `🏅 *Rango:* ${usuario.rango}\n`;
+        mensaje += `🔹 *Nivel:* ${usuario.nivel}\n`;
+        mensaje += `❤️ *Vida:* ${usuario.vida} HP\n`;
+        mensaje += `✨ *XP:* ${usuario.experiencia} / ${(usuario.nivel * 1500)} XP\n\n`;
+
+        mensaje += `🌟 *Habilidades:*\n`;
+        Object.entries(usuario.habilidades).forEach(([habilidad, data]) => {
+            mensaje += `   🔹 ${habilidad}: Nivel ${data.nivel}\n`;
+        });
+
+        mensaje += `\n⚔️ *Sigue entrenando para mejorar aún más.*`;
+
+        // 📩 Enviar mensaje con imagen de perfil
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: profilePictureUrl },
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "📜", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .nivel:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al obtener tu nivel. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+        
 case 'minar2': {
     try {
         const fs = require("fs");
