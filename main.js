@@ -13,6 +13,32 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 // 📂 Definir la ruta de almacenamiento de stickers
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
+//para el juego rpg user
+const path = "./rpguser.json";
+
+// Verificar si el archivo existe, si no, crearlo con estructura vacía
+if (!fs.existsSync(path)) {
+    fs.writeFileSync(path, JSON.stringify({ textos: {} }, null, 2));
+}
+
+// Función para cargar los textos aleatorios desde el JSON
+function cargarRpgUser() {
+    if (fs.existsSync(path)) {
+        return JSON.parse(fs.readFileSync(path, "utf-8"));
+    } else {
+        return { textos: {} };
+    }
+}
+
+// Función para guardar cambios en `rpguser.json`
+function guardarRpgUser(data) {
+    fs.writeFileSync(path, JSON.stringify(data, null, 2));
+}
+
+// Cargar datos iniciales del `rpguser.json`
+let rpgUserData = cargarRpgUser();
+
+
 
 // 📂 Crear la carpeta `stickers/` si no existe
 if (!fs.existsSync(stickersDir)) {
@@ -211,83 +237,141 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-case 'tovideo': {
+case 'picar': {
     try {
-        const axios = require('axios');
-        const fs = require('fs');
-        const path = require('path');
-        const { writeFileSync } = fs;
-        const { exec } = require('child_process');
+        const fs = require("fs");
+        const rpgFile = "./rpg.json";
+        const rpgUserFile = "./rpguser.json";
+        const userId = msg.key.participant || msg.key.remoteJid;
 
-        // Asegúrate de que el usuario respondió a un sticker
-        if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Debes responder a un sticker (animado o estático) para convertirlo a video.*"
-            }, { quoted: msg });
-        }
-
-        // Enviar reacción de proceso ⏳
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "⏳", key: msg.key }
+        // ⛏️ Reacción antes de procesar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "⛏️", key: msg.key } 
         });
 
-        // Descarga del sticker
-        let quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage;
-        let stickerStream = await downloadContentFromMessage(quoted, "sticker");
-
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of stickerStream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        // Si el buffer está vacío, error
-        if (buffer.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "❌ *Error al procesar el sticker.*"
+        // 📂 Verificar si los archivos existen
+        if (!fs.existsSync(rpgFile) || !fs.existsSync(rpgUserFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Los datos del RPG no están disponibles.*" 
             }, { quoted: msg });
         }
 
-        // Rutas temporales
-        const stickerPath = path.join(__dirname, 'tmp', `${Date.now()}.webp`);
-        const videoPath = stickerPath.replace('.webp', '.mp4');
+        // 📥 Cargar datos del usuario y eventos
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+        let rpgUserData = JSON.parse(fs.readFileSync(rpgUserFile, "utf-8"));
 
-        // Guardar el sticker temporalmente
-        writeFileSync(stickerPath, buffer);
-
-        // Convertir de WebP a MP4 con ffmpeg
-        // Asegúrate de tener FFmpeg instalado y con soporte para webp
-        exec(`ffmpeg -i "${stickerPath}" -c:v libx264 -pix_fmt yuv420p -crf 23 -preset veryfast "${videoPath}"`, async (error) => {
-            if (error) {
-                console.error("❌ Error al convertir sticker a video:", error);
-                return sock.sendMessage(msg.key.remoteJid, {
-                    text: "❌ *No se pudo convertir el sticker en video.*"
-                }, { quoted: msg });
-            }
-
-            // Enviar el video resultante
-            await sock.sendMessage(msg.key.remoteJid, {
-                video: { url: videoPath },
-                caption: "🎞️ *Aquí está tu video convertido del sticker.*",
-                mimetype: 'video/mp4'
+        // ❌ Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId]) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
             }, { quoted: msg });
+        }
 
-            // Eliminar archivos temporales
-            fs.unlinkSync(stickerPath);
-            fs.unlinkSync(videoPath);
+        let usuario = rpgData.usuarios[userId];
 
-            // Enviar reacción de éxito ✅
-            await sock.sendMessage(msg.key.remoteJid, {
-                react: { text: "✅", key: msg.key }
+        // 🚑 Verificar si el usuario tiene 0 de vida
+        if (usuario.vida <= 0) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: `🚑 *¡No puedes usar este comando!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
+            }, { quoted: msg });
+        }
+
+        // 📜 Seleccionar un texto aleatorio para la acción
+        const textoAleatorio = rpgUserData.eventos.picar[Math.floor(Math.random() * rpgUserData.eventos.picar.length)];
+
+        // 🎚️ Generar XP y diamantes aleatorios
+        let xpGanado = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
+        let diamantesGanados = Math.floor(Math.random() * (800 - 200 + 1)) + 200;
+
+        // ❤️ Reducir vida del usuario entre 2 y 6 puntos
+        let vidaPerdida = Math.floor(Math.random() * (6 - 2 + 1)) + 2;
+        usuario.vida = Math.max(0, usuario.vida - vidaPerdida); // Evita valores negativos
+
+        // ✨ Subida de nivel y habilidades
+        usuario.experiencia += xpGanado;
+        usuario.diamantes += diamantesGanados;
+
+        // 📊 Verificar si el usuario sube de nivel
+        let nivelAnterior = usuario.nivel;
+        let xpMaxNivel = usuario.nivel * 1500; // Escala de XP por nivel
+        while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
+            usuario.experiencia -= xpMaxNivel;
+            usuario.nivel += 1;
+            xpMaxNivel = usuario.nivel * 1500; // Actualizar el XP máximo del nuevo nivel
+        }
+
+        // 🎖️ Subida aleatoria de habilidades
+        let habilidades = Object.keys(usuario.habilidades);
+        if (habilidades.length > 0) {
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            usuario.habilidades[habilidadSubida].nivel += Math.random() < 0.5 ? 1 : 0; // 50% de probabilidad de subir
+        }
+
+        // 🏅 Rango basado en el nivel del usuario
+        const rangos = [
+            { nivel: 1, rango: "🌟 Novato" },
+            { nivel: 5, rango: "⚔️ Guerrero Novato" },
+            { nivel: 10, rango: "🔥 Maestro Combatiente" },
+            { nivel: 20, rango: "👑 Élite Supremo" },
+            { nivel: 30, rango: "🌀 Legendario" },
+            { nivel: 40, rango: "💀 Dios de la Guerra" },
+            { nivel: 50, rango: "🚀 Titán Supremo" }
+        ];
+        let nuevoRango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
+        usuario.rango = nuevoRango;
+
+        // 📜 Mensaje de resultado
+        let mensaje = `⛏️ *${usuario.nombre} fue a picar y esto pasó...*\n\n`;
+        mensaje += `💬 ${textoAleatorio}\n\n`;
+        mensaje += `💎 *Diamantes ganados:* ${diamantesGanados}\n`;
+        mensaje += `✨ *XP Ganado:* ${xpGanado}\n\n`;
+
+        // 🆙 Notificación de subida de nivel con estadísticas completas
+        if (usuario.nivel > nivelAnterior) {
+            let xpRestante = xpMaxNivel - usuario.experiencia;
+
+            mensaje += `🎉 *¡Felicidades ${usuario.nombre}! Has subido de nivel.* 🏆\n\n`;
+            mensaje += `🏅 *Nuevo Rango:* ${usuario.rango}\n`;
+            mensaje += `🔹 *Nivel:* ${usuario.nivel}\n`;
+            mensaje += `✨ *XP:* ${usuario.experiencia} / ${xpMaxNivel} XP\n`;
+            mensaje += `❤️ *Vida:* ${usuario.vida} HP\n`;
+            mensaje += `📌 *XP faltante para el siguiente nivel:* ${xpRestante} XP\n\n`;
+            mensaje += `🌟 *Habilidades Mejoradas:*\n`;
+
+            habilidades.forEach(habilidad => {
+                mensaje += `   🔹 ${habilidad}: Nivel ${usuario.habilidades[habilidad].nivel}\n`;
             });
-        });
-    } catch (error) {
-        console.error("❌ Error en el comando .toimg (WEBP->MP4):", error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Ocurrió un error al convertir el sticker. Inténtalo de nuevo.*"
+
+            mensaje += `\n⚔️ ¡Sigue entrenando para hacerte más fuerte!`;
+        }
+
+        // 📂 Guardar cambios en el archivo
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📩 Enviar mensaje con información
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: mensaje 
         }, { quoted: msg });
+
+        // ✅ Reacción de confirmación después de ejecutar
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .picar:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al picar. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
 }
+
         
 case 'visión': {
     try {
