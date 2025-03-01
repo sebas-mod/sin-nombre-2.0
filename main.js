@@ -16,15 +16,6 @@ const stickersFile = "./stickers.json";
 //para el juego rpg user
 const path = "./rpguser.json";
 
-// Función para cargar los textos aleatorios desde el JSON
-function cargarRpgUser() {
-    if (fs.existsSync(path)) {
-        return JSON.parse(fs.readFileSync(path, "utf-8"));
-    } else {
-        return { textos: {} };
-    }
-}
-
 // Función para guardar cambios en `rpguser.json`
 function guardarRpgUser(data) {
     fs.writeFileSync(path, JSON.stringify(data, null, 2));
