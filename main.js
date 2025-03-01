@@ -211,10 +211,11 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
 
     switch (lowerCommand) {
-case 'pixai': {
+
+ case 'pixai': {
     try {
         if (!args.length) {
-            return sock.sendMessage(msg.key.remoteJid, { 
+            return conn.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Formato incorrecto.*\nEjemplo: \`${global.prefix}pixai chica anime estilo studio ghibli\``
             }, { quoted: msg });
         }
@@ -222,7 +223,7 @@ case 'pixai': {
         const prompt = args.join(" ");
         const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(prompt)}`;
 
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await conn.sendMessage(msg.key.remoteJid, { 
             react: { text: '🔄', key: msg.key } 
         });
 
@@ -231,80 +232,34 @@ case 'pixai': {
         const { images } = await response.json();
 
         if (!images?.length) {
-            return sock.sendMessage(msg.key.remoteJid, { 
+            return conn.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *No se encontraron resultados.* Intenta con otra descripción."
             }, { quoted: msg });
         }
 
-        const medias = images.slice(0, 4).map(url => ({ 
-            type: "image", 
-            data: { url } 
-        }));
-
-        if (medias.length > 1) {
-            await sendAlbumMessage(sock, msg.key.remoteJid, medias, { 
-                caption: `🎨 Resultados para: *${prompt}*`,
-                quoted: msg 
-            });
-        } else {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                image: { url: images[0] },
+        for (const imageUrl of images.slice(0, 4)) {
+            await conn.sendMessage(msg.key.remoteJid, { 
+                image: { url: imageUrl },
                 caption: `🎨 Generado para: *${prompt}*`
             }, { quoted: msg });
         }
 
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await conn.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
 
     } catch (error) {
         console.error("❌ Error en .pixai:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await conn.sendMessage(msg.key.remoteJid, { 
             text: `❌ Fallo al generar imágenes. Error: ${error.message}`
         }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await conn.sendMessage(msg.key.remoteJid, { 
             react: { text: "❌", key: msg.key } 
         });
     }
     break;
 }
-
-async function sendAlbumMessage(conn, jid, medias, options = {}) {
-    try {
-        if (typeof jid !== "string") throw new TypeError("jid debe ser una cadena.");
-        if (!Array.isArray(medias) || medias.length < 2) throw new RangeError("Se requieren al menos 2 medios para crear un álbum.");
-
-        const messages = medias.map((media, index) => {
-            if (!media.type || !media.data || !media.data.url) {
-                throw new TypeError("Cada medio debe tener un tipo y una URL válida.");
-            }
-            return {
-                [media.type]: media.data,
-                ...(index === 0 && options.caption ? { caption: options.caption } : {})
-            };
-        });
-
-        await conn.relayMessage(jid, {
-            albumMessage: {
-                messages,
-                ...(options.quoted ? {
-                    contextInfo: {
-                        remoteJid: options.quoted.key.remoteJid,
-                        fromMe: options.quoted.key.fromMe,
-                        stanzaId: options.quoted.key.id,
-                        participant: options.quoted.key.participant || options.quoted.key.remoteJid,
-                        quotedMessage: options.quoted.message,
-                    }
-                } : {})
-            }
-        });
-
-    } catch (error) {
-        console.error("❌ Error en sendAlbumMessage:", error);
-        throw error;
-    }
-}
-            case 'verdad': {
+        case 'verdad': {
     try {
         const verdad = pickRandom(global.verdad); // Selecciona una verdad aleatoria
         await sock.sendMessage(msg.key.remoteJid, {
