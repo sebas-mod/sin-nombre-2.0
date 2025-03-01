@@ -450,7 +450,6 @@ case 'nivel': {
     try {
         const fs = require("fs");
         const axios = require("axios");
-        const path = require("path");
         const rpgFile = "./rpg.json";
         const userId = msg.key.participant || msg.key.remoteJid;
         const defaultImageUrl = "https://cdn.dorratz.com/files/1740822565780.jpg"; // Imagen por defecto
@@ -511,6 +510,12 @@ case 'nivel': {
         Object.entries(usuario.habilidades).forEach(([habilidad, data]) => {
             mensaje += `   🔹 ${habilidad}: Nivel ${data.nivel}\n`;
         });
+
+        mensaje += `\n🛠️ *Comandos para ganar XP y diamantes:*  
+⛏️ \`${global.prefix}picar\`, \`${global.prefix}minar\`, \`${global.prefix}minar2\`, \`${global.prefix}work\`, \`${global.prefix}claim\`, \`${global.prefix}cofre\`, \`${global.prefix}crime\`, \`${global.prefix}robar\`  
+💰 *Guarda diamantes en el gremio con:* \`${global.prefix}depositar <cantidad>\`  
+🏦 *Retira diamantes con:* \`${global.prefix}retirar <cantidad>\`  
+🚑 *Cura tu vida con:* \`${global.prefix}hospital\``;
 
         mensaje += `\n⚔️ *Sigue entrenando para mejorar aún más.*`;
 
@@ -3916,6 +3921,7 @@ case 'nivelper': {
     break;
 }
      
+
 case 'bal':
 case 'saldo': {
     try {
@@ -3965,6 +3971,10 @@ case 'saldo': {
 📜 *¿Cómo guardar tus diamantes en el gremio?*  
 🔹 Usa \`${global.prefix}dep <cantidad>\` o \`${global.prefix}depositar <cantidad>\` para almacenar diamantes en el gremio.  
 🔹 Los diamantes guardados están protegidos y no pueden ser robados.  
+
+📜 *¿Cómo retirar diamantes del gremio?*  
+🔹 Usa \`${global.prefix}retirar <cantidad>\` para sacar diamantes de tu cuenta del gremio y agregarlos a tu saldo.  
+
 🚀 ¡Administra bien tu economía y conviértete en el más rico del gremio! 🏆
 `;
 
@@ -3993,8 +4003,7 @@ case 'saldo': {
         });
     }
     break;
-}        
-
+}
         
 
 case 'dame': {
