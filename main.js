@@ -16,11 +16,6 @@ const stickersFile = "./stickers.json";
 //para el juego rpg user
 const path = "./rpguser.json";
 
-// Verificar si el archivo existe, si no, crearlo con estructura vacía
-if (!fs.existsSync(path)) {
-    fs.writeFileSync(path, JSON.stringify({ textos: {} }, null, 2));
-}
-
 // Función para cargar los textos aleatorios desde el JSON
 function cargarRpgUser() {
     if (fs.existsSync(path)) {
