@@ -279,11 +279,10 @@ case 'pixai': {
             react: { text: '🎨', key: msg.key } // Reacción de pincel antes de generar la imagen
         });
 
-        if (!args) {
-            return sock.sendMessage(msg.key.remoteJid, { 
+        if (!args) return sock.sendMessage(msg.key.remoteJid, { 
                 text: `⚠️ *Uso incorrecto del comando.*\n📌 Ejemplo: \`${global.prefix}pixai chica anime estilo studio ghibli\`\n\n🔹 *Escribe una descripción para generar una imagen personalizada.*`
             }, { quoted: msg });
-        }
+        
 
         const prompt = args.join(" ");
         const apiUrl = `https://api.dorratz.com/v2/pix-ai?prompt=${encodeURIComponent(prompt)}`;
