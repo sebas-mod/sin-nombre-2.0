@@ -5993,6 +5993,14 @@ case "perfil": {
     try {
         let userJid = null;
 
+        // Enviar reacción antes de procesar el comando
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: {
+                text: "📸", // Emoji de cámara o cualquier otro que prefieras
+                key: msg.key
+            }
+        });
+
         // Si no hay menciones, no hay participante y no hay texto, mostrar la guía de uso
         const hasMention = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0;
         const hasParticipant = msg.message.extendedTextMessage?.contextInfo?.participant;
