@@ -322,7 +322,6 @@ case 'nivelmascota': {
     break;
 }
 
-
 case 'daragua': {
     try {
         const fs = require("fs");
@@ -464,20 +463,13 @@ case 'daragua': {
             }, { quoted: msg });
         }
 
-        // 📂 Guardar cambios
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
-
-        // 📩 Enviar mensaje con información
-        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .daragua:", error);
     }
     break;
-}
-        
-
-        
+}        
 
         
 case 'hospital':
