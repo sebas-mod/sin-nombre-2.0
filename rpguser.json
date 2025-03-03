@@ -1,52 +1,16 @@
 {
   "eventos": {
-    "minar": [
-      "⛏️ Golpeaste la roca y encontraste algunos diamantes brillantes.",
-      "🪨 La mina estaba llena de piedras, pero lograste conseguir algo valioso.",
-      "💎 Descubriste una pequeña veta de diamantes escondida en la cueva.",
-      "⛏️ Mientras minabas, encontraste un cofre con recursos extra.",
-      "🪓 Golpeaste con tanta fuerza que descubriste oro y diamantes.",
-      "💎 Encontraste un raro mineral, ¡puede valer una fortuna!",
-      "⛏️ Tu pico se rompió, pero antes lograste extraer algunos diamantes.",
-      "⛏️ Trabajaste arduamente y encontraste una buena cantidad de minerales.",
-      "🪨 Un golpe de suerte te llevó a una mina secreta llena de recursos.",
-      "💰 Encontraste un pequeño tesoro enterrado mientras minabas."
-    ],
-    "picar": [
-      "🪓 Cortaste una roca gigante y encontraste minerales raros.",
-      "⛏️ Con cada golpe, extraías más y más minerales preciosos.",
-      "🪨 Encontraste una veta secreta llena de minerales valiosos.",
-      "⛏️ Un duende minero te ayudó a extraer minerales más rápido.",
-      "🪓 Descubriste una piedra brillante, pero aún no sabes su valor.",
-      "🪨 Una grieta en la roca reveló diamantes ocultos.",
-      "⛏️ Rompiste una gran roca y dentro había oro y diamantes.",
-      "⛏️ Usaste dinamita y obtuviste una gran cantidad de minerales.",
-      "🔦 En la oscuridad de la cueva, encontraste un mineral especial.",
-      "💰 Picando sin descanso, hallaste una pepita de oro gigante."
-    ],
-    "crime": [
-      "🕵️ Intentaste robar un banco, pero la policía te atrapó y perdiste diamantes.",
-      "🔫 Lograste entrar a una bóveda secreta y te llevaste una buena cantidad de dinero.",
-      "🚔 Te descubrieron en medio del robo y tuviste que huir sin nada.",
-      "💰 Un atraco bien planeado te dio una gran recompensa.",
-      "🔪 Fallaste en el crimen y terminaste perdiendo recursos.",
-      "🏃 Lograste escapar, pero solo con una pequeña cantidad de diamantes.",
-      "🕵️‍♂️ Engañaste a la seguridad y lograste hacer un gran robo.",
-      "🚔 Fuiste emboscado por la policía y lo perdiste todo.",
-      "🎭 Te disfrazaste y lograste infiltrarte en una mansión para robar joyas.",
-      "🔴 Un testigo alertó a la policía y casi te atrapan en pleno delito."
-    ],
-    "work": [
-      "💼 Trabajaste duro y tu jefe te dio un bono extra.",
-      "🛠️ Reparaste una máquina y te pagaron bien.",
-      "💵 Fuiste el empleado del mes y recibiste un aumento.",
-      "📦 Organizaste el almacén y ganaste un bono adicional.",
-      "🏗️ Ayudaste en la construcción y te pagaron en diamantes.",
-      "🚗 Lavaste autos todo el día y lograste reunir algo de dinero.",
-      "💰 Hiciste horas extras y tu esfuerzo valió la pena.",
-      "💼 Cerraste un negocio y te ganaste una comisión extra.",
-      "📊 Diseñaste un plan de marketing y recibiste una gran recompensa.",
-      "🎨 Pintaste una obra de arte y la vendiste por una fortuna."
+    "robar": [
+      "🔫 Intentaste robar a un usuario, pero fallaste y perdiste diamantes.",
+      "🚨 Fuiste descubierto y terminaste escapando sin nada.",
+      "💰 Lograste robar algunas monedas sin que se dieran cuenta.",
+      "🔪 Amenazaste a un usuario y lograste llevarte una buena cantidad de recursos.",
+      "🕵️‍♂️ Engañaste a la víctima y lograste obtener un buen botín.",
+      "🏃 Escapaste antes de que te atraparan, llevándote algunos diamantes.",
+      "🔫 Planeaste el robo perfectamente y obtuviste una gran fortuna.",
+      "🚔 La policía te atrapó en medio del robo y perdiste lo que tenías.",
+      "🔮 Un mago te enseñó a robar sin ser detectado.",
+      "👥 Te aliastes con una banda y juntos hicieron un golpe exitoso."
     ],
     "claim": [
       "🎁 Abriste tu recompensa diaria y ganaste algunos diamantes.",
@@ -71,30 +35,6 @@
       "📦 Dentro del cofre encontraste diamantes y XP extra.",
       "🗝️ Encontraste una llave especial que te permitió abrir dos cofres.",
       "🌀 Un cofre dimensional apareció y contenía un objeto místico."
-    ],
-    "minar2": [
-      "⛏️ Cavaste en una cueva secreta y encontraste un raro mineral.",
-      "🪨 Una fuerte explosión reveló un depósito de diamantes escondidos.",
-      "💎 Mientras minabas, descubriste una piedra con propiedades mágicas.",
-      "⛏️ Golpeaste la roca con tanta fuerza que revelaste un pasaje oculto.",
-      "🪨 Hallaste un fragmento de un mineral desconocido y muy valioso.",
-      "💎 Un compañero minero te dio un mapa con la ubicación de más recursos.",
-      "⛏️ Tuviste un día afortunado, encontraste una gran cantidad de minerales.",
-      "🪨 Tras varias horas, por fin diste con una mina llena de recursos.",
-      "🏗️ Excavaste en un área prohibida y encontraste oro puro.",
-      "🎭 Un misterioso minero te enseñó un truco para encontrar más minerales."
-    ],
-    "robar": [
-      "🔫 Intentaste robar a un usuario, pero fallaste y perdiste diamantes.",
-      "🚨 Fuiste descubierto y terminaste escapando sin nada.",
-      "💰 Lograste robar algunas monedas sin que se dieran cuenta.",
-      "🔪 Amenazaste a un usuario y lograste llevarte una buena cantidad de recursos.",
-      "🕵️‍♂️ Engañaste a la víctima y lograste obtener un buen botín.",
-      "🏃 Escapaste antes de que te atraparan, llevándote algunos diamantes.",
-      "🔫 Planeaste el robo perfectamente y obtuviste una gran fortuna.",
-      "🚔 La policía te atrapó en medio del robo y perdiste lo que tenías.",
-      "🔮 Un mago te enseñó a robar sin ser detectado.",
-      "👥 Te aliastes con una banda y juntos hicieron un golpe exitoso."
     ]
   }
 }
