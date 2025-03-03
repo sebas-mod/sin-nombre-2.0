@@ -372,7 +372,6 @@ case 'nivelmascota': {
     break;
 }
 
-
 case 'daragua': {
     try {
         const fs = require("fs");
@@ -423,41 +422,44 @@ case 'daragua': {
             return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de volver a usar este comando.*` }, { quoted: msg });
         }
 
-        // 🎚️ Generar XP y diamantes aleatorios
-        let xpGanado = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
-        let diamantesGanados = Math.floor(Math.random() * (100 - 1 + 1)) + 1;
+        // 🎖️ **Generar recompensas aleatorias**
+        let diamantesGanados = Math.floor(Math.random() * (100 - 1 + 1)) + 1; // Entre 1 y 100
+        let xpGanada = Math.floor(Math.random() * (1000 - 200 + 1)) + 200; // Entre 200 y 1000
+
+        // 💰 **Incrementar experiencia y diamantes**
+        usuario.diamantes += diamantesGanados;
+        mascota.experiencia += xpGanada;
 
         // ❤️ Reducir vida aleatoriamente entre 5 y 20 puntos
         let vidaPerdida = Math.floor(Math.random() * (20 - 5 + 1)) + 5;
         mascota.vida = Math.max(0, mascota.vida - vidaPerdida);
 
-        // ✨ Subida de nivel y habilidades
-        mascota.experiencia += xpGanado;
-        usuario.diamantes += diamantesGanados;
-
-        // 🕒 Guardar cooldown
+        // 🕒 **Guardar cooldown**
         if (!mascota.cooldowns) mascota.cooldowns = {};
         mascota.cooldowns.daragua = tiempoActual;
 
-        // 📜 Lista de textos aleatorios con XP y diamantes incluidos
-        const textosAleatorios = [
-            `💦 *${mascota.nombre} bebió agua fresca y se siente revitalizado.*  
+        // 💦 **Textos aleatorios personalizados con recompensas**
+        const textos = [
+            `💧 *${mascota.nombre} bebió agua fresca y se siente revitalizado.*  
 💎 *${diamantesGanados} Diamantes ganados*  
-✨ *${xpGanado} XP obtenidos*`,
+✨ *${xpGanada} XP obtenidos*`,
             `🌊 *Un trago de agua y ${mascota.nombre} está lleno de energía.*  
 💎 *${diamantesGanados} Diamantes ganados*  
-✨ *${xpGanado} XP obtenidos*`,
+✨ *${xpGanada} XP obtenidos*`,
             `🏞️ *${mascota.nombre} se refrescó con agua y está más feliz que nunca.*  
 💎 *${diamantesGanados} Diamantes ganados*  
-✨ *${xpGanado} XP obtenidos*`
+✨ *${xpGanada} XP obtenidos*`,
+            `🐾 *${mascota.nombre} disfrutó de una buena hidratación y ahora está más activo.*  
+💎 *${diamantesGanados} Diamantes ganados*  
+✨ *${xpGanada} XP obtenidos*`
         ];
 
         // 📢 **Enviar mensaje con XP y Diamantes**
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: textosAleatorios[Math.floor(Math.random() * textosAleatorios.length)] 
+            text: textos[Math.floor(Math.random() * textos.length)] 
         }, { quoted: msg });
 
-        // 📊 **Habilidad aleatoria que sube de nivel**
+        // 🌟 **Incrementar niveles aleatorios en habilidades**
         let habilidades = Object.keys(mascota.habilidades);
         if (habilidades.length > 0) {
             let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
@@ -512,6 +514,7 @@ case 'daragua': {
     }
     break;
 }
+        
 
         
 case 'hospital':
