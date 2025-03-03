@@ -322,8 +322,7 @@ case 'nivelmascota': {
     break;
 }
 
-        
- case 'daragua': {
+case 'daragua': {
     try {
         const fs = require("fs");
         const rpgFile = "./rpg.json";
@@ -398,6 +397,10 @@ case 'nivelmascota': {
         let xpGanado = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
         let diamantesGanados = Math.floor(Math.random() * (100 - 1 + 1)) + 1;
 
+        // ❤️ Reducir vida aleatoriamente entre 5 y 20 puntos
+        let vidaPerdida = Math.floor(Math.random() * (20 - 5 + 1)) + 5;
+        mascota.vida = Math.max(0, mascota.vida - vidaPerdida);
+
         // ✨ Subida de nivel y habilidades
         mascota.experiencia += xpGanado;
         usuario.diamantes += diamantesGanados;
@@ -412,23 +415,34 @@ case 'nivelmascota': {
         mensaje += `💎 *Diamantes ganados:* ${diamantesGanados}\n`;
         mensaje += `✨ *XP Ganado:* ${xpGanado}\n`;
 
+        // 📊 **Habilidad aleatoria que sube de nivel**
+        let habilidades = Object.keys(mascota.habilidades);
+        if (habilidades.length > 0) {
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            if (Math.random() < 0.5) { // 50% de probabilidad de mejorar una habilidad
+                mascota.habilidades[habilidadSubida].nivel += 1;
+
+                await sock.sendMessage(msg.key.remoteJid, { 
+                    text: `🌟 *¡${mascota.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${mascota.habilidades[habilidadSubida].nivel}*`
+                }, { quoted: msg });
+            }
+        }
+
         // 📊 Verificar si la mascota sube de nivel
         let nivelAnterior = mascota.nivel;
-        let xpMaxActual = mascota.xpMax || 500; // Asegurar que xpMax existe
-
+        let xpMaxActual = mascota.nivel * 1200; // Ajuste del XP máximo por nivel
         while (mascota.experiencia >= xpMaxActual && mascota.nivel < 80) {
-            mascota.experiencia -= xpMaxActual; // Restar la XP usada para subir de nivel
-            mascota.nivel += 1; // Subir nivel
-            xpMaxActual = mascota.nivel * 1200; // Ajustar el XP máximo del nuevo nivel
-            mascota.xpMax = xpMaxActual; // Guardar nuevo XP requerido
+            mascota.experiencia -= xpMaxActual;
+            mascota.nivel += 1;
+            xpMaxActual = mascota.nivel * 1200;
+            mascota.xpMax = xpMaxActual;
 
-            // 📜 Notificación de subida de nivel
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🎉 *¡Felicidades! Tu mascota ${mascota.nombre} ha subido de nivel.* 🏆\n\n🐾 *Nuevo Nivel:* ${mascota.nivel}\n✨ *Experiencia:* ${mascota.experiencia} / ${xpMaxActual} XP`
+                text: `🎉 *¡Felicidades! Tu mascota ${mascota.nombre} ha subido de nivel.* 🏆\n🐾 *Nuevo Nivel:* ${mascota.nivel}\n✨ *Experiencia:* ${mascota.experiencia} / ${xpMaxActual} XP`
             }, { quoted: msg });
         }
 
-        // 🎖️ Actualización de Rango de la Mascota
+        // 📊 **Actualizar Rangos**
         const rangosMascota = [
             { nivel: 1, rango: "🐣 Principiante" },
             { nivel: 10, rango: "🐾 Aprendiz" },
@@ -451,15 +465,12 @@ case 'nivelmascota': {
 
         // 📂 Guardar cambios
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
-
-        // 📩 Enviar mensaje con información
-        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
-
     } catch (error) {
         console.error("❌ Error en el comando .daragua:", error);
     }
     break;
-}
+}        
+
         
 case 'hospital':
 case 'hosp': {
