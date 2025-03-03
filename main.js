@@ -1798,25 +1798,24 @@ case 'nivel': {
     break;
 }
         
+
 case 'minar2': {
     try {
         const fs = require("fs");
         const rpgFile = "./rpg.json";
-        const rpgUserFile = "./rpguser.json";
         const userId = msg.key.participant || msg.key.remoteJid;
-        const cooldownTime = 5 * 60 * 1000; // ⏳ 5 minutos
+        const cooldownTime = 5 * 60 * 1000; // ⏳ 5 minutos de espera
 
         // ⛏️ Reacción antes de procesar
         await sock.sendMessage(msg.key.remoteJid, { react: { text: "⛏️", key: msg.key } });
 
-        // 📂 Verificar si los archivos existen
-        if (!fs.existsSync(rpgFile) || !fs.existsSync(rpgUserFile)) {
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
             return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Los datos del RPG no están disponibles.*" }, { quoted: msg });
         }
 
-        // 📥 Cargar datos del usuario y eventos
+        // 📥 Cargar datos del usuario
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let rpgUserData = JSON.parse(fs.readFileSync(rpgUserFile, "utf-8"));
 
         // ❌ Verificar si el usuario está registrado
         if (!rpgData.usuarios[userId]) {
@@ -1837,81 +1836,96 @@ case 'minar2': {
         // 🕒 Verificar cooldown
         let tiempoActual = Date.now();
         if (usuario.cooldowns?.minar2 && tiempoActual - usuario.cooldowns.minar2 < cooldownTime) {
-            let tiempoRestante = ((usuario.cooldowns.minar2 + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(2);
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de volver a minar.*` 
-            }, { quoted: msg });
+            let tiempoRestante = ((usuario.cooldowns.minar2 + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
+            return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de volver a minar.*` }, { quoted: msg });
         }
 
-        // 📜 Seleccionar un texto aleatorio para la acción
-        const textoAleatorio = rpgUserData.eventos.minar2[Math.floor(Math.random() * rpgUserData.eventos.minar2.length)];
+        // 🎖️ **Generar recompensas aleatorias**
+        let xpGanado = Math.floor(Math.random() * (2000 - 500 + 1)) + 500; // Entre 500 y 2000 XP
+        let diamantesGanados = Math.floor(Math.random() * (900 - 300 + 1)) + 300; // Entre 300 y 900 diamantes
 
-        // 🎚️ Generar XP y diamantes aleatorios
-        let xpGanado = Math.floor(Math.random() * (1200 - 300 + 1)) + 300;
-        let diamantesGanados = Math.floor(Math.random() * (900 - 300 + 1)) + 300;
-
-        // ❤️ Reducir vida del usuario entre 3 y 7 puntos
+        // ❤️ Reducir vida aleatoriamente entre 3 y 7 puntos
         let vidaPerdida = Math.floor(Math.random() * (7 - 3 + 1)) + 3;
         usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
-        // ✨ Subida de nivel y habilidades
+        // 💎 **Incrementar experiencia y diamantes**
         usuario.experiencia += xpGanado;
         usuario.diamantes += diamantesGanados;
 
-        // 📜 Guardar el tiempo del último uso del comando
+        // 🕒 **Guardar cooldown**
         if (!usuario.cooldowns) usuario.cooldowns = {};
         usuario.cooldowns.minar2 = tiempoActual;
 
-        // 📜 Mensaje de resultado
-        let mensaje = `⛏️ *${usuario.nombre} fue a minar y esto pasó...*\n\n`;
-        mensaje += `💬 ${textoAleatorio}\n\n`;
-        mensaje += `💎 *Diamantes ganados:* ${diamantesGanados}\n`;
-        mensaje += `✨ *XP Ganado:* ${xpGanado}\n`;
+        // ⛏️ **Textos aleatorios personalizados con recompensas**
+        const textos = [
+            `⛏️ *${usuario.nombre} encontró una mina secreta y extrae minerales valiosos.*  
+💎 *${diamantesGanados} Diamantes ganados*  
+✨ *${xpGanado} XP obtenidos*`,
+            `🏔️ *Después de un duro trabajo, ${usuario.nombre} encontró piedras preciosas.*  
+💎 *${diamantesGanados} Diamantes ganados*  
+✨ *${xpGanado} XP obtenidos*`,
+            `⛏️ *Golpe tras golpe, ${usuario.nombre} extrae tesoros ocultos en la cueva.*  
+💎 *${diamantesGanados} Diamantes ganados*  
+✨ *${xpGanado} XP obtenidos*`,
+            `🌋 *Las profundidades de la mina revelan una gran sorpresa para ${usuario.nombre}.*  
+💎 *${diamantesGanados} Diamantes ganados*  
+✨ *${xpGanado} XP obtenidos*`,
+            `🔦 *${usuario.nombre} explora una mina abandonada y descubre minerales raros.*  
+💎 *${diamantesGanados} Diamantes ganados*  
+✨ *${xpGanado} XP obtenidos*`,
+            `⚒️ *Un golpe certero y ${usuario.nombre} saca un montón de diamantes de la roca.*  
+💎 *${diamantesGanados} Diamantes ganados*  
+✨ *${xpGanado} XP obtenidos*`
+        ];
 
-        // 📩 Enviar mensaje con información principal
-        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+        // 📢 **Enviar mensaje con XP y Diamantes**
+        await sock.sendMessage(msg.key.remoteJid, { text: textos[Math.floor(Math.random() * textos.length)] }, { quoted: msg });
 
-        // 📊 Verificar si el usuario sube de nivel
-        let nivelAnterior = usuario.nivel;
+        // 📊 **Habilidad aleatoria que sube de nivel (30% de probabilidad)**
+        let habilidades = Object.keys(usuario.habilidades);
+        if (habilidades.length > 0) {
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            if (Math.random() < 0.3) { // 30% de probabilidad de mejorar una habilidad
+                usuario.habilidades[habilidadSubida].nivel += 1;
+                await sock.sendMessage(msg.key.remoteJid, { 
+                    text: `✨ *¡${usuario.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${usuario.habilidades[habilidadSubida].nivel}*`
+                }, { quoted: msg });
+            }
+        }
+
+        // 📊 **Actualizar y manejar Rangos**
+        const rangos = [
+            { nivel: 1, rango: "🌟 Novato" },
+            { nivel: 5, rango: "⚔️ Guerrero Novato" },
+            { nivel: 10, rango: "🔥 Maestro Combatiente" },
+            { nivel: 20, rango: "👑 Élite Supremo" },
+            { nivel: 30, rango: "🌀 Legendario" },
+            { nivel: 40, rango: "💀 Dios de la Guerra" },
+            { nivel: 50, rango: "🚀 Titán Supremo" }
+        ];
+        let rangoAnterior = usuario.rango;
+        usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
+
+        if (usuario.rango !== rangoAnterior) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎖️ *¡${usuario.nombre} ha subido de rango a ${usuario.rango}!* 🚀`
+            }, { quoted: msg });
+        }
+
+        // 📊 **Verificar si el usuario sube de nivel**
         let xpMaxNivel = usuario.nivel * 1500;
         while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
             usuario.experiencia -= xpMaxNivel;
             usuario.nivel += 1;
             xpMaxNivel = usuario.nivel * 1500;
 
-            // 🎖️ **Actualizar Rango Basado en el Nivel**
-            const rangos = [
-                { nivel: 1, rango: "🌟 Novato" },
-                { nivel: 5, rango: "⚔️ Guerrero Novato" },
-                { nivel: 10, rango: "🔥 Maestro Combatiente" },
-                { nivel: 20, rango: "👑 Élite Supremo" },
-                { nivel: 30, rango: "🌀 Legendario" },
-                { nivel: 40, rango: "💀 Dios de la Guerra" },
-                { nivel: 50, rango: "🚀 Titán Supremo" }
-            ];
-            usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
-
-            // 📜 **Notificación de Nivel**
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${usuario.rango}` 
-            }, { quoted: msg });
-        }
-
-        // 🎖️ **Habilidad Aleatoria**
-        let habilidades = Object.keys(usuario.habilidades);
-        if (habilidades.length > 0) {
-            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
-            usuario.habilidades[habilidadSubida].nivel += Math.random() < 0.5 ? 1 : 0;
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `✨ *${usuario.nombre} ha mejorado su habilidad ${habilidadSubida} a nivel ${usuario.habilidades[habilidadSubida].nivel}!*`
+                text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${usuario.rango}`
             }, { quoted: msg });
         }
 
         // 📂 Guardar cambios en el archivo
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
-
-        // ✅ Reacción de confirmación después de ejecutar
-        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
 
     } catch (error) {
         console.error("❌ Error en el comando .minar2:", error);
@@ -1924,21 +1938,19 @@ case 'crime': {
     try {
         const fs = require("fs");
         const rpgFile = "./rpg.json";
-        const rpgUserFile = "./rpguser.json";
         const userId = msg.key.participant || msg.key.remoteJid;
-        const cooldownTime = 8 * 60 * 1000; // 8 minutos
+        const cooldownTime = 8 * 60 * 1000; // ⏳ 8 minutos de espera
 
         // 🕵️‍♂️ Reacción antes de procesar
         await sock.sendMessage(msg.key.remoteJid, { react: { text: "🕵️‍♂️", key: msg.key } });
 
-        // 📂 Verificar si los archivos existen
-        if (!fs.existsSync(rpgFile) || !fs.existsSync(rpgUserFile)) {
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
             return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Los datos del RPG no están disponibles.*" }, { quoted: msg });
         }
 
-        // 📥 Cargar datos del usuario y eventos
+        // 📥 Cargar datos del usuario
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let rpgUserData = JSON.parse(fs.readFileSync(rpgUserFile, "utf-8"));
 
         // ❌ Verificar si el usuario está registrado
         if (!rpgData.usuarios[userId]) {
@@ -1959,20 +1971,15 @@ case 'crime': {
         // 🕒 Verificar cooldown
         let tiempoActual = Date.now();
         if (usuario.cooldowns?.crime && tiempoActual - usuario.cooldowns.crime < cooldownTime) {
-            let tiempoRestante = ((usuario.cooldowns.crime + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(2);
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de intentar otro crimen.*` 
-            }, { quoted: msg });
+            let tiempoRestante = ((usuario.cooldowns.crime + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
+            return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de intentar otro crimen.*` }, { quoted: msg });
         }
 
-        // 🎭 Seleccionar texto aleatorio para el crimen
-        const textoAleatorio = rpgUserData.eventos.crime[Math.floor(Math.random() * rpgUserData.eventos.crime.length)];
-
-        // 🎲 Probabilidad de éxito del 50%
+        // 🎖️ **Generar recompensas aleatorias**
         let exito = Math.random() < 0.5;
-        let xpGanado = exito ? Math.floor(Math.random() * (1500 - 300 + 1)) + 300 : -Math.floor(Math.random() * (700 - 200 + 1)) + 200;
-        let diamantesGanados = exito ? Math.floor(Math.random() * (700 - 100 + 1)) + 100 : 0;
-        let vidaPerdida = exito ? Math.floor(Math.random() * (10 - 5 + 1)) + 5 : Math.floor(Math.random() * (15 - 10 + 1)) + 10;
+        let xpGanado = exito ? Math.floor(Math.random() * (2000 - 500 + 1)) + 500 : -Math.floor(Math.random() * (1000 - 300 + 1)) + 300;
+        let diamantesGanados = exito ? Math.floor(Math.random() * (1000 - 200 + 1)) + 200 : 0;
+        let vidaPerdida = exito ? Math.floor(Math.random() * (10 - 5 + 1)) + 5 : Math.floor(Math.random() * (20 - 10 + 1)) + 10;
 
         usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
@@ -1983,55 +1990,85 @@ case 'crime': {
             usuario.experiencia = Math.max(0, usuario.experiencia + xpGanado);
         }
 
-        // 📜 Mensaje de resultado del crimen
-        let mensaje = `🕵️‍♂️ *${usuario.nombre} intentó cometer un crimen...*\n\n`;
-        mensaje += `💬 ${textoAleatorio}\n\n`;
+        // 📜 **Textos aleatorios personalizados con recompensas**
+        const textosExito = [
+            `🕵️‍♂️ *${usuario.nombre} planeó un crimen perfecto y logró escapar con el botín.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `💰 *${usuario.nombre} hackeó una cuenta bancaria y se hizo con una fortuna.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🚗 *Un golpe rápido y preciso, ${usuario.nombre} robó un auto de lujo y lo vendió en el mercado negro.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🔫 *${usuario.nombre} asaltó una joyería y escapó sin dejar rastro.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`
+        ];
 
-        if (exito) {
-            mensaje += `✅ *¡Crimen exitoso!*\n`;
-            mensaje += `🔥 *XP Ganado:* ${xpGanado}\n`;
-            mensaje += `💎 *Diamantes obtenidos:* ${diamantesGanados}\n\n`;
-        } else {
-            mensaje += `❌ *Fallaste y te atraparon!*\n`;
-            mensaje += `💀 *Perdiste XP:* ${Math.abs(xpGanado)}\n`;
-            mensaje += `❤️ *Perdiste vida:* ${vidaPerdida} HP\n\n`;
+        const textosFracaso = [
+            `🚔 *${usuario.nombre} intentó un crimen, pero fue atrapado y perdió parte de su XP.*  
+💀 *Perdiste XP:* ${Math.abs(xpGanado)}  
+❤️ *Perdiste vida:* ${vidaPerdida} HP`,
+            `🔒 *${usuario.nombre} fue sorprendido en medio del robo y apenas logró escapar con vida.*  
+💀 *Perdiste XP:* ${Math.abs(xpGanado)}  
+❤️ *Perdiste vida:* ${vidaPerdida} HP`,
+            `🚨 *Las alarmas se activaron y ${usuario.nombre} tuvo que huir sin botín.*  
+💀 *Perdiste XP:* ${Math.abs(xpGanado)}  
+❤️ *Perdiste vida:* ${vidaPerdida} HP`,
+            `⚠️ *Un cómplice traicionó a ${usuario.nombre} y fue arrestado, perdiendo experiencia.*  
+💀 *Perdiste XP:* ${Math.abs(xpGanado)}  
+❤️ *Perdiste vida:* ${vidaPerdida} HP`
+        ];
+
+        // 📢 **Enviar mensaje con XP y Diamantes**
+        await sock.sendMessage(msg.key.remoteJid, { text: exito ? textosExito[Math.floor(Math.random() * textosExito.length)] : textosFracaso[Math.floor(Math.random() * textosFracaso.length)] }, { quoted: msg });
+
+        // 🌟 **Incrementar niveles aleatorios en habilidades (30% de probabilidad)**
+        let habilidades = Object.keys(usuario.habilidades);
+        if (habilidades.length > 0 && Math.random() < 0.3) { // 30% de probabilidad
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            usuario.habilidades[habilidadSubida].nivel += 1;
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🌟 *¡${usuario.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${usuario.habilidades[habilidadSubida].nivel}*`
+            }, { quoted: msg });
         }
 
-        // 📥 Guardar cooldown y cambios en archivos
-        usuario.cooldowns = usuario.cooldowns || {};
-        usuario.cooldowns.crime = tiempoActual;
+        // 📊 **Actualizar y manejar Rangos**
+        const rangos = [
+            { nivel: 1, rango: "🌟 Novato" },
+            { nivel: 5, rango: "⚔️ Guerrero Novato" },
+            { nivel: 10, rango: "🔥 Maestro Criminal" },
+            { nivel: 20, rango: "👑 Élite del Crimen" },
+            { nivel: 30, rango: "🌀 Genio del Robo" },
+            { nivel: 40, rango: "💀 Rey del Crimen" },
+            { nivel: 50, rango: "🚀 Señor Supremo" }
+        ];
+        let rangoAnterior = usuario.rango;
+        usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
 
-        // 📩 Enviar mensaje con información principal
-        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+        if (usuario.rango !== rangoAnterior) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎖️ *¡${usuario.nombre} ha subido de rango a ${usuario.rango}!* 🚀`
+            }, { quoted: msg });
+        }
 
-        // ✅ Reacción de confirmación después de ejecutar
-        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
-
-        // 📊 Verificar si el usuario sube de nivel
-        let nivelAnterior = usuario.nivel;
+        // 📊 **Verificar si el usuario sube de nivel**
         let xpMaxNivel = usuario.nivel * 1500;
         while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
             usuario.experiencia -= xpMaxNivel;
             usuario.nivel += 1;
             xpMaxNivel = usuario.nivel * 1500;
 
-            // 🎖️ **Actualizar Rango Basado en el Nivel**
-            const rangos = [
-                { nivel: 1, rango: "🌟 Novato" },
-                { nivel: 5, rango: "⚔️ Guerrero Novato" },
-                { nivel: 10, rango: "🔥 Maestro Combatiente" },
-                { nivel: 20, rango: "👑 Élite Supremo" },
-                { nivel: 30, rango: "🌀 Legendario" },
-                { nivel: 40, rango: "💀 Dios de la Guerra" },
-                { nivel: 50, rango: "🚀 Titán Supremo" }
-            ];
-            usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
-
-            // 📜 **Notificación de Nivel**
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${usuario.rango}` 
+                text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${usuario.rango}`
             }, { quoted: msg });
         }
+
+        // 📥 Guardar cooldown y cambios en archivos
+        usuario.cooldowns = usuario.cooldowns || {};
+        usuario.cooldowns.crime = tiempoActual;
 
         // 📂 Guardar cambios en el archivo
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
@@ -2041,6 +2078,8 @@ case 'crime': {
     }
     break;
 }
+
+        
         
 case 'robar': {
     try {
@@ -2434,25 +2473,19 @@ case 'work': {
     try {
         const fs = require("fs");
         const rpgFile = "./rpg.json";
-        const rpgUserFile = "./rpguser.json";
         const userId = msg.key.participant || msg.key.remoteJid;
-        const cooldownTime = 8 * 60 * 1000; // 8 minutos en milisegundos
+        const cooldownTime = 8 * 60 * 1000; // 8 minutos
 
         // 🛠️ Reacción antes de procesar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🛠️", key: msg.key } 
-        });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "🛠️", key: msg.key } });
 
-        // 📂 Verificar si los archivos existen
-        if (!fs.existsSync(rpgFile) || !fs.existsSync(rpgUserFile)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *Los datos del RPG no están disponibles.*" 
-            }, { quoted: msg });
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Los datos del RPG no están disponibles.*" }, { quoted: msg });
         }
 
-        // 📥 Cargar datos del usuario y eventos
+        // 📥 Cargar datos del usuario
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let rpgUserData = JSON.parse(fs.readFileSync(rpgUserFile, "utf-8"));
 
         // ❌ Verificar si el usuario está registrado
         if (!rpgData.usuarios[userId]) {
@@ -2463,135 +2496,131 @@ case 'work': {
 
         let usuario = rpgData.usuarios[userId];
 
-        // 🕒 Verificar si el usuario está en cooldown
-        let tiempoActual = Date.now();
-        if (usuario.cooldowns?.work && tiempoActual - usuario.cooldowns.work < cooldownTime) {
-            let tiempoRestante = ((usuario.cooldowns.work + cooldownTime - tiempoActual) / 1000).toFixed(0);
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⏳ *Debes esperar ${tiempoRestante} segundos antes de volver a usar este comando.*` 
-            }, { quoted: msg });
-        }
-
         // 🚑 Verificar si el usuario tiene 0 de vida
         if (usuario.vida <= 0) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: `🚑 *¡No puedes usar este comando!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
+                text: `🚑 *¡No puedes trabajar!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
             }, { quoted: msg });
         }
 
-        // 📜 Seleccionar un texto aleatorio para la acción
-        const textoAleatorio = rpgUserData.eventos.work[Math.floor(Math.random() * rpgUserData.eventos.work.length)];
+        // 🕒 Verificar cooldown
+        let tiempoActual = Date.now();
+        if (usuario.cooldowns?.work && tiempoActual - usuario.cooldowns.work < cooldownTime) {
+            let tiempoRestante = ((usuario.cooldowns.work + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
+            return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de volver a trabajar.*` }, { quoted: msg });
+        }
 
-        // 🎚️ Generar XP y diamantes aleatorios
-        let xpGanado = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
-        let diamantesGanados = Math.floor(Math.random() * (500 - 1 + 1)) + 1;
-
-        // ❤️ Reducir vida del usuario entre 2 y 5 puntos
+        // 🎖️ **Generar recompensas aleatorias**
+        let xpGanado = Math.floor(Math.random() * (3500 - 200 + 1)) + 200;
+        let diamantesGanados = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
         let vidaPerdida = Math.floor(Math.random() * (5 - 2 + 1)) + 2;
-        usuario.vida = Math.max(0, usuario.vida - vidaPerdida); // Evita valores negativos
+        usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
-        // ✨ Subida de nivel y habilidades
+        // 💰 **Incrementar experiencia y diamantes**
         usuario.experiencia += xpGanado;
         usuario.diamantes += diamantesGanados;
 
-        // 📜 Guardar el tiempo del último uso del comando
-        if (!usuario.cooldowns) usuario.cooldowns = {};
+        // 📜 Guardar cooldown
+        usuario.cooldowns = usuario.cooldowns || {};
         usuario.cooldowns.work = tiempoActual;
 
-        // 📜 Mensaje de resultado
-        let mensaje = `🛠️ *${usuario.nombre} fue a trabajar y esto pasó...*\n\n`;
-        mensaje += `💬 ${textoAleatorio}\n\n`;
-        mensaje += `💎 *Diamantes ganados:* ${diamantesGanados}\n`;
-        mensaje += `✨ *XP Ganado:* ${xpGanado}\n`;
+        // 💼 **Textos aleatorios personalizados con recompensas**
+        const textos = [
+            `🛠️ *${usuario.nombre} trabajó duro y recibió su pago.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `💰 *${usuario.nombre} completó una tarea importante en su trabajo y fue recompensado.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🔨 *Después de una jornada agotadora, ${usuario.nombre} recibió su salario.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `📈 *${usuario.nombre} cerró un buen trato y ganó una gran comisión.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `💵 *${usuario.nombre} recibió un bono por su desempeño laboral.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🚀 *Un ascenso inesperado hizo que ${usuario.nombre} ganara más dinero del esperado.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`
+        ];
 
-        // 📩 Enviar mensaje con información principal
-        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+        // 📢 **Enviar mensaje con XP y Diamantes**
+        await sock.sendMessage(msg.key.remoteJid, { text: textos[Math.floor(Math.random() * textos.length)] }, { quoted: msg });
 
-        // 📊 Verificar si el usuario sube de nivel
-        let nivelAnterior = usuario.nivel;
-        let xpMaxNivel = usuario.nivel * 1500; // Escala de XP por nivel
+        // 🌟 **Incrementar niveles aleatorios en habilidades (30% de probabilidad)**
+        let habilidades = Object.keys(usuario.habilidades);
+        if (habilidades.length > 0 && Math.random() < 0.3) { // 30% de probabilidad
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            usuario.habilidades[habilidadSubida].nivel += 1;
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🌟 *¡${usuario.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${usuario.habilidades[habilidadSubida].nivel}*`
+            }, { quoted: msg });
+        }
+
+        // 📊 **Actualizar y manejar Rangos**
+        const rangos = [
+            { nivel: 1, rango: "🌟 Novato" },
+            { nivel: 5, rango: "⚔️ Guerrero Novato" },
+            { nivel: 10, rango: "🔥 Maestro del Oficio" },
+            { nivel: 20, rango: "👑 Experto en Trabajo" },
+            { nivel: 30, rango: "🌀 Líder de Proyecto" },
+            { nivel: 40, rango: "💀 Empresario Exitoso" },
+            { nivel: 50, rango: "🚀 Magnate Supremo" }
+        ];
+        let rangoAnterior = usuario.rango;
+        usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
+
+        if (usuario.rango !== rangoAnterior) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎖️ *¡${usuario.nombre} ha subido de rango a ${usuario.rango}!* 🚀`
+            }, { quoted: msg });
+        }
+
+        // 📊 **Verificar si el usuario sube de nivel**
+        let xpMaxNivel = usuario.nivel * 1500;
         while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
             usuario.experiencia -= xpMaxNivel;
             usuario.nivel += 1;
-            xpMaxNivel = usuario.nivel * 1500; // Actualizar el XP máximo del nuevo nivel
+            xpMaxNivel = usuario.nivel * 1500;
 
-            // 🎖️ Actualizar rango basado en nivel
-            const rangos = [
-                { nivel: 1, rango: "🌟 Novato" },
-                { nivel: 5, rango: "⚔️ Guerrero Novato" },
-                { nivel: 10, rango: "🔥 Maestro Combatiente" },
-                { nivel: 20, rango: "👑 Élite Supremo" },
-                { nivel: 30, rango: "🌀 Legendario" },
-                { nivel: 40, rango: "💀 Dios de la Guerra" },
-                { nivel: 50, rango: "🚀 Titán Supremo" }
-            ];
-            usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
-
-            // 🆙 Enviar mensaje de subida de nivel
-            let mensajeNivel = `🎉 *¡Felicidades ${usuario.nombre}! Has subido de nivel.* 🏆\n\n`;
-            mensajeNivel += `🏅 *Nuevo Rango:* ${usuario.rango}\n`;
-            mensajeNivel += `🔹 *Nivel:* ${usuario.nivel}\n`;
-            mensajeNivel += `✨ *XP:* ${usuario.experiencia} / ${xpMaxNivel} XP\n`;
-            mensajeNivel += `❤️ *Vida:* ${usuario.vida} HP\n`;
-            mensajeNivel += `📌 *XP faltante para el siguiente nivel:* ${xpMaxNivel - usuario.experiencia} XP\n`;
-            await sock.sendMessage(msg.key.remoteJid, { text: mensajeNivel }, { quoted: msg });
-        }
-
-        // 🎖️ Subida aleatoria de habilidades (mensajes separados)
-        let habilidades = Object.keys(usuario.habilidades);
-        if (habilidades.length > 0) {
-            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
-            let subirHabilidad = Math.random() < 0.5; // 50% de probabilidad de subir
-
-            if (subirHabilidad) {
-                usuario.habilidades[habilidadSubida].nivel += 1;
-                let mensajeHabilidad = `✨ *¡${usuario.nombre} ha mejorado su habilidad!*\n\n`;
-                mensajeHabilidad += `🔹 *Habilidad:* ${habilidadSubida}\n`;
-                mensajeHabilidad += `🎚️ *Nuevo Nivel:* ${usuario.habilidades[habilidadSubida].nivel}`;
-                await sock.sendMessage(msg.key.remoteJid, { text: mensajeHabilidad }, { quoted: msg });
-            }
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${usuario.rango}`
+            }, { quoted: msg });
         }
 
         // 📂 Guardar cambios en el archivo
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
         // ✅ Reacción de confirmación después de ejecutar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
 
     } catch (error) {
         console.error("❌ Error en el comando .work:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al trabajar. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al trabajar. Inténtalo de nuevo.*" }, { quoted: msg });
     }
     break;
 }
-        
+            
 case 'minar': {
     try {
         const fs = require("fs");
         const rpgFile = "./rpg.json";
-        const rpgUserFile = "./rpguser.json";
         const userId = msg.key.participant || msg.key.remoteJid;
-        const cooldownTime = 5 * 60 * 1000; // 5 minutos en milisegundos
+        const cooldownTime = 5 * 60 * 1000; // 5 minutos
 
         // ⛏️ Reacción antes de procesar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "⛏️", key: msg.key } 
-        });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "⛏️", key: msg.key } });
 
-        // 📂 Verificar si los archivos existen
-        if (!fs.existsSync(rpgFile) || !fs.existsSync(rpgUserFile)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *Los datos del RPG no están disponibles.*" 
-            }, { quoted: msg });
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Los datos del RPG no están disponibles.*" }, { quoted: msg });
         }
 
-        // 📥 Cargar datos del usuario y eventos
+        // 📥 Cargar datos del usuario
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let rpgUserData = JSON.parse(fs.readFileSync(rpgUserFile, "utf-8"));
 
         // ❌ Verificar si el usuario está registrado
         if (!rpgData.usuarios[userId]) {
@@ -2602,135 +2631,131 @@ case 'minar': {
 
         let usuario = rpgData.usuarios[userId];
 
-        // 🕒 Verificar si el usuario está en cooldown
-        let tiempoActual = Date.now();
-        if (usuario.cooldowns?.minar && tiempoActual - usuario.cooldowns.minar < cooldownTime) {
-            let tiempoRestante = ((usuario.cooldowns.minar + cooldownTime - tiempoActual) / 1000).toFixed(0);
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⏳ *Debes esperar ${tiempoRestante} segundos antes de volver a usar este comando.*` 
-            }, { quoted: msg });
-        }
-
         // 🚑 Verificar si el usuario tiene 0 de vida
         if (usuario.vida <= 0) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: `🚑 *¡No puedes usar este comando!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
+                text: `🚑 *¡No puedes minar!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
             }, { quoted: msg });
         }
 
-        // 📜 Seleccionar un texto aleatorio para la acción
-        const textoAleatorio = rpgUserData.eventos.minar[Math.floor(Math.random() * rpgUserData.eventos.minar.length)];
+        // 🕒 Verificar cooldown
+        let tiempoActual = Date.now();
+        if (usuario.cooldowns?.minar && tiempoActual - usuario.cooldowns.minar < cooldownTime) {
+            let tiempoRestante = ((usuario.cooldowns.minar + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
+            return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de volver a minar.*` }, { quoted: msg });
+        }
 
-        // 🎚️ Generar XP y diamantes aleatorios
-        let xpGanado = Math.floor(Math.random() * (1200 - 300 + 1)) + 300;
+        // 🎖️ **Generar recompensas aleatorias**
+        let xpGanado = Math.floor(Math.random() * (2000 - 200 + 1)) + 200;
         let diamantesGanados = Math.floor(Math.random() * (900 - 300 + 1)) + 300;
-
-        // ❤️ Reducir vida del usuario entre 3 y 7 puntos
         let vidaPerdida = Math.floor(Math.random() * (7 - 3 + 1)) + 3;
-        usuario.vida = Math.max(0, usuario.vida - vidaPerdida); // Evita valores negativos
+        usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
-        // ✨ Subida de nivel y habilidades
+        // 💰 **Incrementar experiencia y diamantes**
         usuario.experiencia += xpGanado;
         usuario.diamantes += diamantesGanados;
 
-        // 📜 Guardar el tiempo del último uso del comando
-        if (!usuario.cooldowns) usuario.cooldowns = {};
+        // 📜 Guardar cooldown
+        usuario.cooldowns = usuario.cooldowns || {};
         usuario.cooldowns.minar = tiempoActual;
 
-        // 📜 Mensaje de resultado
-        let mensaje = `⛏️ *${usuario.nombre} fue a minar y esto pasó...*\n\n`;
-        mensaje += `💬 ${textoAleatorio}\n\n`;
-        mensaje += `💎 *Diamantes ganados:* ${diamantesGanados}\n`;
-        mensaje += `✨ *XP Ganado:* ${xpGanado}\n`;
+        // ⛏️ **Textos aleatorios personalizados con recompensas**
+        const textos = [
+            `⛏️ *${usuario.nombre} encontró una mina de oro y trabajó duro en ella.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `💎 *Después de cavar durante horas, ${usuario.nombre} descubrió piedras preciosas.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🌋 *Explorando una cueva profunda, ${usuario.nombre} halló minerales raros.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🔨 *Golpeando con su pico, ${usuario.nombre} consiguió una gran cantidad de recursos.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `💰 *La suerte estuvo del lado de ${usuario.nombre}, quien encontró un filón de diamantes.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🚀 *Tras una larga jornada, ${usuario.nombre} extrajo una cantidad impresionante de minerales.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`
+        ];
 
-        // 📩 Enviar mensaje con información principal
-        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+        // 📢 **Enviar mensaje con XP y Diamantes**
+        await sock.sendMessage(msg.key.remoteJid, { text: textos[Math.floor(Math.random() * textos.length)] }, { quoted: msg });
 
-        // 📊 Verificar si el usuario sube de nivel
-        let nivelAnterior = usuario.nivel;
-        let xpMaxNivel = usuario.nivel * 1500; // Escala de XP por nivel
+        // 🌟 **Incrementar niveles aleatorios en habilidades (50% de probabilidad)**
+        let habilidades = Object.keys(usuario.habilidades);
+        if (habilidades.length > 0 && Math.random() < 0.5) { // 50% de probabilidad
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            usuario.habilidades[habilidadSubida].nivel += 1;
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🌟 *¡${usuario.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${usuario.habilidades[habilidadSubida].nivel}*`
+            }, { quoted: msg });
+        }
+
+        // 📊 **Actualizar y manejar Rangos**
+        const rangos = [
+            { nivel: 1, rango: "🌟 Novato" },
+            { nivel: 5, rango: "⚔️ Guerrero Novato" },
+            { nivel: 10, rango: "🔥 Maestro Minero" },
+            { nivel: 20, rango: "👑 Excavador Supremo" },
+            { nivel: 30, rango: "🌀 Cazador de Gemas" },
+            { nivel: 40, rango: "💀 Señor de los Minerales" },
+            { nivel: 50, rango: "🚀 Maestro de las Minas" }
+        ];
+        let rangoAnterior = usuario.rango;
+        usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
+
+        if (usuario.rango !== rangoAnterior) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎖️ *¡${usuario.nombre} ha subido de rango a ${usuario.rango}!* 🚀`
+            }, { quoted: msg });
+        }
+
+        // 📊 **Verificar si el usuario sube de nivel**
+        let xpMaxNivel = usuario.nivel * 1500;
         while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
             usuario.experiencia -= xpMaxNivel;
             usuario.nivel += 1;
-            xpMaxNivel = usuario.nivel * 1500; // Actualizar el XP máximo del nuevo nivel
+            xpMaxNivel = usuario.nivel * 1500;
 
-            // 🎖️ Actualizar rango basado en nivel
-            const rangos = [
-                { nivel: 1, rango: "🌟 Novato" },
-                { nivel: 5, rango: "⚔️ Guerrero Novato" },
-                { nivel: 10, rango: "🔥 Maestro Combatiente" },
-                { nivel: 20, rango: "👑 Élite Supremo" },
-                { nivel: 30, rango: "🌀 Legendario" },
-                { nivel: 40, rango: "💀 Dios de la Guerra" },
-                { nivel: 50, rango: "🚀 Titán Supremo" }
-            ];
-            usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
-
-            // 🆙 Enviar mensaje de subida de nivel
-            let mensajeNivel = `🎉 *¡Felicidades ${usuario.nombre}! Has subido de nivel.* 🏆\n\n`;
-            mensajeNivel += `🏅 *Nuevo Rango:* ${usuario.rango}\n`;
-            mensajeNivel += `🔹 *Nivel:* ${usuario.nivel}\n`;
-            mensajeNivel += `✨ *XP:* ${usuario.experiencia} / ${xpMaxNivel} XP\n`;
-            mensajeNivel += `❤️ *Vida:* ${usuario.vida} HP\n`;
-            mensajeNivel += `📌 *XP faltante para el siguiente nivel:* ${xpMaxNivel - usuario.experiencia} XP\n`;
-            await sock.sendMessage(msg.key.remoteJid, { text: mensajeNivel }, { quoted: msg });
-        }
-
-        // 🎖️ Subida aleatoria de habilidades (mensajes separados)
-        let habilidades = Object.keys(usuario.habilidades);
-        if (habilidades.length > 0) {
-            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
-            let subirHabilidad = Math.random() < 0.5; // 50% de probabilidad de subir
-
-            if (subirHabilidad) {
-                usuario.habilidades[habilidadSubida].nivel += 1;
-                let mensajeHabilidad = `✨ *¡${usuario.nombre} ha mejorado su habilidad!*\n\n`;
-                mensajeHabilidad += `🔹 *Habilidad:* ${habilidadSubida}\n`;
-                mensajeHabilidad += `🎚️ *Nuevo Nivel:* ${usuario.habilidades[habilidadSubida].nivel}`;
-                await sock.sendMessage(msg.key.remoteJid, { text: mensajeHabilidad }, { quoted: msg });
-            }
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${usuario.rango}`
+            }, { quoted: msg });
         }
 
         // 📂 Guardar cambios en el archivo
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
         // ✅ Reacción de confirmación después de ejecutar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
 
     } catch (error) {
         console.error("❌ Error en el comando .minar:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al minar. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al minar. Inténtalo de nuevo.*" }, { quoted: msg });
     }
     break;
-}
+}        
 
- case 'picar': {
+case 'picar': {
     try {
         const fs = require("fs");
         const rpgFile = "./rpg.json";
-        const rpgUserFile = "./rpguser.json";
         const userId = msg.key.participant || msg.key.remoteJid;
-        const cooldownTime = 5 * 60 * 1000; // 5 minutos en milisegundos
+        const cooldownTime = 5 * 60 * 1000; // 5 minutos
 
         // ⛏️ Reacción antes de procesar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "⛏️", key: msg.key } 
-        });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "⛏️", key: msg.key } });
 
-        // 📂 Verificar si los archivos existen
-        if (!fs.existsSync(rpgFile) || !fs.existsSync(rpgUserFile)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *Los datos del RPG no están disponibles.*" 
-            }, { quoted: msg });
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Los datos del RPG no están disponibles.*" }, { quoted: msg });
         }
 
-        // 📥 Cargar datos del usuario y eventos
+        // 📥 Cargar datos del usuario
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let rpgUserData = JSON.parse(fs.readFileSync(rpgUserFile, "utf-8"));
 
         // ❌ Verificar si el usuario está registrado
         if (!rpgData.usuarios[userId]) {
@@ -2741,116 +2766,113 @@ case 'minar': {
 
         let usuario = rpgData.usuarios[userId];
 
-        // 🕒 Verificar si el usuario está en cooldown
-        let tiempoActual = Date.now();
-        if (usuario.cooldowns?.picar && tiempoActual - usuario.cooldowns.picar < cooldownTime) {
-            let tiempoRestante = ((usuario.cooldowns.picar + cooldownTime - tiempoActual) / 1000).toFixed(0);
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⏳ *Debes esperar ${tiempoRestante} segundos antes de volver a usar este comando.*` 
-            }, { quoted: msg });
-        }
-
         // 🚑 Verificar si el usuario tiene 0 de vida
         if (usuario.vida <= 0) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: `🚑 *¡No puedes usar este comando!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
+                text: `🚑 *¡No puedes picar piedras!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
             }, { quoted: msg });
         }
 
-        // 📜 Seleccionar un texto aleatorio para la acción
-        const textoAleatorio = rpgUserData.eventos.picar[Math.floor(Math.random() * rpgUserData.eventos.picar.length)];
+        // 🕒 Verificar cooldown
+        let tiempoActual = Date.now();
+        if (usuario.cooldowns?.picar && tiempoActual - usuario.cooldowns.picar < cooldownTime) {
+            let tiempoRestante = ((usuario.cooldowns.picar + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
+            return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de volver a picar.*` }, { quoted: msg });
+        }
 
-        // 🎚️ Generar XP y diamantes aleatorios
-        let xpGanado = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
+        // 🎖️ **Generar recompensas aleatorias**
+        let xpGanado = Math.floor(Math.random() * (2000 - 200 + 1)) + 200;
         let diamantesGanados = Math.floor(Math.random() * (800 - 200 + 1)) + 200;
-
-        // ❤️ Reducir vida del usuario entre 2 y 6 puntos
         let vidaPerdida = Math.floor(Math.random() * (6 - 2 + 1)) + 2;
-        usuario.vida = Math.max(0, usuario.vida - vidaPerdida); // Evita valores negativos
+        usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
-        // ✨ Subida de nivel y habilidades
+        // 💰 **Incrementar experiencia y diamantes**
         usuario.experiencia += xpGanado;
         usuario.diamantes += diamantesGanados;
 
-        // 📜 Guardar el tiempo del último uso del comando
-        if (!usuario.cooldowns) usuario.cooldowns = {};
+        // 📜 Guardar cooldown
+        usuario.cooldowns = usuario.cooldowns || {};
         usuario.cooldowns.picar = tiempoActual;
 
-        // 📜 Mensaje de resultado
-        let mensaje = `⛏️ *${usuario.nombre} fue a picar y esto pasó...*\n\n`;
-        mensaje += `💬 ${textoAleatorio}\n\n`;
-        mensaje += `💎 *Diamantes ganados:* ${diamantesGanados}\n`;
-        mensaje += `✨ *XP Ganado:* ${xpGanado}\n`;
+        // ⛏️ **Textos aleatorios personalizados con recompensas**
+        const textos = [
+            `⛏️ *${usuario.nombre} trabajó arduamente picando piedras en la cantera.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `💎 *Tras una larga jornada, ${usuario.nombre} encontró gemas valiosas.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🪨 *Piedra tras piedra, ${usuario.nombre} logró extraer un buen botín.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `🔨 *Golpeando con su pico, ${usuario.nombre} descubrió minerales ocultos.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `⛰️ *Explorando la cantera, ${usuario.nombre} halló una veta de diamantes.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`,
+            `💰 *La fortuna sonrió a ${usuario.nombre}, quien extrajo un tesoro de la roca.*  
+💎 *${diamantesGanados} Diamantes obtenidos*  
+✨ *${xpGanado} XP ganados*`
+        ];
 
-        // 📩 Enviar mensaje con información principal
-        await sock.sendMessage(msg.key.remoteJid, { text: mensaje }, { quoted: msg });
+        // 📢 **Enviar mensaje con XP y Diamantes**
+        await sock.sendMessage(msg.key.remoteJid, { text: textos[Math.floor(Math.random() * textos.length)] }, { quoted: msg });
 
-        // 📊 Verificar si el usuario sube de nivel
-        let nivelAnterior = usuario.nivel;
-        let xpMaxNivel = usuario.nivel * 1500; // Escala de XP por nivel
+        // 🌟 **Incrementar niveles aleatorios en habilidades (50% de probabilidad)**
+        let habilidades = Object.keys(usuario.habilidades);
+        if (habilidades.length > 0 && Math.random() < 0.5) { // 50% de probabilidad
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            usuario.habilidades[habilidadSubida].nivel += 1;
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🌟 *¡${usuario.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${usuario.habilidades[habilidadSubida].nivel}*`
+            }, { quoted: msg });
+        }
+
+        // 📊 **Actualizar y manejar Rangos**
+        const rangos = [
+            { nivel: 1, rango: "🌟 Novato" },
+            { nivel: 5, rango: "⚒️ Minero Aprendiz" },
+            { nivel: 10, rango: "🪨 Minero Experto" },
+            { nivel: 20, rango: "💎 Cazador de Gemas" },
+            { nivel: 30, rango: "🔱 Maestro Excavador" },
+            { nivel: 40, rango: "🏆 Señor de las Rocas" },
+            { nivel: 50, rango: "🚀 Titán del Pico" }
+        ];
+        let rangoAnterior = usuario.rango;
+        usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
+
+        if (usuario.rango !== rangoAnterior) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎖️ *¡${usuario.nombre} ha subido de rango a ${usuario.rango}!* 🚀`
+            }, { quoted: msg });
+        }
+
+        // 📊 **Verificar si el usuario sube de nivel**
+        let xpMaxNivel = usuario.nivel * 1500;
         while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
             usuario.experiencia -= xpMaxNivel;
             usuario.nivel += 1;
-            xpMaxNivel = usuario.nivel * 1500; // Actualizar el XP máximo del nuevo nivel
+            xpMaxNivel = usuario.nivel * 1500;
 
-            // 🎖️ Actualizar rango basado en nivel
-            const rangos = [
-                { nivel: 1, rango: "🌟 Novato" },
-                { nivel: 5, rango: "⚔️ Guerrero Novato" },
-                { nivel: 10, rango: "🔥 Maestro Combatiente" },
-                { nivel: 20, rango: "👑 Élite Supremo" },
-                { nivel: 30, rango: "🌀 Legendario" },
-                { nivel: 40, rango: "💀 Dios de la Guerra" },
-                { nivel: 50, rango: "🚀 Titán Supremo" }
-            ];
-            usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
-
-            // 🆙 Enviar mensaje de subida de nivel
-            let mensajeNivel = `🎉 *¡Felicidades ${usuario.nombre}! Has subido de nivel.* 🏆\n\n`;
-            mensajeNivel += `🏅 *Nuevo Rango:* ${usuario.rango}\n`;
-            mensajeNivel += `🔹 *Nivel:* ${usuario.nivel}\n`;
-            mensajeNivel += `✨ *XP:* ${usuario.experiencia} / ${xpMaxNivel} XP\n`;
-            mensajeNivel += `❤️ *Vida:* ${usuario.vida} HP\n`;
-            mensajeNivel += `📌 *XP faltante para el siguiente nivel:* ${xpMaxNivel - usuario.experiencia} XP\n`;
-            await sock.sendMessage(msg.key.remoteJid, { text: mensajeNivel }, { quoted: msg });
-        }
-
-        // 🎖️ Subida aleatoria de habilidades (mensajes separados)
-        let habilidades = Object.keys(usuario.habilidades);
-        if (habilidades.length > 0) {
-            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
-            let subirHabilidad = Math.random() < 0.5; // 50% de probabilidad de subir
-
-            if (subirHabilidad) {
-                usuario.habilidades[habilidadSubida].nivel += 1;
-                let mensajeHabilidad = `✨ *¡${usuario.nombre} ha mejorado su habilidad!*\n\n`;
-                mensajeHabilidad += `🔹 *Habilidad:* ${habilidadSubida}\n`;
-                mensajeHabilidad += `🎚️ *Nuevo Nivel:* ${usuario.habilidades[habilidadSubida].nivel}`;
-                await sock.sendMessage(msg.key.remoteJid, { text: mensajeHabilidad }, { quoted: msg });
-            }
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${usuario.rango}`
+            }, { quoted: msg });
         }
 
         // 📂 Guardar cambios en el archivo
         fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
         // ✅ Reacción de confirmación después de ejecutar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
 
     } catch (error) {
         console.error("❌ Error en el comando .picar:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al picar. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-
-        // ❌ Reacción de error
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
-        });
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al picar. Inténtalo de nuevo.*" }, { quoted: msg });
     }
     break;
-}       
+}                        
 
         
 case 'visión': {
