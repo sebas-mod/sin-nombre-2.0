@@ -238,7 +238,7 @@ case 'addowner': {
         const configFilePath = "./config.js";
 
         // 🔍 Obtener número del bot correctamente
-        let botNumber = sock.user.id.split("@")[0];
+        let botNumber = sock.user.id.replace(/[^0-9]/g, "");
 
         // 🔍 Obtener el número del usuario que ejecuta el comando
         let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
@@ -256,8 +256,8 @@ case 'addowner': {
         let nuevoOwner;
         if (msg.message.extendedTextMessage) {
             nuevoOwner = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
-        } else if (args.length > 0) {
-            nuevoOwner = args[0].replace(/[^0-9]/g, ""); // Limpiar número
+        } else if (text) {
+            nuevoOwner = text.replace(/[^0-9]/g, ""); // Limpiar número
         } else {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: "⚠️ *Uso incorrecto.*\n📌 Usa `.addowner 507XXXXXXXX` o responde a un mensaje." 
@@ -301,7 +301,7 @@ case 'deleteowner': {
         const configFilePath = "./config.js";
 
         // 🔍 Obtener número del bot correctamente
-        let botNumber = sock.user.id.split("@")[0];
+        let botNumber = sock.user.id.replace(/[^0-9]/g, "");
 
         // 🔍 Obtener el número del usuario que ejecuta el comando
         let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
@@ -319,8 +319,8 @@ case 'deleteowner': {
         let ownerEliminar;
         if (msg.message.extendedTextMessage) {
             ownerEliminar = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
-        } else if (args.length > 0) {
-            ownerEliminar = args[0].replace(/[^0-9]/g, ""); // Limpiar número
+        } else if (text) {
+            ownerEliminar = text.replace(/[^0-9]/g, ""); // Limpiar número
         } else {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: "⚠️ *Uso incorrecto.*\n📌 Usa `.deleteowner 507XXXXXXXX` o responde a un mensaje." 
@@ -357,7 +357,6 @@ case 'deleteowner': {
     }
     break;
 }
-
         
 case 'deletemascota': {
     try {
