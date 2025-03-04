@@ -108,6 +108,7 @@ sock.ev.on("presence.update", async (presence) => {
 
             
             // 🟢 Consola de mensajes entrantes con diseño
+// 🔥 Evento de recepción de mensajes
 sock.ev.on("messages.upsert", async (messageUpsert) => {
     try {
         const msg = messageUpsert.messages[0];
@@ -134,8 +135,11 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
         console.log(chalk.gray("──────────────────────────"));
 
-        // ⚠️ Si el "modo privado" está activado y el usuario no es dueño ni el bot, ignorar mensaje
-        if (modos.modoPrivado && !isOwner(sender) && !fromMe) return;
+        // ⚠️ Modo privado: Solo responder en grupos y a Owners/usuarios en `owners.json`
+        if (!isGroup && modos.modoPrivado && !isOwner(sender) && sender !== botNumber) {
+            console.log(chalk.red(`🚫 Mensaje privado ignorado de ${sender}`));
+            return;
+        }
 
         // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
         if (isGroup && modos.modoAdmins[chatId]) {
@@ -198,6 +202,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.error("❌ Error en el evento messages.upsert:", error);
     }
 });
+
+            
             
             sock.ev.on("connection.update", async (update) => {
     const { connection } = update;
