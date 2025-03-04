@@ -86,16 +86,22 @@ loadPrefix();
 console.log(`📌 Prefijo actual: ${global.prefix}`);
 //orivado
 // Almacenar owner los usuarios en línea por cada grupo (hacerlo accesible globalmente)
+// 📂 Ruta del archivo JSON donde se guardan los Owners
 const ownersFile = "./owners.json";
 
 // 📌 Si `owners.json` no existe, crearlo con un Owner por defecto
 if (!fs.existsSync(ownersFile)) {
-    fs.writeFileSync(ownersFile, JSON.stringify({ owners: ["15167096033"] }, null, 2));
+    fs.writeFileSync(ownersFile, JSON.stringify({ owners: ["15167096032"] }, null, 2));
 }
 
 // 📥 Cargar los Owners desde `owners.json`
 const ownersData = JSON.parse(fs.readFileSync(ownersFile, "utf-8"));
 
+// 🔍 Función para verificar si un usuario es Owner
+global.isOwner = (user) => {
+    user = user.replace(/[^0-9]/g, ""); // Limpiar número
+    return ownersData.owners.includes(user);
+};
 
 // 🔄 Función para guardar cambios en `owners.json`
 global.saveOwners = () => {
