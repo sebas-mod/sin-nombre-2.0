@@ -261,30 +261,9 @@ case 'verper': {
             return; 
         }
 
-        // 📜 Mensaje principal con explicación  
-        let mensaje = `🎭 *Personajes Comprados - Azura Ultra* 🎭\n\n`;
-        mensaje += `📜 *Aquí puedes ver la lista de personajes que has adquirido.*\n\n`;
-
-        // 🔥 **Explicaciones organizadas**  
-        mensaje += `🛠️ *Opciones de gestión de personajes:*\n`;
-        mensaje += `🔹 Usa \`${global.prefix}per <número_personaje>\` para cambiar tu personaje principal.\n`;
-        mensaje += `🔹 Usa \`${global.prefix}nivelper\` para ver estadísticas detalladas.\n`;
-        mensaje += `🔹 Usa \`${global.prefix}bolasdeldragon\` para revivir personajes muertos.\n`;
-        mensaje += `🔹 Usa \`${global.prefix}vender <nombre_personaje> <precio>\` para vender un personaje.\n`;
-        mensaje += `🔹 Usa \`${global.prefix}quitarventa <nombre_personaje>\` para retirarlo del mercado.\n\n`;
-
-        // ⚔️ **Nuevas funciones de batalla y ranking**  
-        mensaje += `⚔️ *Modo Batalla y Rankings:*\n`;
-        mensaje += `🔹 Usa \`${global.prefix}batallaanime\` para luchar contra otro personaje.\n`;
-        mensaje += `🔹 Usa \`${global.prefix}topper\` para ver el ranking de los personajes.\n\n`;
-
-        // 📜 **Comandos para subir de nivel**  
-        mensaje += `🏆 *Comandos para entrenar y mejorar a tus personajes:*\n`;
-        mensaje += `🔹 \`${global.prefix}luchar\`, \`${global.prefix}poder\`, \`${global.prefix}volar\`\n`;
-        mensaje += `🔹 \`${global.prefix}otromundo\`, \`${global.prefix}otrouniverso\`, \`${global.prefix}mododios\`\n`;
-        mensaje += `🔹 \`${global.prefix}mododiablo\`, \`${global.prefix}enemigos\`, \`${global.prefix}podermaximo\`\n\n`;
-
         // 📜 **Lista de personajes del usuario**  
+        let mensaje = `🎭 *Personajes Comprados - Azura Ultra* 🎭\n\n`;
+
         usuario.personajes.forEach((personaje, index) => { 
             mensaje += `═════════════════════\n`;  
             mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;  
@@ -299,7 +278,27 @@ case 'verper': {
             mensaje += `   💎 *Valor:* ${personaje.precio} diamantes\n\n`;  
         });
 
-        // 🎥 Enviar mensaje con **video como GIF**  
+        // 🔥 **Opciones de gestión de personajes**  
+        mensaje += `═════════════════════\n`;
+        mensaje += `🛠️ *Gestión de personajes:*\n`;
+        mensaje += `🔹 \`${global.prefix}per <número>\` - Cambiar personaje principal\n`;
+        mensaje += `🔹 \`${global.prefix}nivelper\` - Ver estadísticas detalladas\n`;
+        mensaje += `🔹 \`${global.prefix}bolasdeldragon\` - Revivir personaje\n`;
+        mensaje += `🔹 \`${global.prefix}vender <nombre> <precio>\` - Vender personaje\n`;
+        mensaje += `🔹 \`${global.prefix}quitarventa <nombre>\` - Retirar de la venta\n\n`;
+
+        // ⚔️ **Modo Batalla y Rankings**  
+        mensaje += `⚔️ *Batalla y Ranking:*\n`;
+        mensaje += `🔹 \`${global.prefix}batallaanime\` - Luchar contra otro personaje\n`;
+        mensaje += `🔹 \`${global.prefix}topper\` - Ver ranking de personajes\n\n`;
+
+        // 🏆 **Comandos para subir de nivel**  
+        mensaje += `🏆 *Subir de nivel:*\n`;
+        mensaje += `🔹 \`${global.prefix}luchar\`, \`${global.prefix}poder\`, \`${global.prefix}volar\`\n`;
+        mensaje += `🔹 \`${global.prefix}otromundo\`, \`${global.prefix}otrouniverso\`, \`${global.prefix}mododios\`\n`;
+        mensaje += `🔹 \`${global.prefix}mododiablo\`, \`${global.prefix}enemigos\`, \`${global.prefix}podermaximo\`\n`;
+
+        // 🎥 **Enviar mensaje con video como GIF**  
         await sock.sendMessage(msg.key.remoteJid, {  
             video: { url: "https://cdn.dorratz.com/files/1740651987117.mp4" },  
             gifPlayback: true, // Se reproduce como GIF  
@@ -314,7 +313,7 @@ case 'verper': {
     } catch (error) {  
         console.error("❌ Error en el comando .verper:", error);  
         await sock.sendMessage(msg.key.remoteJid, {  
-            text: "❌ *Ocurrió un error al obtener la lista de personajes. Inténtalo de nuevo.*"  
+            text: "❌ *Ocurrió un error al obtener la lista de personajes. Inténtalo de nuevo.*` 
         }, { quoted: msg });
 
         // ❌ Enviar reacción de error  
