@@ -6191,7 +6191,7 @@ case 'vermascotas': {
         }  
 
         // 📜 Mensaje principal con explicación  
-        let mensaje = `🐾 *Lista de Mascotas - Azura Ultra* 🐾\n\n`;  
+        let mensaje = ` 🐾 *Tus Mascotas - Azura Ultra* 🐾\n\n`;  
         mensaje += `📜 *Aquí puedes ver todas las mascotas que has comprado y sus estadísticas.*\n\n`;  
         mensaje += `🔹 Usa \`${global.prefix}mascota <número>\` para cambiar tu mascota principal.\n`;  
         mensaje += `🔹 Usa \`${global.prefix}curar\` para restaurar la vida de tu mascota.\n`;  
