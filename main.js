@@ -289,7 +289,7 @@ case 'verper': {
 
         // ⚔️ **Modo Batalla y Rankings**  
         mensaje += `⚔️ *Batalla y Ranking:*\n`;
-        mensaje += `🔹 \`${global.prefix}batallaanime\` - Luchar contra otro personaje\n`;
+        mensaje += `🔹 \`${global.prefix}batallaanime <@usuario>\` - Luchar contra otro personaje\n`;
         mensaje += `🔹 \`${global.prefix}topper\` - Ver ranking de personajes\n\n`;
 
         // 🏆 **Comandos para subir de nivel**  
@@ -313,7 +313,7 @@ case 'verper': {
     } catch (error) {  
         console.error("❌ Error en el comando .verper:", error);  
         await sock.sendMessage(msg.key.remoteJid, {  
-            text: "❌ *Ocurrió un error al obtener la lista de personajes. Inténtalo de nuevo.*` 
+            text: "❌ *Ocurrió un error al obtener la lista de personajes. Inténtalo de nuevo.*"  
         }, { quoted: msg });
 
         // ❌ Enviar reacción de error  
