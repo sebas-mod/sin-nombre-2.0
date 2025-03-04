@@ -8815,44 +8815,61 @@ case 'creador': {
     break;
 }
     
-            
 case 'verco': {
-    const fs = require("fs");
+    try {
+        const fs = require("fs");
 
-    // Leer el archivo main.js
-    const mainFilePath = "./main.js";
-    if (!fs.existsSync(mainFilePath)) {
-        return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error:* No se encontró el archivo de comandos." }, { quoted: msg });
+        // 📂 Ruta del archivo principal
+        const mainFilePath = "./main.js";
+        if (!fs.existsSync(mainFilePath)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Error:* No se encontró el archivo de comandos." 
+            }, { quoted: msg });
+        }
+
+        // 📥 Leer contenido del archivo
+        const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
+
+        // 🔍 Extraer los nombres de los comandos dentro de `case 'comando':`
+        const commandRegex = /case\s+['"]([^'"]+)['"]:/g;
+        let commands = [];
+        let match;
+        while ((match = commandRegex.exec(mainFileContent)) !== null) {
+            commands.push(match[1]);
+        }
+
+        // 📊 Filtrar y ordenar los comandos
+        commands = [...new Set(commands)].sort();
+        let totalComandos = commands.length;
+
+        // 📜 Construir mensaje con formato ordenado
+        let commandList = `📜 *Lista de Comandos Disponibles (${totalComandos} comandos):*\n\n`;
+        commands.forEach(cmd => {
+            commandList += `🔹 *${global.prefix}${cmd}*\n`;
+        });
+
+        commandList += `\n📌 **Usa los comandos con el prefijo actual:** \`${global.prefix}\``;
+
+        // 📩 Enviar el mensaje con el menú de comandos
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            { text: commandList, quoted: msg }
+        );
+
+        // ✅ Confirmación con reacción
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .verco:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al obtener la lista de comandos. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
     }
-
-    // Leer contenido del archivo
-    const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
-
-    // Extraer los nombres de los comandos dentro de `case 'comando':`
-    const commandRegex = /case\s+['"]([^'"]+)['"]:/g;
-    let commands = [];
-    let match;
-    while ((match = commandRegex.exec(mainFileContent)) !== null) {
-        commands.push(match[1]);
-    }
-
-    // Filtrar y ordenar los comandos
-    commands = [...new Set(commands)].sort();
-
-    // Construir mensaje con formato de lista
-    let commandList = "📜 *Lista de Comandos Disponibles:*\n\n";
-    commands.forEach(cmd => {
-        commandList += `🔹 *${global.prefix}${cmd}*\n`;
-    });
-
-    // Enviar el mensaje con el menú de comandos
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        { text: commandList, footer: "📌 Usa los comandos con el prefijo actual.", quoted: msg },
-    );
-
     break;
-}
+}            
+
             
 case 'play': { 
     const yts = require('yt-search'); 
