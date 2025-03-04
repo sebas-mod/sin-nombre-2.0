@@ -3512,7 +3512,7 @@ case 'nivel': {
 ⚔️ *Batallas y Ránkings:*  
 ━━━━━━━━━━━━━━━━━━━━━━  
 🆚 *Lucha contra otros usuarios:*  
-🔹 Usa \`${global.prefix}batallauser <@usuario>\` para desafiar a alguien.  
+🔹 Usa \`${global.prefix}batallauser\` para desafiar a alguien.  
 
 🏆 *Consulta el ranking global:*  
 🔹 Usa \`${global.prefix}topuser\` para ver el top de jugadores.  
