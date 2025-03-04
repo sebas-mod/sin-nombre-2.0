@@ -232,6 +232,99 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'verper': { 
+    try { 
+        // 🔄 Enviar reacción mientras se procesa el comando 
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🎭", key: msg.key } // Emoji de personaje 🎭 
+        });
+
+        const rpgFile = "./rpg.json";
+        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { usuarios: {} };
+        let userId = msg.key.participant || msg.key.remoteJid;
+
+        // ❌ Verificar si el usuario está registrado 
+        if (!rpgData.usuarios[userId]) { 
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No estás registrado en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+            }, { quoted: msg });
+            return; 
+        }
+
+        let usuario = rpgData.usuarios[userId];
+
+        // ❌ Verificar si el usuario tiene personajes 
+        if (!usuario.personajes || usuario.personajes.length === 0) { 
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *No tienes personajes en tu colección.*\n📜 Usa \`${global.prefix}tiendaper\` para comprar alguno.` 
+            }, { quoted: msg });
+            return; 
+        }
+
+        // 📜 Mensaje principal con explicación  
+        let mensaje = `🎭 *Personajes Comprados - Azura Ultra* 🎭\n\n`;
+        mensaje += `📜 *Aquí puedes ver la lista de personajes que has adquirido.*\n\n`;
+
+        // 🔥 **Explicaciones organizadas**  
+        mensaje += `🛠️ *Opciones de gestión de personajes:*\n`;
+        mensaje += `🔹 Usa \`${global.prefix}per <número_personaje>\` para cambiar tu personaje principal.\n`;
+        mensaje += `🔹 Usa \`${global.prefix}nivelper\` para ver estadísticas detalladas.\n`;
+        mensaje += `🔹 Usa \`${global.prefix}bolasdeldragon\` para revivir personajes muertos.\n`;
+        mensaje += `🔹 Usa \`${global.prefix}vender <nombre_personaje> <precio>\` para vender un personaje.\n`;
+        mensaje += `🔹 Usa \`${global.prefix}quitarventa <nombre_personaje>\` para retirarlo del mercado.\n\n`;
+
+        // ⚔️ **Nuevas funciones de batalla y ranking**  
+        mensaje += `⚔️ *Modo Batalla y Rankings:*\n`;
+        mensaje += `🔹 Usa \`${global.prefix}batallaanime <@usuario>\` para luchar contra otro personaje.\n`;
+        mensaje += `🔹 Usa \`${global.prefix}topper\` para ver el ranking de los personajes.\n\n`;
+
+        // 📜 **Comandos para subir de nivel**  
+        mensaje += `🏆 *Comandos para entrenar y mejorar a tus personajes:*\n`;
+        mensaje += `🔹 \`${global.prefix}luchar\`, \`${global.prefix}poder\`, \`${global.prefix}volar\`\n`;
+        mensaje += `🔹 \`${global.prefix}otromundo\`, \`${global.prefix}otrouniverso\`, \`${global.prefix}mododios\`\n`;
+        mensaje += `🔹 \`${global.prefix}mododiablo\`, \`${global.prefix}enemigos\`, \`${global.prefix}podermaximo\`\n\n`;
+
+        // 📜 **Lista de personajes del usuario**  
+        usuario.personajes.forEach((personaje, index) => { 
+            mensaje += `═════════════════════\n`;  
+            mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`;  
+            mensaje += `   🏅 *Rango:* ${personaje.rango}\n`;  
+            mensaje += `   🎚️ *Nivel:* ${personaje.nivel}\n`;  
+            mensaje += `   ❤️ *Vida:* ${personaje.vida} HP\n`;  
+            mensaje += `   ✨ *Experiencia:* ${personaje.experiencia} / ${personaje.xpMax} XP\n`;  
+            mensaje += `   🌟 *Habilidades:*\n`;  
+            Object.entries(personaje.habilidades).forEach(([habilidad, nivel]) => {  
+                mensaje += `      🔹 ${habilidad} (Nivel ${nivel})\n`;  
+            });  
+            mensaje += `   💎 *Valor:* ${personaje.precio} diamantes\n\n`;  
+        });
+
+        // 🎥 Enviar mensaje con **video como GIF**  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            video: { url: "https://cdn.dorratz.com/files/1740651987117.mp4" },  
+            gifPlayback: true, // Se reproduce como GIF  
+            caption: mensaje  
+        }, { quoted: msg });
+
+        // ✅ Enviar reacción de éxito  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            react: { text: "✅", key: msg.key }  
+        });
+
+    } catch (error) {  
+        console.error("❌ Error en el comando .verper:", error);  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            text: "❌ *Ocurrió un error al obtener la lista de personajes. Inténtalo de nuevo.*"  
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            react: { text: "❌", key: msg.key }  
+        });  
+    }  
+    break;  
+}
+        
 case 'per': {
     try {
         // 🔄 Enviar reacción mientras se procesa el comando
@@ -3409,13 +3502,38 @@ case 'nivel': {
             mensaje += `   🔹 ${habilidad}: Nivel ${data.nivel}\n`;
         });
 
-        mensaje += `\n🛠️ *Comandos para ganar XP y diamantes:*  
-⛏️ \`${global.prefix}picar\`, \`${global.prefix}minar\`, \`${global.prefix}minar2\`, \`${global.prefix}work\`, \`${global.prefix}claim\`, \`${global.prefix}cofre\`, \`${global.prefix}crime\`, \`${global.prefix}robar\`  
-💰 *Guarda diamantes en el gremio con:* \`${global.prefix}depositar <cantidad>\`  
-🏦 *Retira diamantes con:* \`${global.prefix}retirar <cantidad>\`  
-🚑 *Cura tu vida con:* \`${global.prefix}hospital\``;
+        mensaje += `\n💪 *Comandos para mejorar tu nivel y habilidades:*  
+━━━━━━━━━━━━━━━━━━━━━━  
+⛏️ *Recolección y Trabajo:*  
+🔹 \`${global.prefix}picar\`, \`${global.prefix}minar\`, \`${global.prefix}minar2\`, \`${global.prefix}work\`  
+🎁 *Recompensas y robos:*  
+🔹 \`${global.prefix}claim\`, \`${global.prefix}cofre\`, \`${global.prefix}crime\`, \`${global.prefix}robar\`  
 
-        mensaje += `\n⚔️ *Sigue entrenando para mejorar aún más.*`;
+⚔️ *Batallas y Ránkings:*  
+━━━━━━━━━━━━━━━━━━━━━━  
+🆚 *Lucha contra otros usuarios:*  
+🔹 Usa \`${global.prefix}batallauser <@usuario>\` para desafiar a alguien.  
+
+🏆 *Consulta el ranking global:*  
+🔹 Usa \`${global.prefix}topuser\` para ver el top de jugadores.  
+
+💰 *Gestión de Diamantes:*  
+━━━━━━━━━━━━━━━━━━━━━━  
+🏦 *Guarda diamantes:*  
+🔹 \`${global.prefix}depositar <cantidad>\`  
+💎 *Retira diamantes:*  
+🔹 \`${global.prefix}retirar <cantidad>\`  
+
+🚑 *Cuidado de tu personaje:*  
+━━━━━━━━━━━━━━━━━━━━━━  
+❤️ *Cura tu vida:*  
+🔹 \`${global.prefix}hospital\`  
+🐉 *Revive con las Bolas del Dragón:*  
+🔹 \`${global.prefix}bolasdeldragon\`  
+
+━━━━━━━━━━━━━━━━━━━━━━  
+⚡ *Sigue entrenando para convertirte en una leyenda.*  
+`;
 
         // 📩 Enviar mensaje con imagen de perfil
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -6030,198 +6148,108 @@ case 'rpg': {
     break; 
 }
         
-case 'verper': { 
-    try { 
-        // 🔄 Enviar reacción mientras se procesa el comando 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🎭", key: msg.key } // Emoji de personaje 🎭 
-        });
 
-        const rpgFile = "./rpg.json";
-        let rpgData = fs.existsSync(rpgFile) ? JSON.parse(fs.readFileSync(rpgFile, "utf-8")) : { usuarios: {} };
-        let userId = msg.key.participant || msg.key.remoteJid;
 
-        // Verificar si el usuario está registrado 
-        if (!rpgData.usuarios[userId]) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No estás registrado en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
-            }, { quoted: msg });
-            return; 
-        }
 
-        let usuario = rpgData.usuarios[userId];
+case 'vermascotas': {  
+    try {  
+        // 🔄 Enviar reacción mientras se procesa el comando  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            react: { text: "🐾", key: msg.key } // Emoji de mascotas 🐾  
+        });  
 
-        // Verificar si el usuario tiene personajes 
-        if (!usuario.personajes || usuario.personajes.length === 0) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes personajes en tu colección.*\n📜 Usa \`${global.prefix}tiendaper\` para comprar alguno.` 
-            }, { quoted: msg });
-            return; 
-        }
+        // 📂 Archivo JSON donde se guardan los datos del RPG  
+        const rpgFile = "./rpg.json";  
 
-        // Mensaje principal con explicación 📜 
-        let mensaje = `🎭 *Personajes Comprados - Azura Ultra* 🎭\n\n`;
-        mensaje += `📜 *Aquí puedes ver la lista de personajes que has adquirido.*\n\n`;
+        // 📂 Verificar si el archivo existe  
+        if (!fs.existsSync(rpgFile)) {  
+            await sock.sendMessage(msg.key.remoteJid, {  
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.`  
+            }, { quoted: msg });  
+            return;  
+        }  
 
-        // Explicaciones adicionales ordenadas 🔥
-        mensaje += `🛠️ *¿Cómo mejorar a tus personajes?*\n`;
-        mensaje += `🔹 Usa estos comandos para subir de nivel a tus personajes:\n`;
-        mensaje += `   🏆 \`${global.prefix}luchar\`, \`${global.prefix}poder\`, \`${global.prefix}volar\`,\n`;
-        mensaje += `   🔥 \`${global.prefix}otromundo\`, \`${global.prefix}otrouniverso\`, \`${global.prefix}mododios\`,\n`;
-        mensaje += `   😈 \`${global.prefix}mododiablo\`, \`${global.prefix}enemigos\`, \`${global.prefix}podermaximo\`\n\n`;
+        // 📥 Cargar los datos del RPG  
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));  
 
-        mensaje += `🔄 *¿Quieres cambiar tu personaje principal?*\n`;
-        mensaje += `   📌 Usa \`${global.prefix}per <número_personaje>\` para cambiarlo.\n\n`;
+        // ❌ Verificar si el usuario está registrado  
+        let userId = msg.key.participant || msg.key.remoteJid;  
+        if (!rpgData.usuarios[userId]) {  
+            await sock.sendMessage(msg.key.remoteJid, {  
+                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.`  
+            }, { quoted: msg });  
+            return;  
+        }  
 
-        mensaje += `✨ *¿Tu personaje ha muerto? Revívelo con las Bolas del Dragón!*\n`;
-        mensaje += `   📌 Usa \`${global.prefix}bolasdeldragon\` para traerlo de vuelta a la vida.\n\n`;
+        let usuario = rpgData.usuarios[userId];  
 
-        mensaje += `💰 *¿Quieres vender un personaje?*\n`;
-        mensaje += `   📌 Usa \`${global.prefix}vender <nombre_personaje> <precio>\` para venderlo.\n\n`;
+        // ❌ Verificar si el usuario tiene mascotas  
+        if (!usuario.mascotas || usuario.mascotas.length === 0) {  
+            await sock.sendMessage(msg.key.remoteJid, {  
+                text: `❌ *No tienes ninguna mascota comprada.*\n🔹 Usa \`${global.prefix}tiendamascotas\` para ver las mascotas disponibles en la tienda.`  
+            }, { quoted: msg });  
+            return;  
+        }  
 
-        mensaje += `🔄 *¿Quieres quitar a un personaje de la venta?*\n`;
-        mensaje += `   📌 Usa \`${global.prefix}quitarventa <nombre_personaje>\` para retirarlo del mercado.\n\n`;
+        // 📜 Mensaje principal con explicación  
+        let mensaje = `🐾 *Lista de Mascotas - Azura Ultra* 🐾\n\n`;  
+        mensaje += `📜 *Aquí puedes ver todas las mascotas que has comprado y sus estadísticas.*\n\n`;  
+        mensaje += `🔹 Usa \`${global.prefix}mascota <número>\` para cambiar tu mascota principal.\n`;  
+        mensaje += `🔹 Usa \`${global.prefix}curar\` para restaurar la vida de tu mascota.\n`;  
+        mensaje += `🔹 Usa \`${global.prefix}nivelmascota\` para ver las estadísticas de tu mascota actual.\n\n`;  
 
-        // Recorrer todos los personajes del usuario 
-        usuario.personajes.forEach((personaje, index) => { 
-            mensaje += `*═════════════════════*\n`; // Línea de separación 
-            mensaje += `🔹 *${index + 1}. ${personaje.nombre}*\n`; 
-            mensaje += `   🏅 *Rango:* ${personaje.rango}\n`; 
-            mensaje += `   🎚️ *Nivel:* ${personaje.nivel}\n`; 
-            mensaje += `   ❤️ *Vida:* ${personaje.vida} HP\n`; 
-            mensaje += `   ✨ *Experiencia:* ${personaje.experiencia} / ${personaje.xpMax} XP\n`; 
-            mensaje += `   🌟 *Habilidades:*\n`; 
-            // Listar correctamente las habilidades 
-            Object.entries(personaje.habilidades).forEach(([habilidad, nivel]) => { 
-                mensaje += `      🔹 ${habilidad} (Nivel ${nivel})\n`; 
-            }); 
-            mensaje += `   💎 *Valor:* ${personaje.precio} diamantes\n\n`; 
-        });
+        // 🔥 **Nuevas funciones**  
+        mensaje += `⚔️ *Batallas y Rankings:*\n`;  
+        mensaje += `🔹 Usa \`${global.prefix}batallamascota\` para luchar contra otra mascota.\n`;  
+        mensaje += `🔹 Usa \`${global.prefix}topmascotas\` para ver en qué puesto está tu mascota en el ranking.\n\n`;  
 
-        // Enviar el mensaje con el **video como GIF** 🎥 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740651987117.mp4" }, 
-            gifPlayback: true, // Se reproduce como GIF 
-            caption: mensaje 
-        }, { quoted: msg });
+        // 📜 **Mostrar lista de mascotas del usuario**  
+        usuario.mascotas.forEach((mascota, index) => {  
+            let habilidadesMascota = Object.entries(mascota.habilidades)  
+                .map(([habilidad, data]) => `      🔹 ${habilidad} (Nivel ${data.nivel || 1})`)  
+                .join("\n");  
 
-        // ✅ Enviar reacción de éxito 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
+            mensaje += `═════════════════════\n`;  
+            mensaje += `🔹 *${index + 1}. ${mascota.nombre}*\n`;  
+            mensaje += `   📊 *Rango:* ${mascota.rango || "Sin Rango"}\n`;  
+            mensaje += `   🎚️ *Nivel:* ${mascota.nivel || 1}\n`;  
+            mensaje += `   ❤️ *Vida:* ${mascota.vida || 100} HP\n`;  
+            mensaje += `   ✨ *Experiencia:* ${mascota.experiencia || 0} / ${mascota.xpMax || 500} XP\n`;  
+            mensaje += `   🌟 *Habilidades:*\n${habilidadesMascota}\n`;  
+            mensaje += `═════════════════════\n\n`;  
+        });  
 
-    } catch (error) { 
-        console.error("❌ Error en el comando .verper:", error); 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener la lista de personajes. Inténtalo de nuevo.*" 
-        }, { quoted: msg }); 
+        // 📜 **Explicación Final**  
+        mensaje += `📜 **Estos son los comandos para subir de nivel a tu mascota:**\n`;  
+        mensaje += `   🛠️ *${global.prefix}daragua*, *${global.prefix}darcomida*, *${global.prefix}darcariño*, *${global.prefix}pasear*, *${global.prefix}cazar*, *${global.prefix}entrenar*, *${global.prefix}presumir*, *${global.prefix}supermascota*\n\n`;  
+        mensaje += `🚀 **¡Sigue entrenando a tus mascotas en el Gremio Azura Ultra!** 🏆`;  
 
-        // ❌ Enviar reacción de error 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
-        }); 
-    } 
-    break; 
+        // 🎥 Enviar mensaje con el **video como GIF**  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            video: { url: "https://cdn.dorratz.com/files/1740655817564.mp4" },  
+            gifPlayback: true, // Se reproduce como GIF  
+            caption: mensaje  
+        }, { quoted: msg });  
+
+        // ✅ Confirmación con reacción de éxito  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            react: { text: "✅", key: msg.key }  
+        });  
+
+    } catch (error) {  
+        console.error("❌ Error en el comando .vermascotas:", error);  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            text: "❌ *Ocurrió un error al obtener tu lista de mascotas. Inténtalo de nuevo.*"  
+        }, { quoted: msg });  
+
+        // ❌ Enviar reacción de error  
+        await sock.sendMessage(msg.key.remoteJid, {  
+            react: { text: "❌", key: msg.key }  
+        });  
+    }  
+    break;  
 }
-
-case 'vermascotas': { 
-    try { 
-        // 🔄 Enviar reacción mientras se procesa el comando 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🐾", key: msg.key } // Emoji de mascotas 🐾 
-        });
-
-        // Archivo JSON donde se guardan los datos del RPG 
-        const rpgFile = "./rpg.json";
-
-        // Verificar si el archivo existe 
-        if (!fs.existsSync(rpgFile)) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
-            }, { quoted: msg });
-            return; 
-        }
-
-        // Cargar los datos del RPG 
-        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-
-        // Verificar si el usuario está registrado 
-        let userId = msg.key.participant || msg.key.remoteJid;
-        if (!rpgData.usuarios[userId]) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta en el gremio Azura Ultra.*\n\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
-            }, { quoted: msg });
-            return; 
-        }
-
-        let usuario = rpgData.usuarios[userId];
-
-        // Verificar si el usuario tiene mascotas 
-        if (!usuario.mascotas || usuario.mascotas.length === 0) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes ninguna mascota comprada.*\n\n🔹 Usa \`${global.prefix}tiendamascotas\` para ver las mascotas disponibles en la tienda.` 
-            }, { quoted: msg });
-            return; 
-        }
-
-        // Mensaje principal con explicación 📜 
-        let mensaje = `🐾 *Lista de Mascotas - Azura Ultra* 🐾\n\n`;
-        mensaje += `📜 *Aquí puedes ver todas las mascotas que has comprado y sus estadísticas.*\n\n`;
-
-        mensaje += `🛠️ *Opciones para gestionar tus mascotas:*\n`;
-        mensaje += `🔹 Usa \`${global.prefix}mascota <número>\` para cambiar tu mascota principal.\n`;
-        mensaje += `🔹 Usa \`${global.prefix}curar\` para restaurar la vida de tu mascota.\n\n`;
-
-        // Recorrer todas las mascotas del usuario y mostrarlas en formato organizado
-        usuario.mascotas.forEach((mascota, index) => { 
-            let habilidadesMascota = Object.entries(mascota.habilidades)
-                .map(([habilidad, data]) => `      🔹 ${habilidad} (Nivel ${data.nivel || 1})`)
-                .join("\n");
-
-            mensaje += `═════════════════════\n`; // Línea de separación
-            mensaje += `🔹 *${index + 1}. ${mascota.nombre}*\n`; 
-            mensaje += `   📊 *Rango:* ${mascota.rango || "Sin Rango"}\n`; 
-            mensaje += `   🎚️ *Nivel:* ${mascota.nivel || 1}\n`; 
-            mensaje += `   ❤️ *Vida:* ${mascota.vida || 100} HP\n`; 
-            mensaje += `   ✨ *Experiencia:* ${mascota.experiencia || 0} / ${mascota.xpMax || 500} XP\n`; 
-            mensaje += `   🌟 *Habilidades:*\n${habilidadesMascota}\n`; 
-            mensaje += `═════════════════════\n\n`; 
-        });
-
-        // Explicación Final 📜 
-        mensaje += `📜 **Explicación Final:**\n`;
-        mensaje += `🔹 Usa *${global.prefix}mascota <número>* para cambiar tu mascota principal.\n`;
-        mensaje += `🔹 Usa *${global.prefix}nivelmascota* para ver la estadística de tu mascota actual.\n`;
-        mensaje += `🔹 Usa estos comandos para subir de nivel a tus mascotas: \n`;
-        mensaje += `   🛠️ *${global.prefix}daragua*, *${global.prefix}darcomida*, *${global.prefix}darcariño*, *${global.prefix}pasear*, *${global.prefix}cazar*, *${global.prefix}entrenar*, *${global.prefix}presumir*, *${global.prefix}supermascota*\n\n`;
-
-        mensaje += `🚀 **¡Sigue entrenando a tus mascotas en el Gremio Azura Ultra!** 🏆`;
-
-        // Enviar mensaje con el **video como GIF** 🎥 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740655817564.mp4" }, 
-            gifPlayback: true, // Se reproduce como GIF 
-            caption: mensaje 
-        }, { quoted: msg });
-
-        // ✅ Confirmación con reacción de éxito 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } // Emoji de confirmación ✅ 
-        });
-
-    } catch (error) { 
-        console.error("❌ Error en el comando .vermascotas:", error); 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener tu lista de mascotas. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-
-        // ❌ Enviar reacción de error 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } // Emoji de error ❌ 
-        }); 
-    } 
-    break; 
-}        
+        
 
  case 'comprar': {
     try {
