@@ -85,11 +85,27 @@ function loadPrefix() {
 loadPrefix();
 console.log(`📌 Prefijo actual: ${global.prefix}`);
 //orivado
-// Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
+// Almacenar owner los usuarios en línea por cada grupo (hacerlo accesible globalmente)
+const ownersFilePath = "./owners.json";
 
-// Definir la carpeta temporal dentro del bot
+// 📂 Si `owners.json` no existe, crearlo con una lista vacía
+if (!fs.existsSync(ownersFilePath)) {
+    fs.writeFileSync(ownersFilePath, JSON.stringify({ owners: [] }, null, 2));
+}
 
-// Si el modo privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
+// 🔄 Cargar Owners desde JSON
+const getOwners = () => {
+    let data = fs.readFileSync(ownersFilePath, "utf-8");
+    return JSON.parse(data).owners;
+};
+
+// 🔄 Guardar Owners en JSON
+const saveOwners = (owners) => {
+    fs.writeFileSync(ownersFilePath, JSON.stringify({ owners }, null, 2));
+};
+
+
+// Si el modo owner privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
 //modoprivado ariba
 const guarFilePath = "./guar.json";
@@ -232,24 +248,18 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+
 case 'addowner': {
     try {
-        const fs = require("fs");
-        const configFilePath = "./config.js";
-
-        // 🔍 Obtener número del bot correctamente
+        // 📥 Obtener número del bot
         let botNumber = sock.user.id.replace(/[^0-9]/g, "");
-
-        // 🔍 Obtener el número del usuario que ejecuta el comando
         let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
-            ? msg.participant.replace(/[^0-9]/g, "")  // En grupos
-            : msg.key.remoteJid.replace(/[^0-9]/g, ""); // En chat privado
+            ? msg.participant.replace(/[^0-9]/g, "")
+            : msg.key.remoteJid.replace(/[^0-9]/g, "");
 
-        // 🔐 Verificar si el usuario es Owner o el propio bot
-        if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los Owners o el bot pueden agregar nuevos Owners.*" 
-            }, { quoted: msg });
+        // 🔐 Verificar si el usuario que ejecuta el comando es Owner o el propio bot
+        if (!getOwners().includes(ejecutor) && ejecutor !== botNumber) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⛔ *Solo los Owners o el bot pueden agregar nuevos Owners.*" }, { quoted: msg });
         }
 
         // 📥 Obtener el número del nuevo Owner
@@ -257,62 +267,43 @@ case 'addowner': {
         if (msg.message.extendedTextMessage) {
             nuevoOwner = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
         } else if (text) {
-            nuevoOwner = text.replace(/[^0-9]/g, ""); // Limpiar número
+            nuevoOwner = text.replace(/[^0-9]/g, "");
         } else {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\n📌 Usa `.addowner 507XXXXXXXX` o responde a un mensaje." 
-            }, { quoted: msg });
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso incorrecto.*\n📌 Usa `.addowner 507XXXXXXXX` o responde a un mensaje." }, { quoted: msg });
         }
-
-        // 📂 Leer `config.js`
-        let configContent = fs.readFileSync(configFilePath, "utf-8");
 
         // ❌ Verificar si ya es Owner
-        if (configContent.includes(`["${nuevoOwner}"]`)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *El usuario ${nuevoOwner} ya es un Owner.*` 
-            }, { quoted: msg });
+        let owners = getOwners();
+        if (owners.includes(nuevoOwner)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El usuario ${nuevoOwner} ya es un Owner.*` }, { quoted: msg });
         }
 
-        // ✏️ Agregar Owner en `config.js`
-        let newOwnerEntry = `    ["${nuevoOwner}"],\n`;
-        configContent = configContent.replace(/(global\.owner\s*=\s*\n)/, `$1${newOwnerEntry}`);
+        // ✅ Agregar nuevo Owner
+        owners.push(nuevoOwner);
+        saveOwners(owners);
 
-        // 💾 Guardar cambios en `config.js`
-        fs.writeFileSync(configFilePath, configContent, "utf-8");
-
-        // ✅ Confirmar éxito
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✅ *El usuario ${nuevoOwner} ha sido agregado como Owner.*\n📌 *Reinicia el bot para aplicar los cambios.*` 
+            text: `✅ *El usuario ${nuevoOwner} ha sido agregado como Owner.*` 
         }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .addowner:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Error al agregar Owner. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error al agregar Owner. Inténtalo de nuevo.*" }, { quoted: msg });
     }
     break;
 }
 
 case 'deleteowner': {
     try {
-        const fs = require("fs");
-        const configFilePath = "./config.js";
-
-        // 🔍 Obtener número del bot correctamente
+        // 📥 Obtener número del bot
         let botNumber = sock.user.id.replace(/[^0-9]/g, "");
-
-        // 🔍 Obtener el número del usuario que ejecuta el comando
         let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
-            ? msg.participant.replace(/[^0-9]/g, "")  // En grupos
-            : msg.key.remoteJid.replace(/[^0-9]/g, ""); // En chat privado
+            ? msg.participant.replace(/[^0-9]/g, "")
+            : msg.key.remoteJid.replace(/[^0-9]/g, "");
 
-        // 🔐 Verificar si el usuario es Owner o el propio bot
-        if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los Owners o el bot pueden eliminar Owners.*" 
-            }, { quoted: msg });
+        // 🔐 Verificar si el usuario que ejecuta el comando es Owner o el propio bot
+        if (!getOwners().includes(ejecutor) && ejecutor !== botNumber) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⛔ *Solo los Owners o el bot pueden eliminar Owners.*" }, { quoted: msg });
         }
 
         // 📥 Obtener el número del Owner a eliminar
@@ -320,43 +311,32 @@ case 'deleteowner': {
         if (msg.message.extendedTextMessage) {
             ownerEliminar = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
         } else if (text) {
-            ownerEliminar = text.replace(/[^0-9]/g, ""); // Limpiar número
+            ownerEliminar = text.replace(/[^0-9]/g, "");
         } else {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\n📌 Usa `.deleteowner 507XXXXXXXX` o responde a un mensaje." 
-            }, { quoted: msg });
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso incorrecto.*\n📌 Usa `.deleteowner 507XXXXXXXX` o responde a un mensaje." }, { quoted: msg });
         }
-
-        // 📂 Leer `config.js`
-        let configContent = fs.readFileSync(configFilePath, "utf-8");
 
         // ❌ Verificar si el número está en la lista de Owners
-        if (!configContent.includes(`["${ownerEliminar}"]`)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: `⚠️ *El usuario ${ownerEliminar} no está en la lista de Owners.*` 
-            }, { quoted: msg });
+        let owners = getOwners();
+        if (!owners.includes(ownerEliminar)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El usuario ${ownerEliminar} no está en la lista de Owners.*` }, { quoted: msg });
         }
 
-        // 📝 Eliminar el Owner de la lista en `config.js`
-        let regex = new RegExp(`\\s*\"${ownerEliminar}"\,?\\n?`, "g");
-        configContent = configContent.replace(regex, "");
+        // 📝 Eliminar el Owner de la lista
+        owners = owners.filter(owner => owner !== ownerEliminar);
+        saveOwners(owners);
 
-        // 💾 Guardar cambios en `config.js`
-        fs.writeFileSync(configFilePath, configContent, "utf-8");
-
-        // ✅ Confirmar éxito
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✅ *El usuario ${ownerEliminar} ha sido eliminado como Owner.*\n📌 *Reinicia el bot para aplicar los cambios.*` 
+            text: `✅ *El usuario ${ownerEliminar} ha sido eliminado como Owner.*` 
         }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en el comando .deleteowner:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Error al eliminar Owner. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error al eliminar Owner. Inténtalo de nuevo.*" }, { quoted: msg });
     }
     break;
 }
+
         
 case 'deletemascota': {
     try {
