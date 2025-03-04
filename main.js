@@ -325,42 +325,40 @@ case 'luchar': {
             text: textos[Math.floor(Math.random() * textos.length)] 
         }, { quoted: msg });
 
+        // 🌟 **Incrementar niveles aleatorios en habilidades (30% de probabilidad)**
+        let habilidades = Object.keys(personaje.habilidades);
+        if (habilidades.length > 0 && Math.random() < 0.3) { // 30% de probabilidad
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            personaje.habilidades[habilidadSubida] += 1;
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🌟 *¡${personaje.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${personaje.habilidades[habilidadSubida]}*`
+            }, { quoted: msg });
+        }
+
         // 📊 **Verificar si el personaje sube de nivel**
-        let xpMaxNivel = personaje.nivel * 1500;
+        let xpMaxNivel = personaje.nivel === 1 ? 1000 : personaje.nivel * 1500;
         while (personaje.experiencia >= xpMaxNivel && personaje.nivel < 70) {
             personaje.experiencia -= xpMaxNivel;
             personaje.nivel += 1;
             xpMaxNivel = personaje.nivel * 1500;
 
-            // 🎖️ **Actualizar Rangos**
-            const rangos = [
+            // 📊 **Actualizar y manejar Rangos**
+            const rangosPersonaje = [
                 { nivel: 1, rango: "🌟 Principiante" },
-                { nivel: 5, rango: "⚔️ Guerrero" },
-                { nivel: 10, rango: "🔥 Maestro" },
-                { nivel: 20, rango: "🏆 Leyenda" },
-                { nivel: 30, rango: "👑 Rey Supremo" },
-                { nivel: 40, rango: "🚀 Dios de la Guerra" },
-                { nivel: 50, rango: "💀 Deidad de la Batalla" },
-                { nivel: 60, rango: "🌌 Titán del Universo" },
-                { nivel: 70, rango: "🐉 Mítico Inmortal" }
+                { nivel: 10, rango: "⚔️ Guerrero" },
+                { nivel: 20, rango: "🔥 Maestro de Batalla" },
+                { nivel: 30, rango: "👑 Líder Supremo" },
+                { nivel: 40, rango: "🌀 Legendario" },
+                { nivel: 50, rango: "💀 Dios de la Guerra" },
+                { nivel: 60, rango: "🚀 Titán de la Arena" },
+                { nivel: 70, rango: "🔱 Inmortal" }
             ];
             let rangoAnterior = personaje.rango;
-            personaje.rango = rangos.reduce((acc, curr) => (personaje.nivel >= curr.nivel ? curr.rango : acc), personaje.rango);
+            personaje.rango = rangosPersonaje.reduce((acc, curr) => (personaje.nivel >= curr.nivel ? curr.rango : acc), personaje.rango);
 
-            // 📢 **Notificar subida de nivel y cambio de rango**
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: `🎉 *¡${personaje.nombre} ha subido al nivel ${personaje.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${personaje.rango}`
-            }, { quoted: msg });
-        }
-
-        // 🌟 **Incrementar niveles aleatorios en habilidades con 30% de probabilidad**
-        let habilidades = Object.keys(personaje.habilidades);
-        if (habilidades.length > 0 && Math.random() < 0.3) { // 30% de probabilidad de mejorar una habilidad
-            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
-            personaje.habilidades[habilidadSubida].nivel += 1;
-
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🌟 *¡${personaje.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${personaje.habilidades[habilidadSubida].nivel}*`
             }, { quoted: msg });
         }
 
@@ -376,6 +374,7 @@ case 'luchar': {
     }
     break;
 }
+            
         
 case 'bolasdeldragon': {
     try {
