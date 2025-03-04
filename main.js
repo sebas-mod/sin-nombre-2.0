@@ -232,14 +232,19 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+
 case 'addowner': {
     try {
         const fs = require("fs");
         const configFilePath = "./config.js";
 
+        // Obtener el número del bot correctamente en todos los casos
+        let botNumber = sock.user.id.split("@")[0];
+
         // Obtener el número del usuario que ejecuta el comando
-        let ejecutor = sender.replace(/[^0-9]/g, "");
-        let botNumber = sock.user.id.split("@")[0]; // Obtener correctamente el número del bot
+        let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
+            ? msg.participant.replace(/[^0-9]/g, "")  // En grupos
+            : msg.key.remoteJid.replace(/[^0-9]/g, ""); // En chat privado
 
         // Verificar si el usuario es Owner o el propio bot
         if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
@@ -248,7 +253,7 @@ case 'addowner': {
             }, { quoted: msg });
         }
 
-        // Obtener el número del usuario a agregar
+        // Obtener el número del nuevo Owner a agregar
         let nuevoOwner;
         if (msg.message.extendedTextMessage) {
             nuevoOwner = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
@@ -296,18 +301,22 @@ case 'deleteowner': {
         const fs = require("fs");
         const configFilePath = "./config.js";
 
-        // Obtener el número del usuario que ejecuta el comando
-        let ejecutor = sender.replace(/[^0-9]/g, "");
-        let botNumber = sock.user.id.split("@")[0]; // Obtener correctamente el número del bot
+        // Obtener el número del bot correctamente en todos los casos
+        let botNumber = sock.user.id.split("@")[0];
 
-        // Verificar si el usuario es Owner o el Bot
+        // Obtener el número del usuario que ejecuta el comando
+        let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
+            ? msg.participant.replace(/[^0-9]/g, "")  // En grupos
+            : msg.key.remoteJid.replace(/[^0-9]/g, ""); // En chat privado
+
+        // Verificar si el usuario es Owner o el propio bot
         if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: "⛔ *Solo los Owners o el bot pueden eliminar Owners.*" 
             }, { quoted: msg });
         }
 
-        // Obtener el número del usuario a eliminar
+        // Obtener el número del Owner a eliminar
         let ownerEliminar;
         if (msg.message.extendedTextMessage) {
             ownerEliminar = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
@@ -349,6 +358,7 @@ case 'deleteowner': {
     }
     break;
 }
+
         
 case 'deletemascota': {
     try {
