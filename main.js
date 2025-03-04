@@ -232,7 +232,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-
 case 'addowner': {
     try {
         const fs = require("fs");
@@ -240,9 +239,9 @@ case 'addowner': {
 
         // Obtener el número del usuario que ejecuta el comando
         let ejecutor = sender.replace(/[^0-9]/g, "");
-        let botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
+        let botNumber = sock.user.id.split("@")[0]; // Obtener correctamente el número del bot
 
-        // Verificar si el usuario es Owner o el Bot
+        // Verificar si el usuario es Owner o el propio bot
         if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: "⛔ *Solo los Owners o el bot pueden agregar nuevos Owners.*" 
@@ -257,7 +256,7 @@ case 'addowner': {
             nuevoOwner = args[0].replace(/[^0-9]/g, ""); // Limpiar número
         } else {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\n📌 Ejemplo: `.addowner 507XXXXXXXX` o respondiendo a un mensaje." 
+                text: "⚠️ *Uso incorrecto.*\n📌 Usa `.addowner 507XXXXXXXX` o responde a un mensaje." 
             }, { quoted: msg });
         }
 
@@ -299,7 +298,7 @@ case 'deleteowner': {
 
         // Obtener el número del usuario que ejecuta el comando
         let ejecutor = sender.replace(/[^0-9]/g, "");
-        let botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
+        let botNumber = sock.user.id.split("@")[0]; // Obtener correctamente el número del bot
 
         // Verificar si el usuario es Owner o el Bot
         if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
@@ -316,7 +315,7 @@ case 'deleteowner': {
             ownerEliminar = args[0].replace(/[^0-9]/g, ""); // Limpiar número
         } else {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Uso incorrecto.*\n📌 Ejemplo: `.deleteowner 507XXXXXXXX` o respondiendo a un mensaje." 
+                text: "⚠️ *Uso incorrecto.*\n📌 Usa `.deleteowner 507XXXXXXXX` o responde a un mensaje." 
             }, { quoted: msg });
         }
 
