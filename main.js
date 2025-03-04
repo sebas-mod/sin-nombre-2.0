@@ -232,17 +232,22 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+
 case 'addowner': {
     try {
-        // Verificar si el usuario que ejecuta el comando es un Owner
-        if (!global.isOwner(sender)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los Owners pueden agregar nuevos Owners.*" 
-            }, { quoted: msg });
-        }
-
         const fs = require("fs");
         const configFilePath = "./config.js";
+
+        // Obtener el número del usuario que ejecuta el comando
+        let ejecutor = sender.replace(/[^0-9]/g, "");
+        let botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
+
+        // Verificar si el usuario es Owner o el Bot
+        if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo los Owners o el bot pueden agregar nuevos Owners.*" 
+            }, { quoted: msg });
+        }
 
         // Obtener el número del usuario a agregar
         let nuevoOwner;
@@ -289,15 +294,19 @@ case 'addowner': {
 
 case 'deleteowner': {
     try {
-        // Verificar si el usuario que ejecuta el comando es un Owner
-        if (!global.isOwner(sender)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los Owners pueden eliminar Owners.*" 
-            }, { quoted: msg });
-        }
-
         const fs = require("fs");
         const configFilePath = "./config.js";
+
+        // Obtener el número del usuario que ejecuta el comando
+        let ejecutor = sender.replace(/[^0-9]/g, "");
+        let botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot
+
+        // Verificar si el usuario es Owner o el Bot
+        if (!global.isOwner(ejecutor) && ejecutor !== botNumber) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo los Owners o el bot pueden eliminar Owners.*" 
+            }, { quoted: msg });
+        }
 
         // Obtener el número del usuario a eliminar
         let ownerEliminar;
