@@ -232,6 +232,96 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'deletemascota': {
+    try {
+        // 🔄 Reacción de procesamiento
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "🗑️", key: msg.key } });
+
+        // Verificar si el usuario es el Owner
+        if (!isOwner(sender)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo el propietario del bot puede eliminar mascotas de la tienda.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        const rpgFile = "./rpg.json";
+
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No hay mascotas en la tienda o el archivo no existe.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // ❌ Verificar si hay mascotas en la tienda
+        if (!rpgData.tiendaMascotas || rpgData.tiendaMascotas.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *La tienda de mascotas está vacía.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 📌 Verificar si se ingresó un número
+        if (!text || isNaN(text)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}deletemascota <número>\`\n🔹 Usa \`${global.prefix}tiendamascotas\` para ver la lista.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        const numeroMascota = parseInt(text);
+
+        // ❌ Validar el número
+        if (numeroMascota <= 0 || numeroMascota > rpgData.tiendaMascotas.length) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Número inválido.*\n📌 Usa \`${global.prefix}tiendamascotas\` para ver la lista de mascotas.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 🗑️ Eliminar la mascota de la tienda
+        let mascotaEliminada = rpgData.tiendaMascotas.splice(numeroMascota - 1, 1)[0];
+
+        // 📂 Guardar cambios
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📜 Mensaje de confirmación
+        let mensaje = `🗑️ *Mascota eliminada de la tienda*\n\n`;
+        mensaje += `🐾 *Nombre:* ${mascotaEliminada.nombre}\n`;
+        mensaje += `🏅 *Rango:* ${mascotaEliminada.rango}\n`;
+        mensaje += `💎 *Precio:* ${mascotaEliminada.precio} diamantes\n`;
+        mensaje += `🌟 *Habilidades:* ${Object.keys(mascotaEliminada.habilidades).join(", ")}\n\n`;
+        mensaje += `📌 *Esta mascota ya no está disponible en la tienda.*`;
+
+        // 📩 Enviar mensaje con imagen de la mascota eliminada
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: mascotaEliminada.imagen },
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .deletemascota:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al eliminar la mascota. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
+        
 case 'deleteper': {
     try {
         // 🔄 Reacción de procesamiento
