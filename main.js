@@ -103,7 +103,10 @@ const getOwners = () => {
 const saveOwners = (owners) => {
     fs.writeFileSync(ownersFilePath, JSON.stringify({ owners }, null, 2));
 };
-
+const ownersFile = "./owners.json";
+if (!fs.existsSync(ownersFile)) {
+    fs.writeFileSync(ownersFile, JSON.stringify({ owners: ["15167096033"] }, null, 2));
+}
 
 // Si el modo owner privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
@@ -248,91 +251,69 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-
 case 'addowner': {
     try {
-        // 📥 Obtener número del bot
-        let botNumber = sock.user.id.replace(/[^0-9]/g, "");
-        let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
-            ? msg.participant.replace(/[^0-9]/g, "")
-            : msg.key.remoteJid.replace(/[^0-9]/g, "");
-
-        // 🔐 Verificar si el usuario que ejecuta el comando es Owner o el propio bot
-        if (!getOwners().includes(ejecutor) && ejecutor !== botNumber) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⛔ *Solo los Owners o el bot pueden agregar nuevos Owners.*" }, { quoted: msg });
+        // Obtener el número del remitente o el número mencionado
+        let newOwner = text.trim() || (msg.quoted ? msg.quoted.participant : null);
+        if (!newOwner) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes escribir un número o responder un mensaje para agregarlo como Owner.*" }, { quoted: msg });
         }
 
-        // 📥 Obtener el número del nuevo Owner
-        let nuevoOwner;
-        if (msg.message.extendedTextMessage) {
-            nuevoOwner = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
-        } else if (text) {
-            nuevoOwner = text.replace(/[^0-9]/g, "");
-        } else {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso incorrecto.*\n📌 Usa `.addowner 507XXXXXXXX` o responde a un mensaje." }, { quoted: msg });
+        newOwner = newOwner.replace(/[^0-9]/g, ""); // Limpiar número
+        if (newOwner.length < 8) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *El número ingresado no es válido.*" }, { quoted: msg });
         }
 
-        // ❌ Verificar si ya es Owner
-        let owners = getOwners();
-        if (owners.includes(nuevoOwner)) {
-            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El usuario ${nuevoOwner} ya es un Owner.*` }, { quoted: msg });
+        // Verificar si ya es Owner
+        let ownersData = JSON.parse(fs.readFileSync("./owners.json", "utf-8"));
+        if (ownersData.owners.includes(newOwner)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El número ${newOwner} ya es Owner.*` }, { quoted: msg });
         }
 
-        // ✅ Agregar nuevo Owner
-        owners.push(nuevoOwner);
-        saveOwners(owners);
+        // Agregar el nuevo Owner
+        ownersData.owners.push(newOwner);
+        fs.writeFileSync("./owners.json", JSON.stringify(ownersData, null, 2));
 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✅ *El usuario ${nuevoOwner} ha sido agregado como Owner.*` 
-        }, { quoted: msg });
+        // Confirmar que se agregó correctamente
+        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *El número ${newOwner} ha sido agregado como Owner.*` }, { quoted: msg });
 
     } catch (error) {
-        console.error("❌ Error en el comando .addowner:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error al agregar Owner. Inténtalo de nuevo.*" }, { quoted: msg });
+        console.error("❌ Error en .addowner:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al agregar el Owner.*" }, { quoted: msg });
     }
     break;
 }
 
+
 case 'deleteowner': {
     try {
-        // 📥 Obtener número del bot
-        let botNumber = sock.user.id.replace(/[^0-9]/g, "");
-        let ejecutor = msg.key.remoteJid.endsWith("@g.us") 
-            ? msg.participant.replace(/[^0-9]/g, "")
-            : msg.key.remoteJid.replace(/[^0-9]/g, "");
-
-        // 🔐 Verificar si el usuario que ejecuta el comando es Owner o el propio bot
-        if (!getOwners().includes(ejecutor) && ejecutor !== botNumber) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⛔ *Solo los Owners o el bot pueden eliminar Owners.*" }, { quoted: msg });
+        // Obtener el número del Owner a eliminar
+        let removeOwner = text.trim() || (msg.quoted ? msg.quoted.participant : null);
+        if (!removeOwner) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes escribir un número o responder un mensaje para eliminarlo como Owner.*" }, { quoted: msg });
         }
 
-        // 📥 Obtener el número del Owner a eliminar
-        let ownerEliminar;
-        if (msg.message.extendedTextMessage) {
-            ownerEliminar = msg.message.extendedTextMessage.contextInfo.participant.replace(/[^0-9]/g, "");
-        } else if (text) {
-            ownerEliminar = text.replace(/[^0-9]/g, "");
-        } else {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Uso incorrecto.*\n📌 Usa `.deleteowner 507XXXXXXXX` o responde a un mensaje." }, { quoted: msg });
+        removeOwner = removeOwner.replace(/[^0-9]/g, ""); // Limpiar número
+        if (removeOwner.length < 8) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *El número ingresado no es válido.*" }, { quoted: msg });
         }
 
-        // ❌ Verificar si el número está en la lista de Owners
-        let owners = getOwners();
-        if (!owners.includes(ownerEliminar)) {
-            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El usuario ${ownerEliminar} no está en la lista de Owners.*` }, { quoted: msg });
+        // Cargar la lista de Owners
+        let ownersData = JSON.parse(fs.readFileSync("./owners.json", "utf-8"));
+        if (!ownersData.owners.includes(removeOwner)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El número ${removeOwner} no es un Owner registrado.*` }, { quoted: msg });
         }
 
-        // 📝 Eliminar el Owner de la lista
-        owners = owners.filter(owner => owner !== ownerEliminar);
-        saveOwners(owners);
+        // Eliminar el Owner
+        ownersData.owners = ownersData.owners.filter(num => num !== removeOwner);
+        fs.writeFileSync("./owners.json", JSON.stringify(ownersData, null, 2));
 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✅ *El usuario ${ownerEliminar} ha sido eliminado como Owner.*` 
-        }, { quoted: msg });
+        // Confirmar eliminación
+        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *El número ${removeOwner} ha sido eliminado como Owner.*` }, { quoted: msg });
 
     } catch (error) {
-        console.error("❌ Error en el comando .deleteowner:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Error al eliminar Owner. Inténtalo de nuevo.*" }, { quoted: msg });
+        console.error("❌ Error en .deleteowner:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al eliminar el Owner.*" }, { quoted: msg });
     }
     break;
 }
