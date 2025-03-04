@@ -275,7 +275,7 @@ case 'verper': {
 
         // ⚔️ **Nuevas funciones de batalla y ranking**  
         mensaje += `⚔️ *Modo Batalla y Rankings:*\n`;
-        mensaje += `🔹 Usa \`${global.prefix}batallaanime <@usuario>\` para luchar contra otro personaje.\n`;
+        mensaje += `🔹 Usa \`${global.prefix}batallaanime\` para luchar contra otro personaje.\n`;
         mensaje += `🔹 Usa \`${global.prefix}topper\` para ver el ranking de los personajes.\n\n`;
 
         // 📜 **Comandos para subir de nivel**  
