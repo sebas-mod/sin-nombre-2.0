@@ -232,6 +232,8 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+
+
 case 'luchar': {
     try {
         const fs = require("fs");
@@ -266,7 +268,7 @@ case 'luchar': {
             }, { quoted: msg });
         }
 
-        let personaje = usuario.personajes[0]; // Se asume que el primer personaje es el principal
+        let personaje = usuario.personajes[0]; // Primer personaje como principal
 
         // 🚑 Verificar si el personaje tiene 0 de vida
         if (personaje.vida <= 0) {
@@ -283,14 +285,14 @@ case 'luchar': {
         }
 
         // 🎖️ **Generar recompensas aleatorias**
-        let diamantesGanados = Math.floor(Math.random() * (500 - 1 + 1)) + 1; // Entre 1 y 500
-        let xpGanada = Math.floor(Math.random() * (2000 - 500 + 1)) + 500; // Entre 500 y 2000
+        let diamantesGanados = Math.floor(Math.random() * (500 - 1 + 1)) + 1;
+        let xpGanada = Math.floor(Math.random() * (2000 - 500 + 1)) + 500;
 
         // 💰 **Incrementar experiencia y diamantes**
         usuario.diamantes += diamantesGanados;
         personaje.experiencia += xpGanada;
 
-        // ❤️ Reducir vida aleatoriamente entre 5 y 20 puntos
+        // ❤️ Reducir vida entre 5 y 20 puntos
         let vidaPerdida = Math.floor(Math.random() * (20 - 5 + 1)) + 5;
         personaje.vida = Math.max(0, personaje.vida - vidaPerdida);
 
@@ -298,24 +300,18 @@ case 'luchar': {
         if (!personaje.cooldowns) personaje.cooldowns = {};
         personaje.cooldowns.luchar = tiempoActual;
 
-        // ⚔️ **Textos aleatorios personalizados con recompensas**
+        // ⚔️ **Mensajes de recompensa**
         const textos = [
-            `⚔️ *${personaje.nombre} luchó con valentía y salió victorioso.*  
+            `⚔️ *${personaje.nombre} peleó y ganó experiencia.*  
 💎 *${diamantesGanados} Diamantes obtenidos*  
 ✨ *${xpGanada} XP ganados*`,
-            `🔥 *${personaje.nombre} se enfrentó a un enemigo poderoso y ganó la batalla.*  
+            `🔥 *${personaje.nombre} venció a un enemigo y se hizo más fuerte.*  
 💎 *${diamantesGanados} Diamantes obtenidos*  
 ✨ *${xpGanada} XP ganados*`,
-            `🛡️ *${personaje.nombre} defendió su honor y salió fortalecido.*  
+            `🛡️ *${personaje.nombre} se defendió con éxito en la batalla.*  
 💎 *${diamantesGanados} Diamantes obtenidos*  
 ✨ *${xpGanada} XP ganados*`,
-            `⚡ *${personaje.nombre} usó una técnica especial y logró derrotar a su oponente.*  
-💎 *${diamantesGanados} Diamantes obtenidos*  
-✨ *${xpGanada} XP ganados*`,
-            `🏆 *La experiencia en combate de ${personaje.nombre} aumentó tras una intensa batalla.*  
-💎 *${diamantesGanados} Diamantes obtenidos*  
-✨ *${xpGanada} XP ganados*`,
-            `🥇 *${personaje.nombre} se destacó en el campo de batalla y recibió una gran recompensa.*  
+            `⚡ *${personaje.nombre} aprendió nuevas técnicas en el combate.*  
 💎 *${diamantesGanados} Diamantes obtenidos*  
 ✨ *${xpGanada} XP ganados*`
         ];
@@ -325,25 +321,16 @@ case 'luchar': {
             text: textos[Math.floor(Math.random() * textos.length)] 
         }, { quoted: msg });
 
-        // 🌟 **Incrementar niveles aleatorios en habilidades (30% de probabilidad)**
-        let habilidades = Object.keys(personaje.habilidades);
-        if (habilidades.length > 0 && Math.random() < 0.3) { // 30% de probabilidad
-            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
-            personaje.habilidades[habilidadSubida] += 1;
-
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🌟 *¡${personaje.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${personaje.habilidades[habilidadSubida]}*`
-            }, { quoted: msg });
-        }
-
-        // 📊 **Verificar si el personaje sube de nivel**
+        // 📊 **Manejar la subida de nivel correctamente**
         let xpMaxNivel = personaje.nivel === 1 ? 1000 : personaje.nivel * 1500;
+
         while (personaje.experiencia >= xpMaxNivel && personaje.nivel < 70) {
             personaje.experiencia -= xpMaxNivel;
             personaje.nivel += 1;
             xpMaxNivel = personaje.nivel * 1500;
+            personaje.xpMax = xpMaxNivel; // Ajustar la XP máxima del nuevo nivel
 
-            // 📊 **Actualizar y manejar Rangos**
+            // 📊 **Actualizar Rangos**
             const rangosPersonaje = [
                 { nivel: 1, rango: "🌟 Principiante" },
                 { nivel: 10, rango: "⚔️ Guerrero" },
@@ -359,6 +346,17 @@ case 'luchar': {
 
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: `🎉 *¡${personaje.nombre} ha subido al nivel ${personaje.nivel}! 🏆*\n🏅 *Nuevo Rango:* ${personaje.rango}`
+            }, { quoted: msg });
+        }
+
+        // 🌟 **Mejorar habilidades con 30% de probabilidad**
+        let habilidades = Object.keys(personaje.habilidades);
+        if (habilidades.length > 0 && Math.random() < 0.3) {
+            let habilidadSubida = habilidades[Math.floor(Math.random() * habilidades.length)];
+            personaje.habilidades[habilidadSubida] += 1;
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🌟 *¡${personaje.nombre} ha mejorado su habilidad!* 🎯\n🔹 *${habilidadSubida}: Nivel ${personaje.habilidades[habilidadSubida]}*`
             }, { quoted: msg });
         }
 
