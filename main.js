@@ -232,6 +232,96 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'deleteper': {
+    try {
+        // 🔄 Reacción de procesamiento
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "🗑️", key: msg.key } });
+
+        // Verificar si el usuario es el Owner
+        if (!isOwner(sender)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⛔ *Solo el propietario del bot puede eliminar personajes de la tienda.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        const rpgFile = "./rpg.json";
+
+        // 📂 Verificar si el archivo existe
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No hay personajes en la tienda o el archivo no existe.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        // ❌ Verificar si hay personajes en la tienda
+        if (!rpgData.tiendaPersonajes || rpgData.tiendaPersonajes.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *La tienda de personajes está vacía.*" 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 📌 Verificar si se ingresó un número
+        if (!text || isNaN(text)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}deleteper <número>\`\n🔹 Usa \`${global.prefix}tiendaper\` para ver la lista.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        const numeroPersonaje = parseInt(text);
+
+        // ❌ Validar el número
+        if (numeroPersonaje <= 0 || numeroPersonaje > rpgData.tiendaPersonajes.length) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `⚠️ *Número inválido.*\n📌 Usa \`${global.prefix}tiendaper\` para ver la lista de personajes.` 
+            }, { quoted: msg });
+            return;
+        }
+
+        // 🗑️ Eliminar el personaje de la tienda
+        let personajeEliminado = rpgData.tiendaPersonajes.splice(numeroPersonaje - 1, 1)[0];
+
+        // 📂 Guardar cambios
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📜 Mensaje de confirmación
+        let mensaje = `🗑️ *Personaje eliminado de la tienda*\n\n`;
+        mensaje += `🎭 *Nombre:* ${personajeEliminado.nombre}\n`;
+        mensaje += `🏅 *Rango:* ${personajeEliminado.rango}\n`;
+        mensaje += `💎 *Precio:* ${personajeEliminado.precio} diamantes\n`;
+        mensaje += `🌟 *Habilidades:* ${Object.keys(personajeEliminado.habilidades).join(", ")}\n\n`;
+        mensaje += `📌 *Este personaje ya no está disponible en la tienda.*`;
+
+        // 📩 Enviar mensaje con imagen del personaje eliminado
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: personajeEliminado.imagen },
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .deleteper:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al eliminar el personaje. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
+        
 case 'verper': { 
     try { 
         // 🔄 Enviar reacción mientras se procesa el comando 
