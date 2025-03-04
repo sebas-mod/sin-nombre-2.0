@@ -262,7 +262,7 @@ case 'verper': {
         }
 
         // 📜 **Lista de personajes del usuario**  
-        let mensaje = `🎭 *Personajes Comprados - Azura Ultra* 🎭\n\n`;
+        let mensaje = `🎭 *Tus Personajes Comprados - Azura Ultra* 🎭\n\n`;
 
         usuario.personajes.forEach((personaje, index) => { 
             mensaje += `═════════════════════\n`;  
@@ -289,7 +289,7 @@ case 'verper': {
 
         // ⚔️ **Modo Batalla y Rankings**  
         mensaje += `⚔️ *Batalla y Ranking:*\n`;
-        mensaje += `🔹 \`${global.prefix}batallaanime <@usuario>\` - Luchar contra otro personaje\n`;
+        mensaje += `🔹 \`${global.prefix}batallaanime\` - Luchar contra otro personaje\n`;
         mensaje += `🔹 \`${global.prefix}topper\` - Ver ranking de personajes\n\n`;
 
         // 🏆 **Comandos para subir de nivel**  
