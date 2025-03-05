@@ -231,6 +231,286 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'batallauser': {
+  try {
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*`
+      }, { quoted: msg });
+    }
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    let userId = msg.key.participant || msg.key.remoteJid;
+    
+    // ⏳ Verificar cooldown (5 minutos) para batallas de usuarios
+    if (rpgData.usuarios[userId]?.cooldowns?.batallaUser) {
+      let cooldownTime = rpgData.usuarios[userId].cooldowns.batallaUser;
+      if ((Date.now() - cooldownTime) < 5 * 60 * 1000) {
+        let remainingTime = Math.ceil((5 * 60 * 1000 - (Date.now() - cooldownTime)) / 1000);
+        return sock.sendMessage(msg.key.remoteJid, {
+          text: `⏳ *Debes esperar ${remainingTime} segundos antes de usar \`${global.prefix}batallauser\` nuevamente.*`
+        }, { quoted: msg });
+      }
+    }
+    
+    // Verificar que el usuario existe
+    if (!rpgData.usuarios[userId]) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *No tienes una cuenta en el gremio Azura Ultra. Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.*`
+      }, { quoted: msg });
+    }
+    let usuario = rpgData.usuarios[userId];
+    
+    // Extraer el ID del oponente: intenta primero por mensaje citado y, si no, por menciones
+    let opponentId;
+    if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      opponentId = msg.message.extendedTextMessage.contextInfo.participant;
+    }
+    if (!opponentId && msg.message?.extendedTextMessage?.contextInfo?.mentionedJid) {
+      opponentId = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
+    }
+    if (!opponentId) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `⚔️ *Menciona o responde (cita) a un usuario para retarlo a una batalla entre usuarios.*`
+      }, { quoted: msg });
+    }
+    
+    // Verificar que el oponente exista
+    if (!rpgData.usuarios[opponentId]) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *El oponente no tiene una cuenta registrada en el gremio.*`
+      }, { quoted: msg });
+    }
+    let oponente = rpgData.usuarios[opponentId];
+    
+    // Formatear habilidades de ambos usuarios
+    let habilidadesUser = Object.entries(usuario.habilidades)
+      .map(([nombre, datos]) => `⚡ *${nombre}:* Nivel ${datos.nivel || 1}`)
+      .join("\n");
+    let habilidadesOponente = Object.entries(oponente.habilidades)
+      .map(([nombre, datos]) => `⚡ *${nombre}:* Nivel ${datos.nivel || 1}`)
+      .join("\n");
+    
+    // Construir el mensaje de desafío usando el prefijo global
+    let mensajeDesafio =
+      `🛡️ *¡Desafío de Batalla entre Usuarios!* 🛡️\n\n` +
+      `👤 *Retador:* @${userId.split('@')[0]}\n` +
+      `🎯 *Retado:* @${opponentId.split('@')[0]}\n\n` +
+      `📊 *Datos de @${userId.split('@')[0]}:*\n` +
+      `   • *Nivel:* ${usuario.nivel}\n` +
+      `   • *Vida:* ${usuario.vida}\n` +
+      `   • *Habilidades:*\n${habilidadesUser}\n\n` +
+      `📊 *Datos de @${opponentId.split('@')[0]}:*\n` +
+      `   • *Nivel:* ${oponente.nivel}\n` +
+      `   • *Vida:* ${oponente.vida}\n` +
+      `   • *Habilidades:*\n${habilidadesOponente}\n\n` +
+      `🛡️ *@${opponentId.split('@')[0]}*, responde con \`${global.prefix}gouser\` para aceptar el desafío.\n` +
+      `⏳ *Tienes 2 minutos para aceptar.*`;
+      
+    await sock.sendMessage(msg.key.remoteJid, { text: mensajeDesafio, mentions: [userId, opponentId] });
+    
+    // Guardar la solicitud de batalla en el usuario retador (tipo "user")
+    usuario.battleRequest = {
+      target: opponentId,
+      time: Date.now(),
+      type: "user"
+    };
+    fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+    
+    // Configurar expiración de la solicitud (2 minutos)
+    setTimeout(() => {
+      let data = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+      if (
+        data.usuarios[userId]?.battleRequest &&
+        data.usuarios[userId].battleRequest.target === opponentId &&
+        data.usuarios[userId].battleRequest.type === "user"
+      ) {
+        delete data.usuarios[userId].battleRequest;
+        fs.writeFileSync(rpgFile, JSON.stringify(data, null, 2));
+        sock.sendMessage(msg.key.remoteJid, {
+          text: "⏳ *La solicitud de batalla entre usuarios ha expirado porque no fue aceptada a tiempo.*"
+        }, { quoted: msg });
+      }
+    }, 120000);
+    
+  } catch (error) {
+    console.error('❌ Error en .batallauser:', error);
+  }
+  break;
+}
+
+case 'gouser': {
+  try {
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*`
+      }, { quoted: msg });
+    }
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    let userId = msg.key.participant || msg.key.remoteJid;
+    
+    // Buscar quién desafió al usuario (tipo "user")
+    const challengerId = Object.keys(rpgData.usuarios).find(
+      (id) => rpgData.usuarios[id].battleRequest &&
+              rpgData.usuarios[id].battleRequest.target === userId &&
+              rpgData.usuarios[id].battleRequest.type === "user"
+    );
+    if (!challengerId) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: "⚠️ *No tienes ninguna solicitud de batalla entre usuarios pendiente.*"
+      }, { quoted: msg });
+    }
+    
+    // Verificar que la solicitud siga activa (2 minutos)
+    const requestTime = rpgData.usuarios[challengerId].battleRequest.time;
+    if (Date.now() - requestTime > 120000) {
+      delete rpgData.usuarios[challengerId].battleRequest;
+      fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: "⏳ *La solicitud de batalla entre usuarios ha expirado.*"
+      }, { quoted: msg });
+    }
+    
+    // Eliminar la solicitud de batalla al aceptar
+    delete rpgData.usuarios[challengerId].battleRequest;
+    
+    let userStats = rpgData.usuarios[userId];
+    let challengerStats = rpgData.usuarios[challengerId];
+    
+    // Animación de batalla
+    const animaciones = [
+      "🛡️ *¡La batalla entre usuarios comienza!* Los guerreros se preparan...",
+      `🔥 *${challengerStats.nombre}* lanza un ataque devastador.`,
+      `🛡️ *${userStats.nombre}* se defiende con gran habilidad.`,
+      `💥 *Impacto crítico de ${userStats.nombre}!*`,
+      `⚡ *${challengerStats.nombre}* utiliza su técnica secreta.`,
+      `🌪️ *La batalla se intensifica...*`,
+      `✨ *El enfrentamiento alcanza su punto álgido...*`,
+      "💥 *¡El destino de la batalla está por decidirse!*"
+    ];
+    let mensajeAnimado = await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: animaciones[0] },
+      { quoted: msg }
+    );
+    for (let i = 1; i < animaciones.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: animaciones[i], edit: mensajeAnimado.key },
+        { quoted: msg }
+      );
+    }
+    
+    // **💥 Cálculo de batalla para usuarios**
+    const statsChallenger = challengerStats.nivel * 5 +
+      Object.values(challengerStats.habilidades).reduce((total, h) => total + ((typeof h === 'object' ? h.nivel : h) * 2), 0);
+    const statsUser = userStats.nivel * 5 +
+      Object.values(userStats.habilidades).reduce((total, h) => total + ((typeof h === 'object' ? h.nivel : h) * 2), 0);
+    
+    let empate = false;
+    let ganadorId, perdedorId;
+    if (statsChallenger > statsUser) {
+      ganadorId = challengerId;
+      perdedorId = userId;
+    } else if (statsChallenger < statsUser) {
+      ganadorId = userId;
+      perdedorId = challengerId;
+    } else {
+      empate = true;
+    }
+    
+    let mensajeFinal = "";
+    
+    if (empate) {
+      const xpTie = Math.floor(Math.random() * 301) + 200;     // 200 - 500 XP
+      const diamondTie = Math.floor(Math.random() * 201) + 100;  // 100 - 300 diamantes
+      
+      rpgData.usuarios[userId].diamantes = (rpgData.usuarios[userId].diamantes || 0) + diamondTie;
+      rpgData.usuarios[challengerId].diamantes = (rpgData.usuarios[challengerId].diamantes || 0) + diamondTie;
+      
+      userStats.experiencia = (userStats.experiencia || 0) + xpTie;
+      challengerStats.experiencia = (challengerStats.experiencia || 0) + xpTie;
+      
+      mensajeFinal = 
+        `🤝 *¡La batalla entre usuarios terminó en empate!* 🤝\n\n` +
+        `Ambos reciben:\n` +
+        `• +${xpTie} XP ✨\n` +
+        `• +${diamondTie} diamantes 💎\n\n` +
+        `❤️ *Estado actual:*\n` +
+        `- ${userStats.nombre}: ${userStats.vida} HP\n` +
+        `- ${challengerStats.nombre}: ${challengerStats.vida} HP`;
+    } else {
+      let ganador = rpgData.usuarios[ganadorId];
+      let perdedor = rpgData.usuarios[perdedorId];
+      
+      // 🔻 Reducir vida de los usuarios
+      ganador.vida -= Math.floor(Math.random() * 10) + 5;
+      perdedor.vida -= Math.floor(Math.random() * 20) + 10;
+      if (ganador.vida < 0) ganador.vida = 0;
+      if (perdedor.vida < 0) perdedor.vida = 0;
+      
+      const xpGanador = Math.floor(Math.random() * 701) + 300; // 300 - 1000 XP
+      const diamondGanador = Math.floor(Math.random() * 301) + 200; // 200 - 500 diamantes
+      const xpPerdedor = Math.floor(Math.random() * 201) + 100; // 100 - 300 XP
+      const diamondPerdedor = Math.floor(Math.random() * 151) + 50; // 50 - 200 diamantes
+      
+      ganador.experiencia = (ganador.experiencia || 0) + xpGanador;
+      rpgData.usuarios[ganadorId].diamantes = (rpgData.usuarios[ganadorId].diamantes || 0) + diamondGanador;
+      perdedor.experiencia = (perdedor.experiencia || 0) + xpPerdedor;
+      rpgData.usuarios[perdedorId].diamantes = (rpgData.usuarios[perdedorId].diamantes || 0) + diamondPerdedor;
+      
+      mensajeFinal =
+        `🎉 *¡La batalla entre usuarios ha terminado!* 🎉\n\n` +
+        `🏆 *Ganador:* @${ganadorId.split('@')[0]}\n` +
+        `💔 *Perdedor:* @${perdedorId.split('@')[0]}\n\n` +
+        `*Recompensas:*\n` +
+        `• *Ganador:* +${xpGanador} XP ✨, +${diamondGanador} diamantes 💎\n` +
+        `• *Perdedor:* +${xpPerdedor} XP ✨, +${diamondPerdedor} diamantes 💎\n\n` +
+        `❤️ *Estado actual:*\n` +
+        `- ${ganador.nombre}: ${ganador.vida} HP\n` +
+        `- ${perdedor.nombre}: ${perdedor.vida} HP`;
+    }
+    
+    // Subida de nivel automática para los usuarios (definimos xpMax para usuario como nivel * 1500)
+    const usuariosEnBatalla = [userStats, challengerStats];
+    for (const u of usuariosEnBatalla) {
+      u.xpMax = u.xpMax || (u.nivel * 1500);
+      while (u.experiencia >= u.xpMax && u.nivel < 70) {
+        u.experiencia -= u.xpMax;
+        u.nivel++;
+        u.xpMax = u.nivel * 1500; // Ajusta según tu sistema
+        const rangos = ['🌟 Principiante', '⚔️ Guerrero', '🔥 Maestro', '👑 Élite', '🌀 Legendario', '💀 Dios de la Batalla'];
+        u.rango = rangos[Math.min(Math.floor(u.nivel / 10), rangos.length - 1)];
+      }
+    }
+    
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: mensajeFinal, mentions: empate ? [userId, challengerId] : [ganadorId, perdedorId] },
+      { quoted: msg }
+    );
+    
+    // ⏳ Guardar cooldown de batalla para ambos (5 minutos)
+    rpgData.usuarios[userId].cooldowns = rpgData.usuarios[userId].cooldowns || {};
+    rpgData.usuarios[challengerId].cooldowns = rpgData.usuarios[challengerId].cooldowns || {};
+    rpgData.usuarios[userId].cooldowns.batallaUser = Date.now();
+    rpgData.usuarios[challengerId].cooldowns.batallaUser = Date.now();
+    
+    fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+    
+  } catch (error) {
+    console.error('❌ Error en .gouser:', error);
+    return sock.sendMessage(
+      msg.key.remoteJid,
+      { text: '❌ *Error inesperado al procesar la batalla entre usuarios.*' },
+      { quoted: msg }
+    );
+  }
+  break;
+}            
+        
 case 'batallaanime': {
   try {
     const rpgFile = "./rpg.json";
