@@ -6107,7 +6107,7 @@ case "tt":
         const videoComments = videoData.comment || "0";
 
         // 📜 Mensaje con la información del video
-        let mensaje = `🎥 *Video de TikTok Descargado* 🎥\n\n`;
+        let mensaje = `🎥 *Video de TikTok* 🎥\n\n`;
         mensaje += `📌 *Título:* ${videoTitle}\n`;
         mensaje += `👤 *Autor:* ${videoAuthor}\n`;
         mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
