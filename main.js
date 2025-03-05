@@ -231,236 +231,55 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-
-case 'batallamascota': {
+case "git":
     try {
-        const rpgFile = "./rpg.json";
-
-        if (!fs.existsSync(rpgFile)) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No hay datos de RPG. Usa `.crearcartera` para empezar.*" }, { quoted: msg });
+        // Verificar si se proporcionó un comando
+        if (!args[0]) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Debes especificar el nombre de un comando.*\nEjemplo: `.git rest`"
+            }, { quoted: msg });
+            return;
         }
 
-        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let userId = msg.key.participant || msg.key.remoteJid;
-
-        // ⏳ Verificar cooldown
-        if (rpgData.usuarios[userId]?.cooldowns?.batallaMascota) {
-            let cooldownTime = rpgData.usuarios[userId].cooldowns.batallaMascota;
-            if ((Date.now() - cooldownTime) < 5 * 60 * 1000) {
-                let remainingTime = Math.ceil((5 * 60 * 1000 - (Date.now() - cooldownTime)) / 1000);
-                return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${remainingTime} segundos antes de usar .batallamascota nuevamente.*` }, { quoted: msg });
-            }
+        // Leer el archivo main.js
+        const mainFilePath = "./main.js";
+        if (!fs.existsSync(mainFilePath)) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "❌ *Error:* No se encontró el archivo de comandos."
+            }, { quoted: msg });
+            return;
         }
 
-        // 📌 Verificar si el usuario tiene mascota
-        if (!rpgData.usuarios[userId] || !rpgData.usuarios[userId].mascotas || rpgData.usuarios[userId].mascotas.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No tienes una mascota. Usa `.tiendamascotas` para comprar una.*" }, { quoted: msg });
+        // Leer el contenido del archivo main.js
+        const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
+
+        // Buscar el comando solicitado
+        const commandName = args[0].toLowerCase();
+        const commandRegex = new RegExp(`case\\s+['"]${commandName}['"]:\\s*([\\s\\S]*?)\\s*break;`, "g");
+        const match = commandRegex.exec(mainFileContent);
+
+        if (!match) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ *Error:* No se encontró el comando *${commandName}* en el archivo main.js.`
+            }, { quoted: msg });
+            return;
         }
 
-        // 📌 Verificar si se mencionó o citó a un usuario
-        let mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid;
-        let replied = msg.message.extendedTextMessage?.contextInfo?.participant;
-        let opponentId = mentioned ? mentioned[0] : replied;
+        // Extraer el código del comando
+        const commandCode = `📜 *Código del comando ${commandName}:*\n\n\`\`\`${match[0]}\`\`\``;
 
-        if (!opponentId) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚔️ *Menciona o responde a un usuario para retarlo a una batalla de mascotas.*" }, { quoted: msg });
-        }
-
-        // 📌 Verificar si el oponente tiene mascota
-        if (!rpgData.usuarios[opponentId] || !rpgData.usuarios[opponentId].mascotas || rpgData.usuarios[opponentId].mascotas.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *El oponente no tiene una mascota.*" }, { quoted: msg });
-        }
-
-        let userMascot = rpgData.usuarios[userId].mascotas[0];
-        let opponentMascot = rpgData.usuarios[opponentId].mascotas[0];
-
-        // 🔥 Enviar reto de batalla con info de mascotas y habilidades
-        let habilidadesUser = userMascot.habilidades.map(h => `⚡ *${h.nombre}:* Nivel ${h.nivel}`).join("\n");
-        let habilidadesOpponent = opponentMascot.habilidades.map(h => `⚡ *${h.nombre}:* Nivel ${h.nivel}`).join("\n");
-
+        // Enviar el código como mensaje
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚔️ *¡Desafío de Batalla de Mascotas!*\n\n
-👤 *Retador:* @${userId.split('@')[0]}  
-🎯 *Retado:* @${opponentId.split('@')[0]}  
-
-🐾 *Mascota de @${userId.split('@')[0]}:*  
-- 🏷️ *Nombre:* ${userMascot.nombre}  
-- 💖 *Vida:* ${userMascot.vida}  
-- 🏆 *Nivel:* ${userMascot.nivel}  
-- 🌟 *Rango:* ${userMascot.rango}  
-🎯 *Habilidades:*  
-${habilidadesUser}  
-
-🐾 *Mascota de @${opponentId.split('@')[0]}:*  
-- 🏷️ *Nombre:* ${opponentMascot.nombre}  
-- 💖 *Vida:* ${opponentMascot.vida}  
-- 🏆 *Nivel:* ${opponentMascot.nivel}  
-- 🌟 *Rango:* ${opponentMascot.rango}  
-🎯 *Habilidades:*  
-${habilidadesOpponent}  
-
-🛡️ *@${opponentId.split('@')[0]}*, *responde con* \`.gomascota\` *para aceptar.*  
-⏳ *Tienes 2 minutos para aceptar antes de que la solicitud expire.*`,
-            mentions: [userId, opponentId]
-        });
-
-        // Guardar la solicitud de batalla
-        rpgData.usuarios[userId].battleRequest = {
-            target: opponentId,
-            time: Date.now(),
-        };
-        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
-
-        // Configurar expiración de la solicitud
-        setTimeout(() => {
-            if (rpgData.usuarios[userId].battleRequest && rpgData.usuarios[userId].battleRequest.target === opponentId) {
-                delete rpgData.usuarios[userId].battleRequest;
-                fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
-                sock.sendMessage(msg.key.remoteJid, { text: "⏳ *La solicitud de batalla ha expirado porque no fue aceptada a tiempo.*" }, { quoted: msg });
-            }
-        }, 120000);
-    } catch (error) {
-        console.error('❌ Error en .batallamascota:', error);
-    }
-    break;
-}
-
-case 'gomascota': {
-    try {
-        const rpgFile = "./rpg.json";
-
-        if (!fs.existsSync(rpgFile)) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No hay datos de RPG. Usa `.crearcartera` para empezar.*" }, { quoted: msg });
-        }
-
-        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-        let userId = msg.key.participant || msg.key.remoteJid;
-
-        // 📌 Buscar quién desafió al usuario
-        const challengerId = Object.keys(rpgData.usuarios).find(
-            (id) => rpgData.usuarios[id].battleRequest && rpgData.usuarios[id].battleRequest.target === userId
-        );
-
-        if (!challengerId) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *No tienes ninguna solicitud de batalla pendiente.*" }, { quoted: msg });
-        }
-
-        // 📌 Verificar si la solicitud sigue activa
-        const requestTime = rpgData.usuarios[challengerId].battleRequest.time;
-        if (Date.now() - requestTime > 120000) { // 2 minutos
-            delete rpgData.usuarios[challengerId].battleRequest;
-            fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
-            return sock.sendMessage(msg.key.remoteJid, { text: "⏳ *La solicitud de batalla ha expirado.*" }, { quoted: msg });
-        }
-
-        let userMascot = rpgData.usuarios[userId].mascotas[0];
-        let challengerMascot = rpgData.usuarios[challengerId].mascotas[0];
-
-        // 🔥 Animación de batalla
-        const animaciones = [
-            "⚔️ *¡La batalla comienza!* Las mascotas se preparan para el combate...",
-            `🔥 *${challengerMascot.nombre}* ataca con un feroz embate.`,
-            `🛡️ *${userMascot.nombre}* esquiva y responde con una contraofensiva.`,
-            `💥 *${userMascot.nombre}* lanza un golpe crítico.`,
-            `⚡ *${challengerMascot.nombre}* usa su habilidad especial y ataca.`,
-            `🌪️ *Ambas mascotas se enfrentan con fuerza... ¡es una batalla intensa!*`,
-            `✨ *Los espectadores están al borde de sus asientos... ¿quién ganará?*`,
-            "💥 *¡Impacto final! La batalla está por decidirse...*"
-        ];
-
-        let mensajeAnimado = await sock.sendMessage(msg.key.remoteJid, { text: animaciones[0] }, { quoted: msg });
-        for (let i = 1; i < animaciones.length; i++) {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            await sock.sendMessage(
-                msg.key.remoteJid,
-                { text: animaciones[i], edit: mensajeAnimado.key },
-                { quoted: msg }
-            );
-        }
-
-        // **💥 Cálculo de batalla**
-        const statsChallenger = challengerMascot.nivel * 5 + challengerMascot.habilidades.reduce((total, h) => total + h.nivel * 2, 0);
-        const statsUser = userMascot.nivel * 5 + userMascot.habilidades.reduce((total, h) => total + h.nivel * 2, 0);
-
-        let ganadorId, perdedorId;
-        if (statsChallenger > statsUser) {
-            ganadorId = challengerId;
-            perdedorId = userId;
-        } else if (statsChallenger < statsUser) {
-            ganadorId = userId;
-            perdedorId = challengerId;
-        } else {
-            return sock.sendMessage(msg.key.remoteJid, { text: "🤝 *¡La batalla terminó en empate!*" });
-        }
-
-        let ganadorMascota = rpgData.usuarios[ganadorId].mascotas[0];
-        let perdedorMascota = rpgData.usuarios[perdedorId].mascotas[0];
-
-        // 🔻 Reducir vida de las mascotas
-        ganadorMascota.vida -= Math.floor(Math.random() * 10) + 5;
-        perdedorMascota.vida -= Math.floor(Math.random() * 20) + 10;
-        if (ganadorMascota.vida < 0) ganadorMascota.vida = 0;
-        if (perdedorMascota.vida < 0) perdedorMascota.vida = 0;
-
-        // 🎁 Recompensas aleatorias
-        const xpGanador = Math.floor(Math.random() * 701) + 300; // 300 - 1000 XP
-        const coinsGanador = Math.floor(Math.random() * 301) + 200; // 200 - 500 Coins
-        const xpPerdedor = Math.floor(Math.random() * 201) + 100; // 100 - 300 XP
-        const coinsPerdedor = Math.floor(Math.random() * 151) + 50; // 50 - 200 Coins
-
-        ganadorMascota.experiencia += xpGanador;
-        rpgData.usuarios[ganadorId].coins = (rpgData.usuarios[ganadorId].coins || 0) + coinsGanador;
-        perdedorMascota.experiencia += xpPerdedor;
-        rpgData.usuarios[perdedorId].coins = (rpgData.usuarios[perdedorId].coins || 0) + coinsPerdedor;
-
-        // 📈 Subida de nivel automática
-        const mascotas = [ganadorMascota, perdedorMascota];
-        for (const mascota of mascotas) {
-            while (mascota.experiencia >= mascota.experienciaSiguienteNivel) {
-                mascota.nivel++;
-                mascota.experiencia -= mascota.experienciaSiguienteNivel;
-                mascota.experienciaSiguienteNivel += 100 * mascota.nivel;
-
-                const rangos = ['🐾 Principiante', '🐾 Intermedio', '🐾 Avanzado', '🐾 Experto', '🐾 Leyenda'];
-                mascota.rango = rangos[Math.min(Math.floor(mascota.nivel / 10), rangos.length - 1)];
-            }
-        }
-
-        // 📢 Mensaje final con menciones
-        const textoResultados = `🎉 *¡La batalla ha terminado!*  
-🏆 *Ganador:* @${ganadorId.split('@')[0]}  
-💔 *Perdedor:* @${perdedorId.split('@')[0]}  
-
-✨ *Recompensas:*  
-- 🏅 *Ganador:* +${xpGanador} XP, 🪙 +${coinsGanador} Cortana Coins  
-- 🔹 *Perdedor:* +${xpPerdedor} XP, 🪙 +${coinsPerdedor} Cortana Coins  
-
-❤️ *Estado de las mascotas:*  
-- ${ganadorMascota.nombre}: ${ganadorMascota.vida} HP  
-- ${perdedorMascota.nombre}: ${perdedorMascota.vida} HP`;
-
-        await sock.sendMessage(
-            msg.key.remoteJid,
-            { text: textoResultados, mentions: [ganadorId, perdedorId] },
-            { quoted: msg }
-        );
-
-        // ⏳ Guardar cooldown de batalla
-        rpgData.usuarios[ganadorId].cooldowns = rpgData.usuarios[ganadorId].cooldowns || {};
-        rpgData.usuarios[perdedorId].cooldowns = rpgData.usuarios[perdedorId].cooldowns || {};
-        rpgData.usuarios[ganadorId].cooldowns.batallaMascota = Date.now();
-        rpgData.usuarios[perdedorId].cooldowns.batallaMascota = Date.now();
-
-        // 📂 Guardar datos
-        delete rpgData.usuarios[challengerId].battleRequest;
-        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+            text: commandCode
+        }, { quoted: msg });
 
     } catch (error) {
-        console.error('❌ Error en .gomascota:', error);
-        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error inesperado al procesar la batalla.*' }, { quoted: msg });
+        console.error("❌ Error en el comando git:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Error al obtener el código del comando.*"
+        }, { quoted: msg });
     }
     break;
-}
             
         
 case 'addlista': {
