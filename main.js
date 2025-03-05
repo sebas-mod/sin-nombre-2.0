@@ -233,6 +233,132 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 // pon mas comando aqui abajo
 
 // Comando para agregar un usuario a la lista (addlista)
+case 'batallamascota': {
+    try {
+        const fs = require("fs");
+        const rpgFile = "./rpg.json";
+
+        if (!fs.existsSync(rpgFile)) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No hay datos de RPG. Usa `.crearcartera` para empezar.*" }, { quoted: msg });
+        }
+
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+        let userId = msg.key.participant || msg.key.remoteJid;
+
+        // 📌 Verificar si el usuario está registrado
+        if (!rpgData.usuarios[userId] || !rpgData.usuarios[userId].mascotas || rpgData.usuarios[userId].mascotas.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *No tienes una mascota. Usa `.tiendamascotas` para comprar una.*" }, { quoted: msg });
+        }
+
+        // 📌 Verificar si se mencionó a un usuario o se citó un mensaje
+        let mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid;
+        let replied = msg.message.extendedTextMessage?.contextInfo?.participant;
+        let opponentId = mentioned ? mentioned[0] : replied;
+
+        if (!opponentId) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "⚔️ *Debes mencionar o responder a un usuario para retarlo a una batalla de mascotas.*" }, { quoted: msg });
+        }
+
+        // 📌 Verificar si el oponente está registrado
+        if (!rpgData.usuarios[opponentId] || !rpgData.usuarios[opponentId].mascotas || rpgData.usuarios[opponentId].mascotas.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, { text: "❌ *El oponente no tiene una mascota.*" }, { quoted: msg });
+        }
+
+        let userMascot = rpgData.usuarios[userId].mascotas[0];
+        let opponentMascot = rpgData.usuarios[opponentId].mascotas[0];
+
+        // Enviar solicitud de batalla
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚔️ *${msg.pushName} ha retado a ${opponentMascot.nombre} de @${opponentId.split('@')[0]} a una batalla de mascotas!*\n\n📝 *Mascota de ${msg.pushName}:* ${userMascot.nombre} (${userMascot.rango})\n🆚\n🐾 *Mascota de @${opponentId.split('@')[0]}:* ${opponentMascot.nombre} (${opponentMascot.rango})\n\n🛡️ *${opponentMascot.nombre}*, escribe \`.go\` en los próximos *30 segundos* para aceptar la batalla.`,
+            mentions: [opponentId]
+        });
+
+        // Esperar respuesta del oponente
+        let accepted = false;
+        sock.ev.on("messages.upsert", async (messageUpsert) => {
+            let acceptMsg = messageUpsert.messages[0];
+            if (!acceptMsg || acceptMsg.key.remoteJid !== msg.key.remoteJid || acceptMsg.key.participant !== opponentId) return;
+            if (acceptMsg.message.conversation?.toLowerCase() === ".go") {
+                accepted = true;
+            }
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 30000)); // Esperar 30 segundos
+        if (!accepted) {
+            return sock.sendMessage(msg.key.remoteJid, { text: `❌ *El reto de batalla ha expirado. ${opponentMascot.nombre} no aceptó la batalla.*` }, { quoted: msg });
+        }
+
+        // 🎮 Iniciar batalla
+        let battleText = `🔥 *¡La batalla entre ${userMascot.nombre} y ${opponentMascot.nombre} ha comenzado!*\n\n`;
+        let rounds = Math.floor(Math.random() * 3) + 4; // Entre 4 y 6 turnos
+        let userHP = userMascot.vida;
+        let opponentHP = opponentMascot.vida;
+        let userTotalDamage = 0;
+        let opponentTotalDamage = 0;
+
+        for (let i = 1; i <= rounds; i++) {
+            let userDamage = Math.floor(Math.random() * 30) + 10;
+            let opponentDamage = Math.floor(Math.random() * 30) + 10;
+
+            userHP -= opponentDamage;
+            opponentHP -= userDamage;
+
+            userTotalDamage += userDamage;
+            opponentTotalDamage += opponentDamage;
+
+            battleText += `🌀 *Ronda ${i}:*\n`;
+            battleText += `🐾 *${userMascot.nombre} ataca con ${Object.keys(userMascot.habilidades)[Math.floor(Math.random() * Object.keys(userMascot.habilidades).length)]} y causa ${userDamage} de daño!*\n`;
+            battleText += `🔺 *${opponentMascot.nombre} responde con ${Object.keys(opponentMascot.habilidades)[Math.floor(Math.random() * Object.keys(opponentMascot.habilidades).length)]} y causa ${opponentDamage} de daño!*\n\n`;
+        }
+
+        // Determinar ganador
+        let winner, loser, winnerMascot, loserMascot, winnerXP, winnerDiamonds, loserXP, loserDiamonds;
+
+        if (userTotalDamage > opponentTotalDamage) {
+            winner = userId;
+            loser = opponentId;
+            winnerMascot = userMascot;
+            loserMascot = opponentMascot;
+        } else {
+            winner = opponentId;
+            loser = userId;
+            winnerMascot = opponentMascot;
+            loserMascot = userMascot;
+        }
+
+        winnerXP = Math.floor(Math.random() * 700) + 300;
+        winnerDiamonds = Math.floor(Math.random() * 700) + 300;
+        loserXP = Math.floor(Math.random() * 100) + 100;
+        loserDiamonds = Math.floor(Math.random() * 100) + 100;
+
+        // Aplicar recompensas y reducción de vida
+        rpgData.usuarios[winner].mascotas[0].experiencia += winnerXP;
+        rpgData.usuarios[winner].mascotas[0].vida = Math.max(0, userMascot.vida - opponentTotalDamage);
+        rpgData.usuarios[loser].mascotas[0].experiencia += loserXP;
+        rpgData.usuarios[loser].mascotas[0].vida = Math.max(0, opponentMascot.vida - userTotalDamage);
+
+        fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+        // 📜 Enviar resultado final
+        battleText += `🏆 *¡${winnerMascot.nombre} ha ganado la batalla!* 🎉\n\n`;
+        battleText += `👑 *Ganador:* @${winner.split('@')[0]} (${winnerMascot.nombre})\n`;
+        battleText += `🆚 *Perdedor:* @${loser.split('@')[0]} (${loserMascot.nombre})\n\n`;
+        battleText += `🔹 *Recompensas:*\n`;
+        battleText += `✨ @${winner.split('@')[0]} ganó ${winnerXP} XP y ${winnerDiamonds} 💎\n`;
+        battleText += `💔 @${loser.split('@')[0]} recibió ${loserXP} XP y ${loserDiamonds} 💎\n`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: battleText,
+            mentions: [winner, loser]
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .batallamascota:", error);
+        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al iniciar la batalla de mascotas.*" }, { quoted: msg });
+    }
+    break;
+}
+        
 case 'addlista': {
   try {
     const fromMe = msg.key.fromMe; // Definir desde el mensaje
