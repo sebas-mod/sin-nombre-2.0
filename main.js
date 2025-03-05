@@ -231,6 +231,311 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'batallaanime': {
+  try {
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*` },
+        { quoted: msg }
+      );
+    }
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    let userId = msg.key.participant || msg.key.remoteJid;
+    
+    // ⏳ Verificar cooldown (5 minutos) para batallas de personajes
+    if (rpgData.usuarios[userId]?.cooldowns?.batallaAnime) {
+      let cooldownTime = rpgData.usuarios[userId].cooldowns.batallaAnime;
+      if ((Date.now() - cooldownTime) < 5 * 60 * 1000) {
+        let remainingTime = Math.ceil((5 * 60 * 1000 - (Date.now() - cooldownTime)) / 1000);
+        return sock.sendMessage(
+          msg.key.remoteJid,
+          { text: `⏳ *Debes esperar ${remainingTime} segundos antes de usar \`${global.prefix}batallaanime\` nuevamente.*` },
+          { quoted: msg }
+        );
+      }
+    }
+    
+    // Verificar que el usuario tenga al menos un personaje
+    if (!rpgData.usuarios[userId] || !rpgData.usuarios[userId].personajes || rpgData.usuarios[userId].personajes.length === 0) {
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `❌ *No tienes un personaje registrado. Usa \`${global.prefix}rpg <nombre> <edad>\` para crear tu cuenta y obtener un personaje inicial.*` },
+        { quoted: msg }
+      );
+    }
+    
+    // Extraer el ID del oponente: se intenta primero por mensaje citado y, si no, por menciones
+    let opponentId;
+    if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      opponentId = msg.message.extendedTextMessage.contextInfo.participant;
+    }
+    if (!opponentId && msg.message?.extendedTextMessage?.contextInfo?.mentionedJid) {
+      opponentId = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
+    }
+    if (!opponentId) {
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⚔️ *Menciona o responde (cita) a un usuario para retarlo a una batalla de personajes.*" },
+        { quoted: msg }
+      );
+    }
+    
+    // Verificar que el oponente tenga un personaje
+    if (!rpgData.usuarios[opponentId] || !rpgData.usuarios[opponentId].personajes || rpgData.usuarios[opponentId].personajes.length === 0) {
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "❌ *El oponente no tiene un personaje registrado.*" },
+        { quoted: msg }
+      );
+    }
+    
+    let userCharacter = rpgData.usuarios[userId].personajes[0];
+    let opponentCharacter = rpgData.usuarios[opponentId].personajes[0];
+    
+    // Formatear habilidades (en personajes se guardan como números)
+    let habilidadesUser = Object.entries(userCharacter.habilidades)
+      .map(([nombre, valor]) => `⚡ *${nombre}:* Nivel ${valor}`)
+      .join("\n");
+    let habilidadesOpponent = Object.entries(opponentCharacter.habilidades)
+      .map(([nombre, valor]) => `⚡ *${nombre}:* Nivel ${valor}`)
+      .join("\n");
+    
+    // Construir mensaje de desafío con el prefijo global para la respuesta
+    let mensajeDesafio = 
+      `🎌 *¡Desafío de Batalla Anime!* 🎌\n\n` +
+      `👤 *Retador:* @${userId.split('@')[0]}\n` +
+      `🎯 *Retado:* @${opponentId.split('@')[0]}\n\n` +
+      `🗡️ *Personaje de @${userId.split('@')[0]}:*\n` +
+      `   • *Nombre:* ${userCharacter.nombre}\n` +
+      `   • *Nivel:* ${userCharacter.nivel}\n` +
+      `   • *Rango:* ${userCharacter.rango}\n` +
+      `   • *Habilidades:*\n${habilidadesUser}\n\n` +
+      `🛡️ *Personaje de @${opponentId.split('@')[0]}:*\n` +
+      `   • *Nombre:* ${opponentCharacter.nombre}\n` +
+      `   • *Nivel:* ${opponentCharacter.nivel}\n` +
+      `   • *Rango:* ${opponentCharacter.rango}\n` +
+      `   • *Habilidades:*\n${habilidadesOpponent}\n\n` +
+      `🛡️ *@${opponentId.split('@')[0]}*, responde con \`${global.prefix}goper\` para aceptar el desafío.\n` +
+      `⏳ *Tienes 2 minutos para aceptar.*`;
+      
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: mensajeDesafio, mentions: [userId, opponentId] }
+    );
+    
+    // Guardar la solicitud de batalla en el usuario retador (tipo "anime")
+    rpgData.usuarios[userId].battleRequest = {
+      target: opponentId,
+      time: Date.now(),
+      type: "anime"
+    };
+    fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+    
+    // Expiración de la solicitud (2 minutos)
+    setTimeout(() => {
+      let data = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+      if (
+        data.usuarios[userId]?.battleRequest &&
+        data.usuarios[userId].battleRequest.target === opponentId &&
+        data.usuarios[userId].battleRequest.type === "anime"
+      ) {
+        delete data.usuarios[userId].battleRequest;
+        fs.writeFileSync(rpgFile, JSON.stringify(data, null, 2));
+        sock.sendMessage(
+          msg.key.remoteJid,
+          { text: "⏳ *La solicitud de batalla anime ha expirado porque no fue aceptada a tiempo.*" },
+          { quoted: msg }
+        );
+      }
+    }, 120000);
+    
+  } catch (error) {
+    console.error('❌ Error en .batallaanime:', error);
+  }
+  break;
+}
+
+case 'goper': {
+  try {
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*` },
+        { quoted: msg }
+      );
+    }
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    let userId = msg.key.participant || msg.key.remoteJid;
+    
+    // Buscar quién desafió al usuario (tipo "anime")
+    const challengerId = Object.keys(rpgData.usuarios).find(
+      (id) => rpgData.usuarios[id].battleRequest &&
+              rpgData.usuarios[id].battleRequest.target === userId &&
+              rpgData.usuarios[id].battleRequest.type === "anime"
+    );
+    if (!challengerId) {
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⚠️ *No tienes ninguna solicitud de batalla anime pendiente.*" },
+        { quoted: msg }
+      );
+    }
+    
+    // Verificar que la solicitud siga activa (2 minutos)
+    const requestTime = rpgData.usuarios[challengerId].battleRequest.time;
+    if (Date.now() - requestTime > 120000) {
+      delete rpgData.usuarios[challengerId].battleRequest;
+      fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⏳ *La solicitud de batalla anime ha expirado.*" },
+        { quoted: msg }
+      );
+    }
+    
+    // Eliminar la solicitud de batalla al aceptar
+    delete rpgData.usuarios[challengerId].battleRequest;
+    
+    let userCharacter = rpgData.usuarios[userId].personajes[0];
+    let challengerCharacter = rpgData.usuarios[challengerId].personajes[0];
+    
+    // 🔥 Animación de batalla
+    const animaciones = [
+      "🎌 *¡La batalla anime comienza!* Los guerreros se preparan para el combate...",
+      `🔥 *${challengerCharacter.nombre}* lanza un ataque devastador.`,
+      `🛡️ *${userCharacter.nombre}* bloquea el ataque con gran habilidad.`,
+      `💥 *Impacto crítico de ${userCharacter.nombre}!*`,
+      `⚡ *${challengerCharacter.nombre}* utiliza su técnica especial.`,
+      `🌪️ *La batalla se intensifica a cada segundo...*`,
+      `✨ *El enfrentamiento alcanza su punto álgido...*`,
+      "💥 *¡El destino de la batalla está por decidirse!*"
+    ];
+    let mensajeAnimado = await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: animaciones[0] },
+      { quoted: msg }
+    );
+    for (let i = 1; i < animaciones.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: animaciones[i], edit: mensajeAnimado.key },
+        { quoted: msg }
+      );
+    }
+    
+    // **💥 Cálculo de batalla**
+    const statsChallenger = challengerCharacter.nivel * 5 +
+      Object.values(challengerCharacter.habilidades).reduce((total, h) => total + (h * 2), 0);
+    const statsUser = userCharacter.nivel * 5 +
+      Object.values(userCharacter.habilidades).reduce((total, h) => total + (h * 2), 0);
+    
+    let empate = false;
+    let ganadorId, perdedorId;
+    if (statsChallenger > statsUser) {
+      ganadorId = challengerId;
+      perdedorId = userId;
+    } else if (statsChallenger < statsUser) {
+      ganadorId = userId;
+      perdedorId = challengerId;
+    } else {
+      empate = true;
+    }
+    
+    let mensajeFinal = "";
+    
+    if (empate) {
+      const xpTie = Math.floor(Math.random() * 301) + 200;      // 200 - 500 XP
+      const diamondTie = Math.floor(Math.random() * 201) + 100;   // 100 - 300 diamantes
+      
+      rpgData.usuarios[userId].diamantes = (rpgData.usuarios[userId].diamantes || 0) + diamondTie;
+      rpgData.usuarios[challengerId].diamantes = (rpgData.usuarios[challengerId].diamantes || 0) + diamondTie;
+      
+      userCharacter.experiencia = (userCharacter.experiencia || 0) + xpTie;
+      challengerCharacter.experiencia = (challengerCharacter.experiencia || 0) + xpTie;
+      
+      mensajeFinal = 
+        `🤝 *¡La batalla anime terminó en empate!* 🤝\n\n` +
+        `Ambos reciben:\n` +
+        `• +${xpTie} XP ✨\n` +
+        `• +${diamondTie} diamantes 💎\n\n` +
+        `❤️ *Estado actual de los guerreros:*\n` +
+        `- ${userCharacter.nombre}: ${userCharacter.vida} HP\n` +
+        `- ${challengerCharacter.nombre}: ${challengerCharacter.vida} HP`;
+    } else {
+      let ganadorCharacter = rpgData.usuarios[ganadorId].personajes[0];
+      let perdedorCharacter = rpgData.usuarios[perdedorId].personajes[0];
+      
+      // 🔻 Reducir vida de los personajes
+      ganadorCharacter.vida -= Math.floor(Math.random() * 10) + 5;
+      perdedorCharacter.vida -= Math.floor(Math.random() * 20) + 10;
+      if (ganadorCharacter.vida < 0) ganadorCharacter.vida = 0;
+      if (perdedorCharacter.vida < 0) perdedorCharacter.vida = 0;
+      
+      const xpGanador = Math.floor(Math.random() * 701) + 300; // 300 - 1000 XP
+      const diamondGanador = Math.floor(Math.random() * 301) + 200; // 200 - 500 diamantes
+      const xpPerdedor = Math.floor(Math.random() * 201) + 100; // 100 - 300 XP
+      const diamondPerdedor = Math.floor(Math.random() * 151) + 50; // 50 - 200 diamantes
+      
+      ganadorCharacter.experiencia = (ganadorCharacter.experiencia || 0) + xpGanador;
+      rpgData.usuarios[ganadorId].diamantes = (rpgData.usuarios[ganadorId].diamantes || 0) + diamondGanador;
+      perdedorCharacter.experiencia = (perdedorCharacter.experiencia || 0) + xpPerdedor;
+      rpgData.usuarios[perdedorId].diamantes = (rpgData.usuarios[perdedorId].diamantes || 0) + diamondPerdedor;
+      
+      mensajeFinal =
+        `🎉 *¡La batalla anime ha terminado!* 🎉\n\n` +
+        `🏆 *Ganador:* @${ganadorId.split('@')[0]}\n` +
+        `💔 *Perdedor:* @${perdedorId.split('@')[0]}\n\n` +
+        `*Recompensas:*\n` +
+        `• *Ganador:* +${xpGanador} XP ✨, +${diamondGanador} diamantes 💎\n` +
+        `• *Perdedor:* +${xpPerdedor} XP ✨, +${diamondPerdedor} diamantes 💎\n\n` +
+        `❤️ *Estado actual de los guerreros:*\n` +
+        `- ${ganadorCharacter.nombre}: ${ganadorCharacter.vida} HP\n` +
+        `- ${perdedorCharacter.nombre}: ${perdedorCharacter.vida} HP`;
+    }
+    
+    // Subida de nivel automática para ambos personajes
+    const personajes = [userCharacter, challengerCharacter];
+    for (const personaje of personajes) {
+      personaje.xpMax = personaje.xpMax || 1000;
+      while (personaje.experiencia >= personaje.xpMax && personaje.nivel < 70) {
+        personaje.experiencia -= personaje.xpMax;
+        personaje.nivel++;
+        personaje.xpMax = personaje.nivel * 1500; // Ajusta según tu sistema
+        const rangos = ['🌟 Principiante', '⚔️ Guerrero', '🔥 Maestro', '👑 Élite', '🌀 Legendario', '💀 Dios de la Batalla'];
+        personaje.rango = rangos[Math.min(Math.floor(personaje.nivel / 10), rangos.length - 1)];
+      }
+    }
+    
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: mensajeFinal, mentions: empate ? [userId, challengerId] : [ganadorId, perdedorId] },
+      { quoted: msg }
+    );
+    
+    // ⏳ Guardar cooldown de batalla para ambos (5 minutos)
+    rpgData.usuarios[userId].cooldowns = rpgData.usuarios[userId].cooldowns || {};
+    rpgData.usuarios[challengerId].cooldowns = rpgData.usuarios[challengerId].cooldowns || {};
+    rpgData.usuarios[userId].cooldowns.batallaAnime = Date.now();
+    rpgData.usuarios[challengerId].cooldowns.batallaAnime = Date.now();
+    
+    fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+    
+  } catch (error) {
+    console.error('❌ Error en .goper:', error);
+    return sock.sendMessage(
+      msg.key.remoteJid,
+      { text: '❌ *Error inesperado al procesar la batalla anime.*' },
+      { quoted: msg }
+    );
+  }
+  break;
+}
+            
+        
 case 'batallamascota': {
   try {
     const rpgFile = "./rpg.json";
