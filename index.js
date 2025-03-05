@@ -146,8 +146,14 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
         console.log(chalk.gray("──────────────────────────"));
 
-        // ⚠️ Si el "modo privado" está activado y el mensaje NO es del bot (fromMe), ni del owner, ni de un usuario permitido, se ignora el mensaje.
-        if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
+        // Lógica para determinar si el bot debe responder:
+        if (!isGroup) {
+          // En chat privado: solo responde si es fromMe, owner o usuario permitido.
+          if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
+        } else {
+          // En grupos: si el modo privado está activo, solo responde si es fromMe, owner o usuario permitido.
+          if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
+        }
 
         // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
         if (isGroup && modos.modoAdmins[chatId]) {
@@ -210,6 +216,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.error("❌ Error en el evento messages.upsert:", error);
     }
 });
+
+
             
             
             sock.ev.on("connection.update", async (update) => {
