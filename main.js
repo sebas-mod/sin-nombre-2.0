@@ -234,11 +234,11 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 // Comando para agregar un usuario a la lista (addlista)
 case 'addlista': {
   try {
-    // Solo el owner puede usar este comando
-    if (!isOwner(sender)) {
+    // Permitir el comando si el remitente es owner o si el mensaje es enviado por el bot (fromMe)
+    if (!isOwner(sender) && !fromMe) {
       await sock.sendMessage(
         msg.key.remoteJid,
-        { text: "⛔ Solo el propietario del bot puede usar este comando." },
+        { text: "⛔ Solo el propietario del bot o el bot mismo pueden usar este comando." },
         { quoted: msg }
       );
       return;
@@ -311,11 +311,11 @@ case 'addlista': {
 // Comando para eliminar un usuario de la lista (deletelista)
 case 'deletelista': {
   try {
-    // Solo el owner puede usar este comando
-    if (!isOwner(sender)) {
+    // Permitir el comando si el remitente es owner o si el mensaje es enviado por el bot (fromMe)
+    if (!isOwner(sender) && !fromMe) {
       await sock.sendMessage(
         msg.key.remoteJid,
-        { text: "⛔ Solo el propietario del bot puede usar este comando." },
+        { text: "⛔ Solo el propietario del bot o el bot mismo pueden usar este comando." },
         { quoted: msg }
       );
       return;
