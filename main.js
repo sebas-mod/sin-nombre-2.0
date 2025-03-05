@@ -231,9 +231,12 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+
 // Comando para agregar un usuario a la lista (addlista)
 case 'addlista': {
   try {
+    const fromMe = msg.key.fromMe; // Definir desde el mensaje
+    const text = args.join(" ");
     // Permitir el comando si el remitente es owner o si el mensaje es enviado por el bot (fromMe)
     if (!isOwner(sender) && !fromMe) {
       await sock.sendMessage(
@@ -311,6 +314,8 @@ case 'addlista': {
 // Comando para eliminar un usuario de la lista (deletelista)
 case 'deletelista': {
   try {
+    const fromMe = msg.key.fromMe; // Definir desde el mensaje
+    const text = args.join(" ");
     // Permitir el comando si el remitente es owner o si el mensaje es enviado por el bot (fromMe)
     if (!isOwner(sender) && !fromMe) {
       await sock.sendMessage(
