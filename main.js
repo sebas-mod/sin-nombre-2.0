@@ -3716,25 +3716,28 @@ case 'nivelmascota': {
         // 🐾 Obtener la mascota actual (la primera en la lista)
         let mascota = usuario.mascotas[0];
 
-        // 📊 Calcular XP faltante para el siguiente nivel
-        let xpMax = mascota.xpMax || 500; // Si no tiene definido xpMax, empieza en 500
-        let xpFaltante = Math.max(0, xpMax - mascota.experiencia);
+        // Definir defaults para evitar valores undefined
+        let experiencia = typeof mascota.experiencia === "number" ? mascota.experiencia : 0;
+        let nivel = typeof mascota.nivel === "number" ? mascota.nivel : 1;
+        let xpMax = typeof mascota.xpMax === "number" ? mascota.xpMax : 500;
+        let xpFaltante = Math.max(0, xpMax - experiencia);
 
         // 📜 Construcción del mensaje de estadísticas
         let mensaje = `📊 *Estadísticas de tu Mascota Principal* 📊\n\n`;
         mensaje += `🐾 *Nombre:* ${mascota.nombre}\n`;
-        mensaje += `🎚️ *Nivel:* ${mascota.nivel} 🆙\n`;
-        mensaje += `❤️ *Vida:* ${mascota.vida} HP\n`;
-        mensaje += `✨ *Experiencia:* ${mascota.experiencia} / ${xpMax} XP\n`;
+        mensaje += `🎚️ *Nivel:* ${nivel} 🆙\n`;
+        mensaje += `❤️ *Vida:* ${mascota.vida || 100} HP\n`;
+        mensaje += `✨ *Experiencia:* ${experiencia} / ${xpMax} XP\n`;
         mensaje += `📊 *Rango:* ${mascota.rango || "Principiante"}\n`;
         mensaje += `📌 *XP faltante para el siguiente nivel:* ${xpFaltante} XP\n\n`;
 
         mensaje += `🌟 *Habilidades:*\n`;
         Object.entries(mascota.habilidades).forEach(([habilidad, datos]) => {
-            mensaje += `   🔹 ${habilidad} (Nivel ${datos.nivel || 1})\n`;
+            let nivelSkill = (datos && datos.nivel) ? datos.nivel : 1;
+            mensaje += `   🔹 ${habilidad} (Nivel ${nivelSkill})\n`;
         });
 
-        // 📢 **Mensaje motivacional para seguir entrenando** 
+        // 📢 Mensaje motivacional para seguir entrenando
         mensaje += `\n🚀 *Sigue subiendo de nivel a tu mascota con estos comandos:* 🔽\n`;
         mensaje += `   🥤 \`${global.prefix}daragua\` | 🍖 \`${global.prefix}darcomida\` | ❤️ \`${global.prefix}darcariño\`\n`;
         mensaje += `   🚶 \`${global.prefix}pasear\` | 🎯 \`${global.prefix}cazar\` | 🏋️ \`${global.prefix}entrenar\`\n`;
