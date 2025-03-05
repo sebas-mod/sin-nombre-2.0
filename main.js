@@ -231,6 +231,98 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'topper': {
+  try {
+    // Reacción al usar el comando
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "🏆", key: msg.key }
+    });
+    
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*`
+      }, { quoted: msg });
+    }
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    let usuarios = rpgData.usuarios;
+    if (!usuarios || Object.keys(usuarios).length === 0) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: "❌ *No hay usuarios registrados aún.*"
+      }, { quoted: msg });
+    }
+    
+    // Crear arrays para ranking
+    let rankingCantidad = [];
+    let rankingFuerza = [];
+    
+    // Recorremos los usuarios para calcular datos
+    for (let id in usuarios) {
+      let user = usuarios[id];
+      if (user.personajes && user.personajes.length > 0) {
+        let cantidad = user.personajes.length;
+        // Sumar niveles de todos los personajes
+        let totalNivel = user.personajes.reduce((sum, pers) => sum + (pers.nivel || 1), 0);
+        // Crear un listado de personajes con nombre y nivel
+        let listado = user.personajes.map(pers => `🎭 ${pers.nombre} (Nivel ${pers.nivel})`).join("\n");
+        
+        rankingCantidad.push({
+          id,
+          nombre: user.nombre,
+          cantidad,
+          listado
+        });
+        rankingFuerza.push({
+          id,
+          nombre: user.nombre,
+          totalNivel,
+          cantidad,
+          listado
+        });
+      }
+    }
+    
+    // Ordenar rankings: mayor cantidad y mayor fuerza (totalNivel)
+    rankingCantidad.sort((a, b) => b.cantidad - a.cantidad);
+    rankingFuerza.sort((a, b) => b.totalNivel - a.totalNivel);
+    
+    // Construir mensaje para ranking por cantidad
+    let mensajeCantidad = "🏆 *Ranking de Jugadores con Más Personajes* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
+    rankingCantidad.forEach((u, index) => {
+      mensajeCantidad += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
+      mensajeCantidad += `🎮 *Personajes:* ${u.cantidad}\n`;
+      mensajeCantidad += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    });
+    
+    // Construir mensaje para ranking por fuerza (suma de niveles)
+    let mensajeFuerza = "🏆 *Ranking de Jugadores con Personajes Más Fuertes* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
+    rankingFuerza.forEach((u, index) => {
+      mensajeFuerza += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
+      mensajeFuerza += `🎮 *Total Nivel:* ${u.totalNivel}\n`;
+      mensajeFuerza += `🎮 *Personajes:* ${u.cantidad}\n`;
+      mensajeFuerza += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    });
+    
+    // Combinar ambos rankings en un solo mensaje
+    let mensajeFinal = mensajeCantidad + "\n" + mensajeFuerza;
+    
+    await sock.sendMessage(msg.key.remoteJid, { text: mensajeFinal, mentions: Object.keys(usuarios).filter(id => {
+      let user = usuarios[id];
+      return user.personajes && user.personajes.length > 0;
+    }) }, { quoted: msg });
+    
+  } catch (error) {
+    console.error("❌ Error en el comando .topper:", error);
+    await sock.sendMessage(msg.key.remoteJid, { 
+      text: `❌ *Ocurrió un error al generar el ranking. Inténtalo de nuevo.*` 
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "❌", key: msg.key }
+    });
+  }
+  break;
+}
+        
 case 'batallauser': {
   try {
     const rpgFile = "./rpg.json";
