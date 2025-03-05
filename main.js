@@ -253,8 +253,7 @@ case 'addlista': {
         msg.key.participant ||
         msg.key.remoteJid;
     } else if (text && text.trim() !== "") {
-      // Si se proporciona el número directamente, extrae solo los dígitos.
-      target = text.replace(/\D/g, "");
+      target = text;
     }
 
     if (!target) {
@@ -266,11 +265,17 @@ case 'addlista': {
       return;
     }
 
+    // Normalizamos para guardar solo dígitos
+    target = target.replace(/\D/g, "");
+
     // Ruta del archivo lista.json
     const listaFile = "./lista.json";
     let lista = [];
     if (fs.existsSync(listaFile)) {
       lista = JSON.parse(fs.readFileSync(listaFile, "utf-8"));
+      if (!Array.isArray(lista)) {
+        lista = [];
+      }
     }
 
     // Verificar si el usuario ya está en la lista
@@ -283,7 +288,7 @@ case 'addlista': {
       return;
     }
 
-    // Agregar el usuario y guardar el archivo
+    // Agregar el usuario a la lista y guardar el archivo
     lista.push(target);
     fs.writeFileSync(listaFile, JSON.stringify(lista, null, 2));
 
@@ -324,7 +329,7 @@ case 'deletelista': {
         msg.key.participant ||
         msg.key.remoteJid;
     } else if (text && text.trim() !== "") {
-      target = text.replace(/\D/g, "");
+      target = text;
     }
 
     if (!target) {
@@ -336,10 +341,16 @@ case 'deletelista': {
       return;
     }
 
+    // Normalizamos para guardar solo dígitos
+    target = target.replace(/\D/g, "");
+
     const listaFile = "./lista.json";
     let lista = [];
     if (fs.existsSync(listaFile)) {
       lista = JSON.parse(fs.readFileSync(listaFile, "utf-8"));
+      if (!Array.isArray(lista)) {
+        lista = [];
+      }
     }
 
     // Verificar si el usuario se encuentra en la lista
@@ -352,7 +363,7 @@ case 'deletelista': {
       return;
     }
 
-    // Eliminar el usuario y guardar el archivo
+    // Eliminar el usuario de la lista y guardar el archivo
     lista = lista.filter((u) => u !== target);
     fs.writeFileSync(listaFile, JSON.stringify(lista, null, 2));
 
@@ -370,7 +381,7 @@ case 'deletelista': {
     );
   }
   break;
-}            
+}
         
 case 'deletemascota': {
     try {
