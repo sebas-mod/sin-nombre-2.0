@@ -9,7 +9,17 @@
     const { handleCommand } = require("./main"); 
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
-//privado y admins
+//lista
+function isAllowedUser(sender) {
+  const listaFile = "./lista.json";
+  if (!fs.existsSync(listaFile)) return false;
+  const lista = JSON.parse(fs.readFileSync(listaFile, "utf-8"));
+  // Extrae solo los dígitos del número para comparar
+  const num = sender.replace(/\D/g, "");
+  return lista.includes(num);
+}
+    
+    //privado y admins
 
 const path = "./activos.json";
 
