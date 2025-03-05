@@ -366,8 +366,8 @@ case 'gomascota': {
         `🏆 *Ganador:* @${ganadorId.split('@')[0]}\n` +
         `💔 *Perdedor:* @${perdedorId.split('@')[0]}\n\n` +
         `*Recompensas:*\n` +
-        `• *Ganador:* +${xpGanador} XP, +${diamondGanador} diamantes\n` +
-        `• *Perdedor:* +${xpPerdedor} XP, +${diamondPerdedor} diamantes\n\n` +
+        `• *Ganador:* +${xpGanador} XP✨️, +${diamondGanador} diamantes💎\n` +
+        `• *Perdedor:* +${xpPerdedor} XP✨️, +${diamondPerdedor} diamantes💎\n\n` +
         `❤️ *Estado actual de las mascotas:*\n` +
         `- ${ganadorMascota.nombre}: ${ganadorMascota.vida} HP\n` +
         `- ${perdedorMascota.nombre}: ${perdedorMascota.vida} HP`;
