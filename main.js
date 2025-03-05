@@ -86,27 +86,7 @@ loadPrefix();
 console.log(`📌 Prefijo actual: ${global.prefix}`);
 //orivado
 // Almacenar owner los usuarios en línea por cada grupo (hacerlo accesible globalmente)
-// 📂 Ruta del archivo JSON donde se guardan los Owners
-const ownersFile = "./owners.json";
 
-// 📌 Si `owners.json` no existe, crearlo con un Owner por defecto
-if (!fs.existsSync(ownersFile)) {
-    fs.writeFileSync(ownersFile, JSON.stringify({ owners: ["15167096032"] }, null, 2));
-}
-
-// 📥 Cargar los Owners desde `owners.json`
-const ownersData = JSON.parse(fs.readFileSync(ownersFile, "utf-8"));
-
-// 🔍 Función para verificar si un usuario es Owner
-global.isOwner = (user) => {
-    user = user.replace(/[^0-9]/g, ""); // Limpiar número
-    return ownersData.owners.includes(user);
-};
-
-// 🔄 Función para guardar cambios en `owners.json`
-global.saveOwners = () => {
-    fs.writeFileSync(ownersFile, JSON.stringify(ownersData, null, 2));
-};
 
 // Si el modo owner privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
 
@@ -251,73 +231,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-case 'addowner': {
-    try {
-        // 📌 Obtener el número del usuario citado o escrito manualmente
-        let isOwner = text.trim() || (msg.quoted ? msg.quoted.participant : null);
-        if (!isOwner) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Debes escribir un número o responder un mensaje para agregarlo como Owner.*" 
-            }, { quoted: msg });
-        }
-
-        isOwner = isOwner.replace(/[^0-9]/g, ""); // Limpiar número
-        if (isOwner.length < 8) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *El número ingresado no es válido.*" }, { quoted: msg });
-        }
-
-        // ❌ Verificar si ya es Owner
-        if (ownersData.owners.includes(isOwner)) {
-            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El número ${isOwner} ya es Owner.*` }, { quoted: msg });
-        }
-
-        // ✅ Agregar el nuevo Owner
-        ownersData.owners.push(isOwner);
-        saveOwners(); // Guardar cambios en `owners.json`
-
-        // 📌 Confirmación
-        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *El número ${isOwner} ha sido agregado como Owner.*` }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en .addowner:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al agregar el Owner.*" }, { quoted: msg });
-    }
-    break;
-}
-
-case 'deleteowner': {
-    try {
-        // 📌 Obtener el número del usuario citado o escrito manualmente
-        let isOwner = text.trim() || (msg.quoted ? msg.quoted.participant : null);
-        if (!isOwner) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Debes escribir un número o responder un mensaje para eliminarlo como Owner.*" 
-            }, { quoted: msg });
-        }
-
-        isOwner = isOwner.replace(/[^0-9]/g, ""); // Limpiar número
-        if (isOwner.length < 8) {
-            return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *El número ingresado no es válido.*" }, { quoted: msg });
-        }
-
-        // ❌ Verificar si el número NO es un Owner registrado
-        if (!ownersData.owners.includes(isOwner)) {
-            return sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *El número ${isOwner} no es un Owner registrado.*` }, { quoted: msg });
-        }
-
-        // ✅ Eliminar el Owner
-        ownersData.owners = ownersData.owners.filter(num => num !== isOwner);
-        saveOwners(); // Guardar cambios en `owners.json`
-
-        // 📌 Confirmación
-        await sock.sendMessage(msg.key.remoteJid, { text: `✅ *El número ${isOwner} ha sido eliminado como Owner.*` }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en .deleteowner:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al eliminar el Owner.*" }, { quoted: msg });
-    }
-    break;
-}            
             
         
 case 'deletemascota': {
