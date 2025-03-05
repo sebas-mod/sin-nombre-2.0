@@ -231,6 +231,92 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+
+case 'topmascotas': {
+  try {
+    // Reacción inicial
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "🏆", key: msg.key } 
+    });
+    
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*`
+      }, { quoted: msg });
+    }
+    
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    let usuarios = rpgData.usuarios;
+    if (!usuarios || Object.keys(usuarios).length === 0) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: "❌ *No hay usuarios registrados aún.*"
+      }, { quoted: msg });
+    }
+    
+    // Creamos arrays para ranking
+    let rankingCantidad = [];
+    let rankingFuerza = [];
+    
+    for (let id in usuarios) {
+      let user = usuarios[id];
+      if (user.mascotas && user.mascotas.length > 0) {
+        let cantidad = user.mascotas.length;
+        // Sumar el nivel de todas las mascotas del usuario
+        let totalNivel = user.mascotas.reduce((sum, mascota) => sum + (mascota.nivel || 1), 0);
+        // Listado de mascotas con nombre y nivel
+        let listado = user.mascotas.map(mascota => `🎭 ${mascota.nombre} (Nivel ${mascota.nivel})`).join("\n");
+        rankingCantidad.push({ id, nombre: user.nombre, cantidad, listado });
+        rankingFuerza.push({ id, nombre: user.nombre, totalNivel, cantidad, listado });
+      }
+    }
+    
+    // Ordenar rankings
+    rankingCantidad.sort((a, b) => b.cantidad - a.cantidad);
+    rankingFuerza.sort((a, b) => b.totalNivel - a.totalNivel);
+    
+    // Construir mensaje del ranking por cantidad
+    let mensajeCantidad = "🏆 *Ranking de Jugadores con Más Mascotas* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
+    rankingCantidad.forEach((u, index) => {
+      mensajeCantidad += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
+      mensajeCantidad += `🐾 *Mascotas:* ${u.cantidad}\n`;
+      mensajeCantidad += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    });
+    
+    // Construir mensaje del ranking por fuerza (suma de niveles)
+    let mensajeFuerza = "🏆 *Ranking de Jugadores con Mascotas Más Fuertes* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
+    rankingFuerza.forEach((u, index) => {
+      mensajeFuerza += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
+      mensajeFuerza += `🐾 *Total Nivel:* ${u.totalNivel}\n`;
+      mensajeFuerza += `🐾 *Mascotas:* ${u.cantidad}\n`;
+      mensajeFuerza += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    });
+    
+    // Combinar ambos rankings en un solo mensaje
+    let mensajeFinal = mensajeCantidad + "\n" + mensajeFuerza;
+    
+    // Enviar la imagen con el ranking en el caption (se mencionan los usuarios con mascotas)
+    await sock.sendMessage(msg.key.remoteJid, { 
+      image: { url: "https://cdn.dorratz.com/files/1741194332982.jpg" },
+      caption: mensajeFinal,
+      mentions: Object.keys(usuarios).filter(id => {
+        let user = usuarios[id];
+        return user.mascotas && user.mascotas.length > 0;
+      })
+    }, { quoted: msg });
+    
+  } catch (error) {
+    console.error("❌ Error en el comando .topmascotas:", error);
+    await sock.sendMessage(msg.key.remoteJid, { 
+      text: `❌ *Ocurrió un error al generar el ranking de mascotas. Inténtalo de nuevo.*` 
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "❌", key: msg.key }
+    });
+  }
+  break;
+}
+        
 case 'topper': {
   try {
     // Reacción al usar el comando
@@ -306,10 +392,15 @@ case 'topper': {
     // Combinar ambos rankings en un solo mensaje
     let mensajeFinal = mensajeCantidad + "\n" + mensajeFuerza;
     
-    await sock.sendMessage(msg.key.remoteJid, { text: mensajeFinal, mentions: Object.keys(usuarios).filter(id => {
-      let user = usuarios[id];
-      return user.personajes && user.personajes.length > 0;
-    }) }, { quoted: msg });
+    // Enviar la imagen con el ranking en el caption
+    await sock.sendMessage(msg.key.remoteJid, { 
+      image: { url: "https://cdn.dorratz.com/files/1741194214880.jpg" },
+      caption: mensajeFinal,
+      mentions: Object.keys(usuarios).filter(id => {
+        let user = usuarios[id];
+        return user.personajes && user.personajes.length > 0;
+      })
+    }, { quoted: msg });
     
   } catch (error) {
     console.error("❌ Error en el comando .topper:", error);
