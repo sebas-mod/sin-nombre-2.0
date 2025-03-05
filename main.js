@@ -231,7 +231,146 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-            
+// Comando para agregar un usuario a la lista (addlista)
+case 'addlista': {
+  try {
+    // Solo el owner puede usar este comando
+    if (!isOwner(sender)) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⛔ Solo el propietario del bot puede usar este comando." },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    // Intentamos extraer el número del usuario objetivo:
+    // Si se cita el mensaje, se toma el número del participante citado.
+    let target;
+    if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      target =
+        msg.message.extendedTextMessage.contextInfo.participant ||
+        msg.key.participant ||
+        msg.key.remoteJid;
+    } else if (text && text.trim() !== "") {
+      // Si se proporciona el número directamente, extrae solo los dígitos.
+      target = text.replace(/\D/g, "");
+    }
+
+    if (!target) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⚠️ Uso incorrecto. Cita el mensaje del usuario o proporciona el número." },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    // Ruta del archivo lista.json
+    const listaFile = "./lista.json";
+    let lista = [];
+    if (fs.existsSync(listaFile)) {
+      lista = JSON.parse(fs.readFileSync(listaFile, "utf-8"));
+    }
+
+    // Verificar si el usuario ya está en la lista
+    if (lista.includes(target)) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "ℹ️ El usuario ya está en la lista." },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    // Agregar el usuario y guardar el archivo
+    lista.push(target);
+    fs.writeFileSync(listaFile, JSON.stringify(lista, null, 2));
+
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: `✅ Usuario ${target} agregado a la lista.` },
+      { quoted: msg }
+    );
+  } catch (error) {
+    console.error("❌ Error en el comando .addlista:", error);
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Ocurrió un error al agregar el usuario a la lista." },
+      { quoted: msg }
+    );
+  }
+  break;
+}
+
+// Comando para eliminar un usuario de la lista (deletelista)
+case 'deletelista': {
+  try {
+    // Solo el owner puede usar este comando
+    if (!isOwner(sender)) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⛔ Solo el propietario del bot puede usar este comando." },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    // Intentamos extraer el número del usuario objetivo
+    let target;
+    if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      target =
+        msg.message.extendedTextMessage.contextInfo.participant ||
+        msg.key.participant ||
+        msg.key.remoteJid;
+    } else if (text && text.trim() !== "") {
+      target = text.replace(/\D/g, "");
+    }
+
+    if (!target) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⚠️ Uso incorrecto. Cita el mensaje del usuario o proporciona el número." },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    const listaFile = "./lista.json";
+    let lista = [];
+    if (fs.existsSync(listaFile)) {
+      lista = JSON.parse(fs.readFileSync(listaFile, "utf-8"));
+    }
+
+    // Verificar si el usuario se encuentra en la lista
+    if (!lista.includes(target)) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "ℹ️ El usuario no se encuentra en la lista." },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    // Eliminar el usuario y guardar el archivo
+    lista = lista.filter((u) => u !== target);
+    fs.writeFileSync(listaFile, JSON.stringify(lista, null, 2));
+
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: `✅ Usuario ${target} eliminado de la lista.` },
+      { quoted: msg }
+    );
+  } catch (error) {
+    console.error("❌ Error en el comando .deletelista:", error);
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Ocurrió un error al eliminar el usuario de la lista." },
+      { quoted: msg }
+    );
+  }
+  break;
+}            
         
 case 'deletemascota': {
     try {
