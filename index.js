@@ -146,8 +146,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
         console.log(chalk.gray("──────────────────────────"));
 
-        // ⚠️ Si el "modo privado" está activado y el usuario no es dueño, ni está en la lista de permitidos, ni es el bot, ignorar el mensaje
-        if (modos.modoPrivado && !isOwner(sender) && !isAllowedUser(sender) && !fromMe) return;
+        // ⚠️ Si el "modo privado" está activado y el mensaje NO es del bot (fromMe), ni del owner, ni de un usuario permitido, se ignora el mensaje.
+        if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
 
         // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
         if (isGroup && modos.modoAdmins[chatId]) {
