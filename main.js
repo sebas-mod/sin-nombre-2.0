@@ -304,95 +304,9 @@ case 'topuser': {
   break;
 }
 
-            
 case 'topmascotas': {
   try {
     // Reacción inicial
-    await sock.sendMessage(msg.key.remoteJid, { 
-      react: { text: "🏆", key: msg.key } 
-    });
-    
-    const rpgFile = "./rpg.json";
-    if (!fs.existsSync(rpgFile)) {
-      return sock.sendMessage(msg.key.remoteJid, {
-        text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*`
-      }, { quoted: msg });
-    }
-    
-    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-    let usuarios = rpgData.usuarios;
-    if (!usuarios || Object.keys(usuarios).length === 0) {
-      return sock.sendMessage(msg.key.remoteJid, {
-        text: "❌ *No hay usuarios registrados aún.*"
-      }, { quoted: msg });
-    }
-    
-    // Creamos arrays para ranking
-    let rankingCantidad = [];
-    let rankingFuerza = [];
-    
-    for (let id in usuarios) {
-      let user = usuarios[id];
-      if (user.mascotas && user.mascotas.length > 0) {
-        let cantidad = user.mascotas.length;
-        // Sumar el nivel de todas las mascotas del usuario
-        let totalNivel = user.mascotas.reduce((sum, mascota) => sum + (mascota.nivel || 1), 0);
-        // Listado de mascotas con nombre y nivel
-        let listado = user.mascotas.map(mascota => `🎭 ${mascota.nombre} (Nivel ${mascota.nivel})`).join("\n");
-        rankingCantidad.push({ id, nombre: user.nombre, cantidad, listado });
-        rankingFuerza.push({ id, nombre: user.nombre, totalNivel, cantidad, listado });
-      }
-    }
-    
-    // Ordenar rankings
-    rankingCantidad.sort((a, b) => b.cantidad - a.cantidad);
-    rankingFuerza.sort((a, b) => b.totalNivel - a.totalNivel);
-    
-    // Construir mensaje del ranking por cantidad
-    let mensajeCantidad = "🏆 *Ranking de Jugadores con Más Mascotas* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
-    rankingCantidad.forEach((u, index) => {
-      mensajeCantidad += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
-      mensajeCantidad += `🐾 *Mascotas:* ${u.cantidad}\n`;
-      mensajeCantidad += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-    });
-    
-    // Construir mensaje del ranking por fuerza (suma de niveles)
-    let mensajeFuerza = "🏆 *Ranking de Jugadores con Mascotas Más Fuertes* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
-    rankingFuerza.forEach((u, index) => {
-      mensajeFuerza += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
-      mensajeFuerza += `🐾 *Total Nivel:* ${u.totalNivel}\n`;
-      mensajeFuerza += `🐾 *Mascotas:* ${u.cantidad}\n`;
-      mensajeFuerza += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-    });
-    
-    // Combinar ambos rankings en un solo mensaje
-    let mensajeFinal = mensajeCantidad + "\n" + mensajeFuerza;
-    
-    // Enviar la imagen con el ranking en el caption (se mencionan los usuarios con mascotas)
-    await sock.sendMessage(msg.key.remoteJid, { 
-      image: { url: "https://cdn.dorratz.com/files/1741194332982.jpg" },
-      caption: mensajeFinal,
-      mentions: Object.keys(usuarios).filter(id => {
-        let user = usuarios[id];
-        return user.mascotas && user.mascotas.length > 0;
-      })
-    }, { quoted: msg });
-    
-  } catch (error) {
-    console.error("❌ Error en el comando .topmascotas:", error);
-    await sock.sendMessage(msg.key.remoteJid, { 
-      text: `❌ *Ocurrió un error al generar el ranking de mascotas. Inténtalo de nuevo.*` 
-    }, { quoted: msg });
-    await sock.sendMessage(msg.key.remoteJid, { 
-      react: { text: "❌", key: msg.key }
-    });
-  }
-  break;
-}
-        
-case 'topper': {
-  try {
-    // Reacción al usar el comando
     await sock.sendMessage(msg.key.remoteJid, { 
       react: { text: "🏆", key: msg.key }
     });
@@ -403,6 +317,7 @@ case 'topper': {
         text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*`
       }, { quoted: msg });
     }
+    
     let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
     let usuarios = rpgData.usuarios;
     if (!usuarios || Object.keys(usuarios).length === 0) {
@@ -411,68 +326,121 @@ case 'topper': {
       }, { quoted: msg });
     }
     
-    // Crear arrays para ranking
-    let rankingCantidad = [];
-    let rankingFuerza = [];
-    
-    // Recorremos los usuarios para calcular datos
+    // Construir array de ranking para mascotas: cantidad y total nivel
+    let ranking = [];
     for (let id in usuarios) {
       let user = usuarios[id];
-      if (user.personajes && user.personajes.length > 0) {
-        let cantidad = user.personajes.length;
-        // Sumar niveles de todos los personajes
-        let totalNivel = user.personajes.reduce((sum, pers) => sum + (pers.nivel || 1), 0);
-        // Crear un listado de personajes con nombre y nivel
-        let listado = user.personajes.map(pers => `🎭 ${pers.nombre} (Nivel ${pers.nivel})`).join("\n");
-        
-        rankingCantidad.push({
+      if (user.mascotas && user.mascotas.length > 0) {
+        let cantidad = user.mascotas.length;
+        let totalNivel = user.mascotas.reduce((sum, m) => sum + (m.nivel || 1), 0);
+        // Listado de mascotas: nombre y nivel de cada una
+        let listado = user.mascotas.map(m => `🎭 ${m.nombre} (Nivel ${m.nivel})`).join("\n");
+        ranking.push({
           id,
           nombre: user.nombre,
           cantidad,
-          listado
-        });
-        rankingFuerza.push({
-          id,
-          nombre: user.nombre,
           totalNivel,
-          cantidad,
           listado
         });
       }
     }
     
-    // Ordenar rankings: mayor cantidad y mayor fuerza (totalNivel)
-    rankingCantidad.sort((a, b) => b.cantidad - a.cantidad);
-    rankingFuerza.sort((a, b) => b.totalNivel - a.totalNivel);
-    
-    // Construir mensaje para ranking por cantidad
-    let mensajeCantidad = "🏆 *Ranking de Jugadores con Más Personajes* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
-    rankingCantidad.forEach((u, index) => {
-      mensajeCantidad += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
-      mensajeCantidad += `🎮 *Personajes:* ${u.cantidad}\n`;
-      mensajeCantidad += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    // Ordenar ranking: primero por cantidad descendente; si hay empate, por totalNivel descendente
+    ranking.sort((a, b) => {
+      if (b.cantidad !== a.cantidad) return b.cantidad - a.cantidad;
+      return b.totalNivel - a.totalNivel;
     });
     
-    // Construir mensaje para ranking por fuerza (suma de niveles)
-    let mensajeFuerza = "🏆 *Ranking de Jugadores con Personajes Más Fuertes* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
-    rankingFuerza.forEach((u, index) => {
-      mensajeFuerza += `🥇 *#${index+1} - @${u.id.split('@')[0]}*\n`;
-      mensajeFuerza += `🎮 *Total Nivel:* ${u.totalNivel}\n`;
-      mensajeFuerza += `🎮 *Personajes:* ${u.cantidad}\n`;
-      mensajeFuerza += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    // Construir mensaje final
+    let mensajeFinal = "🏆 *Ranking de Jugadores con Más y Mejores Mascotas* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
+    ranking.forEach((u, index) => {
+      mensajeFinal += `🥇 *#${index + 1} - @${u.id.split('@')[0]}*\n`;
+      mensajeFinal += `🐾 *Mascotas:* ${u.cantidad}\n`;
+      mensajeFinal += `🔥 *Total Nivel:* ${u.totalNivel}\n`;
+      mensajeFinal += `${u.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
     });
     
-    // Combinar ambos rankings en un solo mensaje
-    let mensajeFinal = mensajeCantidad + "\n" + mensajeFuerza;
+    // Enviar la imagen con el ranking en el caption y mencionar a todos los usuarios incluidos
+    await sock.sendMessage(msg.key.remoteJid, { 
+      image: { url: "https://cdn.dorratz.com/files/1741194332982.jpg" },
+      caption: mensajeFinal,
+      mentions: ranking.map(u => u.id)
+    }, { quoted: msg });
     
-    // Enviar la imagen con el ranking en el caption
+  } catch (error) {
+    console.error("❌ Error en el comando .topmascotas:", error);
+    await sock.sendMessage(msg.key.remoteJid, { 
+      text: `❌ *Ocurrió un error al generar el ranking de mascotas. Inténtalo de nuevo.*`
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "❌", key: msg.key }
+    });
+  }
+  break;
+}            
+
+        
+case 'topper': {
+  try {
+    // Reacción inicial
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "🏆", key: msg.key }
+    });
+    
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *No hay datos de RPG. Usa \`${global.prefix}crearcartera\` para empezar.*`
+      }, { quoted: msg });
+    }
+    
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    let usuarios = rpgData.usuarios;
+    if (!usuarios || Object.keys(usuarios).length === 0) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: "❌ *No hay usuarios registrados aún.*"
+      }, { quoted: msg });
+    }
+    
+    // Crear un array para el ranking con ambos criterios
+    let ranking = [];
+    for (let id in usuarios) {
+      let user = usuarios[id];
+      if (user.personajes && user.personajes.length > 0) {
+        let cantidad = user.personajes.length;
+        let totalNivel = user.personajes.reduce((sum, pers) => sum + (pers.nivel || 1), 0);
+        // Listado de personajes: se muestra el nombre y el nivel de cada uno
+        let listado = user.personajes.map(pers => `🎭 ${pers.nombre} (Nivel ${pers.nivel})`).join("\n");
+        ranking.push({
+          id,
+          nombre: user.nombre,
+          cantidad,
+          totalNivel,
+          listado
+        });
+      }
+    }
+    
+    // Ordenar ranking: primero por cantidad descendente y, en caso de empate, por totalNivel descendente
+    ranking.sort((a, b) => {
+      if (b.cantidad !== a.cantidad) return b.cantidad - a.cantidad;
+      return b.totalNivel - a.totalNivel;
+    });
+    
+    // Construir el mensaje del ranking
+    let mensajeRanking = "🏆 *Ranking de Jugadores con Más y Mejores Personajes* 🏆\n━━━━━━━━━━━━━━━━━━━━\n";
+    ranking.forEach((user, index) => {
+      mensajeRanking += `🥇 *#${index + 1} - @${user.id.split('@')[0]}*\n`;
+      mensajeRanking += `🎮 *Personajes:* ${user.cantidad}\n`;
+      mensajeRanking += `🔥 *Total Nivel:* ${user.totalNivel}\n`;
+      mensajeRanking += `${user.listado}\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    });
+    
+    // Enviar el mensaje con la imagen de fondo y mencionar a todos los usuarios incluidos en el ranking
     await sock.sendMessage(msg.key.remoteJid, { 
       image: { url: "https://cdn.dorratz.com/files/1741194214880.jpg" },
-      caption: mensajeFinal,
-      mentions: Object.keys(usuarios).filter(id => {
-        let user = usuarios[id];
-        return user.personajes && user.personajes.length > 0;
-      })
+      caption: mensajeRanking,
+      mentions: ranking.map(u => u.id)
     }, { quoted: msg });
     
   } catch (error) {
