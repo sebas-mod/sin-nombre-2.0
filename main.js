@@ -223,7 +223,7 @@ case 'robar': {
     // 🥷 Reacción inicial
     await sock.sendMessage(msg.key.remoteJid, { react: { text: "🥷", key: msg.key } });
 
-    // Verificar existencia del archivo
+    // Verificar si el archivo existe
     if (!fs.existsSync(rpgFile)) {
       return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Los datos del RPG no están disponibles.*" }, { quoted: msg });
     }
@@ -231,87 +231,96 @@ case 'robar': {
 
     // Verificar que el ladrón esté registrado
     if (!rpgData.usuarios[userId]) {
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
-      }, { quoted: msg });
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` },
+        { quoted: msg }
+      );
     }
     let usuario = rpgData.usuarios[userId];
 
     // Verificar que el ladrón tenga vida
     if (usuario.vida <= 0) {
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: `🚑 *¡No puedes robar!*\n\n🔴 *Tu vida es 0.*\n📜 Usa \`${global.prefix}hospital\` para recuperarte.` 
-      }, { quoted: msg });
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "🚑 *¡No puedes robar! Tu vida es 0. Usa \`${global.prefix}hospital\` para recuperarte.*" },
+        { quoted: msg }
+      );
     }
 
     let tiempoActual = Date.now();
     if (usuario.cooldowns?.robar && (tiempoActual - usuario.cooldowns.robar) < cooldownTime) {
       let tiempoRestante = ((usuario.cooldowns.robar + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de intentar otro robo.*` 
-      }, { quoted: msg });
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de intentar otro robo.*` },
+        { quoted: msg }
+      );
     }
 
-    // Verificar que se cite el mensaje de la víctima (ya sea por cita o mención)
-    let targetId = msg.message.extendedTextMessage?.contextInfo?.participant || (msg.message.mentionedJid ? msg.message.mentionedJid[0] : null);
+    // Obtener el ID de la víctima a partir de la cita o mención
+    let targetId = msg.message.extendedTextMessage?.contextInfo?.participant ||
+                   (msg.message.mentionedJid ? msg.message.mentionedJid[0] : null);
     if (!targetId) {
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: `⚠️ *Debes citar o mencionar a la persona a la que quieres robar.*\nEjemplo: Responde un mensaje con: \`${global.prefix}robar\`` 
-      }, { quoted: msg });
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `⚠️ *Debes citar o mencionar a la persona a la que quieres robar.*\nEjemplo: \`${global.prefix}robar @usuario\`` },
+        { quoted: msg }
+      );
     }
     if (!rpgData.usuarios[targetId]) {
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: `❌ *El usuario al que intentas robar no está registrado en el RPG.*` 
-      }, { quoted: msg });
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `❌ *El usuario al que intentas robar no está registrado en el RPG.*` },
+        { quoted: msg }
+      );
     }
     let victima = rpgData.usuarios[targetId];
 
-    // Probabilidad: 90% de éxito, 10% de fallo
-    let exito = Math.random() < 0.9;
+    // Probabilidad: 50% de éxito
+    let exito = Math.random() < 0.5;
 
     // Calcular vida perdida del ladrón
-    let vidaPerdida = exito 
-          ? Math.floor(Math.random() * (10 - 5 + 1)) + 5 
-          : Math.floor(Math.random() * (20 - 10 + 1)) + 10;
+    let vidaPerdida = exito
+      ? Math.floor(Math.random() * (10 - 5 + 1)) + 5   // 5-10 HP si tiene éxito
+      : Math.floor(Math.random() * (20 - 10 + 1)) + 10; // 10-20 HP si falla
     usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
+    // Variables para XP y diamantes
+    let xpRobado = 0;
+    let diamantesRobados = 0;
     if (exito) {
-      // Robar XP entre 500 y 3000
-      let xpRobado = Math.floor(Math.random() * (3000 - 500 + 1)) + 500;
-      // Si la víctima tiene diamantes, roba entre 20 y 1500; si no, roba XP adicional.
-      let diamantesRobados = victima.diamantes > 0 
-            ? Math.min(victima.diamantes, Math.floor(Math.random() * (1500 - 20 + 1)) + 20)
-            : 0;
-      let xpAdicional = (diamantesRobados === 0) 
-            ? Math.floor(Math.random() * (1000 - 300 + 1)) + 300 
-            : 0;
-
-      usuario.experiencia += xpRobado + xpAdicional;
+      xpRobado = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // entre 500 y 3000 XP
+      if (victima.diamantes > 0) {
+        diamantesRobados = Math.min(victima.diamantes, Math.floor(Math.random() * (1500 - 20 + 1)) + 20);
+      } else {
+        // Si la víctima no tiene diamantes, robar XP adicional
+        xpRobado += Math.floor(Math.random() * (1000 - 300 + 1)) + 300;
+      }
+      usuario.experiencia += xpRobado;
       usuario.diamantes += diamantesRobados;
       victima.diamantes = Math.max(0, victima.diamantes - diamantesRobados);
-      victima.experiencia = Math.max(0, victima.experiencia - xpAdicional);
+      victima.experiencia = Math.max(0, victima.experiencia - xpRobado);
     } else {
-      // En caso de fallo, el ladrón pierde entre 300 y 1000 XP
+      // En caso de fallo, el ladrón pierde XP entre 300 y 1000
       let xpPerdido = Math.floor(Math.random() * (1000 - 300 + 1)) + 300;
       usuario.experiencia = Math.max(0, usuario.experiencia - xpPerdido);
     }
 
-    // Textos de resultado
+    // Textos de resultado (con menciones)
     const textosExito = [
-      `🥷 *${usuario.nombre} se infiltró en las sombras y robó con maestría a @${victima.id.split('@')[0]}.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
+      `🥷 *${usuario.nombre} se infiltró y robó con éxito a @${victima.id.split('@')[0]}.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
       `💰 *Con astucia, ${usuario.nombre} engañó a @${victima.id.split('@')[0]} y se llevó un gran botín.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
-      `🚀 *Con velocidad, ${usuario.nombre} logró sustraer el botín de @${victima.id.split('@')[0]} sin ser detectado.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`
+      `🚀 *Con rapidez, ${usuario.nombre} sustrajo el botín de @${victima.id.split('@')[0]} sin ser detectado.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`
     ];
     const textosFracaso = [
-      `🚔 *${usuario.nombre} fue atrapado en el intento de robo y perdió ${Math.abs(xpPerdido)} XP.*\n❤️ *Perdiste ${vidaPerdida} HP*`,
-      `🔒 *El plan falló: ${usuario.nombre} intentó robar a @${victima.id.split('@')[0]} y fue descubierto, perdiendo ${Math.abs(xpPerdido)} XP y ${vidaPerdida} HP.*`
+      `🚔 *${usuario.nombre} fue atrapado en el intento de robo y perdió parte de su experiencia.*\n❤️ *Perdiste ${vidaPerdida} HP*`,
+      `🔒 *El plan falló: ${usuario.nombre} intentó robar a @${victima.id.split('@')[0]} y fue descubierto, perdiendo ${vidaPerdida} HP.*`
     ];
+    let mensajeResultado = exito
+      ? textosExito[Math.floor(Math.random() * textosExito.length)]
+      : textosFracaso[Math.floor(Math.random() * textosFracaso.length)];
 
-    let mensajeResultado = exito 
-          ? textosExito[Math.floor(Math.random() * textosExito.length)]
-          : textosFracaso[Math.floor(Math.random() * textosFracaso.length)];
-
-    // Enviar mensaje con resultado, mencionando tanto al ladrón como a la víctima
     await sock.sendMessage(msg.key.remoteJid, { 
       text: mensajeResultado, 
       mentions: [userId, targetId] 
@@ -327,7 +336,7 @@ case 'robar': {
       }, { quoted: msg });
     }
 
-    // Actualizar y manejar subida de nivel y rango
+    // Actualizar y manejar subida de nivel
     let xpMaxNivel = usuario.nivel === 1 ? 1000 : usuario.nivel * 1500;
     while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
       usuario.experiencia -= xpMaxNivel;
@@ -359,16 +368,12 @@ case 'robar': {
     usuario.cooldowns = usuario.cooldowns || {};
     usuario.cooldowns.robar = tiempoActual;
     fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
-
+    
   } catch (error) {
     console.error("❌ Error en el comando .robar:", error);
   }
   break;
 }
-
-
-
-
         
 case 'cofre': {
     try {
