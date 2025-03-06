@@ -242,11 +242,9 @@ case 'robar': {
     }
 
     let tiempoActual = Date.now();
-    if (usuario.cooldowns?.robar && tiempoActual - usuario.cooldowns.robar < cooldownTime) {
+    if (usuario.cooldowns?.robar && (tiempoActual - usuario.cooldowns.robar) < cooldownTime) {
       let tiempoRestante = ((usuario.cooldowns.robar + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de intentar otro robo.*` 
-      }, { quoted: msg });
+      return sock.sendMessage(msg.key.remoteJid, { text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de intentar otro robo.*` }, { quoted: msg });
     }
 
     // Verificar que se cite el mensaje de la víctima
@@ -267,47 +265,49 @@ case 'robar': {
     // Probabilidad: 90% éxito, 10% fallo
     let exito = Math.random() < 0.9;
 
-    // Calcular vida perdida
+    // Calcular vida perdida del ladrón
     let vidaPerdida = exito 
           ? Math.floor(Math.random() * (10 - 5 + 1)) + 5 
           : Math.floor(Math.random() * (20 - 10 + 1)) + 10;
     usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
     if (exito) {
-      // Robar XP entre 500 y 3000
+      // Roba XP entre 500 y 3000
       let xpRobado = Math.floor(Math.random() * (3000 - 500 + 1)) + 500;
-      // Si la víctima tiene diamantes, roba entre 20 y 1500, sino roba solo XP.
+      // Si la víctima tiene diamantes, roba entre 20 y 1500; si no, roba solo XP.
       let diamantesRobados = victima.diamantes > 0 
             ? Math.min(victima.diamantes, Math.floor(Math.random() * (1500 - 20 + 1)) + 20)
             : 0;
-      usuario.experiencia += xpRobado;
+      // Si no se roban diamantes, se roba algo de XP adicional
+      let xpAdicional = (diamantesRobados === 0) ? Math.floor(Math.random() * (1000 - 300 + 1)) + 300 : 0;
+      usuario.experiencia += xpRobado + xpAdicional;
       usuario.diamantes += diamantesRobados;
       victima.diamantes = Math.max(0, victima.diamantes - diamantesRobados);
-      victima.experiencia = Math.max(0, victima.experiencia - xpRobado);
+      victima.experiencia = Math.max(0, victima.experiencia - xpAdicional);
     } else {
       // En caso de fallo, el ladrón pierde entre 300 y 1000 XP
       let xpPerdido = Math.floor(Math.random() * (1000 - 300 + 1)) + 300;
       usuario.experiencia = Math.max(0, usuario.experiencia - xpPerdido);
     }
 
-    // Textos para mensajes de resultado con más variedad
+    // Textos de resultado
     const textosExito = [
-      `🥷 *${usuario.nombre} se infiltró en las sombras y robó con maestría.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${Math.floor(xpRobado)} XP*`,
-      `💰 *Con astucia, ${usuario.nombre} engañó a su víctima y se llevó el botín.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${Math.floor(xpRobado)} XP*`,
-      `🔥 *${usuario.nombre} ejecutó un plan perfecto y robó sin dejar rastro.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${Math.floor(xpRobado)} XP*`,
-      `🚀 *Con velocidad y precisión, ${usuario.nombre} logró sustraer el botín.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${Math.floor(xpRobado)} XP*`,
-      `🔑 *El plan fue impecable: ${usuario.nombre} robó exitosamente y se fue con el premio.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${Math.floor(xpRobado)} XP*`
+      `🥷 *${usuario.nombre} se infiltró en las sombras y robó con maestría.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
+      `💰 *Con astucia, ${usuario.nombre} engañó a su víctima y se llevó el botín.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
+      `🚀 *${usuario.nombre} ejecutó un plan perfecto y robó sin dejar rastro.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`
     ];
     const textosFracaso = [
       `🚔 *${usuario.nombre} fue sorprendido y perdió ${Math.abs(xpPerdido)} XP en el intento.*\n❤️ *Perdiste ${vidaPerdida} HP*`,
-      `🔒 *El plan fracasó: ${usuario.nombre} fue atrapado y tuvo que pagar las consecuencias.*\n💀 *Perdiste ${Math.abs(xpPerdido)} XP* y *${vidaPerdida} HP*`,
-      `⚠️ *Un error en el plan hizo que ${usuario.nombre} terminara perdiendo experiencia y vida.*\n💀 *Perdiste ${Math.abs(xpPerdido)} XP* y *${vidaPerdida} HP*`
+      `🔒 *El plan falló: ${usuario.nombre} fue atrapado y tuvo que pagar las consecuencias.*\n💀 *Perdiste ${Math.abs(xpPerdido)} XP* y *${vidaPerdida} HP*`
     ];
+    let mensajeResultado = exito 
+          ? textosExito[Math.floor(Math.random() * textosExito.length)]
+          : textosFracaso[Math.floor(Math.random() * textosFracaso.length)];
 
+    // Enviar el mensaje con mención de ambos usuarios (ladrón y víctima)
     await sock.sendMessage(msg.key.remoteJid, { 
-      text: exito 
-            ? textosExito[Math.floor(Math.random() * textosExito.length)] 
-            : textosFracaso[Math.floor(Math.random() * textosFracaso.length)]
+      text: mensajeResultado, 
+      mentions: [userId, targetId] 
     }, { quoted: msg });
 
     // Incrementar habilidad con 30% de probabilidad (mensaje separado)
@@ -320,7 +320,7 @@ case 'robar': {
       }, { quoted: msg });
     }
 
-    // Actualizar y manejar nivel y rango
+    // Actualizar y manejar subida de nivel y rango
     let xpMaxNivel = usuario.nivel === 1 ? 1000 : usuario.nivel * 1500;
     while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
       usuario.experiencia -= xpMaxNivel;
@@ -358,6 +358,8 @@ case 'robar': {
   }
   break;
 }
+
+
         
 case 'cofre': {
     try {
