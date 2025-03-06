@@ -14,25 +14,7 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 //para el juego rpg user
-const rpgUserPath = "./rpguser.json"; // Cambié "path" por "rpgUserPath"
-// Verificar si el archivo existe, si no, crearlo con estructura vacía
-if (!fs.existsSync(rpgUserPath)) {
-    fs.writeFileSync(rpgUserPath, JSON.stringify({ textos: {} }, null, 2));
-}
-// Función para cargar los textos aleatorios desde el JSON
-function cargarRpgUser() {
-    if (fs.existsSync(rpgUserPath)) {
-        return JSON.parse(fs.readFileSync(rpgUserPath, "utf-8"));
-    } else {
-        return { textos: {} };
-    }
-}
-// Función para guardar cambios en `rpguser.json`
-function guardarRpgUser(data) {
-    fs.writeFileSync(rpgUserPath, JSON.stringify(data, null, 2));
-}
-// Cargar datos iniciales del `rpguser.json`
-let rpgUserData = cargarRpgUser();
+
 //ariba rpg user
 
 // 📂 Crear la carpeta `stickers/` si no existe
