@@ -252,14 +252,13 @@ case 'robar': {
       }, { quoted: msg });
     }
 
-    // Verificar que se cite el mensaje de la víctima
-    let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-    if (!quoted) {
+    // Verificar que se cite el mensaje de la víctima (ya sea por cita o mención)
+    let targetId = msg.message.extendedTextMessage?.contextInfo?.participant || (msg.message.mentionedJid ? msg.message.mentionedJid[0] : null);
+    if (!targetId) {
       return sock.sendMessage(msg.key.remoteJid, { 
-        text: `⚠️ *Debes citar el mensaje de la persona a la que quieres robar.*\nEjemplo: Responde un mensaje con: \`${global.prefix}robar\`` 
+        text: `⚠️ *Debes citar o mencionar a la persona a la que quieres robar.*\nEjemplo: Responde un mensaje con: \`${global.prefix}robar\`` 
       }, { quoted: msg });
     }
-    let targetId = msg.message.extendedTextMessage.contextInfo.participant;
     if (!rpgData.usuarios[targetId]) {
       return sock.sendMessage(msg.key.remoteJid, { 
         text: `❌ *El usuario al que intentas robar no está registrado en el RPG.*` 
@@ -267,7 +266,7 @@ case 'robar': {
     }
     let victima = rpgData.usuarios[targetId];
 
-    // Establecer probabilidad: 90% éxito, 10% fallo
+    // Probabilidad: 90% de éxito, 10% de fallo
     let exito = Math.random() < 0.9;
 
     // Calcular vida perdida del ladrón
@@ -277,18 +276,18 @@ case 'robar': {
     usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
 
     if (exito) {
-      // Roba XP entre 500 y 3000
+      // Robar XP entre 500 y 3000
       let xpRobado = Math.floor(Math.random() * (3000 - 500 + 1)) + 500;
-      // Si la víctima tiene diamantes, roba entre 20 y 1500 (sin exceder lo que tenga); de lo contrario, roba XP adicional.
-      let diamantesRobados = 0;
-      if (victima.diamantes > 0) {
-        diamantesRobados = Math.min(victima.diamantes, Math.floor(Math.random() * (1500 - 20 + 1)) + 20);
-      }
-      let xpAdicional = (diamantesRobados === 0) ? Math.floor(Math.random() * (1000 - 300 + 1)) + 300 : 0;
+      // Si la víctima tiene diamantes, roba entre 20 y 1500; si no, roba XP adicional.
+      let diamantesRobados = victima.diamantes > 0 
+            ? Math.min(victima.diamantes, Math.floor(Math.random() * (1500 - 20 + 1)) + 20)
+            : 0;
+      let xpAdicional = (diamantesRobados === 0) 
+            ? Math.floor(Math.random() * (1000 - 300 + 1)) + 300 
+            : 0;
 
       usuario.experiencia += xpRobado + xpAdicional;
       usuario.diamantes += diamantesRobados;
-      // Reducir a la víctima lo robado
       victima.diamantes = Math.max(0, victima.diamantes - diamantesRobados);
       victima.experiencia = Math.max(0, victima.experiencia - xpAdicional);
     } else {
@@ -297,16 +296,17 @@ case 'robar': {
       usuario.experiencia = Math.max(0, usuario.experiencia - xpPerdido);
     }
 
-    // Textos de resultado con más variedad
+    // Textos de resultado
     const textosExito = [
-      `🥷 *${usuario.nombre} se infiltró en las sombras y robó con maestría.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
-      `💰 *Con astucia, ${usuario.nombre} engañó a su víctima y se llevó el botín.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
-      `🚀 *Con velocidad y precisión, ${usuario.nombre} logró sustraer el botín sin ser notado.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`
+      `🥷 *${usuario.nombre} se infiltró en las sombras y robó con maestría a @${victima.id.split('@')[0]}.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
+      `💰 *Con astucia, ${usuario.nombre} engañó a @${victima.id.split('@')[0]} y se llevó un gran botín.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`,
+      `🚀 *Con velocidad, ${usuario.nombre} logró sustraer el botín de @${victima.id.split('@')[0]} sin ser detectado.*\n💎 *Robaste ${diamantesRobados} diamantes* y *${xpRobado} XP*`
     ];
     const textosFracaso = [
-      `🚔 *${usuario.nombre} fue sorprendido en pleno intento de robo y perdió ${Math.abs(xpPerdido)} XP.*\n❤️ *Perdiste ${vidaPerdida} HP*`,
-      `🔒 *El plan falló: ${usuario.nombre} fue atrapado y tuvo que pagar las consecuencias, perdiendo ${Math.abs(xpPerdido)} XP y ${vidaPerdida} HP.*`
+      `🚔 *${usuario.nombre} fue atrapado en el intento de robo y perdió ${Math.abs(xpPerdido)} XP.*\n❤️ *Perdiste ${vidaPerdida} HP*`,
+      `🔒 *El plan falló: ${usuario.nombre} intentó robar a @${victima.id.split('@')[0]} y fue descubierto, perdiendo ${Math.abs(xpPerdido)} XP y ${vidaPerdida} HP.*`
     ];
+
     let mensajeResultado = exito 
           ? textosExito[Math.floor(Math.random() * textosExito.length)]
           : textosFracaso[Math.floor(Math.random() * textosFracaso.length)];
@@ -365,6 +365,8 @@ case 'robar': {
   }
   break;
 }
+
+
 
 
         
