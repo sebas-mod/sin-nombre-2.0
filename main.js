@@ -9,28 +9,21 @@ const os = require("os");
 const { execSync } = require("child_process");
 const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
-// Ruta del archivo donde se guardan los paquetes de stickers
-// 📂 Definir la ruta de almacenamiento de stickers
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 //para el juego rpg user
-
 //ariba rpg user
-
 // 📂 Crear la carpeta `stickers/` si no existe
 if (!fs.existsSync(stickersDir)) {
     fs.mkdirSync(stickersDir, { recursive: true });
 }
-
 // 📂 Crear el archivo `stickers.json` si no existe
 if (!fs.existsSync(stickersFile)) {
     fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
 }
 //juego rpg abajo
-
 // Ruta del archivo RPG
 const rpgFile = "./rpg.json";
-
 // Si el archivo no existe, crearlo con la estructura básica
 if (!fs.existsSync(rpgFile)) {
     const rpgDataInicial = {
@@ -43,16 +36,12 @@ if (!fs.existsSync(rpgFile)) {
 }
 // Cargar datos del RPG
 let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-
 // Función para guardar cambios en `rpg.json`
 function saveRpgData() {
     fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 }
-
-
 // 🛠️ Ruta del archivo de configuración
 const configFilePath = "./config.json";
-
 // Función para leer el prefijo guardado
 function loadPrefix() {
     if (fs.existsSync(configFilePath)) {
@@ -62,34 +51,27 @@ function loadPrefix() {
         global.prefix = ".";
     }
 }
-
 // Cargar el prefijo al iniciar el bot
 loadPrefix();
 console.log(`📌 Prefijo actual: ${global.prefix}`);
 //orivado
 // Almacenar owner los usuarios en línea por cada grupo (hacerlo accesible globalmente)
-
-
 // Si el modo owner privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
-
 //modoprivado ariba
 const guarFilePath = "./guar.json";
 if (!fs.existsSync(guarFilePath)) {
     fs.writeFileSync(guarFilePath, JSON.stringify({}, null, 2));
 }
-
 // Función para guardar multimedia en guar.json
 function saveMultimedia(key, data) {
     let guarData = JSON.parse(fs.readFileSync(guarFilePath, "utf-8"));
     guarData[key] = data;
     fs.writeFileSync(guarFilePath, JSON.stringify(guarData, null, 2));
 }
-
 // Función para obtener la lista de multimedia guardado
 function getMultimediaList() {
     return JSON.parse(fs.readFileSync(guarFilePath, "utf-8"));
 }
-
 // Exportamos las funciones para usarlas en los comandos
 module.exports = {
     saveMultimedia,
