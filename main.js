@@ -197,12 +197,25 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 // pon mas comando aqui abajo
 case 'personalidad': {
     try {
-        const userId = msg.message.extendedTextMessage?.contextInfo?.participant || msg.mentionedJid?.[0];
+        let userId;
+
+        // Si el usuario responde un mensaje, tomar el ID del citado
+        if (msg.message.extendedTextMessage?.contextInfo?.participant) {
+            userId = msg.message.extendedTextMessage.contextInfo.participant;
+        } 
+        // Si se menciona a un usuario con @
+        else if (msg.mentionedJid && msg.mentionedJid.length > 0) {
+            userId = msg.mentionedJid[0];
+        } 
+        // Si no se menciona a nadie, analizar al usuario que envió el mensaje
+        else {
+            userId = msg.key.participant || msg.key.remoteJid;
+        }
 
         if (!userId) {
             return sock.sendMessage(
                 msg.key.remoteJid,
-                { text: "⚠️ *Debes mencionar a un usuario o responder a su mensaje para analizar su personalidad.*" },
+                { text: "⚠️ *Debes mencionar o responder a un usuario para analizar su personalidad.*" },
                 { quoted: msg }
             );
         }
