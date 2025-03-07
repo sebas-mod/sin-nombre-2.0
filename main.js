@@ -242,6 +242,50 @@ case 'daradmins': {
 }
 
 // Comando para quitar derechos de admin (quitaradmin / quitaradmins)
+case 'setname': {
+  try {
+    const chatId = msg.key.remoteJid;
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ Este comando solo se puede usar en grupos." }, { quoted: msg });
+      return;
+    }
+    
+    // Obtener metadata del grupo para verificar permisos
+    const groupMetadata = await sock.groupMetadata(chatId);
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
+    const isSenderAdmin = senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin");
+    
+    if (!isSenderAdmin && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { text: "⚠️ Solo los administradores o el propietario pueden usar este comando." }, { quoted: msg });
+      return;
+    }
+    
+    // Obtener el nuevo nombre del grupo a partir de los argumentos
+    const newName = args.join(" ").trim();
+    if (!newName) {
+      await sock.sendMessage(chatId, { text: "⚠️ Debes proporcionar un nombre para el grupo." }, { quoted: msg });
+      return;
+    }
+    
+    // Enviar reacción inicial indicando que se inició el proceso
+    await sock.sendMessage(chatId, { react: { text: "✏️", key: msg.key } });
+    
+    // Actualizar el nombre del grupo
+    await sock.groupUpdateSubject(chatId, newName);
+    
+    // Confirmar el cambio
+    await sock.sendMessage(chatId, { text: `✅ *Nombre del grupo cambiado a:* ${newName}` }, { quoted: msg });
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("❌ Error en el comando setname:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al cambiar el nombre del grupo.*" }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key } });
+  }
+  break;
+}
+        
 case 'quitaradmin':
 case 'quitaradmins': {
   try {
