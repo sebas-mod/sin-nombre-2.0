@@ -253,12 +253,11 @@ case 'ship': {
         mensaje += `📜 ${frase}\n\n`;
         mensaje += `💍 *¿Deberían casarse? 🤔*`;
 
-        // Enviar imagen con el ship
+        // Enviar mensaje con el ship
         await sock.sendMessage(
             chatId,
             {
-                image: { url: "https://cdn.dorratz.com/files/1741340936306.jpg" },
-                caption: mensaje,
+                text: mensaje,
                 mentions: [user1, user2]
             },
             { quoted: msg }
