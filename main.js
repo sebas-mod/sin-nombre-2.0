@@ -195,6 +195,86 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'personalidad': {
+    try {
+        const userId = msg.message.extendedTextMessage?.contextInfo?.participant || msg.mentionedJid?.[0];
+
+        if (!userId) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "⚠️ *Debes mencionar a un usuario o responder a su mensaje para analizar su personalidad.*" },
+                { quoted: msg }
+            );
+        }
+
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🎭", key: msg.key } 
+        });
+
+        // Generar valores aleatorios para cada aspecto de la personalidad (1 - 100)
+        const personalidad = {
+            "🌟 Carisma": Math.floor(Math.random() * 100) + 1,
+            "🧠 Inteligencia": Math.floor(Math.random() * 100) + 1,
+            "💪 Fortaleza": Math.floor(Math.random() * 100) + 1,
+            "😂 Sentido del Humor": Math.floor(Math.random() * 100) + 1,
+            "🔥 Pasión": Math.floor(Math.random() * 100) + 1,
+            "🎨 Creatividad": Math.floor(Math.random() * 100) + 1,
+            "💼 Responsabilidad": Math.floor(Math.random() * 100) + 1,
+            "❤️ Empatía": Math.floor(Math.random() * 100) + 1,
+            "🧘‍♂️ Paciencia": Math.floor(Math.random() * 100) + 1,
+            "🤖 Nivel de Frialdad": Math.floor(Math.random() * 100) + 1,
+            "👑 Liderazgo": Math.floor(Math.random() * 100) + 1
+        };
+
+        let mensaje = `🎭 *Análisis de Personalidad* 🎭\n\n👤 *Usuario:* @${userId.split("@")[0]}\n\n`;
+        
+        // Agregar cada estadística con barras de progreso visuales
+        for (let [atributo, valor] of Object.entries(personalidad)) {
+            let barra = "▓".repeat(valor / 10) + "░".repeat(10 - valor / 10);
+            mensaje += `*${atributo}:* ${valor}%\n${barra}\n\n`;
+        }
+
+        mensaje += `📊 *Datos generados aleatoriamente. ¿Crees que esto representa a esta persona? 🤔*\n`;
+
+        // Obtener foto de perfil del usuario
+        let profilePicUrl;
+        try {
+            profilePicUrl = await sock.profilePictureUrl(userId, 'image');
+        } catch (e) {
+            profilePicUrl = "https://cdn.dorratz.com/files/1741338863359.jpg"; // Imagen por defecto
+        }
+
+        // Enviar el mensaje con imagen
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                image: { url: profilePicUrl },
+                caption: mensaje,
+                mentions: [userId]
+            },
+            { quoted: msg }
+        );
+
+        // ✅ Enviar reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error('❌ Error en el comando .personalidad:', error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: '❌ *Error inesperado al generar la personalidad.*' 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+}
+break;
+        
 case 'tag': {
   try {
     const chatId = msg.key.remoteJid;
