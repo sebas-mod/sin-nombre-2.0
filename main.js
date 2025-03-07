@@ -195,6 +195,55 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'tagall':
+case 'invocar':
+case 'todos': {
+  try {
+    // Verificar que se use en un grupo
+    const chatId = msg.key.remoteJid;
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+
+    // Obtener metadata del grupo para extraer participantes
+    const metadata = await sock.groupMetadata(chatId);
+    const participants = metadata.participants; // Array de objetos con { id, ... }
+
+    // Construir la lista de menciones (cada línea con "➥ @<numero>")
+    const mentionList = participants
+      .map(p => `➥ @${p.id.split("@")[0]}`)
+      .join("\n");
+
+    // Obtener el mensaje extra (argumentos) que el usuario envía
+    const extraMsg = args.join(" ");
+
+    // Construir el mensaje final con un diseño alitorio
+    let finalMsg = "━〔 *📢 INVOCACIÓN 📢* 〕━➫\n";
+    finalMsg += "٩(͡๏̯͡๏)۶ Por Azura Ultra 2.0 Bot ٩(͡๏̯͡๏)۶\n";
+    if (extraMsg.trim().length > 0) {
+      finalMsg += `\n❑ Mensaje: ${extraMsg}\n\n`;
+    } else {
+      finalMsg += "\n";
+    }
+    finalMsg += mentionList;
+
+    // Obtener la lista de IDs completos para la mención
+    const mentionIds = participants.map(p => p.id);
+
+    // Enviar el mensaje con el caption y la lista de menciones
+    await sock.sendMessage(chatId, { 
+      text: finalMsg,
+      mentions: mentionIds
+    }, { quoted: msg });
+
+  } catch (error) {
+    console.error("❌ Error en el comando tagall:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando tagall.*" }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'antiarabe': {
   try {
     const fs = require("fs");
