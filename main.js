@@ -204,35 +204,50 @@ case 'tag': {
       return;
     }
     
-    // Obtener metadata del grupo para extraer la lista de participantes
+    // Obtener metadata del grupo para extraer la lista de participantes (menciones)
     const groupMetadata = await sock.groupMetadata(chatId);
     const allMentions = groupMetadata.participants.map(p => p.id);
     
-    // Determinar el contenido a enviar:
-    // Si se usó en respuesta (reply), se toma el contenido del mensaje citado.
-    let content = "";
+    let messageToForward = null;
+    // Si se responde a un mensaje (reply)
     if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
-      // Se intenta extraer el texto del mensaje citado
       if (quoted.conversation) {
-        content = quoted.conversation;
-      } else if (quoted.extendedTextMessage?.text) {
-        content = quoted.extendedTextMessage.text;
+        // Mensaje de texto
+        messageToForward = { text: quoted.conversation };
+      } else if (quoted.extendedTextMessage && quoted.extendedTextMessage.text) {
+        messageToForward = { text: quoted.extendedTextMessage.text };
+      } else if (quoted.imageMessage) {
+        messageToForward = { 
+          image: { url: quoted.imageMessage.url || "" },
+          caption: quoted.imageMessage.caption || ""
+        };
+      } else if (quoted.videoMessage) {
+        messageToForward = { 
+          video: { url: quoted.videoMessage.url || "" },
+          caption: quoted.videoMessage.caption || ""
+        };
+      } else if (quoted.stickerMessage) {
+        messageToForward = { sticker: { url: quoted.stickerMessage.url || "" } };
+      } else if (quoted.documentMessage) {
+        messageToForward = { 
+          document: { url: quoted.documentMessage.url || "" },
+          caption: quoted.documentMessage.caption || ""
+        };
       } else {
-        content = "Mensaje reenviado.";
+        // Si no se reconoce el tipo, no se añade ningún texto extra
+        messageToForward = { text: "" };
       }
+    } else if (args.join(" ").trim().length > 0) {
+      // Si no se responde a un mensaje, se utiliza el texto ingresado
+      messageToForward = { text: args.join(" ") };
     } else {
-      // Si no se responde, se usa el texto que se envíe como argumento
-      content = args.join(" ");
-      if (!content.trim()) {
-        await sock.sendMessage(chatId, { text: "⚠️ Debes escribir un mensaje o responder a uno para usar el comando tag." }, { quoted: msg });
-        return;
-      }
+      await sock.sendMessage(chatId, { text: "⚠️ Debes responder a un mensaje o proporcionar un texto para reenviar." }, { quoted: msg });
+      return;
     }
     
-    // Enviar el mensaje con las menciones "ocultas" (solo en la propiedad mentions, sin listarlas en el texto)
-    await sock.sendMessage(chatId, { text: content, mentions: allMentions }, { quoted: msg });
-    
+    // Enviar el mensaje con las menciones a todos (las menciones serán "ocultas" en el contenido)
+    await sock.sendMessage(chatId, { ...messageToForward, mentions: allMentions }, { quoted: msg });
   } catch (error) {
     console.error("❌ Error en el comando tag:", error);
     await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al ejecutar el comando tag." }, { quoted: msg });
