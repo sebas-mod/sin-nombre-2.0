@@ -198,28 +198,30 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 case 'pareja':
 case 'parejas': {
     try {
-        // Verificar si el comando se usa en un grupo
+        const chatId = msg.key.remoteJid;
+        const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
+
         if (!isGroup) {
             return sock.sendMessage(
-                msg.key.remoteJid,
+                chatId,
                 { text: "❌ *Este comando solo funciona en grupos.*" },
                 { quoted: msg }
             );
         }
 
         // 🔄 Enviar reacción mientras se procesa el comando
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(chatId, { 
             react: { text: "💞", key: msg.key } 
         });
 
         // Obtener lista de participantes del grupo
-        const chatMetadata = await sock.groupMetadata(msg.key.remoteJid);
+        const chatMetadata = await sock.groupMetadata(chatId);
         let participants = chatMetadata.participants.map(p => p.id);
 
         // Si hay menos de 2 personas en el grupo
         if (participants.length < 2) {
             return sock.sendMessage(
-                msg.key.remoteJid,
+                chatId,
                 { text: "⚠️ *Necesitas al menos 2 personas en el grupo para formar parejas.*" },
                 { quoted: msg }
             );
@@ -263,7 +265,7 @@ case 'parejas': {
 
         // Enviar el mensaje con la imagen en un solo mensaje
         await sock.sendMessage(
-            msg.key.remoteJid,
+            chatId,
             {
                 image: { url: "https://cdn.dorratz.com/files/1741340936306.jpg" },
                 caption: mensaje,
@@ -273,23 +275,24 @@ case 'parejas': {
         );
 
         // ✅ Enviar reacción de éxito
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(chatId, { 
             react: { text: "✅", key: msg.key } 
         });
 
     } catch (error) {
         console.error('❌ Error en el comando .pareja:', error);
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(chatId, { 
             text: '❌ *Error inesperado al formar parejas.*' 
         }, { quoted: msg });
 
         // ❌ Enviar reacción de error
-        await sock.sendMessage(msg.key.remoteJid, { 
+        await sock.sendMessage(chatId, { 
             react: { text: "❌", key: msg.key } 
         });
     }
 }
 break;
+            
         
 case 'personalidad': {
   try {
