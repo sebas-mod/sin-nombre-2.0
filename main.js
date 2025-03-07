@@ -242,6 +242,47 @@ case 'daradmins': {
 }
 
 // Comando para quitar derechos de admin (quitaradmin / quitaradmins)
+case 'autoadmins':
+case 'autoadmin': {
+  try {
+    const chatId = msg.key.remoteJid;
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ Este comando solo funciona en grupos." }, { quoted: msg });
+      return;
+    }
+    
+    // Obtener el ID del usuario que ejecuta el comando
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    
+    // Solo el propietario (isOwner) puede usar este comando
+    if (!isOwner(senderId)) {
+      await sock.sendMessage(chatId, { text: "⚠️ Solo el propietario puede usar este comando." }, { quoted: msg });
+      return;
+    }
+    
+    // Enviar reacción inicial
+    await sock.sendMessage(chatId, { react: { text: "👑", key: msg.key } });
+    
+    // Promover al propietario a admin en el grupo
+    await sock.groupParticipantsUpdate(chatId, [senderId], "promote");
+    
+    // Enviar mensaje épico de confirmación
+    await sock.sendMessage(
+      chatId,
+      { text: "🔥 *¡El creador ha sido promovido a Administrador Supremo! Bienvenido al trono, rey de este grupo.* 🔥", mentions: [senderId] },
+      { quoted: msg }
+    );
+    
+    // Enviar reacción final
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("❌ Error en el comando autoadmins:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al otorgar derechos de admin al propietario.*" }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'setname': {
   try {
     const chatId = msg.key.remoteJid;
