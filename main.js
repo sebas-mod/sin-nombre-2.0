@@ -242,6 +242,115 @@ case 'daradmins': {
 }
 
 // Comando para quitar derechos de admin (quitaradmin / quitaradmins)
+
+case 'damelink': {
+  try {
+    const chatId = msg.key.remoteJid;
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+    
+    // Enviar reacción inicial
+    await sock.sendMessage(chatId, { react: { text: "🔗", key: msg.key } });
+    
+    // Esperar un poco para simular "carga"
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Obtener el código de invitación del grupo
+    let code = await sock.groupInviteCode(chatId);
+    if (!code) {
+      throw new Error("No se pudo obtener el código de invitación.");
+    }
+    let link = "https://chat.whatsapp.com/" + code;
+    
+    // Enviar el mensaje con el enlace
+    await sock.sendMessage(
+      chatId,
+      { text: `🔗 *Aquí tienes el enlace del grupo:*\n${link}` },
+      { quoted: msg }
+    );
+    
+    // Enviar reacción final
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("❌ Error en el comando damelink:", error);
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ *Ocurrió un error al generar el enlace del grupo.*" },
+      { quoted: msg }
+    );
+  }
+  break;
+}
+case 'add': {
+  try {
+    const chatId = msg.key.remoteJid;
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+    
+    // Enviar reacción inicial al recibir el comando
+    await sock.sendMessage(chatId, { react: { text: "🚀", key: msg.key } });
+    
+    // Obtener metadata del grupo para verificar permisos
+    const groupMetadata = await sock.groupMetadata(chatId);
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
+    const isSenderAdmin = senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin");
+    if (!isSenderAdmin && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*" }, { quoted: msg });
+      return;
+    }
+    
+    // Verificar que se proporcione un número
+    if (!args[0]) {
+      await sock.sendMessage(chatId, { 
+        text: "⚠️ *Debes proporcionar un número para agregar.*\nEjemplo: `.add +50766066666`" 
+      }, { quoted: msg });
+      return;
+    }
+    
+    // Limpiar el número (remover espacios, guiones, etc.)
+    let rawNumber = args.join("").replace(/\D/g, "");
+    if (!rawNumber || rawNumber.length < 5) {
+      await sock.sendMessage(chatId, { text: "⚠️ *El número proporcionado no es válido.*" }, { quoted: msg });
+      return;
+    }
+    
+    // Convertir a formato WhatsApp (número@s.whatsapp.net)
+    const targetId = `${rawNumber}@s.whatsapp.net`;
+    
+    // Enviar reacción indicando el inicio del proceso de agregar
+    await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } });
+    
+    // Agregar al usuario al grupo
+    await sock.groupParticipantsUpdate(chatId, [targetId], "add");
+    
+    // Enviar mensaje de confirmación con mención oculta
+    await sock.sendMessage(
+      chatId,
+      { text: `✅ Se ha agregado a @${rawNumber} al grupo.`, mentions: [targetId] },
+      { quoted: msg }
+    );
+    
+    // Enviar reacción final de éxito
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("❌ Error en el comando add:", error);
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Ocurrió un error al agregar el usuario al grupo." },
+      { quoted: msg }
+    );
+  }
+  break;
+}        
+
+        
 case 'autoadmins':
 case 'autoadmin': {
   try {
