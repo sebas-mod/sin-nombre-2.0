@@ -201,7 +201,6 @@ case 'parejas': {
   const chatId = msg.key.remoteJid;
   try {
     const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
-
     if (!isGroup) {
       return sock.sendMessage(
         chatId,
@@ -260,22 +259,33 @@ case 'parejas': {
     }
     mensaje += `\n🌟 *¿Será el inicio de una gran historia de amor?* 💘`;
 
-    // Enviar el mensaje con imagen y menciones (las menciones son "ocultas" en el mensaje)
-    await sock.sendMessage(
-      chatId,
-      {
-        image: { url: "https://cdn.dorratz.com/files/1741340936306.jpg" },
-        caption: mensaje,
-        mentions: parejas.flat().concat(solo ? [solo] : [])
-      },
-      { quoted: msg }
-    );
+    // Descargar la imagen desde la URL usando axios
+    const axios = require("axios");
+    const imageUrl = "https://cdn.dorratz.com/files/1741340936306.jpg";
+    let imageBuffer;
+    try {
+      const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+      imageBuffer = Buffer.from(response.data, "binary");
+    } catch (err) {
+      console.error("❌ Error descargando imagen:", err);
+      imageBuffer = null;
+    }
+
+    // Enviar el mensaje con imagen (si se pudo descargar) o solo texto
+    if (!imageBuffer) {
+      await sock.sendMessage(chatId, { text: mensaje }, { quoted: msg });
+    } else {
+      await sock.sendMessage(
+        chatId,
+        { image: imageBuffer, caption: mensaje, mentions: parejas.flat().concat(solo ? [solo] : []) },
+        { quoted: msg }
+      );
+    }
 
     // ✅ Enviar reacción de éxito
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
   } catch (error) {
     console.error('❌ Error en el comando .pareja:', error);
-    // Usamos chatId ya definido para enviar el mensaje de error
     await sock.sendMessage(chatId, { 
       text: '❌ *Error inesperado al formar parejas.*' 
     }, { quoted: msg });
