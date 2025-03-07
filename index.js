@@ -115,7 +115,113 @@ sock.ev.on("presence.update", async (presence) => {
         if (global.onlineUsers[chatId]) global.onlineUsers[chatId].delete(userId);
     }
 });
+// Listener para detectar cambios en los participantes de un grupo (bienvenida y despedida)
+sock.ev.on("group-participants.update", async (update) => {
+  try {
+    // Solo operar en grupos
+    if (!update.id.endsWith("@g.us")) return;
 
+    // Cargar la configuración de activos (activos.json) para ver si las bienvenidas están activadas en este grupo
+    const fs = require("fs");
+    const activosPath = "./activos.json";
+    let activos = {};
+    if (fs.existsSync(activosPath)) {
+      activos = JSON.parse(fs.readFileSync(activosPath, "utf-8"));
+    }
+    // Si no se ha activado la función welcome para este grupo, salir
+    if (!activos.welcome || !activos.welcome[update.id]) return;
+
+    // Textos "alitorios" para bienvenida y despedida (integrados en el código)
+    const welcomeTexts = [
+      "¡Hola! Azura Ultra 2.0 Bot te da la bienvenida con los brazos abiertos 🤗✨. ¡Disfruta tu estancia y diviértete!",
+      "¡Bienvenido(a)! Azura Ultra 2.0 Bot te recibe con alegría y energía 🎉🤖. ¡Prepárate para grandes aventuras!",
+      "¡Saludos! Azura Ultra 2.0 Bot te abraza virtualmente 🤩💫. Comparte, aprende y crece con nosotros.",
+      "¡Bienvenido(a) al grupo! Azura Ultra 2.0 Bot te invita a descubrir un mundo lleno de posibilidades 🚀🌟.",
+      "¡Qué alegría verte! Azura Ultra 2.0 Bot te da la bienvenida, esperamos que te sientas como en casa 🏠💖.",
+      "¡Hola! Gracias por unirte, Azura Ultra 2.0 Bot te saluda con entusiasmo 🎊😊. ¡Siente la energía!",
+      "¡Bienvenido(a)! En Azura Ultra 2.0 Bot cada nuevo miembro es una chispa de inspiración 🔥💡.",
+      "¡Saludos cordiales! Azura Ultra 2.0 Bot te recibe con un fuerte abrazo virtual 🤗💙.",
+      "¡Bienvenido(a)! Disfruta de este espacio creado por Azura Ultra 2.0 Bot y comparte grandes ideas 🎉🌈.",
+      "¡Hola! Azura Ultra 2.0 Bot te da la bienvenida. ¡Prepárate para vivir experiencias increíbles 🚀✨!"
+    ];
+
+    const farewellTexts = [
+      "¡Adiós! Azura Ultra 2.0 Bot te despide con gratitud y te desea lo mejor en tus nuevos caminos 👋💫.",
+      "Hasta pronto, desde Azura Ultra 2.0 Bot te deseamos éxito y esperamos verte de nuevo 🌟🙏.",
+      "¡Chao! Azura Ultra 2.0 Bot se despide, pero aquí siempre tendrás un lugar si decides regresar 🤗💔.",
+      "Nos despedimos con cariño; gracias por compartir momentos en Azura Ultra 2.0 Bot 🏠❤️.",
+      "¡Adiós, amigo(a)! Azura Ultra 2.0 Bot te manda un fuerte abrazo y mucha suerte en el futuro 🤝🌟.",
+      "Hasta luego, y gracias por haber sido parte de nuestra comunidad 🚀💙.",
+      "Chao, que tus futuros proyectos sean tan brillantes como tú 🌟✨. ¡Azura Ultra 2.0 Bot te recuerda siempre!",
+      "¡Nos vemos! Azura Ultra 2.0 Bot te dice adiós con el corazón lleno de gratitud 🤗❤️.",
+      "¡Adiós! Que tu camino esté lleno de éxitos, te lo desea Azura Ultra 2.0 Bot 🚀🌟.",
+      "Hasta pronto, y gracias por haber compartido momentos inolvidables con Azura Ultra 2.0 Bot 👋💖."
+    ];
+
+    // Procesar según la acción: "add" (entrada) o "remove" (salida)
+    if (update.action === "add") {
+      for (const participant of update.participants) {
+        // Crear mención para el usuario
+        const mention = `@${participant.split("@")[0]}`;
+        // Elegir aleatoriamente un mensaje de bienvenida
+        const mensajeTexto = welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)];
+        // Elegir al azar un formato:
+        const option = Math.random();
+        if (option < 0.33) {
+          // Opción 1: Con foto del usuario
+          let profilePicUrl;
+          try {
+            profilePicUrl = await sock.profilePictureUrl(participant, "image");
+          } catch (err) {
+            profilePicUrl = "https://cdn.dorratz.com/files/1741323171822.jpg";
+          }
+          await sock.sendMessage(update.id, {
+            image: { url: profilePicUrl },
+            caption: `👋 ${mention}\n\n${mensajeTexto}`
+          });
+        } else if (option < 0.66) {
+          // Opción 2: Con descripción del grupo (si está disponible)
+          let groupDesc = "";
+          try {
+            const metadata = await sock.groupMetadata(update.id);
+            groupDesc = metadata.desc ? `\n\n📜 *Descripción del grupo:*\n${metadata.desc}` : "";
+          } catch (err) {
+            groupDesc = "";
+          }
+          await sock.sendMessage(update.id, {
+            text: `👋 ${mention}\n\n${mensajeTexto}${groupDesc}`
+          });
+        } else {
+          // Opción 3: Solo texto
+          await sock.sendMessage(update.id, {
+            text: `👋 ${mention}\n\n${mensajeTexto}`
+          });
+        }
+      }
+    } else if (update.action === "remove") {
+      for (const participant of update.participants) {
+        const mention = `@${participant.split("@")[0]}`;
+        const mensajeTexto = farewellTexts[Math.floor(Math.random() * farewellTexts.length)];
+        // Para despedida, usar opción aleatoria entre imagen por defecto o solo texto
+        const option = Math.random();
+        if (option < 0.5) {
+          await sock.sendMessage(update.id, {
+            image: { url: "https://cdn.dorratz.com/files/1741323171822.jpg" },
+            caption: `👋 ${mention}\n\n${mensajeTexto}`
+          });
+        } else {
+          await sock.sendMessage(update.id, {
+            text: `👋 ${mention}\n\n${mensajeTexto}`
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error en el evento group-participants.update:", error);
+  }
+});
+
+            
             
             // 🟢 Consola de mensajes entrantes con diseño
 sock.ev.on("messages.upsert", async (messageUpsert) => {
