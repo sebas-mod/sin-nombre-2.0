@@ -197,99 +197,92 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 // pon mas comando aqui abajo
 case 'pareja':
 case 'parejas': {
-    try {
-        const chatId = msg.key.remoteJid;
-        const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
+  // Declaramos chatId fuera del try para que esté disponible en el catch
+  const chatId = msg.key.remoteJid;
+  try {
+    const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
 
-        if (!isGroup) {
-            return sock.sendMessage(
-                chatId,
-                { text: "❌ *Este comando solo funciona en grupos.*" },
-                { quoted: msg }
-            );
-        }
-
-        // 🔄 Enviar reacción mientras se procesa el comando
-        await sock.sendMessage(chatId, { 
-            react: { text: "💞", key: msg.key } 
-        });
-
-        // Obtener lista de participantes del grupo
-        const chatMetadata = await sock.groupMetadata(chatId);
-        let participants = chatMetadata.participants.map(p => p.id);
-
-        // Si hay menos de 2 personas en el grupo
-        if (participants.length < 2) {
-            return sock.sendMessage(
-                chatId,
-                { text: "⚠️ *Necesitas al menos 2 personas en el grupo para formar parejas.*" },
-                { quoted: msg }
-            );
-        }
-
-        // Mezclar la lista de participantes aleatoriamente
-        participants = participants.sort(() => Math.random() - 0.5);
-
-        // Crear parejas (máximo 5 parejas)
-        let parejas = [];
-        let maxParejas = Math.min(5, Math.floor(participants.length / 2));
-        for (let i = 0; i < maxParejas; i++) {
-            let pareja = [participants.pop(), participants.pop()];
-            parejas.push(pareja);
-        }
-
-        // Si queda una persona sin pareja
-        let solo = participants.length === 1 ? participants[0] : null;
-
-        // Mensajes románticos aleatorios
-        const frases = [
-            "🌹 *Un amor destinado...*",
-            "💞 *¡Esta pareja tiene química!*",
-            "❤️ *¡Qué hermosos juntos!*",
-            "💕 *Cupido hizo su trabajo...*",
-            "💑 *Parece que el destino los unió.*"
-        ];
-
-        // Generar el mensaje con todas las parejas
-        let mensaje = `💖 *Parejas del Grupo* 💖\n\n`;
-        parejas.forEach((p, i) => {
-            mensaje += `💍 *Pareja ${i + 1}:* @${p[0].split("@")[0]} 💕 @${p[1].split("@")[0]}\n`;
-            mensaje += `📜 ${frases[Math.floor(Math.random() * frases.length)]}\n\n`;
-        });
-
-        if (solo) {
-            mensaje += `😢 *@${solo.split("@")[0]} se quedó sin pareja...* 💔\n`;
-        }
-
-        mensaje += `\n🌟 *¿Será el inicio de una gran historia de amor?* 💘`;
-
-        // Enviar el mensaje con la imagen en un solo mensaje
-        await sock.sendMessage(
-            chatId,
-            {
-                image: { url: "https://cdn.dorratz.com/files/1741340936306.jpg" },
-                caption: mensaje,
-                mentions: parejas.flat().concat(solo ? [solo] : [])
-            },
-            { quoted: msg }
-        );
-
-        // ✅ Enviar reacción de éxito
-        await sock.sendMessage(chatId, { 
-            react: { text: "✅", key: msg.key } 
-        });
-
-    } catch (error) {
-        console.error('❌ Error en el comando .pareja:', error);
-        await sock.sendMessage(chatId, { 
-            text: '❌ *Error inesperado al formar parejas.*' 
-        }, { quoted: msg });
-
-        // ❌ Enviar reacción de error
-        await sock.sendMessage(chatId, { 
-            react: { text: "❌", key: msg.key } 
-        });
+    if (!isGroup) {
+      return sock.sendMessage(
+        chatId,
+        { text: "❌ *Este comando solo funciona en grupos.*" },
+        { quoted: msg }
+      );
     }
+
+    // 🔄 Enviar reacción mientras se procesa el comando
+    await sock.sendMessage(chatId, { react: { text: "💞", key: msg.key } });
+
+    // Obtener lista de participantes del grupo
+    const chatMetadata = await sock.groupMetadata(chatId);
+    let participants = chatMetadata.participants.map(p => p.id);
+
+    // Si hay menos de 2 personas en el grupo
+    if (participants.length < 2) {
+      return sock.sendMessage(
+        chatId,
+        { text: "⚠️ *Necesitas al menos 2 personas en el grupo para formar parejas.*" },
+        { quoted: msg }
+      );
+    }
+
+    // Mezclar la lista de participantes aleatoriamente
+    participants = participants.sort(() => Math.random() - 0.5);
+
+    // Crear parejas (máximo 5 parejas)
+    let parejas = [];
+    let maxParejas = Math.min(5, Math.floor(participants.length / 2));
+    for (let i = 0; i < maxParejas; i++) {
+      let pareja = [participants.pop(), participants.pop()];
+      parejas.push(pareja);
+    }
+
+    // Si queda una persona sin pareja
+    let solo = (participants.length === 1) ? participants[0] : null;
+
+    // Frases aleatorias para acompañar
+    const frases = [
+      "🌹 *Un amor destinado...*",
+      "💞 *¡Esta pareja tiene química!*",
+      "❤️ *¡Qué hermosos juntos!*",
+      "💕 *Cupido hizo su trabajo...*",
+      "💑 *Parece que el destino los unió.*"
+    ];
+
+    // Generar el mensaje con todas las parejas
+    let mensaje = `💖 *Parejas del Grupo* 💖\n\n`;
+    parejas.forEach((p, i) => {
+      mensaje += `💍 *Pareja ${i + 1}:* @${p[0].split("@")[0]} 💕 @${p[1].split("@")[0]}\n`;
+      mensaje += `📜 ${frases[Math.floor(Math.random() * frases.length)]}\n\n`;
+    });
+    if (solo) {
+      mensaje += `😢 *@${solo.split("@")[0]} se quedó sin pareja...* 💔\n`;
+    }
+    mensaje += `\n🌟 *¿Será el inicio de una gran historia de amor?* 💘`;
+
+    // Enviar el mensaje con imagen y menciones (las menciones son "ocultas" en el mensaje)
+    await sock.sendMessage(
+      chatId,
+      {
+        image: { url: "https://cdn.dorratz.com/files/1741340936306.jpg" },
+        caption: mensaje,
+        mentions: parejas.flat().concat(solo ? [solo] : [])
+      },
+      { quoted: msg }
+    );
+
+    // ✅ Enviar reacción de éxito
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error('❌ Error en el comando .pareja:', error);
+    // Usamos chatId ya definido para enviar el mensaje de error
+    await sock.sendMessage(chatId, { 
+      text: '❌ *Error inesperado al formar parejas.*' 
+    }, { quoted: msg });
+    await sock.sendMessage(chatId, { 
+      react: { text: "❌", key: msg.key } 
+    });
+  }
 }
 break;
             
