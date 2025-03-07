@@ -209,6 +209,8 @@ case 'tag': {
     const allMentions = groupMetadata.participants.map(p => p.id);
     
     let messageToForward = null;
+    let hasMedia = false;
+
     // Si se responde a un mensaje (reply)
     if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
@@ -227,6 +229,7 @@ case 'tag': {
         if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
         const mimetype = quoted.imageMessage.mimetype || "image/jpeg";
         messageToForward = { image: buffer, caption: quoted.imageMessage.caption || "", mimetype };
+        hasMedia = true;
       } else if (quoted.videoMessage) {
         // Descargar video
         const stream = await downloadContentFromMessage(quoted.videoMessage, "video");
@@ -237,6 +240,7 @@ case 'tag': {
         if (!buffer || buffer.length === 0) throw new Error("Video buffer is empty");
         const mimetype = quoted.videoMessage.mimetype || "video/mp4";
         messageToForward = { video: buffer, caption: quoted.videoMessage.caption || "", mimetype };
+        hasMedia = true;
       } else if (quoted.stickerMessage) {
         // Descargar sticker
         const stream = await downloadContentFromMessage(quoted.stickerMessage, "sticker");
@@ -246,6 +250,7 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Sticker buffer is empty");
         messageToForward = { sticker: buffer };
+        hasMedia = true;
       } else if (quoted.documentMessage) {
         // Descargar documento
         const stream = await downloadContentFromMessage(quoted.documentMessage, "document");
@@ -256,14 +261,20 @@ case 'tag': {
         if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
         const mimetype = quoted.documentMessage.mimetype || "application/pdf";
         messageToForward = { document: buffer, caption: quoted.documentMessage.caption || "", mimetype };
+        hasMedia = true;
       } else {
         // Si no se reconoce el tipo, se envía sin contenido
         messageToForward = { text: "" };
       }
-    } else if (args.join(" ").trim().length > 0) {
-      // Si no se responde a un mensaje, se utiliza el texto ingresado
+    }
+
+    // Si no hay mensaje citado pero hay texto ingresado, usar ese texto
+    if (!hasMedia && args.join(" ").trim().length > 0) {
       messageToForward = { text: args.join(" ") };
-    } else {
+    }
+
+    // Si no se detectó ni texto ni multimedia, enviar advertencia
+    if (!messageToForward) {
       await sock.sendMessage(chatId, { text: "⚠️ Debes responder a un mensaje o proporcionar un texto para reenviar." }, { quoted: msg });
       return;
     }
