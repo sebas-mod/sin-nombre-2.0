@@ -195,6 +195,94 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'ship': {
+    try {
+        const chatId = msg.key.remoteJid;
+        const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
+
+        if (!isGroup) {
+            return sock.sendMessage(
+                chatId,
+                { text: "❌ *Este comando solo funciona en grupos.*" },
+                { quoted: msg }
+            );
+        }
+
+        // 🔄 Enviar reacción mientras se procesa el comando
+        await sock.sendMessage(chatId, { 
+            react: { text: "💖", key: msg.key } 
+        });
+
+        let mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
+        let participantes = (await sock.groupMetadata(chatId)).participants.map(p => p.id);
+        
+        let user1, user2;
+        if (mentioned.length === 2) {
+            // Si se mencionaron dos usuarios, usar esos
+            user1 = mentioned[0];
+            user2 = mentioned[1];
+        } else {
+            // Si no se mencionaron dos, generar aleatoriamente
+            if (participantes.length < 2) {
+                return sock.sendMessage(
+                    chatId,
+                    { text: "⚠️ *Se necesitan al menos 2 personas en el grupo para hacer un ship.*" },
+                    { quoted: msg }
+                );
+            }
+
+            // Mezclar la lista de participantes aleatoriamente
+            participantes = participantes.sort(() => Math.random() - 0.5);
+            user1 = participantes.pop();
+            user2 = participantes.pop();
+        }
+
+        // Calcular compatibilidad aleatoria
+        const porcentaje = Math.floor(Math.random() * 101);
+
+        // Frases de compatibilidad
+        let frase = "💔 *No parecen ser el uno para el otro...*";
+        if (porcentaje >= 80) frase = "💞 *¡Una pareja perfecta, destinados a estar juntos!*";
+        else if (porcentaje >= 50) frase = "💖 *Hay química, pero aún pueden mejorar.*";
+        else if (porcentaje >= 20) frase = "💕 *Se llevan bien, pero no es un amor tan fuerte.*";
+
+        // Construir mensaje
+        let mensaje = `💘 *Ship del Amor* 💘\n\n`;
+        mensaje += `❤️ *Pareja:* @${user1.split("@")[0]} 💕 @${user2.split("@")[0]}\n`;
+        mensaje += `🔮 *Compatibilidad:* *${porcentaje}%*\n`;
+        mensaje += `📜 ${frase}\n\n`;
+        mensaje += `💍 *¿Deberían casarse? 🤔*`;
+
+        // Enviar imagen con el ship
+        await sock.sendMessage(
+            chatId,
+            {
+                image: { url: "https://cdn.dorratz.com/files/1741340936306.jpg" },
+                caption: mensaje,
+                mentions: [user1, user2]
+            },
+            { quoted: msg }
+        );
+
+        // ✅ Enviar reacción de éxito
+        await sock.sendMessage(chatId, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error('❌ Error en el comando .ship:', error);
+        await sock.sendMessage(chatId, { 
+            text: '❌ *Error inesperado al calcular el ship.*' 
+        }, { quoted: msg });
+
+        // ❌ Enviar reacción de error
+        await sock.sendMessage(chatId, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+}
+break;
+        
 case 'pareja':
 case 'parejas': {
   // Declaramos chatId fuera del try para que esté disponible en el catch
