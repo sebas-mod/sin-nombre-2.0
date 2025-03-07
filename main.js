@@ -210,12 +210,11 @@ case 'tag': {
     
     let messageToForward = null;
     let hasMedia = false;
-
+    
     // Si se responde a un mensaje (reply)
     if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
       if (quoted.conversation) {
-        // Mensaje de texto simple
         messageToForward = { text: quoted.conversation };
       } else if (quoted.extendedTextMessage && quoted.extendedTextMessage.text) {
         messageToForward = { text: quoted.extendedTextMessage.text };
@@ -228,7 +227,10 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
         const mimetype = quoted.imageMessage.mimetype || "image/jpeg";
-        messageToForward = { image: buffer, caption: quoted.imageMessage.caption || "", mimetype };
+        messageToForward = { image: buffer, mimetype };
+        if (quoted.imageMessage.caption && quoted.imageMessage.caption.trim().length > 0) {
+          messageToForward.caption = quoted.imageMessage.caption;
+        }
         hasMedia = true;
       } else if (quoted.videoMessage) {
         // Descargar video
@@ -239,7 +241,10 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Video buffer is empty");
         const mimetype = quoted.videoMessage.mimetype || "video/mp4";
-        messageToForward = { video: buffer, caption: quoted.videoMessage.caption || "", mimetype };
+        messageToForward = { video: buffer, mimetype };
+        if (quoted.videoMessage.caption && quoted.videoMessage.caption.trim().length > 0) {
+          messageToForward.caption = quoted.videoMessage.caption;
+        }
         hasMedia = true;
       } else if (quoted.stickerMessage) {
         // Descargar sticker
@@ -260,26 +265,29 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
         const mimetype = quoted.documentMessage.mimetype || "application/pdf";
-        messageToForward = { document: buffer, caption: quoted.documentMessage.caption || "", mimetype };
+        messageToForward = { document: buffer, mimetype };
+        if (quoted.documentMessage.caption && quoted.documentMessage.caption.trim().length > 0) {
+          messageToForward.caption = quoted.documentMessage.caption;
+        }
         hasMedia = true;
       } else {
         // Si no se reconoce el tipo, se envía sin contenido
         messageToForward = { text: "" };
       }
     }
-
-    // Si no hay mensaje citado pero hay texto ingresado, usar ese texto
+    
+    // Si no hay mensaje citado pero hay texto ingresado, se usa ese texto
     if (!hasMedia && args.join(" ").trim().length > 0) {
       messageToForward = { text: args.join(" ") };
     }
-
+    
     // Si no se detectó ni texto ni multimedia, enviar advertencia
     if (!messageToForward) {
       await sock.sendMessage(chatId, { text: "⚠️ Debes responder a un mensaje o proporcionar un texto para reenviar." }, { quoted: msg });
       return;
     }
     
-    // Enviar el mensaje con las menciones a todos (las menciones serán "ocultas")
+    // Enviar el mensaje con las menciones "ocultas"
     await sock.sendMessage(chatId, { ...messageToForward, mentions: allMentions }, { quoted: msg });
   } catch (error) {
     console.error("❌ Error en el comando tag:", error);
