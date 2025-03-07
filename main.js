@@ -195,6 +195,118 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'antiarabe': {
+  try {
+    const fs = require("fs");
+    const path = "./activos.json";
+    const chatId = msg.key.remoteJid; // Debe ser un grupo
+    const param = args[0] ? args[0].toLowerCase() : "";
+
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+
+    // Verificar que se haya especificado "on" o "off"
+    if (!param || (param !== "on" && param !== "off")) {
+      await sock.sendMessage(chatId, { 
+        text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}antiarabe on\` o \`${global.prefix}antiarabe off\``
+      }, { quoted: msg });
+      return;
+    }
+
+    // Verificar permisos: el usuario debe ser admin o propietario
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    if (!isAdmin(sock, chatId, senderId) && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { 
+        text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
+      }, { quoted: msg });
+      return;
+    }
+
+    // Cargar o crear el archivo activos.json
+    let activos = {};
+    if (fs.existsSync(path)) {
+      activos = JSON.parse(fs.readFileSync(path, "utf-8"));
+    }
+    // Asegurarse de tener la propiedad "antiarabe"
+    if (!activos.hasOwnProperty("antiarabe")) {
+      activos.antiarabe = {};
+    }
+
+    if (param === "on") {
+      activos.antiarabe[chatId] = true;
+      await sock.sendMessage(chatId, { text: "✅ *Antiarabe activado en este grupo.*" }, { quoted: msg });
+    } else {
+      delete activos.antiarabe[chatId];
+      await sock.sendMessage(chatId, { text: "✅ *Antiarabe desactivado en este grupo.*" }, { quoted: msg });
+    }
+
+    fs.writeFileSync(path, JSON.stringify(activos, null, 2));
+  } catch (error) {
+    console.error("❌ Error en el comando antiarabe:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando antiarabe.*" }, { quoted: msg });
+  }
+  break;
+}
+        
+case 'antilink': {
+  try {
+    const fs = require("fs");
+    const path = "./activos.json";
+    const chatId = msg.key.remoteJid; // ID del grupo
+    const param = args[0] ? args[0].toLowerCase() : "";
+
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+
+    // Verificar que se haya especificado "on" o "off"
+    if (!param || (param !== "on" && param !== "off")) {
+      await sock.sendMessage(chatId, { 
+        text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}antilink on\` o \`${global.prefix}antilink off\``
+      }, { quoted: msg });
+      return;
+    }
+
+    // Verificar permisos: el usuario debe ser admin o propietario
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    if (!isAdmin(sock, chatId, senderId) && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { 
+        text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
+      }, { quoted: msg });
+      return;
+    }
+
+    // Cargar o crear el archivo activos.json
+    let activos = {};
+    if (fs.existsSync(path)) {
+      activos = JSON.parse(fs.readFileSync(path, "utf-8"));
+    }
+    // Asegurarse de tener la propiedad "antilink"
+    if (!activos.hasOwnProperty("antilink")) {
+      activos.antilink = {};
+    }
+
+    if (param === "on") {
+      activos.antilink[chatId] = true;
+      await sock.sendMessage(chatId, { text: "✅ *Antilink activado en este grupo.*" }, { quoted: msg });
+    } else {
+      delete activos.antilink[chatId];
+      await sock.sendMessage(chatId, { text: "✅ *Antilink desactivado en este grupo.*" }, { quoted: msg });
+    }
+
+    fs.writeFileSync(path, JSON.stringify(activos, null, 2));
+  } catch (error) {
+    console.error("❌ Error en el comando antilink:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando antilink.*" }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'welcome': {
   try {
     const fs = require("fs");
