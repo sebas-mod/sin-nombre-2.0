@@ -96,41 +96,69 @@ let modos = cargarModos();
                     return false;
                 }
             }
-// Almacenar los usuarios en línea por cada grupo
 
-// Almacenar los usuarios en línea por cada grupo (hacerlo accesible globalmente)
-global.onlineUsers = {};
-// Detectar cambios de presencia (quién está en línea y quién no)
-// Detectar cambios de presencia (quién está en línea y quién no)
-sock.ev.on("presence.update", async (presence) => {
-    const chatId = presence.id;
-    const userId = presence.participant;
-
-    if (!chatId.endsWith("@g.us")) return; // Solo en grupos
-
-    if (presence.presence === "available") {
-        if (!global.onlineUsers[chatId]) global.onlineUsers[chatId] = new Set();
-        global.onlineUsers[chatId].add(userId);
-    } else if (presence.presence === "unavailable" || presence.presence === "composing") {
-        if (global.onlineUsers[chatId]) global.onlineUsers[chatId].delete(userId);
-    }
-});
 // Listener para detectar cambios en los participantes de un grupo (bienvenida y despedida)
 sock.ev.on("group-participants.update", async (update) => {
   try {
     // Solo operar en grupos
     if (!update.id.endsWith("@g.us")) return;
 
-    // Cargar la configuración de activos (activos.json) para ver si la función welcome está activada en este grupo
     const fs = require("fs");
     const activosPath = "./activos.json";
     let activos = {};
     if (fs.existsSync(activosPath)) {
       activos = JSON.parse(fs.readFileSync(activosPath, "utf-8"));
     }
+
+    // ***************** LÓGICA ANTIARABE *****************
+    // Si la función antiarabe está activada en este grupo...
+    if (activos.antiarabe && activos.antiarabe[update.id]) {
+      // Lista de prefijos prohibidos (sin el signo +)
+      const disallowedPrefixes = ["20", "212", "213", "216", "218", "222", "249", "252", "253", "269", "962", "963", "964", "965", "966", "967", "968", "970", "971", "973", "974"];
+      if (update.action === "add") {
+        // Obtener metadata del grupo para verificar administradores
+        let groupMetadata = {};
+        try {
+          groupMetadata = await sock.groupMetadata(update.id);
+        } catch (err) {
+          console.error("Error obteniendo metadata del grupo:", err);
+        }
+        for (const participant of update.participants) {
+          // Extraer el número (la parte antes de "@")
+          const phoneNumber = participant.split("@")[0];
+          // Comprobar si el número comienza con alguno de los prefijos prohibidos
+          const isDisallowed = disallowedPrefixes.some(prefix => phoneNumber.startsWith(prefix));
+          if (isDisallowed) {
+            // Verificar si el usuario es admin o propietario
+            let bypass = false;
+            const participantInfo = groupMetadata.participants.find(p => p.id === participant);
+            if (participantInfo && (participantInfo.admin === "admin" || participantInfo.admin === "superadmin")) {
+              bypass = true;
+            }
+            if (!bypass && !isOwner(participant)) {
+              // Enviar aviso mencionando al usuario
+              await sock.sendMessage(update.id, {
+                text: `⚠️ @${phoneNumber} tiene un número prohibido y será expulsado.`,
+                mentions: [participant]
+              });
+              // Intentar expulsar al usuario
+              try {
+                await sock.groupParticipantsUpdate(update.id, [participant], "remove");
+              } catch (expulsionError) {
+                console.error("Error al expulsar al usuario:", expulsionError);
+              }
+            }
+          }
+        }
+      }
+    }
+    // **************** FIN LÓGICA ANTIARABE ****************
+
+    // **************** LÓGICA BIENVENIDA/DESPEDIDA ****************
+    // Si la función welcome no está activada en este grupo, salimos
     if (!activos.welcome || !activos.welcome[update.id]) return;
 
-    // Textos "alitorios" integrados en el código para bienvenida y despedida
+    // Textos integrados para bienvenida y despedida
     const welcomeTexts = [
       "¡Bienvenido(a)! Azura Ultra 2.0 Bot te recibe con los brazos abiertos 🤗✨. ¡Disfruta y comparte!",
       "¡Hola! Azura Ultra 2.0 Bot te abraza con alegría 🎉🤖. ¡Prepárate para grandes aventuras!",
@@ -200,7 +228,6 @@ sock.ev.on("group-participants.update", async (update) => {
       for (const participant of update.participants) {
         const mention = `@${participant.split("@")[0]}`;
         const mensajeTexto = farewellTexts[Math.floor(Math.random() * farewellTexts.length)];
-        // Para despedida, intentar obtener la foto del usuario que se retira; si falla, usar URL por defecto.
         const option = Math.random();
         if (option < 0.5) {
           let profilePicUrl;
@@ -222,13 +249,13 @@ sock.ev.on("group-participants.update", async (update) => {
         }
       }
     }
+    // **************** FIN LÓGICA BIENVENIDA/DESPEDIDA ****************
+
   } catch (error) {
     console.error("Error en el evento group-participants.update:", error);
   }
 });
-
-            
-            
+           
             // 🟢 Consola de mensajes entrantes con diseño
 sock.ev.on("messages.upsert", async (messageUpsert) => {
   try {
