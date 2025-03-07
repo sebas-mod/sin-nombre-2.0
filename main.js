@@ -207,13 +207,13 @@ case 'tag': {
     // Obtener metadata del grupo para extraer la lista de participantes (menciones)
     const groupMetadata = await sock.groupMetadata(chatId);
     const allMentions = groupMetadata.participants.map(p => p.id);
-
+    
     let messageToForward = null;
     // Si se responde a un mensaje (reply)
     if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
       if (quoted.conversation) {
-        // Mensaje de texto
+        // Mensaje de texto simple
         messageToForward = { text: quoted.conversation };
       } else if (quoted.extendedTextMessage && quoted.extendedTextMessage.text) {
         messageToForward = { text: quoted.extendedTextMessage.text };
@@ -224,7 +224,9 @@ case 'tag': {
         for await (const chunk of stream) {
           buffer = Buffer.concat([buffer, chunk]);
         }
-        messageToForward = { image: buffer, caption: quoted.imageMessage.caption || "" };
+        if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
+        const mimetype = quoted.imageMessage.mimetype || "image/jpeg";
+        messageToForward = { image: buffer, caption: quoted.imageMessage.caption || "", mimetype };
       } else if (quoted.videoMessage) {
         // Descargar video
         const stream = await downloadContentFromMessage(quoted.videoMessage, "video");
@@ -232,7 +234,9 @@ case 'tag': {
         for await (const chunk of stream) {
           buffer = Buffer.concat([buffer, chunk]);
         }
-        messageToForward = { video: buffer, caption: quoted.videoMessage.caption || "" };
+        if (!buffer || buffer.length === 0) throw new Error("Video buffer is empty");
+        const mimetype = quoted.videoMessage.mimetype || "video/mp4";
+        messageToForward = { video: buffer, caption: quoted.videoMessage.caption || "", mimetype };
       } else if (quoted.stickerMessage) {
         // Descargar sticker
         const stream = await downloadContentFromMessage(quoted.stickerMessage, "sticker");
@@ -240,6 +244,7 @@ case 'tag': {
         for await (const chunk of stream) {
           buffer = Buffer.concat([buffer, chunk]);
         }
+        if (!buffer || buffer.length === 0) throw new Error("Sticker buffer is empty");
         messageToForward = { sticker: buffer };
       } else if (quoted.documentMessage) {
         // Descargar documento
@@ -248,9 +253,11 @@ case 'tag': {
         for await (const chunk of stream) {
           buffer = Buffer.concat([buffer, chunk]);
         }
-        messageToForward = { document: buffer, caption: quoted.documentMessage.caption || "" };
+        if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
+        const mimetype = quoted.documentMessage.mimetype || "application/pdf";
+        messageToForward = { document: buffer, caption: quoted.documentMessage.caption || "", mimetype };
       } else {
-        // Si no se reconoce el tipo, se envía un mensaje vacío (sin texto)
+        // Si no se reconoce el tipo, se envía sin contenido
         messageToForward = { text: "" };
       }
     } else if (args.join(" ").trim().length > 0) {
@@ -261,7 +268,7 @@ case 'tag': {
       return;
     }
     
-    // Enviar el mensaje con las menciones "ocultas"
+    // Enviar el mensaje con las menciones a todos (las menciones serán "ocultas")
     await sock.sendMessage(chatId, { ...messageToForward, mentions: allMentions }, { quoted: msg });
   } catch (error) {
     console.error("❌ Error en el comando tag:", error);
