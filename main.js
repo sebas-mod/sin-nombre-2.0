@@ -272,7 +272,7 @@ case 'antilink': {
       return;
     }
 
-    // Verificar permisos: el usuario debe ser admin o propietario
+    // Verificar permisos: solo administradores o el propietario pueden usar este comando
     const senderId = msg.key.participant || msg.key.remoteJid;
     if (!isAdmin(sock, chatId, senderId) && !isOwner(senderId)) {
       await sock.sendMessage(chatId, { 
