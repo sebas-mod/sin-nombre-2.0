@@ -195,6 +195,40 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'tag': {
+  try {
+    const chatId = msg.key.remoteJid;
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+    // Obtener la metadata del grupo para extraer los IDs de todos los participantes
+    const groupMetadata = await sock.groupMetadata(chatId);
+    const allMentions = groupMetadata.participants.map(p => p.id);
+
+    // Determinar el mensaje a reenviar:
+    // Si se usa como respuesta, se toma el mensaje citado; de lo contrario, se usa el texto que se envíe.
+    let messageToForward;
+    if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      messageToForward = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+    } else if (args.join(" ").trim().length > 0) {
+      messageToForward = { conversation: args.join(" ") };
+    } else {
+      await sock.sendMessage(chatId, { text: "⚠️ *Debes responder a un mensaje o proporcionar un texto para reenviar.*" }, { quoted: msg });
+      return;
+    }
+
+    // Utilizamos la función copyNForward de Baileys para reenviar el mensaje
+    // con la propiedad mentions para notificar a todos.
+    await sock.copyNForward(chatId, messageToForward, false, { mentions: allMentions });
+  } catch (error) {
+    console.error("❌ Error en el comando tag:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando tag.*" }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'tagall':
 case 'invocar':
 case 'todos': {
