@@ -215,7 +215,6 @@ case 'tag': {
     if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
       if (quoted.conversation) {
-        // Mensaje de texto simple
         messageToForward = { text: quoted.conversation };
       } else if (quoted.extendedTextMessage && quoted.extendedTextMessage.text) {
         messageToForward = { text: quoted.extendedTextMessage.text };
@@ -228,12 +227,9 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
         const mimetype = quoted.imageMessage.mimetype || "image/jpeg";
-        // Solo incluir caption si no está vacío
-        const caption = (quoted.imageMessage.caption && quoted.imageMessage.caption.trim().length > 0) 
-          ? quoted.imageMessage.caption 
-          : undefined;
-        messageToForward = { image: buffer, mimetype };
-        if (caption) messageToForward.caption = caption;
+        // Forzar caption como cadena vacía si no existe
+        const caption = quoted.imageMessage.caption ? quoted.imageMessage.caption : "";
+        messageToForward = { image: buffer, mimetype, caption };
         hasMedia = true;
       } else if (quoted.videoMessage) {
         // Descargar video
@@ -244,11 +240,8 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Video buffer is empty");
         const mimetype = quoted.videoMessage.mimetype || "video/mp4";
-        const caption = (quoted.videoMessage.caption && quoted.videoMessage.caption.trim().length > 0) 
-          ? quoted.videoMessage.caption 
-          : undefined;
-        messageToForward = { video: buffer, mimetype };
-        if (caption) messageToForward.caption = caption;
+        const caption = quoted.videoMessage.caption ? quoted.videoMessage.caption : "";
+        messageToForward = { video: buffer, mimetype, caption };
         hasMedia = true;
       } else if (quoted.stickerMessage) {
         // Descargar sticker
@@ -269,25 +262,26 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
         const mimetype = quoted.documentMessage.mimetype || "application/pdf";
-        const caption = (quoted.documentMessage.caption && quoted.documentMessage.caption.trim().length > 0)
-          ? quoted.documentMessage.caption 
-          : undefined;
-        messageToForward = { document: buffer, mimetype };
-        if (caption) messageToForward.caption = caption;
+        const caption = quoted.documentMessage.caption ? quoted.documentMessage.caption : "";
+        messageToForward = { document: buffer, mimetype, caption };
         hasMedia = true;
       } else {
-        // Si no se reconoce el tipo, se envía sin contenido
         messageToForward = { text: "" };
       }
-    } else if (args.join(" ").trim().length > 0) {
-      // Si no se responde a un mensaje, se utiliza el texto ingresado
+    }
+    
+    // Si no se respondió a un mensaje pero hay texto ingresado, se usa ese texto
+    if (!hasMedia && args.join(" ").trim().length > 0) {
       messageToForward = { text: args.join(" ") };
-    } else {
+    }
+    
+    // Si no se detectó ni texto ni multimedia, enviar advertencia
+    if (!messageToForward) {
       await sock.sendMessage(chatId, { text: "⚠️ Debes responder a un mensaje o proporcionar un texto para reenviar." }, { quoted: msg });
       return;
     }
     
-    // Enviar el mensaje con las menciones a todos (las menciones serán "ocultas")
+    // Enviar el mensaje con las menciones a todos (menciones "ocultas")
     await sock.sendMessage(chatId, { ...messageToForward, mentions: allMentions }, { quoted: msg });
   } catch (error) {
     console.error("❌ Error en el comando tag:", error);
