@@ -195,6 +195,63 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'welcome': {
+  try {
+    const fs = require("fs");
+    const path = "./activos.json";
+    const chatId = msg.key.remoteJid; // ID del grupo
+    const param = args[0] ? args[0].toLowerCase() : "";
+
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+
+    // Verificar que se haya especificado "on" o "off"
+    if (!param || (param !== "on" && param !== "off")) {
+      await sock.sendMessage(chatId, { 
+        text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}welcome on\` o \`${global.prefix}welcome off\``
+      }, { quoted: msg });
+      return;
+    }
+
+    // Verificar permisos: el usuario debe ser admin o propietario
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    if (!isAdmin(sock, chatId, senderId) && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { 
+        text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
+      }, { quoted: msg });
+      return;
+    }
+
+    // Cargar o crear el archivo activos.json
+    let activos = {};
+    if (fs.existsSync(path)) {
+      activos = JSON.parse(fs.readFileSync(path, "utf-8"));
+    }
+    // Asegurarse de tener la propiedad "welcome" (para bienvenida y despedida)
+    if (!activos.hasOwnProperty("welcome")) {
+      activos.welcome = {};
+    }
+
+    if (param === "on") {
+      activos.welcome[chatId] = true;
+      await sock.sendMessage(chatId, { text: "✅ *Bienvenidas y despedidas activadas en este grupo.*" }, { quoted: msg });
+    } else {
+      // Para "off", eliminamos la propiedad para ese grupo
+      delete activos.welcome[chatId];
+      await sock.sendMessage(chatId, { text: "✅ *Bienvenidas y despedidas desactivadas en este grupo.*" }, { quoted: msg });
+    }
+
+    fs.writeFileSync(path, JSON.stringify(activos, null, 2));
+  } catch (error) {
+    console.error("❌ Error en el comando welcome:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando welcome.*" }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'robar': {
   try {
     const fs = require("fs");
