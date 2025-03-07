@@ -197,6 +197,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 // pon mas comando aqui abajo
 case 'personalidad': {
   try {
+    const axios = require("axios");
     // Intentar obtener el ID del usuario a analizar (por reply o mención)
     let userId = msg.message?.extendedTextMessage?.contextInfo?.participant || (msg.mentionedJid && msg.mentionedJid[0]);
     if (!userId) {
@@ -207,10 +208,8 @@ case 'personalidad': {
       );
     }
 
-    // Enviar reacción mientras se procesa el comando
-    await sock.sendMessage(msg.key.remoteJid, { 
-      react: { text: "🎭", key: msg.key } 
-    });
+    // Enviar reacción mientras se procesa
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "🎭", key: msg.key } });
 
     // Generar valores aleatorios para cada aspecto de la personalidad (1 - 100)
     const personalidad = {
@@ -235,19 +234,24 @@ case 'personalidad': {
     }
     mensaje += `📊 *Datos generados aleatoriamente. ¿Crees que esto representa a esta persona? 🤔*\n`;
 
-    // Obtener foto de perfil del usuario; si falla, usar la imagen por defecto
+    // Intentar obtener la foto de perfil del usuario; si falla, usar imagen por defecto
     let profilePicUrl;
     try {
-      profilePicUrl = await sock.profilePictureUrl(userId, 'image');
+      profilePicUrl = await sock.profilePictureUrl(userId, "image");
+      if (!profilePicUrl) profilePicUrl = "https://cdn.dorratz.com/files/1741338863359.jpg";
     } catch (e) {
       profilePicUrl = "https://cdn.dorratz.com/files/1741338863359.jpg";
     }
-
+    
+    // Descargar la imagen mediante axios y convertir a buffer
+    const response = await axios.get(profilePicUrl, { responseType: "arraybuffer" });
+    const profilePicBuffer = Buffer.from(response.data, "binary");
+    
     // Enviar el mensaje con la imagen y el análisis, mencionando al usuario
     await sock.sendMessage(
       msg.key.remoteJid,
       {
-        image: { url: profilePicUrl },
+        image: profilePicBuffer,
         caption: mensaje,
         mentions: [userId]
       },
@@ -255,17 +259,15 @@ case 'personalidad': {
     );
 
     // Enviar reacción de éxito
-    await sock.sendMessage(msg.key.remoteJid, { 
-      react: { text: "✅", key: msg.key } 
-    });
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
   } catch (error) {
-    console.error('❌ Error en el comando .personalidad:', error);
-    await sock.sendMessage(msg.key.remoteJid, { 
-      text: '❌ *Error inesperado al generar la personalidad.*' 
-    }, { quoted: msg });
-    await sock.sendMessage(msg.key.remoteJid, { 
-      react: { text: "❌", key: msg.key } 
-    });
+    console.error("❌ Error en el comando .personalidad:", error);
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ *Error inesperado al generar la personalidad.*" },
+      { quoted: msg }
+    );
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key } });
   }
   break;
 }
