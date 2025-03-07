@@ -216,9 +216,19 @@ case 'antiarabe': {
       return;
     }
 
-    // Verificar permisos: el usuario debe ser admin o propietario
+    // Verificar permisos: solo administradores o el propietario pueden usar este comando
     const senderId = msg.key.participant || msg.key.remoteJid;
-    if (!isAdmin(sock, chatId, senderId) && !isOwner(senderId)) {
+    let isSenderAdmin = false;
+    try {
+      const groupMetadata = await sock.groupMetadata(chatId);
+      const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
+      if (senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin")) {
+        isSenderAdmin = true;
+      }
+    } catch (err) {
+      console.error("Error obteniendo metadata del grupo:", err);
+    }
+    if (!isSenderAdmin && !isOwner(senderId)) {
       await sock.sendMessage(chatId, { 
         text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
       }, { quoted: msg });
@@ -266,16 +276,26 @@ case 'antilink': {
 
     // Verificar que se haya especificado "on" o "off"
     if (!param || (param !== "on" && param !== "off")) {
-      await sock.sendMessage(chatId, { 
+      await sock.sendMessage(chatId, {
         text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}antilink on\` o \`${global.prefix}antilink off\``
       }, { quoted: msg });
       return;
     }
 
     // Verificar permisos: solo administradores o el propietario pueden usar este comando
-    const senderId = msg.key.participant || msg.key.remoteJid;
-    if (!isAdmin(sock, chatId, senderId) && !isOwner(senderId)) {
-      await sock.sendMessage(chatId, { 
+    const senderIdFull = msg.key.participant || msg.key.remoteJid;
+    let isSenderAdmin = false;
+    try {
+      const groupMetadata = await sock.groupMetadata(chatId);
+      const senderParticipant = groupMetadata.participants.find(p => p.id === senderIdFull);
+      if (senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin")) {
+        isSenderAdmin = true;
+      }
+    } catch (err) {
+      console.error("Error obteniendo metadata del grupo:", err);
+    }
+    if (!isSenderAdmin && !isOwner(senderIdFull)) {
+      await sock.sendMessage(chatId, {
         text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
       }, { quoted: msg });
       return;
@@ -328,9 +348,19 @@ case 'welcome': {
       return;
     }
 
-    // Verificar permisos: el usuario debe ser admin o propietario
-    const senderId = msg.key.participant || msg.key.remoteJid;
-    if (!isAdmin(sock, chatId, senderId) && !isOwner(senderId)) {
+    // Verificar permisos: solo administradores o el propietario pueden usar este comando
+    const senderIdFull = msg.key.participant || msg.key.remoteJid;
+    let isSenderAdmin = false;
+    try {
+      const groupMetadata = await sock.groupMetadata(chatId);
+      const senderParticipant = groupMetadata.participants.find(p => p.id === senderIdFull);
+      if (senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin")) {
+        isSenderAdmin = true;
+      }
+    } catch (err) {
+      console.error("Error obteniendo metadata del grupo:", err);
+    }
+    if (!isSenderAdmin && !isOwner(senderIdFull)) {
       await sock.sendMessage(chatId, { 
         text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
       }, { quoted: msg });
@@ -351,7 +381,6 @@ case 'welcome': {
       activos.welcome[chatId] = true;
       await sock.sendMessage(chatId, { text: "✅ *Bienvenidas y despedidas activadas en este grupo.*" }, { quoted: msg });
     } else {
-      // Para "off", eliminamos la propiedad para ese grupo
       delete activos.welcome[chatId];
       await sock.sendMessage(chatId, { text: "✅ *Bienvenidas y despedidas desactivadas en este grupo.*" }, { quoted: msg });
     }
