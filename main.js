@@ -195,6 +195,59 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'setgrupo': {
+  try {
+    const fs = require("fs");
+    const chatId = msg.key.remoteJid; // ID del grupo
+
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+
+    // Obtener el ID del usuario que envía el comando
+    const senderId = msg.key.participant || msg.key.remoteJid;
+
+    // Obtener metadata del grupo para verificar permisos
+    const groupMetadata = await sock.groupMetadata(chatId);
+    const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
+    const isSenderAdmin = senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin");
+    if (!isSenderAdmin && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*" }, { quoted: msg });
+      return;
+    }
+
+    // Verificar que se esté respondiendo a un mensaje que contenga una imagen
+    if (!msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+        !msg.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Debes responder a un mensaje que contenga una imagen para establecerla como foto de grupo.*" }, { quoted: msg });
+      return;
+    }
+
+    const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+    // Descargar la imagen del mensaje citado
+    const stream = await downloadContentFromMessage(quoted.imageMessage, "image");
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+    if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
+
+    // Actualizar la foto de perfil del grupo
+    await sock.updateProfilePicture(chatId, buffer);
+
+    // Enviar confirmación y reacción de éxito
+    await sock.sendMessage(chatId, { text: "✅ *Foto de grupo actualizada correctamente.*" }, { quoted: msg });
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("❌ Error en el comando setgrupo:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al actualizar la foto de grupo.*" }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key } });
+  }
+  break;
+}
+        
 case 'ship': {
     try {
         const chatId = msg.key.remoteJid;
