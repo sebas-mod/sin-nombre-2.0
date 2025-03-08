@@ -286,12 +286,12 @@ case 'menu': {
 case 'menugrupo': {
   try {
     // 📸 Reacción inicial
-    await conn.sendMessage(
-      m.chat,
+    await sock.sendMessage(
+      msg.key.remoteJid,
       {
-        react: { text: "📜", key: m.key }
+        react: { text: "📜", key: msg.key }
       },
-      { quoted: m }
+      { quoted: msg }
     );
 
     const menuTexto = `╔══════════════════╗  
@@ -329,22 +329,22 @@ case 'menugrupo': {
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
 
     // 📸 Enviar el menú con la imagen personalizada
-    await conn.sendMessage(
-      m.chat,
+    await sock.sendMessage(
+      msg.key.remoteJid,
       {
         image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
         caption: menuTexto,
-        mentions: [m.sender]
+        mentions: [msg.sender]
       },
-      { quoted: m }
+      { quoted: msg }
     );
 
   } catch (error) {
     console.error('❌ Error en el comando menugrupo:', error);
-    await conn.sendMessage(
-      m.chat,
+    await sock.sendMessage(
+      msg.key.remoteJid,
       { text: "❌ Ocurrió un error al mostrar el menú de grupo. Intenta nuevamente." },
-      { quoted: m }
+      { quoted: msg }
     );
   }
   break;
