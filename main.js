@@ -195,6 +195,59 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo        
+case 'menuowner': {
+  try {
+    // Reacción inicial
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "👑", key: msg.key }
+    });
+
+    const chatId = msg.key.remoteJid;
+
+    // Construcción del mensaje
+    const captionText = `╔═════════════════════╗  
+║     𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏     ║  
+╚═════════════════════╝  
+
+            𝐌𝐄𝐍𝐔 𝐎𝐖𝐍𝐄𝐑  
+━━━━━━━━━━━━━━━━━━━━━━━━  
+📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗘𝗦𝗣𝗘𝗖𝗜𝗔𝗟𝗘𝗦  
+        (𝐏𝐀𝐑𝐀 𝐄𝐋 𝐃𝐔𝐄Ñ𝐎)  
+━━━━━━━━━━━━━━━━━━━━━━━━  
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯  
+➠ ${global.prefix}bc  
+➠ ${global.prefix}rest  
+➠ ${global.prefix}modoprivado on/off  
+➠ ${global.prefix}addmascota  
+➠ ${global.prefix}addper  
+➠ ${global.prefix}botfoto  
+➠ ${global.prefix}botname  
+➠ ${global.prefix}git  
+➠ ${global.prefix}dar  
+➠ ${global.prefix}dame  
+➠ ${global.prefix}addlista  
+➠ ${global.prefix}deletelista  
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯  
+
+      𝗗𝗲𝘀𝗮𝗿𝗿𝗼𝗹𝗹𝗮𝗱𝗼 𝗽𝗼𝗿: ʳᵘˢˢᵉˡˡ ˣᶻ  
+
+         𝙖𝙯𝙪𝙧𝙖 𝙪𝙡𝙩𝙧𝙖 𝟮.𝟬 𝙗𝙤𝙩`;
+
+    // Enviar el mensaje con la imagen de fondo
+    await sock.sendMessage(chatId, {
+      image: { url: "https://cdn.dorratz.com/files/1741434860617.jpg" },
+      caption: captionText
+    }, { quoted: msg });
+
+  } catch (error) {
+    console.error("❌ Error en el comando menuowner:", error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ Ocurrió un error al mostrar el menú Owner. Inténtalo de nuevo."
+    }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'menurpg': {
   try {
     // Reacción inicial
