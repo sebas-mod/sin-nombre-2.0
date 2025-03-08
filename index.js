@@ -287,7 +287,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
     // ********************** LÓGICA ANTILINK **********************
     if (isGroup) {
-      const fs = require("fs"); // ya está requerido, pero se vuelve a llamar sin problema
+      const fs = require("fs");
       const pathActivos = "./activos.json";
       let activos = {};
       if (fs.existsSync(pathActivos)) {
@@ -300,7 +300,6 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
           if (isOwner(sender)) {
             canBypass = true;
           }
-          // En grupo, obtener metadatos para verificar admin
           try {
             const chatMetadata = await sock.groupMetadata(chatId);
             const participantInfo = chatMetadata.participants.find(p => p.id.includes(sender));
@@ -310,7 +309,6 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
           } catch (err) {
             console.error("Error obteniendo metadata del grupo:", err);
           }
-          // Si no es admin ni propietario, eliminar mensaje y expulsar al usuario
           if (!canBypass) {
             await sock.sendMessage(chatId, { delete: msg.key });
             await sock.sendMessage(chatId, { 
@@ -331,21 +329,21 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
     // Lógica para determinar si el bot debe responder:
     if (!isGroup) {
-      // En chat privado: solo responde si es fromMe, owner o usuario permitido.
+      // En chat privado: solo responde si es fromMe, owner o usuario permitido (según lista.json).
       if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     } else {
       // En grupos: si el modo privado está activo, solo responde si es fromMe, owner o usuario permitido.
       if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     }
 
-    // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
+    // Si el "modo admins" está activado en este grupo, validar si el usuario es admin o propietario
     if (isGroup && modos.modoAdmins[chatId]) {
       const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
       if (chatMetadata) {
         const participant = chatMetadata.participants.find(p => p.id.includes(sender));
         const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
         if (!isAdmin && !isOwner(sender) && !fromMe) {
-          return; // Ignorar mensaje si no es admin ni owner
+          return; // Ignorar mensaje si no es admin ni propietario
         }
       }
     }
@@ -355,12 +353,10 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
       const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
       
-      // Se han removido los bloques de comandos "modoprivado" y "modoadmins"
-      // para que sean ejecutados en otro archivo (por ejemplo, main.js)
+      // Se han removido los bloques de comandos "modoprivado" y "modoadmins" para que sean ejecutados en otro archivo (por ejemplo, main.js)
       // Redirigir cualquier otro comando a handleCommand:
       handleCommand(sock, msg, command, args, sender);
     }
-
   } catch (error) {
     console.error("❌ Error en el evento messages.upsert:", error);
   }
