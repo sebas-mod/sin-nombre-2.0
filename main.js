@@ -297,7 +297,8 @@ case 'menuowner': {
 ➠ ${global.prefix}dar  
 ➠ ${global.prefix}dame  
 ➠ ${global.prefix}addlista  
-➠ ${global.prefix}deletelista  
+➠ ${global.prefix}deletelista
+➠ ${global.prefix}setprefix
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯  
 
       𝗗𝗲𝘀𝗮𝗿𝗿𝗼𝗹𝗹𝗮𝗱𝗼 𝗽𝗼𝗿: ʳᵘˢˢᵉˡˡ ˣᶻ  
