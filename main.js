@@ -249,6 +249,8 @@ Así te registras
 ➤ ${global.prefix}vender  
 ➤ ${global.prefix}quitarventa  
 ➤ ${global.prefix}batallaanime  
+➤ ${global.prefix}comprar  
+➤ ${global.prefix}tiendaper  
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗠𝗔𝗦𝗖𝗢𝗧𝗔𝗦  
 (Sube de nivel a tu mascota y top)  
@@ -264,6 +266,8 @@ Así te registras
 ➤ ${global.prefix}curar  
 ➤ ${global.prefix}nivelmascota  
 ➤ ${global.prefix}batallamascota  
+➤ ${global.prefix}compra  
+➤ ${global.prefix}tiendamascotas  
 
 📌 𝗢𝗧𝗥𝗢𝗦 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦  
 ➤ ${global.prefix}addmascota  
@@ -278,7 +282,9 @@ Así te registras
 ➤ ${global.prefix}topper  
 
 ━━━━━━━━━━━━━━━━━━  
-𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: *Russell xz* 
+𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: russell xz
+
+
 
 ╭────────────────╮  
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
@@ -9819,8 +9825,6 @@ case 'addper': {
     break;
 }
             
-
-        
 case 'addmascota': { 
     try {
         // 🔄 Reacción antes de agregar la mascota
@@ -9828,10 +9832,10 @@ case 'addmascota': {
             react: { text: "🐾", key: msg.key } // Emoji de patas 🐾
         });
 
-        // Verificar permisos (Solo Owner y Admins del grupo)
-        if (!isOwner(sender) && !isAdmin(msg.key.remoteJid, sender)) {
+        // Verificar permisos: solo el owner puede usar este comando
+        if (!isOwner(sender)) {
             await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los administradores del bot pueden agregar mascotas a la tienda.*" 
+                text: "⛔ *Solo el propietario del bot puede agregar mascotas a la tienda.*" 
             }, { quoted: msg });
             return;
         }
