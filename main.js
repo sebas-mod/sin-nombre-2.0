@@ -195,78 +195,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-case 'antidelete': {
-  try {
-    const fs = require("fs");
-    const pathActivos = "./activos.json";
-    const chatId = msg.key.remoteJid; // ID del grupo
-    const param = args[0] ? args[0].toLowerCase() : "";
-
-    // Verificar que se use en un grupo
-    if (!chatId.endsWith("@g.us")) {
-      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
-      return;
-    }
-
-    // Verificar que se haya especificado "on" o "off"
-    if (!param || (param !== "on" && param !== "off")) {
-      await sock.sendMessage(chatId, { 
-        text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}antidelete on\` o \`${global.prefix}antidelete off\``
-      }, { quoted: msg });
-      return;
-    }
-
-    // Verificar permisos: solo los administradores o el propietario pueden usar este comando
-    const senderId = msg.key.participant || msg.key.remoteJid;
-    let isSenderAdmin = false;
-    try {
-      const groupMetadata = await sock.groupMetadata(chatId);
-      const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
-      if (senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin")) {
-        isSenderAdmin = true;
-      }
-    } catch (err) {
-      console.error("Error obteniendo metadata del grupo:", err);
-    }
-    if (!isSenderAdmin && !isOwner(senderId)) {
-      await sock.sendMessage(chatId, { 
-        text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
-      }, { quoted: msg });
-      return;
-    }
-
-    // Enviar reacción inicial para indicar que se recibió el comando
-    await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } });
-
-    // Cargar (o crear) el archivo activos.json
-    let activos = {};
-    if (fs.existsSync(pathActivos)) {
-      activos = JSON.parse(fs.readFileSync(pathActivos, "utf-8"));
-    }
-    // Asegurarse de tener la propiedad "antidelete"
-    if (!activos.hasOwnProperty("antidelete")) {
-      activos.antidelete = {};
-    }
-
-    // Actualizar la propiedad antidelete para este grupo
-    if (param === "on") {
-      activos.antidelete[chatId] = true;
-      await sock.sendMessage(chatId, { text: "✅ *Antidelete activado en este grupo.*" }, { quoted: msg });
-    } else {
-      delete activos.antidelete[chatId];
-      await sock.sendMessage(chatId, { text: "✅ *Antidelete desactivado en este grupo.*" }, { quoted: msg });
-    }
-    fs.writeFileSync(pathActivos, JSON.stringify(activos, null, 2));
-
-    // Enviar reacción final de confirmación
-    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
-  } catch (error) {
-    console.error("❌ Error en el comando antidelete:", error);
-    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando antidelete.*" }, { quoted: msg });
-  }
-  break;
-}
-
         
 case 'setinfo': {
   try {
@@ -413,12 +341,19 @@ case 'add': {
     const chatId = msg.key.remoteJid;
     // Verificar que se use en un grupo
     if (!chatId.endsWith("@g.us")) {
-      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      await sock.sendMessage(
+        chatId,
+        { text: "⚠️ *Este comando solo se puede usar en grupos.*" },
+        { quoted: msg }
+      );
       return;
     }
     
     // Enviar reacción inicial al recibir el comando
-    await sock.sendMessage(chatId, { react: { text: "🚀", key: msg.key } });
+    await sock.sendMessage(
+      chatId,
+      { react: { text: "🚀", key: msg.key } }
+    );
     
     // Obtener metadata del grupo para verificar permisos
     const groupMetadata = await sock.groupMetadata(chatId);
@@ -426,22 +361,32 @@ case 'add': {
     const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
     const isSenderAdmin = senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin");
     if (!isSenderAdmin && !isOwner(senderId)) {
-      await sock.sendMessage(chatId, { text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*" }, { quoted: msg });
+      await sock.sendMessage(
+        chatId,
+        { text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*" },
+        { quoted: msg }
+      );
       return;
     }
     
     // Verificar que se proporcione un número
     if (!args[0]) {
-      await sock.sendMessage(chatId, { 
-        text: "⚠️ *Debes proporcionar un número para agregar.*\nEjemplo: `.add +50766066666`" 
-      }, { quoted: msg });
+      await sock.sendMessage(
+        chatId,
+        { text: "⚠️ *Debes proporcionar un número para agregar.*\nEjemplo: `.add +50766066666`" },
+        { quoted: msg }
+      );
       return;
     }
     
     // Limpiar el número (remover espacios, guiones, etc.)
     let rawNumber = args.join("").replace(/\D/g, "");
     if (!rawNumber || rawNumber.length < 5) {
-      await sock.sendMessage(chatId, { text: "⚠️ *El número proporcionado no es válido.*" }, { quoted: msg });
+      await sock.sendMessage(
+        chatId,
+        { text: "⚠️ *El número proporcionado no es válido.*" },
+        { quoted: msg }
+      );
       return;
     }
     
@@ -449,7 +394,10 @@ case 'add': {
     const targetId = `${rawNumber}@s.whatsapp.net`;
     
     // Enviar reacción indicando el inicio del proceso de agregar
-    await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } });
+    await sock.sendMessage(
+      chatId,
+      { react: { text: "⏳", key: msg.key } }
+    );
     
     try {
       // Intentar agregar al usuario al grupo
@@ -461,42 +409,61 @@ case 'add': {
         { text: `✅ Se ha agregado a @${rawNumber} al grupo.`, mentions: [targetId] },
         { quoted: msg }
       );
+      
       // Enviar reacción final de éxito
-      await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+      await sock.sendMessage(
+        chatId,
+        { react: { text: "✅", key: msg.key } }
+      );
     } catch (error) {
       console.error("❌ Error al agregar al usuario:", error);
-      // Si falla al agregar, se asume que el usuario tiene configuraciones de privacidad activas.
-      // Obtener el código de invitación del grupo
+      
+      // Intentar obtener el código de invitación del grupo
       let code;
       try {
         code = await sock.groupInviteCode(chatId);
       } catch (codeError) {
         console.error("❌ Error al obtener el código de invitación:", codeError);
       }
+      
       if (code) {
-        let link = "https://chat.whatsapp.com/" + code;
-        // Notificar en el grupo que no se pudo agregar y se envió la invitación
+        const link = "https://chat.whatsapp.com/" + code;
+        // Notificar en el grupo que no se pudo agregar y se enviará la invitación
         await sock.sendMessage(
           chatId,
           { text: `⚠️ No se pudo agregar a @${rawNumber} directamente por sus configuraciones de privacidad. Se le ha enviado una invitación para unirse al grupo.`, mentions: [targetId] },
           { quoted: msg }
         );
-        // Intentar enviar la invitación de forma privada al usuario
+        
+        // Opcional: Agregar el contacto antes de enviar la invitación (si la API lo permite)
         try {
-          await sock.sendMessage(
-            targetId,
-            { text: `Hola, te invito a unirte al grupo. Haz clic en el siguiente enlace para unirte:\n\n${link}` }
-          );
-        } catch (privError) {
-          console.error("❌ Error al enviar invitación privada:", privError);
-          await sock.sendMessage(
-            chatId,
-            { text: "❌ Ocurrió un error al enviar la invitación privada al usuario." },
-            { quoted: msg }
-          );
+          // await sock.addContact(targetId); // Descomenta esta línea si dispones del método
+        } catch (contactError) {
+          console.error("❌ Error al agregar el contacto temporalmente:", contactError);
         }
-        // Enviar reacción final de éxito (a pesar del error en agregar)
-        await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+        
+        // Enviar la invitación privada con un retraso para mejorar la entrega
+        setTimeout(async () => {
+          try {
+            await sock.sendMessage(
+              targetId,
+              { text: `Hola, te invito a unirte al grupo. Haz clic en el siguiente enlace para unirte:\n\n${link}` }
+            );
+          } catch (privError) {
+            console.error("❌ Error al enviar invitación privada:", privError);
+            await sock.sendMessage(
+              chatId,
+              { text: "❌ Ocurrió un error al enviar la invitación privada al usuario." },
+              { quoted: msg }
+            );
+          }
+        }, 2000);
+        
+        // Enviar reacción final de éxito (a pesar del error al agregar)
+        await sock.sendMessage(
+          chatId,
+          { react: { text: "✅", key: msg.key } }
+        );
       } else {
         await sock.sendMessage(
           chatId,
