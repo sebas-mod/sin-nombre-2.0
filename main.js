@@ -195,6 +195,78 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'antidelete': {
+  try {
+    const fs = require("fs");
+    const pathActivos = "./activos.json";
+    const chatId = msg.key.remoteJid; // ID del grupo
+    const param = args[0] ? args[0].toLowerCase() : "";
+
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+
+    // Verificar que se haya especificado "on" o "off"
+    if (!param || (param !== "on" && param !== "off")) {
+      await sock.sendMessage(chatId, { 
+        text: `⚠️ *Uso incorrecto.*\nEjemplo: \`${global.prefix}antidelete on\` o \`${global.prefix}antidelete off\``
+      }, { quoted: msg });
+      return;
+    }
+
+    // Verificar permisos: solo los administradores o el propietario pueden usar este comando
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    let isSenderAdmin = false;
+    try {
+      const groupMetadata = await sock.groupMetadata(chatId);
+      const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
+      if (senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin")) {
+        isSenderAdmin = true;
+      }
+    } catch (err) {
+      console.error("Error obteniendo metadata del grupo:", err);
+    }
+    if (!isSenderAdmin && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { 
+        text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*"
+      }, { quoted: msg });
+      return;
+    }
+
+    // Enviar reacción inicial para indicar que se recibió el comando
+    await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } });
+
+    // Cargar (o crear) el archivo activos.json
+    let activos = {};
+    if (fs.existsSync(pathActivos)) {
+      activos = JSON.parse(fs.readFileSync(pathActivos, "utf-8"));
+    }
+    // Asegurarse de tener la propiedad "antidelete"
+    if (!activos.hasOwnProperty("antidelete")) {
+      activos.antidelete = {};
+    }
+
+    // Actualizar la propiedad antidelete para este grupo
+    if (param === "on") {
+      activos.antidelete[chatId] = true;
+      await sock.sendMessage(chatId, { text: "✅ *Antidelete activado en este grupo.*" }, { quoted: msg });
+    } else {
+      delete activos.antidelete[chatId];
+      await sock.sendMessage(chatId, { text: "✅ *Antidelete desactivado en este grupo.*" }, { quoted: msg });
+    }
+    fs.writeFileSync(pathActivos, JSON.stringify(activos, null, 2));
+
+    // Enviar reacción final de confirmación
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("❌ Error en el comando antidelete:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando antidelete.*" }, { quoted: msg });
+  }
+  break;
+}
+
         
 case 'setinfo': {
   try {
