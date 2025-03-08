@@ -676,9 +676,12 @@ Así te registras
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-    // Enviar el mensaje con la imagen de fondo
+    // Intentar enviar el mensaje con imagen
     await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741432608803.jpg" },
+      image: { 
+        url: "https://cdn.dorratz.com/files/1741432608803.jpg",
+        mimetype: "image/jpeg" // Aseguramos que lo lea como JPG
+      },
       caption: captionText
     }, { quoted: msg });
 
