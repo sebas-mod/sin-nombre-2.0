@@ -12,17 +12,6 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 //modos
-const activosPath = "./activos.json";
-let modos = {};
-if (fs.existsSync(activosPath)) {
-  modos = JSON.parse(fs.readFileSync(activosPath, "utf-8"));
-} else {
-  modos = { modoPrivado: false, modoAdmins: {} };
-}
-function guardarModos(data) {
-  fs.writeFileSync(activosPath, JSON.stringify(data, null, 2));
-}
-
 //modos
 // 📂 Crear la carpeta `stickers/` si no existe
 if (!fs.existsSync(stickersDir)) {
@@ -206,65 +195,6 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
-case 'modoprivado': {
-  try {
-    const chatId = msg.key.remoteJid;
-    // Verificar que el comando se ejecute (en privado o grupo) únicamente si es el owner o el propio bot
-    if (!isOwner(sender) && !fromMe) {
-      await sock.sendMessage(chatId, { text: "⚠️ Solo el propietario del bot puede activar o desactivar este modo." }, { quoted: msg });
-      return;
-    }
-    if (!["on", "off"].includes(args[0])) {
-      await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" }, { quoted: msg });
-      return;
-    }
-    modos.modoPrivado = args[0] === "on";
-    guardarModos(modos);
-    await sock.sendMessage(chatId, { text: `🔒 Modo privado ${args[0] === "on" ? "activado" : "desactivado"}` }, { quoted: msg });
-  } catch (error) {
-    console.error("❌ Error en el comando modoprivado:", error);
-    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al ejecutar el comando modoprivado." }, { quoted: msg });
-  }
-  break;
-}
-
-// -------------------------
-// Comando modoadmins (o modoadmins)
-// -------------------------
-case 'modoadmins': {
-  try {
-    const chatId = msg.key.remoteJid;
-    // Este comando solo se usa en grupos
-    if (!chatId.endsWith("@g.us")) {
-      await sock.sendMessage(chatId, { text: "⚠️ Este comando solo se puede usar en grupos." }, { quoted: msg });
-      return;
-    }
-    // Obtener metadata del grupo para verificar permisos
-    const groupMetadata = await sock.groupMetadata(chatId).catch(() => null);
-    if (!groupMetadata) return;
-    const senderParticipant = groupMetadata.participants.find(p => p.id.includes(sender));
-    const isSenderAdmin = senderParticipant ? (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin") : false;
-    if (!isSenderAdmin && !isOwner(sender) && !fromMe) {
-      await sock.sendMessage(chatId, { text: "⚠️ Solo los administradores o el propietario pueden usar este comando." }, { quoted: msg });
-      return;
-    }
-    if (!["on", "off"].includes(args[0])) {
-      await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off` en un grupo." }, { quoted: msg });
-      return;
-    }
-    if (args[0] === "on") {
-      modos.modoAdmins[chatId] = true;
-    } else {
-      delete modos.modoAdmins[chatId];
-    }
-    guardarModos(modos);
-    await sock.sendMessage(chatId, { text: `👑 Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo` }, { quoted: msg });
-  } catch (error) {
-    console.error("❌ Error en el comando modoadmins:", error);
-    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al ejecutar el comando modoadmins." }, { quoted: msg });
-  }
-  break;
-}
         
 case 'setinfo': {
   try {
