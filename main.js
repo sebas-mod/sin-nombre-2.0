@@ -329,7 +329,7 @@ case 'menugrupo': {
 
     // Enviar el mensaje con la imagen
     await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
+      image: { url: "https://files.fm/u/4x8p3ud49g?k=3a9265e2" },
       caption: captionText
     }, { quoted: msg });
 
