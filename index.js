@@ -1,5 +1,5 @@
 (async () => {
-    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
+    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, downloadContentFromMessage } = require("@whiskeysockets/baileys");
     const chalk = require("chalk");
     const figlet = require("figlet");
     const fs = require("fs");
