@@ -583,13 +583,10 @@ case 'menuowner': {
         
 case 'menurpg': {
   try {
-    // Reacción inicial
+    // Reacción inicial (opcional)
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: "⚔️", key: msg.key }
     });
-
-    // Agregamos un pequeño delay (1 segundo)
-    await new Promise(res => setTimeout(res, 1000));
 
     const chatId = msg.key.remoteJid;
 
@@ -677,16 +674,18 @@ Así te registras
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-    // Descargar la imagen con Axios
-    const { data: bufferImagen } = await axios.get("https://cdn.dorratz.com/files/1741432608803.jpg", {
-      responseType: 'arraybuffer'
-    });
+    // Descarga el MP4 con axios
+    const { data: bufferVideo } = await axios.get(
+      "https://cdn.dorratz.com/files/1741469811454.mp4", 
+      { responseType: 'arraybuffer' }
+    );
 
-    // Enviar el mensaje con la imagen
+    // Enviar el "video" como si fuera GIF
     await sock.sendMessage(chatId, {
-      image: bufferImagen,
+      video: bufferVideo,
       caption: captionText,
-      mimetype: "image/jpeg"
+      gifPlayback: true,
+      mimetype: "video/mp4"
     }, { quoted: msg });
 
   } catch (error) {
