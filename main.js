@@ -327,9 +327,14 @@ case 'menugrupo': {
 
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
 
-    // Enviar el mensaje con la imagen
+    // Descargar la imagen desde la URL y convertirla en un buffer
+    const imageUrl = "https://cdn.dorratz.com/files/1741424011901.jpg";
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBuffer = Buffer.from(response.data, 'binary');
+
+    // Enviar el mensaje con la imagen en buffer
     await sock.sendMessage(chatId, {
-      image: { url: "https://files.fm/u/4x8p3ud49g?k=3a9265e2" },
+      image: imageBuffer,
       caption: captionText
     }, { quoted: msg });
 
