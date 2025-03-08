@@ -694,7 +694,7 @@ Así te registras
 
     // Descarga el MP4 con axios
     const { data: bufferVideo } = await axios.get(
-      "https://cdn.dorratz.com/files/1741469811454.mp4", 
+      "https://cdn.dorratz.com/files/1741474416069.mp4", 
       { responseType: 'arraybuffer' }
     );
 
