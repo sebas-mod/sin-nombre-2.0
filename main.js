@@ -455,7 +455,7 @@ case 'ytmp4': {
     break;
 }       
 
-        
+
 case 'allmenu': {
     try {
         const fs = require("fs");
@@ -512,10 +512,18 @@ case 'allmenu': {
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-        // 📩 Enviar el mensaje con la imagen de fondo
+        // 📥 Descargamos el MP4 para enviarlo como GIF
+        const { data: bufferVideo } = await axios.get(
+            "https://cdn.dorratz.com/files/1741471441432.mp4", 
+            { responseType: 'arraybuffer' }
+        );
+
+        // 📩 Enviar el "video" como GIF con la lista de comandos
         await sock.sendMessage(chatId, {
-            image: { url: "https://cdn.dorratz.com/files/1741467699255.jpg" },
-            caption: commandList
+            video: bufferVideo,
+            caption: commandList,
+            gifPlayback: true,
+            mimetype: 'video/mp4'
         }, { quoted: msg });
 
     } catch (error) {
@@ -526,7 +534,7 @@ case 'allmenu': {
     }
     break;
 }
-        
+
 case 'menuowner': {
   try {
     // Reacción inicial
@@ -536,7 +544,7 @@ case 'menuowner': {
 
     const chatId = msg.key.remoteJid;
 
-    // Construcción del mensaje
+    // Construcción del mensaje (tu texto de menú)
     const captionText = `╔═══════════════╗  
 ║     𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏     ║  
 ╚═══════════════╝  
@@ -566,10 +574,18 @@ case 'menuowner': {
 
          𝙖𝙯𝙪𝙧𝙖 𝙪𝙡𝙩𝙧𝙖 𝟮.𝟬 𝙗𝙤𝙩`;
 
-    // Enviar el mensaje con la imagen de fondo
+    // Descargamos el MP4 (para enviarlo como GIF)
+    const { data: bufferVideo } = await axios.get(
+      "https://cdn.dorratz.com/files/1741471185939.mp4",
+      { responseType: 'arraybuffer' }
+    );
+
+    // Enviamos el video como GIF
     await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741467617173.jpg" },
-      caption: captionText
+      video: bufferVideo,
+      caption: captionText,
+      gifPlayback: true,
+      mimetype: "video/mp4"
     }, { quoted: msg });
 
   } catch (error) {
@@ -580,6 +596,7 @@ case 'menuowner': {
   }
   break;
 }
+
         
 case 'menurpg': {
   try {
