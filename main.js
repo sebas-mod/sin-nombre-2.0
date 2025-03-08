@@ -327,9 +327,9 @@ case 'menugrupo': {
 
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
 
-    // Enviar el mensaje con la imagen de fondo, asegurando que la carga sea correcta
+    // Enviar el mensaje con la imagen
     await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741428254785.jpg" },
+      image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
       caption: captionText
     }, { quoted: msg });
 
@@ -340,7 +340,7 @@ case 'menugrupo': {
     }, { quoted: msg });
   }
   break;
-}            
+}
 
             
 case 'setinfo': {
