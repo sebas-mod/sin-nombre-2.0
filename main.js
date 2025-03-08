@@ -209,6 +209,11 @@ case 'allmenu': {
 
         const chatId = msg.key.remoteJid; // Definir chatId correctamente
 
+        // ✅ Enviar la reacción ANTES de mostrar el menú
+        await sock.sendMessage(chatId, {
+            react: { text: "📜", key: msg.key }
+        });
+
         // 📥 Leer contenido del archivo
         const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
 
@@ -237,7 +242,7 @@ case 'allmenu': {
 `;
 
         commands.forEach(cmd => {
-            commandList += `🔹 *${global.prefix}${cmd}*\n`;
+            commandList += `➫ *${global.prefix}${cmd}*\n`;
         });
 
         commandList += `━━━━━━━━━━━━━━━━━━━  
@@ -251,11 +256,6 @@ case 'allmenu': {
             image: { url: "https://cdn.dorratz.com/files/1741436040303.jpg" },
             caption: commandList
         }, { quoted: msg });
-
-        // ✅ Confirmación con reacción
-        await sock.sendMessage(chatId, { 
-            react: { text: "📜", key: msg.key } // Reacción en el mensaje
-        });
 
     } catch (error) {
         console.error("❌ Error en el comando .allmenu:", error);
