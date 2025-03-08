@@ -195,6 +195,93 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo
+case 'menu': {
+  try {
+    // Reacción inicial
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "📜", key: msg.key }
+    });
+
+    const chatId = msg.key.remoteJid;
+
+    // Construir el mensaje del menú con el diseño solicitado
+    const captionText = `╔════════════════════════════╗  
+║   ＡＺＵＲＡ ＵＬＴＲＡ ２.０ ＢＯＴ   ║  
+║     𝙏𝙐 𝘼𝙎𝙄𝙎𝙏𝙀𝙉𝙏𝙀 𝙄𝙉𝙏𝙀𝙇𝙄𝙂𝙀𝙉𝙏𝙀     ║  
+╚════════════════════════════╝  
+
+╭──────────────╮  
+│ ✦ 𝙈𝙀𝙉𝙐 𝙂𝙀𝙉𝙀𝙍𝘼𝙇 ✦ │  
+╰──────────────╯  
+
+⎔ 𝗣𝗿𝗲𝗳𝗶𝗷𝗼 𝗔𝗰𝘁𝘂𝗮𝗹: 『${global.prefix}』  
+⎔ 𝗨𝘀𝗮 『${global.prefix}』 𝗮𝗻𝘁𝗲𝘀 𝗱𝗲 𝗰𝗮𝗱𝗮 𝗰𝗼𝗺𝗮𝗻𝗱𝗼.  
+
+╭──────────────╮  
+│ ✦ 𝙈𝙀𝙉𝙐𝙎 𝘿𝙄𝙎𝙋𝙊𝙉𝙄𝘽𝙇𝙀𝙎 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}allmenu  
+⎔ ${global.prefix}menugrupo  
+⎔ ${global.prefix}menu2  
+⎔ ${global.prefix}menurpg  
+⎔ ${global.prefix}info  
+⎔ ${global.prefix}menuowner  
+
+╭──────────────╮  
+│ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}play → nombre título  
+⎔ ${global.prefix}play2 → nombre título  
+⎔ ${global.prefix}ytmp3 → link  
+⎔ ${global.prefix}ytmp4 → link  
+⎔ ${global.prefix}tiktok → link  
+⎔ ${global.prefix}fb → link  
+⎔ ${global.prefix}ig → link  
+
+╭──────────────╮  
+│ ✦ 𝙊𝙏𝙍𝙊𝙎 𝘾𝙊𝙈𝘼𝙉𝘿𝙊𝙎 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}ver  
+⎔ ${global.prefix}perfil  
+⎔ ${global.prefix}get  
+⎔ ${global.prefix}ping  
+⎔ ${global.prefix}creador  
+⎔ ${global.prefix}toimg  
+⎔ ${global.prefix}personalidad  
+⎔ ${global.prefix}ship  
+⎔ ${global.prefix}parejas  
+⎔ ${global.prefix}verco  
+⎔ ${global.prefix}speedtest  
+⎔ ${global.prefix}tomp3  
+⎔ ${global.prefix}tts  
+⎔ ${global.prefix}visión  
+⎔ ${global.prefix}verdad  
+⎔ ${global.prefix}reto  
+⎔ ${global.prefix}géminis  
+⎔ ${global.prefix}gemini  
+⎔ ${global.prefix}pixai  
+
+╭──────────────────────╮  
+│ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟚.𝟘 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. │  
+│   𝙎𝙀 𝘼𝙂𝙍𝙀𝙂𝘼𝙍Á𝙉 𝙈Á𝙎 𝙁𝙐𝙉𝘾𝙄𝙊𝙉𝙀𝙎 𝙋𝙍𝙊𝙉𝙏𝙊.   │  
+╰──────────────────────╯  
+
+𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝘼𝘿𝙊 𝙋𝙊𝙍 𝙍𝙐𝙎𝙎𝙀𝙇𝙇 𝙓𝙕`;
+
+    // Enviar el mensaje con el video de fondo
+    await sock.sendMessage(chatId, {
+      video: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" },
+      caption: captionText
+    }, { quoted: msg });
+  } catch (error) {
+    console.error("❌ Error en el comando menu:", error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ Ocurrió un error al mostrar el menú. Inténtalo de nuevo."
+    }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'menugrupo': {
   try {
     // Reacción inicial
@@ -9510,12 +9597,7 @@ case 'tiendaper': {
         });
     }
     break;
-}
-
-        
-
-        
-      
+}      
 
         
 case 'addper': {
@@ -10515,11 +10597,7 @@ case "setprefix":
         }, { quoted: msg });
     }
     break;
-        
-        
-            
-
-        
+             
         
 case "rest":
     try {
@@ -10606,99 +10684,6 @@ case "info":
     }
     break;
         
-        
-case "menu": {
-    try {
-        // Reacción antes de enviar el menú
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "📜", key: msg.key } 
-        });
-
-        // Definir la URL del archivo GIF/Video
-        const mediaUrl = "https://cdn.dorratz.com/files/1740370321585.mp4"; 
-        const filePath = path.join(__dirname, "menu_video.mp4");
-
-        // Descargar el archivo si no existe localmente
-        if (!fs.existsSync(filePath)) {
-            const response = await axios({
-                method: "GET",
-                url: mediaUrl,
-                responseType: "stream"
-            });
-
-            const writer = fs.createWriteStream(filePath);
-            response.data.pipe(writer);
-
-            await new Promise((resolve, reject) => {
-                writer.on("finish", resolve);
-                writer.on("error", reject);
-            });
-        }
-
-        // Construcción del menú con formato mejorado y prefijo dinámico
-        const menuMessage = `┏━━━━━━━━━━━━━━━┓
-┃  🤖 *AZURA ULTRA 2.0 BOT*  
-┃  🚀 *Tu Asistente Inteligente*  
-┗━━━━━━━━━━━━━━━┛
-
-📌 *Usa los siguientes comandos para ver más menús:*  
-${global.prefix}allmenu  
-${global.prefix}info  
-${global.prefix}menu2  
-
-🌟 *Prefijo actual:* ${global.prefix}  
-💡 *Usa ${global.prefix} antes de cada comando.*
-
-📥 *Comandos de Descarga* 📥  
-━━━━━━━━━━━━━━━━━━  
-${global.prefix}play → Descargar música.  
-${global.prefix}play2 → Descargar videos.  
-${global.prefix}ytmp3 → Descargar a MP3.  
-${global.prefix}ytmp4 → Descargar a MP4.  
-${global.prefix}tiktok → Descargar video.  
-${global.prefix}fb → Descargar video.  
-${global.prefix}ig → Descargar video.  
-
-👥 *Comandos de Grupo* 👥  
-━━━━━━━━━━━━━━━━━━  
-${global.prefix}cerrargrupo → Cierra el grupo.  
-${global.prefix}abrirgrupo → Abre el grupo.  
-${global.prefix}kick → Expulsar del grupo.  
-
-🔍 *Otros Comandos* 🔍  
-━━━━━━━━━━━━━━━━━━  
-${global.prefix}ver → Ver mensajes de "ver una vez".  
-${global.prefix}perfil → Descargar la foto de perfil de alguien.  
-${global.prefix}get → Descargar estados de WhatsApp.  
-${global.prefix}ping → Ver el estado del bot y el servidor.  
-${global.prefix}creador → Ver el contacto del creador.  
-${global.prefix}info → Ver detalles del bot.  
-
-📂 *Comandos de Multimedia* 📂  
-━━━━━━━━━━━━━━━━━━  
-${global.prefix}guar → Guardar archivos con una clave.  
-${global.prefix}g → Recuperar archivos guardados.  
-${global.prefix}kill → Eliminar un archivo guardado.  
-${global.prefix}clavelista → Ver todas las claves guardadas.  
-
-💡 *Azura Ultra 2.0 está en constante desarrollo. Se agregarán más funciones pronto.*  
-⚙️ *Desarrollado por Russell xz* 🚀`;
-
-        // Enviar el archivo local como video/GIF con el menú
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: filePath }, 
-            gifPlayback: true,
-            caption: menuMessage 
-        }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error al enviar el menú:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al mostrar el menú. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
-}
         
 case "menu2": {
     try {
