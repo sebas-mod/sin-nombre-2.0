@@ -284,6 +284,7 @@ case 'damelink': {
   }
   break;
 }
+
 case 'add': {
   try {
     const chatId = msg.key.remoteJid;
@@ -327,18 +328,60 @@ case 'add': {
     // Enviar reacción indicando el inicio del proceso de agregar
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } });
     
-    // Agregar al usuario al grupo
-    await sock.groupParticipantsUpdate(chatId, [targetId], "add");
-    
-    // Enviar mensaje de confirmación con mención oculta
-    await sock.sendMessage(
-      chatId,
-      { text: `✅ Se ha agregado a @${rawNumber} al grupo.`, mentions: [targetId] },
-      { quoted: msg }
-    );
-    
-    // Enviar reacción final de éxito
-    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+    try {
+      // Intentar agregar al usuario al grupo
+      await sock.groupParticipantsUpdate(chatId, [targetId], "add");
+      
+      // Si se agrega correctamente, enviar mensaje de confirmación con mención oculta
+      await sock.sendMessage(
+        chatId,
+        { text: `✅ Se ha agregado a @${rawNumber} al grupo.`, mentions: [targetId] },
+        { quoted: msg }
+      );
+      // Enviar reacción final de éxito
+      await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+    } catch (error) {
+      console.error("❌ Error al agregar al usuario:", error);
+      // Si falla al agregar, se asume que el usuario tiene configuraciones de privacidad activas.
+      // Obtener el código de invitación del grupo
+      let code;
+      try {
+        code = await sock.groupInviteCode(chatId);
+      } catch (codeError) {
+        console.error("❌ Error al obtener el código de invitación:", codeError);
+      }
+      if (code) {
+        let link = "https://chat.whatsapp.com/" + code;
+        // Notificar en el grupo que no se pudo agregar y se envió la invitación
+        await sock.sendMessage(
+          chatId,
+          { text: `⚠️ No se pudo agregar a @${rawNumber} directamente por sus configuraciones de privacidad. Se le ha enviado una invitación para unirse al grupo.`, mentions: [targetId] },
+          { quoted: msg }
+        );
+        // Intentar enviar la invitación de forma privada al usuario
+        try {
+          await sock.sendMessage(
+            targetId,
+            { text: `Hola, te invito a unirte al grupo. Haz clic en el siguiente enlace para unirte:\n\n${link}` }
+          );
+        } catch (privError) {
+          console.error("❌ Error al enviar invitación privada:", privError);
+          await sock.sendMessage(
+            chatId,
+            { text: "❌ Ocurrió un error al enviar la invitación privada al usuario." },
+            { quoted: msg }
+          );
+        }
+        // Enviar reacción final de éxito (a pesar del error en agregar)
+        await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+      } else {
+        await sock.sendMessage(
+          chatId,
+          { text: "❌ No se pudo obtener el enlace de invitación y agregar al usuario." },
+          { quoted: msg }
+        );
+      }
+    }
   } catch (error) {
     console.error("❌ Error en el comando add:", error);
     await sock.sendMessage(
@@ -348,8 +391,7 @@ case 'add': {
     );
   }
   break;
-}        
-
+}
         
 case 'autoadmins':
 case 'autoadmin': {
