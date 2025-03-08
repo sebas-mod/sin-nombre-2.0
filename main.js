@@ -204,11 +204,11 @@ case 'menu': {
 
     const chatId = msg.key.remoteJid;
 
-    // Construir el mensaje del menú con el diseño solicitado
-    const captionText = `╔════════════════════════════╗  
-║   ＡＺＵＲＡ ＵＬＴＲＡ ２.０ ＢＯＴ   ║  
-║     𝙏𝙐 𝘼𝙎𝙄𝙎𝙏𝙀𝙉𝙏𝙀 𝙄𝙉𝙏𝙀𝙇𝙄𝙂𝙀𝙉𝙏𝙀     ║  
-╚════════════════════════════╝  
+    // Diseño original con letra más pequeña y ajustado para WhatsApp
+    const captionText = `╔═══════════════╗  
+║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
+║   🤖 𝘼𝙎𝙄𝙎𝙏𝙀𝙉𝙏𝙀 🤖   ║  
+╚═══════════════╝  
 
 ╭──────────────╮  
 │ ✦ 𝙈𝙀𝙉𝙐 𝙂𝙀𝙉𝙀𝙍𝘼𝙇 ✦ │  
@@ -230,8 +230,8 @@ case 'menu': {
 ╭──────────────╮  
 │ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
 ╰──────────────╯  
-⎔ ${global.prefix}play → nombre título  
-⎔ ${global.prefix}play2 → nombre título  
+⎔ ${global.prefix}play → título  
+⎔ ${global.prefix}play2 → título  
 ⎔ ${global.prefix}ytmp3 → link  
 ⎔ ${global.prefix}ytmp4 → link  
 ⎔ ${global.prefix}tiktok → link  
@@ -250,7 +250,6 @@ case 'menu': {
 ⎔ ${global.prefix}personalidad  
 ⎔ ${global.prefix}ship  
 ⎔ ${global.prefix}parejas  
-⎔ ${global.prefix}verco  
 ⎔ ${global.prefix}speedtest  
 ⎔ ${global.prefix}tomp3  
 ⎔ ${global.prefix}tts  
@@ -266,13 +265,15 @@ case 'menu': {
 │   𝙎𝙀 𝘼𝙂𝙍𝙀𝙂𝘼𝙍Á𝙉 𝙈Á𝙎 𝙁𝙐𝙉𝘾𝙄𝙊𝙉𝙀𝙎 𝙋𝙍𝙊𝙉𝙏𝙊.   │  
 ╰──────────────────────╯  
 
-𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝘼𝘿𝙊 𝙋𝙊𝙍 𝙍𝙐𝙎𝙎𝙀𝙇𝙇 𝙓𝙕`;
+👨‍💻 𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕`;
 
-    // Enviar el mensaje con el video de fondo
+    // Enviar el video como GIF con el menú
     await sock.sendMessage(chatId, {
       video: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" },
+      gifPlayback: true, // Se envía como GIF
       caption: captionText
     }, { quoted: msg });
+
   } catch (error) {
     console.error("❌ Error en el comando menu:", error);
     await sock.sendMessage(msg.key.remoteJid, {
