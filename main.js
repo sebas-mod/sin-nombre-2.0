@@ -581,13 +581,15 @@ case 'menuowner': {
   break;
 }
         
-
 case 'menurpg': {
   try {
     // Reacción inicial
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: "⚔️", key: msg.key }
     });
+
+    // Agregamos un pequeño delay (1 segundo)
+    await new Promise(res => setTimeout(res, 1000));
 
     const chatId = msg.key.remoteJid;
 
@@ -671,7 +673,6 @@ Así te registras
 ━━━━━━━━━━━━━━━━━━  
 𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: russell xz
 
-
 ╭────────────────╮  
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
@@ -685,7 +686,7 @@ Así te registras
     await sock.sendMessage(chatId, {
       image: bufferImagen,
       caption: captionText,
-      mimetype: "image/jpeg" // Forzamos a tratarla como JPG
+      mimetype: "image/jpeg"
     }, { quoted: msg });
 
   } catch (error) {
@@ -697,7 +698,6 @@ Así te registras
   break;
 }
 
-// ... tu código posterior ...
         
 case 'menu': {
   try {
