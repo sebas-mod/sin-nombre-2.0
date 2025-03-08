@@ -207,6 +207,8 @@ case 'allmenu': {
             }, { quoted: msg });
         }
 
+        const chatId = msg.key.remoteJid; // Definir chatId correctamente
+
         // 📥 Leer contenido del archivo
         const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
 
@@ -251,8 +253,8 @@ case 'allmenu': {
         }, { quoted: msg });
 
         // ✅ Confirmación con reacción
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key }
+        await sock.sendMessage(chatId, { 
+            react: { text: "📜", key: msg.key } // Reacción en el mensaje
         });
 
     } catch (error) {
