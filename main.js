@@ -227,7 +227,8 @@ case 'menugrupo': {
 ├✦ ${global.prefix}invocar  
 ├✦ ${global.prefix}todos  
 ├✦ ${global.prefix}damelink  
-╰────────────────
+├✦ ${global.prefix}abrirgrupo  
+╰✦ ${global.prefix}cerrargrupo  
 
 🛡 𝐒𝐄𝐆𝐔𝐑𝐈𝐃𝐀𝐃  
 ╭✦ ${global.prefix}antilink on/off  
