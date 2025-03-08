@@ -285,15 +285,16 @@ case 'menu': {
 
 case 'menugrupo': {
   try {
-    // Reacción inicial
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: "📜", key: msg.key }
-    });
+    // 📸 Reacción inicial
+    await conn.sendMessage(
+      m.chat,
+      {
+        react: { text: "📜", key: m.key }
+      },
+      { quoted: m }
+    );
 
-    const chatId = msg.key.remoteJid;
-
-    // Construcción del mensaje
-    const captionText = `╔══════════════════╗  
+    const menuTexto = `╔══════════════════╗  
 ║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
 ║   🎭 𝙼𝙴𝙽𝚄 𝙳𝙴 𝙂ℝ𝚄𝙿𝙾 🎭   ║  
 ╚══════════════════╝  
@@ -327,22 +328,24 @@ case 'menugrupo': {
 
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
 
-    // Descargar la imagen desde la URL y convertirla en un buffer
-    const imageUrl = "https://cdn.dorratz.com/files/1741424011901.jpg";
-    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    const imageBuffer = Buffer.from(response.data, 'binary');
-
-    // Enviar el mensaje con la imagen en buffer
-    await sock.sendMessage(chatId, {
-      image: imageBuffer,
-      caption: captionText
-    }, { quoted: msg });
+    // 📸 Enviar el menú con la imagen personalizada
+    await conn.sendMessage(
+      m.chat,
+      {
+        image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
+        caption: menuTexto,
+        mentions: [m.sender]
+      },
+      { quoted: m }
+    );
 
   } catch (error) {
-    console.error("❌ Error en el comando menugrupo:", error);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al mostrar el menú de grupo. Inténtalo de nuevo."
-    }, { quoted: msg });
+    console.error('❌ Error en el comando menugrupo:', error);
+    await conn.sendMessage(
+      m.chat,
+      { text: "❌ Ocurrió un error al mostrar el menú de grupo. Intenta nuevamente." },
+      { quoted: m }
+    );
   }
   break;
 }
