@@ -214,15 +214,16 @@ case 'menugrupo': {
 🛠 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂𝐈Ó𝐍  
 ╭✦ ${global.prefix}setinfo  
 ├✦ ${global.prefix}setname  
-├✦ ${global.prefix}setgrupo  
+├✦ ${global.prefix}setfoto  
 ╰✦ ${global.prefix}welcome on/off 
 
 🔱 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐂𝐈Ó𝐍  
 ╭✦ ${global.prefix}daradmins  
 ├✦ ${global.prefix}quitaradmins  
 ├✦ ${global.prefix}tag  
+├✦ ${global.prefix}damelink
 ├✦ ${global.prefix}tagall  
-╰✦ ${global.prefix}modoadmins  
+╰✦ ${global.prefix}modoadmins on/off 
 
 🛡 𝐒𝐄𝐆𝐔𝐑𝐈𝐃𝐀𝐃  
 ╭✦ ${global.prefix}antilink on/off  
@@ -664,7 +665,7 @@ case 'quitaradmins': {
   break;
 }
         
-case 'setgrupo': {
+case 'setfoto': {
   try {
     const fs = require("fs");
     const chatId = msg.key.remoteJid; // ID del grupo
