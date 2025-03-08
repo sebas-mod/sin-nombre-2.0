@@ -10826,7 +10826,7 @@ case "rest":
     break;
 
         
-        
+case 'help':        
 case "info":
     try {
         // Reacción antes de enviar la información
