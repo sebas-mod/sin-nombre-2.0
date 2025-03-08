@@ -195,6 +195,110 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo        
+case 'menurpg': {
+  try {
+    // Reacción inicial
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "⚔️", key: msg.key }
+    });
+
+    const chatId = msg.key.remoteJid;
+
+    // Construcción del mensaje
+    const captionText = `╔════════════════════╗  
+║   𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏   ║  
+╚════════════════════╝  
+
+✦ 𝐁𝐈𝐄𝐍𝐕𝐄𝐍𝐈𝐃𝐎 𝐀𝐋 𝐌𝐄𝐍𝐔 𝐑𝐏𝐆 ✦  
+━━━━━━━━━━━━━━━━━━  
+➤ 𝗣𝗥𝗘𝗙𝗜𝗝𝗢 𝗔𝗖𝗧𝗨𝗔𝗟: ${global.prefix}  
+➤ 𝗣𝗔𝗥𝗔 𝗘𝗠𝗣𝗘𝗭𝗔𝗥, 𝗨𝗦𝗔:  
+${global.prefix}rpg <nombre> <edad>  
+Así te registras  
+━━━━━━━━━━━━━━━━━━  
+
+📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗨𝗦𝗨𝗔𝗥𝗜𝗢𝗦  
+(Sube de nivel y de top)  
+➤ ${global.prefix}nivel  
+➤ ${global.prefix}picar  
+➤ ${global.prefix}minar  
+➤ ${global.prefix}minar2  
+➤ ${global.prefix}work  
+➤ ${global.prefix}crime  
+➤ ${global.prefix}robar  
+➤ ${global.prefix}cofre  
+➤ ${global.prefix}claim  
+➤ ${global.prefix}batallauser  
+➤ ${global.prefix}hospital  
+➤ ${global.prefix}hosp  
+
+📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗣𝗘𝗥𝗦𝗢𝗡𝗔𝗝𝗘𝗦  
+(Sube de nivel a tu personaje y top)  
+➤ ${global.prefix}luchar  
+➤ ${global.prefix}poder  
+➤ ${global.prefix}volar  
+➤ ${global.prefix}otromundo  
+➤ ${global.prefix}otrouniverso  
+➤ ${global.prefix}mododios  
+➤ ${global.prefix}mododiablo  
+➤ ${global.prefix}podermaximo  
+➤ ${global.prefix}enemigos  
+➤ ${global.prefix}nivelper  
+➤ ${global.prefix}per  
+➤ ${global.prefix}bolasdeldragon  
+➤ ${global.prefix}vender  
+➤ ${global.prefix}quitarventa  
+➤ ${global.prefix}batallaanime  
+
+📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗠𝗔𝗦𝗖𝗢𝗧𝗔𝗦  
+(Sube de nivel a tu mascota y top)  
+➤ ${global.prefix}daragua  
+➤ ${global.prefix}darcariño  
+➤ ${global.prefix}darcomida  
+➤ ${global.prefix}presumir  
+➤ ${global.prefix}cazar  
+➤ ${global.prefix}entrenar  
+➤ ${global.prefix}pasear  
+➤ ${global.prefix}supermascota  
+➤ ${global.prefix}mascota  
+➤ ${global.prefix}curar  
+➤ ${global.prefix}nivelmascota  
+➤ ${global.prefix}batallamascota  
+
+📌 𝗢𝗧𝗥𝗢𝗦 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦  
+➤ ${global.prefix}addmascota  
+➤ ${global.prefix}addper  
+➤ ${global.prefix}deleteuser  
+➤ ${global.prefix}deleteper  
+➤ ${global.prefix}deletemascota  
+
+📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
+➤ ${global.prefix}topuser  
+➤ ${global.prefix}topmascotas  
+➤ ${global.prefix}topper  
+
+━━━━━━━━━━━━━━━━━━  
+𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: 𝗥𝗨𝗦𝗦𝗘𝗟𝗟 𝗫𝗭  
+
+╭────────────────╮  
+│ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
+╰────────────────╯`;
+
+    // Enviar el mensaje con la imagen de fondo
+    await sock.sendMessage(chatId, {
+      image: { url: "https://cdn.dorratz.com/files/1741432608803.jpg" },
+      caption: captionText
+    }, { quoted: msg });
+
+  } catch (error) {
+    console.error("❌ Error en el comando menurpg:", error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ Ocurrió un error al mostrar el menú RPG. Inténtalo de nuevo."
+    }, { quoted: msg });
+  }
+  break;
+}
+        
 case 'menu': {
   try {
     // Reacción inicial
