@@ -514,7 +514,7 @@ case 'allmenu': {
 
         // 📩 Enviar el mensaje con la imagen de fondo
         await sock.sendMessage(chatId, {
-            image: { url: "https://cdn.dorratz.com/files/1741436040303.jpg" },
+            image: { url: "https://cdn.dorratz.com/files/1741467699255.jpg" },
             caption: commandList
         }, { quoted: msg });
 
@@ -568,7 +568,7 @@ case 'menuowner': {
 
     // Enviar el mensaje con la imagen de fondo
     await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741434860617.jpg" },
+      image: { url: "https://cdn.dorratz.com/files/1741467617173.jpg" },
       caption: captionText
     }, { quoted: msg });
 
@@ -679,7 +679,7 @@ Así te registras
     // Intentar enviar el mensaje con imagen
     await sock.sendMessage(chatId, {
       image: { 
-        url: "https://cdn.dorratz.com/files/1741432608803.jpg",
+        url: "https://cdn.dorratz.com/files/1741467508573.jpg",
         mimetype: "image/jpeg" // Aseguramos que lo lea como JPG
       },
       caption: captionText
@@ -832,7 +832,7 @@ case 'menugrupo': {
 
     // Enviar el mensaje con la imagen de fondo
     await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
+      image: { url: "https://cdn.dorratz.com/files/1741467761174.jpg" },
       caption: captionText
     }, { quoted: msg });
 
