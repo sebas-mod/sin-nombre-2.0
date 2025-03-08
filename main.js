@@ -201,7 +201,7 @@ case 'menugrupo': {
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: "📜", key: msg.key }
     });
-    
+
     const chatId = msg.key.remoteJid;
     // Construir el mensaje del menú con el diseño solicitado, usando el prefijo global en cada comando
     const captionText = `Prefijo actual: ${global.prefix}
@@ -215,23 +215,27 @@ case 'menugrupo': {
 ╭✦ ${global.prefix}setinfo  
 ├✦ ${global.prefix}setname  
 ├✦ ${global.prefix}setfoto  
-╰✦ ${global.prefix}welcome on/off 
+├✦ ${global.prefix}welcome on/off  
+╰────────────────
 
 🔱 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐂𝐈Ó𝐍  
 ╭✦ ${global.prefix}daradmins  
 ├✦ ${global.prefix}quitaradmins  
 ├✦ ${global.prefix}tag  
-├✦ ${global.prefix}damelink
 ├✦ ${global.prefix}tagall  
-╰✦ ${global.prefix}modoadmins on/off 
+├✦ ${global.prefix}modoadmins  
+├✦ ${global.prefix}invocar  
+├✦ ${global.prefix}todos  
+├✦ ${global.prefix}damelink  
+╰────────────────
 
 🛡 𝐒𝐄𝐆𝐔𝐑𝐈𝐃𝐀𝐃  
 ╭✦ ${global.prefix}antilink on/off  
 ├✦ ${global.prefix}antiarabe on/off  
 ├✦ ${global.prefix}kick  
-╰✦ ${global.prefix}add  
+╰✦ ${global.prefix}add
 
-📌 𝐌Á𝐒 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𝐏𝐑Ó𝐗𝐈𝐌𝐀𝐌𝐄𝐍𝐓𝐄...  
+📌 𝐌Á𝐒 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𝐏𝐑Ó𝐗𝐈𝐌𝐀𝐌𝐄𝐍𝐓𝐄...
 
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 2.0 BOT ⟣`;
 
@@ -248,7 +252,6 @@ case 'menugrupo': {
   }
   break;
 }
-
             
 case 'setinfo': {
   try {
