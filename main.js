@@ -581,6 +581,7 @@ case 'menuowner': {
   break;
 }
         
+
 case 'menurpg': {
   try {
     // Reacción inicial
@@ -590,7 +591,7 @@ case 'menurpg': {
 
     const chatId = msg.key.remoteJid;
 
-    // Construcción del mensaje
+    // Construcción del mensaje (tu texto de menú)
     const captionText = `╔════════════════════╗  
 ║   𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏   ║  
 ╚════════════════════╝  
@@ -671,18 +672,20 @@ Así te registras
 𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: russell xz
 
 
-
 ╭────────────────╮  
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-    // Intentar enviar el mensaje con imagen
+    // Descargar la imagen con Axios
+    const { data: bufferImagen } = await axios.get("https://cdn.dorratz.com/files/1741432608803.jpg", {
+      responseType: 'arraybuffer'
+    });
+
+    // Enviar el mensaje con la imagen
     await sock.sendMessage(chatId, {
-      image: { 
-        url: "https://cdn.dorratz.com/files/1741467508573.jpg",
-        mimetype: "image/jpeg" // Aseguramos que lo lea como JPG
-      },
-      caption: captionText
+      image: bufferImagen,
+      caption: captionText,
+      mimetype: "image/jpeg" // Forzamos a tratarla como JPG
     }, { quoted: msg });
 
   } catch (error) {
@@ -693,6 +696,8 @@ Así te registras
   }
   break;
 }
+
+// ... tu código posterior ...
         
 case 'menu': {
   try {
