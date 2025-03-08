@@ -332,7 +332,7 @@ case 'menugrupo': {
     await sock.sendMessage(
       msg.key.remoteJid,
       {
-        image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
+        image: { url: "https://i.ibb.co/Hfq7MKBq/dfc511d8f76c.jpg" },
         caption: menuTexto,
         mentions: [msg.sender]
       },
