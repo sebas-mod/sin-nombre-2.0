@@ -287,18 +287,20 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
     // ********************** LÓGICA ANTILINK **********************
     if (isGroup) {
-      const fs = require("fs");
+      const fs = require("fs"); // ya está requerido, pero se vuelve a llamar sin problema
       const pathActivos = "./activos.json";
       let activos = {};
       if (fs.existsSync(pathActivos)) {
         activos = JSON.parse(fs.readFileSync(pathActivos, "utf-8"));
       }
       if (activos.antilink && activos.antilink[chatId]) {
+        // Si el mensaje contiene el enlace de WhatsApp
         if (messageText.includes("https://chat.whatsapp.com/")) {
           let canBypass = false;
           if (isOwner(sender)) {
             canBypass = true;
           }
+          // En grupo, obtener metadatos para verificar admin
           try {
             const chatMetadata = await sock.groupMetadata(chatId);
             const participantInfo = chatMetadata.participants.find(p => p.id.includes(sender));
@@ -308,21 +310,19 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
           } catch (err) {
             console.error("Error obteniendo metadata del grupo:", err);
           }
+          // Si no es admin ni propietario, eliminar mensaje y expulsar al usuario
           if (!canBypass) {
-            // Eliminar el mensaje
             await sock.sendMessage(chatId, { delete: msg.key });
-            // Enviar mensaje de advertencia con mención
             await sock.sendMessage(chatId, { 
               text: `⚠️ @${sender} ha enviado un enlace no permitido y ha sido expulsado.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
-            // Expulsar al usuario (nota: esta acción requiere permisos)
             try {
               await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
             } catch (expulsionError) {
               console.error("Error al expulsar al usuario:", expulsionError);
             }
-            return; // No se procesa el mensaje
+            return;
           }
         }
       }
@@ -354,11 +354,13 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     if (messageText.startsWith(global.prefix)) {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
       const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
-
-      // Se han eliminado los bloques de comandos "modoprivado" y "modoadmins" para que se ejecuten en main.js.
-      // Por lo tanto, aquí solo se redirigen los comandos a la función handleCommand.
+      
+      // Se han removido los bloques de comandos "modoprivado" y "modoadmins"
+      // para que sean ejecutados en otro archivo (por ejemplo, main.js)
+      // Redirigir cualquier otro comando a handleCommand:
       handleCommand(sock, msg, command, args, sender);
     }
+
   } catch (error) {
     console.error("❌ Error en el evento messages.upsert:", error);
   }
