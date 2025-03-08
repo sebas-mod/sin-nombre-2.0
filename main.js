@@ -755,6 +755,10 @@ case 'menu': {
 ⎔ ${global.prefix}géminis  
 ⎔ ${global.prefix}gemini  
 ⎔ ${global.prefix}pixai  
+⎔ ${global.prefix}newpack
+⎔ ${global.prefix}addsticker
+⎔ ${global.prefix}listpacks
+⎔ ${global.prefix}sendpack
 
 ╭─────────────────╮  
  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟚.𝟘 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. 
