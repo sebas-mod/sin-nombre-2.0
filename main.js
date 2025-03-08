@@ -194,60 +194,7 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
     switch (lowerCommand) {
-// pon mas comando aqui abajo
-case 'menugrupo2': {
-  try {
-    // Reacción inicial
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: "📜", key: msg.key }
-    });
-    
-    const chatId = msg.key.remoteJid;
-    // Construir el mensaje del menú con el diseño solicitado, usando el prefijo global en cada comando
-    const captionText = `Prefijo actual: ${global.prefix}
-
-╭───────────⟢  
-│ 🤖 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 2.0 BOT  
-│ 🎭 𝙼𝙴𝙽𝚄 𝙳𝙴 𝙂ℝ𝚄𝙿𝙾 🎭  
-╰───────────⟢  
-
-🛠 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂𝐈Ó𝐍  
-╭✦ ${global.prefix}setinfo  
-├✦ ${global.prefix}setname  
-├✦ ${global.prefix}setgrupo  
-╰✦ ${global.prefix}welcome on/off 
-
-🔱 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐂𝐈Ó𝐍  
-╭✦ ${global.prefix}daradmins  
-├✦ ${global.prefix}quitaradmins  
-├✦ ${global.prefix}tag  
-├✦ ${global.prefix}tagall  
-╰✦ ${global.prefix}modoadmins  
-
-🛡 𝐒𝐄𝐆𝐔𝐑𝐈𝐃𝐀𝐃  
-╭✦ ${global.prefix}antilink on/off  
-├✦ ${global.prefix}antiarabe on/off  
-├✦ ${global.prefix}kick  
-╰✦ ${global.prefix}add  
-
-📌 𝐌Á𝐒 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𝐏𝐑Ó𝐗𝐈𝐌𝐀𝐌𝐄𝐍𝐓𝐄...  
-
-⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 2.0 BOT ⟣`;
-
-    // Enviar el mensaje con la imagen de fondo
-    await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
-      caption: captionText
-    }, { quoted: msg });
-  } catch (error) {
-    console.error("❌ Error en el comando menugrupo:", error);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al mostrar el menú de grupo. Inténtalo de nuevo."
-    }, { quoted: msg });
-  }
-  break;
-}
-        
+// pon mas comando aqui abajo        
 case 'menu': {
   try {
     // Reacción inicial
@@ -338,16 +285,15 @@ case 'menu': {
 
 case 'menugrupo': {
   try {
-    // 📸 Reacción inicial
-    await sock.sendMessage(
-      msg.key.remoteJid,
-      {
-        react: { text: "📜", key: msg.key }
-      },
-      { quoted: msg }
-    );
+    // Reacción inicial
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "📜", key: msg.key }
+    });
 
-    const menuTexto = `╔══════════════════╗  
+    const chatId = msg.key.remoteJid;
+
+    // Construcción del mensaje
+    const captionText = `╔══════════════════╗  
 ║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
 ║   🎭 𝙼𝙴𝙽𝚄 𝙳𝙴 𝙂ℝ𝚄𝙿𝙾 🎭   ║  
 ╚══════════════════╝  
@@ -386,6 +332,7 @@ case 'menugrupo': {
       image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
       caption: captionText
     }, { quoted: msg });
+
   } catch (error) {
     console.error("❌ Error en el comando menugrupo:", error);
     await sock.sendMessage(msg.key.remoteJid, {
