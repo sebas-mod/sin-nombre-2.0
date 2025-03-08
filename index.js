@@ -265,12 +265,12 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     const chatId = msg.key.remoteJid; // ID del grupo o usuario
     const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
     const sender = msg.key.participant
-      ? msg.key.participant.replace(/[^0-9]/g, "")
-      : msg.key.remoteJid.replace(/[^0-9]/g, "");
-    const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
-    const fromMe = msg.key.fromMe || sender === botNumber; // Verifica si el mensaje es del bot
+      ? msg.key.participant.replace(/\D/g, "")
+      : msg.key.remoteJid.replace(/\D/g, "");
+    const botNumber = sock.user.id.split(":")[0]; // Número del bot
+    const fromMe = msg.key.fromMe || sender === botNumber; // Mensaje del bot
     let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-    let messageType = Object.keys(msg.message || {})[0]; // Tipo de mensaje (text, image, video, etc.)
+    let messageType = Object.keys(msg.message || {})[0]; // Tipo de mensaje
 
     // 🔥 Detectar si el mensaje fue eliminado
     if (msg.message?.protocolMessage?.type === 0) {
@@ -287,14 +287,13 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
     // ********************** LÓGICA ANTILINK **********************
     if (isGroup) {
-      const fs = require("fs");
+      const fs = require("fs"); // Se vuelve a requerir, no afecta
       const pathActivos = "./activos.json";
       let activos = {};
       if (fs.existsSync(pathActivos)) {
         activos = JSON.parse(fs.readFileSync(pathActivos, "utf-8"));
       }
       if (activos.antilink && activos.antilink[chatId]) {
-        // Si el mensaje contiene el enlace de WhatsApp
         if (messageText.includes("https://chat.whatsapp.com/")) {
           let canBypass = false;
           if (isOwner(sender)) {
@@ -329,23 +328,23 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
     // Lógica para determinar si el bot debe responder:
     if (!isGroup) {
-      // En chat privado: solo responde si es fromMe, owner o usuario permitido (según lista.json).
+      // En chat privado: responder solo a fromMe, isOwner o usuarios permitidos (lista.json)
       if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     } else {
-      // En grupos: si el modo privado está activo, solo responde si es fromMe, owner o usuario permitido.
-      if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
-    }
-
-    // Si el "modo admins" está activado en este grupo, validar si el usuario es admin o propietario
-    if (isGroup && modos.modoAdmins[chatId]) {
-      const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
-      if (chatMetadata) {
-        const participant = chatMetadata.participants.find(p => p.id.includes(sender));
-        const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
-        if (!isAdmin && !isOwner(sender) && !fromMe) {
-          return; // Ignorar mensaje si no es admin ni propietario
+      // En grupos:
+      if (modos.modoPrivado) {
+        // Modo privado activo: sólo responder a isOwner o a números en lista.json
+        if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
+      } else if (modos.modoAdmins[chatId]) {
+        // Modo admins activo: sólo responder a administradores o isOwner
+        const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
+        if (chatMetadata) {
+          const participant = chatMetadata.participants.find(p => p.id.includes(sender));
+          const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
+          if (!fromMe && !isOwner(sender) && !isAdmin) return;
         }
       }
+      // Si ninguno de los modos está activo, responder a todos en el grupo.
     }
 
     // ✅ Detectar si es un comando
@@ -353,8 +352,9 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
       const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
       
-      // Se han removido los bloques de comandos "modoprivado" y "modoadmins" para que sean ejecutados en otro archivo (por ejemplo, main.js)
-      // Redirigir cualquier otro comando a handleCommand:
+      // Se han removido los bloques de comandos "modoprivado" y "modoadmins"
+      // para que sean ejecutados en otro archivo (por ejemplo, main.js).
+      // Se redirige cualquier otro comando a handleCommand.
       handleCommand(sock, msg, command, args, sender);
     }
   } catch (error) {
