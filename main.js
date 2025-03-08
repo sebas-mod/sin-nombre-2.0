@@ -196,6 +196,58 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     switch (lowerCommand) {
 // pon mas comando aqui abajo
 // Comando para otorgar derechos de admin (daradmin / daradmins)
+case 'modoprivado': {
+  try {
+    // Este comando solo lo puede usar el owner o desde el propio bot
+    if (!isOwner(sender) && !fromMe) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Solo el propietario del bot puede activar o desactivar este modo.*" }, { quoted: msg });
+      return;
+    }
+    if (!["on", "off"].includes(args[0])) {
+      await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" }, { quoted: msg });
+      return;
+    }
+    modos.modoPrivado = args[0] === "on";
+    guardarModos(modos);
+    await sock.sendMessage(chatId, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` }, { quoted: msg });
+  } catch (error) {
+    console.error("❌ Error en el comando modoprivado:", error);
+  }
+  break;
+}
+
+case 'modoadmins': {
+  try {
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+    const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
+    if (!chatMetadata) return;
+    const participant = chatMetadata.participants.find(p => p.id.includes(sender));
+    const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
+    if (!isAdmin && !isOwner(sender) && !fromMe) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Solo los administradores o el propietario pueden usar este comando.*" }, { quoted: msg });
+      return;
+    }
+    if (!["on", "off"].includes(args[0])) {
+      await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoadmins on` o `.modoadmins off` en un grupo." }, { quoted: msg });
+      return;
+    }
+    if (args[0] === "on") {
+      modos.modoAdmins[chatId] = true;
+    } else {
+      delete modos.modoAdmins[chatId];
+    }
+    guardarModos(modos);
+    await sock.sendMessage(chatId, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` }, { quoted: msg });
+  } catch (error) {
+    console.error("❌ Error en el comando modoadmins:", error);
+  }
+  break;
+}
+        
+        
 case 'setinfo': {
   try {
     const chatId = msg.key.remoteJid;
