@@ -653,7 +653,8 @@ Así te registras
 ➤ ${global.prefix}quitarventa  
 ➤ ${global.prefix}batallaanime  
 ➤ ${global.prefix}comprar  
-➤ ${global.prefix}tiendaper  
+➤ ${global.prefix}tiendaper
+➤ ${global.prefix}alaventa
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗠𝗔𝗦𝗖𝗢𝗧𝗔𝗦  
 (Sube de nivel a tu mascota y top)  
