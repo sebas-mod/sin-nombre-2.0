@@ -316,13 +316,13 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
               text: `⚠️ @${sender} ha enviado un enlace no permitido y ha sido expulsado.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
-            // Expulsar al usuario
+            // Expulsar al usuario (nota: esta acción requiere permisos)
             try {
               await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
             } catch (expulsionError) {
               console.error("Error al expulsar al usuario:", expulsionError);
             }
-            return;
+            return; // No se procesa el mensaje
           }
         }
       }
@@ -338,8 +338,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
       if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     }
 
-    // ⚠️ Validación de modo admins en grupos (sólo se chequea para efectos de la lógica, 
-    // los comandos para cambiarlo se han extraído para main.js)
+    // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
     if (isGroup && modos.modoAdmins[chatId]) {
       const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
       if (chatMetadata) {
@@ -356,13 +355,10 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
       const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
 
-      // Se han removido los bloques de comandos "modoprivado" y "modoadmins"
-      // para que sean manejados en otro archivo (por ejemplo, main.js)
-      
-      // Enviar el comando a main.js para su procesamiento
+      // Se han eliminado los bloques de comandos "modoprivado" y "modoadmins" para que se ejecuten en main.js.
+      // Por lo tanto, aquí solo se redirigen los comandos a la función handleCommand.
       handleCommand(sock, msg, command, args, sender);
     }
-
   } catch (error) {
     console.error("❌ Error en el evento messages.upsert:", error);
   }
