@@ -196,6 +196,57 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     switch (lowerCommand) {
 // pon mas comando aqui abajo
 // Comando para otorgar derechos de admin (daradmin / daradmins)
+case 'setinfo': {
+  try {
+    const chatId = msg.key.remoteJid;
+
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
+      return;
+    }
+
+    // Obtener metadata del grupo para verificar permisos
+    const groupMetadata = await sock.groupMetadata(chatId);
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const senderParticipant = groupMetadata.participants.find(p => p.id === senderId);
+    const isSenderAdmin = senderParticipant && (senderParticipant.admin === "admin" || senderParticipant.admin === "superadmin");
+
+    // Solo los admins y el isOwner pueden usar este comando
+    if (!isSenderAdmin && !isOwner(senderId)) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Solo los administradores o el propietario pueden cambiar la descripción del grupo.*" }, { quoted: msg });
+      return;
+    }
+
+    // Verificar que se haya proporcionado una nueva descripción
+    let newDescription = args.join(" ");
+    if (!newDescription) {
+      await sock.sendMessage(chatId, { text: "⚠️ *Debes proporcionar una nueva descripción para el grupo.*\nEjemplo: `.setinfo Nueva descripción del grupo`" }, { quoted: msg });
+      return;
+    }
+
+    // Enviar reacción inicial
+    await sock.sendMessage(chatId, { react: { text: "📝", key: msg.key } });
+
+    // Cambiar la descripción del grupo
+    await sock.groupUpdateDescription(chatId, newDescription);
+
+    // Confirmar el cambio
+    await sock.sendMessage(chatId, { text: `✅ *Descripción del grupo actualizada con éxito.*\n\n📌 *Nueva descripción:* ${newDescription}` }, { quoted: msg });
+
+    // Enviar reacción de éxito
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+
+  } catch (error) {
+    console.error("❌ Error en el comando setinfo:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al actualizar la descripción del grupo.*" }, { quoted: msg });
+
+    // Enviar reacción de error
+    await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } });
+  }
+  break;
+}
+        
 case 'daradmin':
 case 'daradmins': {
   try {
