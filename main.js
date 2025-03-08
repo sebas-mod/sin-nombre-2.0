@@ -282,7 +282,7 @@ case 'menu': {
   }
   break;
 }
-        
+
 case 'menugrupo': {
   try {
     // Reacción inicial
@@ -292,7 +292,7 @@ case 'menugrupo': {
 
     const chatId = msg.key.remoteJid;
 
-    // Construir el mensaje del menú
+    // Construcción del mensaje
     const captionText = `╔══════════════════╗  
 ║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
 ║   🎭 𝙼𝙴𝙽𝚄 𝙳𝙴 𝙂ℝ𝚄𝙿𝙾 🎭   ║  
@@ -327,16 +327,11 @@ case 'menugrupo': {
 
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
 
-    // Intentar enviar el menú con imagen
-    try {
-      await sock.sendMessage(chatId, {
-        image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
-        caption: captionText
-      }, { quoted: msg });
-    } catch (imgError) {
-      console.error("⚠️ Error al enviar la imagen, enviando solo el texto...");
-      await sock.sendMessage(chatId, { text: captionText }, { quoted: msg });
-    }
+    // Enviar el mensaje con la imagen de fondo, asegurando que la carga sea correcta
+    await sock.sendMessage(chatId, {
+      image: { url: "https://cdn.dorratz.com/files/1741424011901.jpg" },
+      caption: captionText
+    }, { quoted: msg });
 
   } catch (error) {
     console.error("❌ Error en el comando menugrupo:", error);
@@ -345,7 +340,8 @@ case 'menugrupo': {
     }, { quoted: msg });
   }
   break;
-}
+}            
+
             
 case 'setinfo': {
   try {
