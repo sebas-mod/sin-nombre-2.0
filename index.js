@@ -1,5 +1,5 @@
 (async () => {
-    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, downloadContentFromMessage } = require("@whiskeysockets/baileys");
+    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
     const chalk = require("chalk");
     const figlet = require("figlet");
     const fs = require("fs");
@@ -18,16 +18,6 @@ function isAllowedUser(sender) {
   const num = sender.replace(/\D/g, "");
   return lista.includes(num);
 }
-//antidelete
-const pathAntidelete = './antidelete.json';
-
-// Si el archivo no existe, lo creamos con un objeto vacío
-if (!fs.existsSync(pathAntidelete)) {
-  fs.writeFileSync(pathAntidelete, JSON.stringify({}, null, 2));
-  console.log('antidelete.json creado correctamente.');
-} else {
-  console.log('antidelete.json ya existe.');
-}    
     
     //privado y admins
 
@@ -271,133 +261,106 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
   try {
     const msg = messageUpsert.messages[0];
     if (!msg) return;
-    const chatId = msg.key.remoteJid;
-    const isGroup = chatId.endsWith("@g.us");
+
+    const chatId = msg.key.remoteJid; // ID del grupo o usuario
+    const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
     const sender = msg.key.participant
       ? msg.key.participant.replace(/[^0-9]/g, "")
       : msg.key.remoteJid.replace(/[^0-9]/g, "");
-    const botNumber = sock.user.id.split(":")[0];
-    const fromMe = msg.key.fromMe || sender === botNumber;
+    const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
+    const fromMe = msg.key.fromMe || sender === botNumber; // Verifica si el mensaje es del bot
     let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-    let messageType = Object.keys(msg.message || {})[0];
+    let messageType = Object.keys(msg.message || {})[0]; // Tipo de mensaje (text, image, video, etc.)
 
-    // Cargar la configuración de activos para antidelete
-    const fs = require("fs");
-    const pathActivos = "./activos.json";
-    let activos = {};
-    if (fs.existsSync(pathActivos)) {
-      activos = JSON.parse(fs.readFileSync(pathActivos, "utf-8"));
-    }
-
-    // Ruta para el almacenamiento de mensajes antidelete
-    const antideletePath = "./antidelete.json";
-    let antideleteData = {};
-    if (fs.existsSync(antideletePath)) {
-      antideleteData = JSON.parse(fs.readFileSync(antideletePath, "utf-8"));
-    }
-
-    // Si es un evento de borrado (mensaje eliminado)
+    // 🔥 Detectar si el mensaje fue eliminado
     if (msg.message?.protocolMessage?.type === 0) {
-      if (isGroup && activos.antidelete && activos.antidelete[chatId]) {
-        if (antideleteData[chatId] && antideleteData[chatId][msg.key.id]) {
-          const storedMsg = antideleteData[chatId][msg.key.id];
-          // Si el mensaje guardado tiene contenido multimedia
-          if (storedMsg.media) {
-            let mediaPayload = {};
-            switch (storedMsg.messageType) {
-              case "imageMessage":
-                mediaPayload = { image: { url: storedMsg.media }, caption: storedMsg.text || "" };
-                break;
-              case "videoMessage":
-                mediaPayload = { video: { url: storedMsg.media }, caption: storedMsg.text || "" };
-                break;
-              case "audioMessage":
-                mediaPayload = { audio: { url: storedMsg.media } };
-                break;
-              case "documentMessage":
-                mediaPayload = { document: { url: storedMsg.media }, caption: storedMsg.text || "" };
-                break;
-              case "stickerMessage":
-                mediaPayload = { sticker: { url: storedMsg.media } };
-                break;
-              default:
-                mediaPayload = { text: storedMsg.text || "" };
-            }
-            // Agregar indicativo de mensaje eliminado
-            if (mediaPayload.caption !== undefined) {
-              mediaPayload.caption = `⚠️ *Mensaje eliminado* por @${sender}\n\n` + mediaPayload.caption;
-            } else if (mediaPayload.text !== undefined) {
-              mediaPayload.text = `⚠️ *Mensaje eliminado* por @${sender}\n\n` + mediaPayload.text;
-            }
-            await sock.sendMessage(chatId, mediaPayload, { mentions: [msg.key.participant || msg.key.remoteJid] });
-          } else {
-            // Si es solo texto
-            const reforwardText = `⚠️ *Mensaje eliminado* por @${sender}\n\n${storedMsg.text || ""}`;
-            await sock.sendMessage(chatId, { text: reforwardText, mentions: [msg.key.participant || msg.key.remoteJid] });
-          }
-          // Eliminar el mensaje guardado para evitar reenviarlo varias veces
-          delete antideleteData[chatId][msg.key.id];
-          fs.writeFileSync(antideletePath, JSON.stringify(antideleteData, null, 2));
-        }
-      }
+      console.log(chalk.red(`🗑️ Un mensaje fue eliminado por ${sender}`));
       return;
-    } else {
-      // Si es un mensaje nuevo y estamos en un grupo con antidelete activo
-      if (isGroup && activos.antidelete && activos.antidelete[chatId]) {
-        if (!antideleteData[chatId]) {
-          antideleteData[chatId] = {};
-        }
-        // Si es un mensaje multimedia, se descarga y guarda en base64
-        if (["imageMessage", "videoMessage", "audioMessage", "documentMessage", "stickerMessage"].includes(messageType)) {
-          try {
-            const mediaData = await sock.downloadMediaMessage(msg);
-            antideleteData[chatId][msg.key.id] = {
-              text: messageText,
-              media: mediaData, // Se asume que mediaData es una cadena base64 o URL
-              messageType: messageType
-            };
-          } catch (mediaError) {
-            console.error("Error descargando el medio:", mediaError);
-            antideleteData[chatId][msg.key.id] = {
-              text: messageText,
-              messageType: messageType
-            };
-          }
-        } else {
-          // Para mensajes de texto u otros sin multimedia
-          antideleteData[chatId][msg.key.id] = {
-            text: messageText,
-            messageType: messageType
-          };
-        }
-        fs.writeFileSync(antideletePath, JSON.stringify(antideleteData, null, 2));
-      }
     }
 
-    // Mostrar en consola el mensaje recibido
-    console.log(`\n📩 Nuevo mensaje recibido`);
-    console.log(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${sender}`);
-    console.log(`💬 Tipo: ${messageType}`);
-    console.log(`💬 Mensaje: ${messageText || "📂 (Mensaje multimedia)"}`);
-    console.log("──────────────────────────");
+    // 🔍 Mostrar en consola el mensaje recibido
+    console.log(chalk.yellow(`\n📩 Nuevo mensaje recibido`));
+    console.log(chalk.green(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${chalk.bold(sender)}`));
+    console.log(chalk.cyan(`💬 Tipo: ${messageType}`));
+    console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
+    console.log(chalk.gray("──────────────────────────"));
 
-    // Aquí sigue tu lógica de ANTILINK y manejo de comandos...
+    // ********************** LÓGICA ANTILINK **********************
+    if (isGroup) {
+      // Cargar activos.json y verificar si antilink está activado para este grupo
+      const fs = require("fs"); // ya tienes fs, pero no afecta si lo vuelves a requerir
+      const pathActivos = "./activos.json";
+      let activos = {};
+      if (fs.existsSync(pathActivos)) {
+        activos = JSON.parse(fs.readFileSync(pathActivos, "utf-8"));
+      }
+      if (activos.antilink && activos.antilink[chatId]) {
+        // Si el mensaje contiene el enlace de WhatsApp
+        if (messageText.includes("https://chat.whatsapp.com/")) {
+          // Verificar si el remitente es admin o propietario
+          let canBypass = false;
+          if (isOwner(sender)) {
+            canBypass = true;
+          }
+          // En grupo, obtener metadatos para verificar admin
+          try {
+            const chatMetadata = await sock.groupMetadata(chatId);
+            const participantInfo = chatMetadata.participants.find(p => p.id.includes(sender));
+            if (participantInfo && (participantInfo.admin === "admin" || participantInfo.admin === "superadmin")) {
+              canBypass = true;
+            }
+          } catch (err) {
+            console.error("Error obteniendo metadata del grupo:", err);
+          }
+          // Si no es admin ni propietario, proceder a eliminar el mensaje y expulsar al usuario
+          if (!canBypass) {
+            // Eliminar el mensaje
+            await sock.sendMessage(chatId, { delete: msg.key });
+            // Enviar mensaje de advertencia con mención
+            await sock.sendMessage(chatId, { 
+              text: `⚠️ @${sender} ha enviado un enlace no permitido y ha sido expulsado.`, 
+              mentions: [msg.key.participant || msg.key.remoteJid]
+            });
+            // Expulsar al usuario (nota: esta acción requiere permisos y la función groupParticipantsUpdate)
+            try {
+              await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+            } catch (expulsionError) {
+              console.error("Error al expulsar al usuario:", expulsionError);
+            }
+            return; // Salir de la lógica para que no se procese el mensaje
+          }
+        }
+      }
+    }
+    // ***************** FIN LÓGICA ANTILINK **********************
+
+    // Lógica para determinar si el bot debe responder:
     if (!isGroup) {
+      // En chat privado: solo responde si es fromMe, owner o usuario permitido.
       if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     } else {
+      // En grupos: si el modo privado está activo, solo responde si es fromMe, owner o usuario permitido.
       if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     }
+
+    // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
     if (isGroup && modos.modoAdmins[chatId]) {
       const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
       if (chatMetadata) {
         const participant = chatMetadata.participants.find(p => p.id.includes(sender));
         const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
-        if (!isAdmin && !isOwner(sender) && !fromMe) return;
+        if (!isAdmin && !isOwner(sender) && !fromMe) {
+          return; // Ignorar mensaje si no es admin ni owner
+        }
       }
     }
+
+    // ✅ Detectar si es un comando
     if (messageText.startsWith(global.prefix)) {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
       const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
+
+      // ⚙️ Comando para activar/desactivar "modo privado"
       if (command === "modoprivado" && (isOwner(sender) || fromMe)) {
         if (!["on", "off"].includes(args[0])) {
           await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
@@ -408,6 +371,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         await sock.sendMessage(chatId, { text: `🔒 *Modo privado ${args[0] === "on" ? "activado" : "desactivado"}*` });
         return;
       }
+
+      // ⚙️ Comando para activar/desactivar "modo admins" (solo en grupos)
       if (command === "modoadmins" && isGroup) {
         const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
         if (!chatMetadata) return;
@@ -422,21 +387,23 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
           return;
         }
         if (args[0] === "on") {
-          modos.modoAdmins[chatId] = true;
+          modos.modoAdmins[chatId] = true; // Activar en este grupo
         } else {
-          delete modos.modoAdmins[chatId];
+          delete modos.modoAdmins[chatId]; // Desactivar en este grupo
         }
         guardarModos(modos);
         await sock.sendMessage(chatId, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` });
         return;
       }
+
+      // 🔄 Enviar el comando a `main.js`
       handleCommand(sock, msg, command, args, sender);
     }
+
   } catch (error) {
     console.error("❌ Error en el evento messages.upsert:", error);
   }
 });
-    
 
             
             
