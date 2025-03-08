@@ -193,8 +193,51 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
 };
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
+    global.viewonce = true; 
+async function handleDeletedMessage(sock, msg) {
+    if (!global.viewonce) return;
+    const chatId = msg.key.remoteJid;
+    const deletedMessage = msg.message;
+    if (deletedMessage) {
+        await sock.sendMessage(chatId, { 
+            text: `⚠️ *Mensaje eliminado reenviado:*\n\n${deletedMessage.conversation || deletedMessage.extendedTextMessage?.text || ''}` 
+        });
+
+        if (deletedMessage.imageMessage) {
+            const imageBuffer = await downloadContentFromMessage(deletedMessage.imageMessage, 'image');
+            await sock.sendMessage(chatId, { image: imageBuffer }, { quoted: msg });
+        } else if (deletedMessage.audioMessage) {
+            const audioBuffer = await downloadContentFromMessage(deletedMessage.audioMessage, 'audio');
+            await sock.sendMessage(chatId, { audio: audioBuffer }, { quoted: msg });
+        } else if (deletedMessage.videoMessage) {
+            const videoBuffer = await downloadContentFromMessage(deletedMessage.videoMessage, 'video');
+            await sock.sendMessage(chatId, { video: videoBuffer }, { quoted: msg });
+        }
+    }
+}
+sock.ev.on('messages.delete', (messages) => {
+    messages.forEach(async (msg) => {
+        await handleDeletedMessage(sock, msg);
+    });
+});
     switch (lowerCommand) {
 // pon mas comando aqui abajo        
+            case 'antieliminar': {
+    if (!isAdmin(sock, msg.key.remoteJid, msg.key.participant || msg.key.remoteJid)) {
+        return sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *Solo los administradores pueden usar este comando.*' });
+    }
+    const action = args[0]?.toLowerCase();
+    if (action === 'activar') {
+        global.viewonce = true;
+        await sock.sendMessage(msg.key.remoteJid, { text: '✅ *Función anti-eliminar activada.*' });
+    } else if (action === 'desactivar') {
+        global.viewonce = false;
+        await sock.sendMessage(msg.key.remoteJid, { text: '❌ *Función anti-eliminar desactivada.*' });
+    } else {
+        await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}antieliminar activar* o *${global.prefix}antieliminar desactivar*` });
+    }
+    break;
+}
 case 'play': { 
     const yts = require('yt-search'); 
 
