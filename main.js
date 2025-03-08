@@ -195,6 +195,75 @@ sock.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     const text = args.join(" ");
     switch (lowerCommand) {
 // pon mas comando aqui abajo        
+case 'allmenu': {
+    try {
+        const fs = require("fs");
+
+        // 📂 Ruta del archivo principal
+        const mainFilePath = "./main.js";
+        if (!fs.existsSync(mainFilePath)) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *Error:* No se encontró el archivo de comandos." 
+            }, { quoted: msg });
+        }
+
+        // 📥 Leer contenido del archivo
+        const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
+
+        // 🔍 Extraer los nombres de los comandos dentro de `case 'comando':`
+        const commandRegex = /case\s+['"]([^'"]+)['"]:/g;
+        let commands = [];
+        let match;
+        while ((match = commandRegex.exec(mainFileContent)) !== null) {
+            commands.push(match[1]);
+        }
+
+        // 📊 Filtrar y ordenar los comandos
+        commands = [...new Set(commands)].sort();
+        let totalComandos = commands.length;
+
+        // 📜 Construir mensaje con diseño personalizado
+        let commandList = `╔════════════════════╗  
+║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏  ║  
+╚════════════════════╝  
+        📜 *Menú Completo*  
+━━━━━━━━━━━━━━━━━━━  
+📌 𝗧𝗢𝗧𝗔𝗟 𝗗𝗘 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦: ${totalComandos}  
+📌 𝗣𝗿𝗲𝗳𝗶𝗷𝗼 𝗔𝗰𝘁𝘂𝗮𝗹: 『${global.prefix}』  
+📌 𝗨𝘀𝗮 『${global.prefix}』 𝗮𝗻𝘁𝗲𝘀 𝗱𝗲 𝗰𝗮𝗱𝗮 𝗰𝗼𝗺𝗮𝗻𝗱𝗼.  
+━━━━━━━━━━━━━━━━━━━  
+`;
+
+        commands.forEach(cmd => {
+            commandList += `🔹 *${global.prefix}${cmd}*\n`;
+        });
+
+        commandList += `━━━━━━━━━━━━━━━━━━━  
+👨‍💻 𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕  
+╭────────────────╮  
+│ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏 │  
+╰────────────────╯`;
+
+        // 📩 Enviar el mensaje con la imagen de fondo
+        await sock.sendMessage(chatId, {
+            image: { url: "https://cdn.dorratz.com/files/1741436040303.jpg" },
+            caption: commandList
+        }, { quoted: msg });
+
+        // ✅ Confirmación con reacción
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .allmenu:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al obtener la lista de comandos. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
+        
 case 'menuowner': {
   try {
     // Reacción inicial
@@ -11241,62 +11310,7 @@ case 'creador': {
 
     break;
 }
-    
-case 'verco': {
-    try {
-        const fs = require("fs");
-
-        // 📂 Ruta del archivo principal
-        const mainFilePath = "./main.js";
-        if (!fs.existsSync(mainFilePath)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *Error:* No se encontró el archivo de comandos." 
-            }, { quoted: msg });
-        }
-
-        // 📥 Leer contenido del archivo
-        const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
-
-        // 🔍 Extraer los nombres de los comandos dentro de `case 'comando':`
-        const commandRegex = /case\s+['"]([^'"]+)['"]:/g;
-        let commands = [];
-        let match;
-        while ((match = commandRegex.exec(mainFileContent)) !== null) {
-            commands.push(match[1]);
-        }
-
-        // 📊 Filtrar y ordenar los comandos
-        commands = [...new Set(commands)].sort();
-        let totalComandos = commands.length;
-
-        // 📜 Construir mensaje con formato ordenado
-        let commandList = `📜 *Lista de Comandos Disponibles (${totalComandos} comandos):*\n\n`;
-        commands.forEach(cmd => {
-            commandList += `🔹 *${global.prefix}${cmd}*\n`;
-        });
-
-        commandList += `\n📌 **Usa los comandos con el prefijo actual:** \`${global.prefix}\``;
-
-        // 📩 Enviar el mensaje con el menú de comandos
-        await sock.sendMessage(
-            msg.key.remoteJid,
-            { text: commandList, quoted: msg }
-        );
-
-        // ✅ Confirmación con reacción
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key }
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .verco:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener la lista de comandos. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
-}            
-
+           
             
 case 'play': { 
     const yts = require('yt-search'); 
