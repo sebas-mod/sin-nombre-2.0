@@ -851,10 +851,18 @@ case 'menugrupo': {
 
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
 
-    // Enviar el mensaje con la imagen de fondo
+    // Descargamos el MP4 para enviarlo como GIF
+    const { data: bufferVideo } = await axios.get(
+      "https://cdn.dorratz.com/files/1741471817068.mp4", 
+      { responseType: 'arraybuffer' }
+    );
+
+    // Enviamos el video como GIF animado
     await sock.sendMessage(chatId, {
-      image: { url: "https://cdn.dorratz.com/files/1741467761174.jpg" },
-      caption: captionText
+      video: bufferVideo,
+      caption: captionText,
+      gifPlayback: true,
+      mimetype: "video/mp4"
     }, { quoted: msg });
 
   } catch (error) {
@@ -865,6 +873,7 @@ case 'menugrupo': {
   }
   break;
 }
+
 
             
 case 'setinfo': {
