@@ -485,47 +485,49 @@ case 'bc': {
     return;
   }
   
-  // Obtén la fecha actual con un formato bonito
+  // Obtén la fecha actual en un formato bonito
   const fecha = new Date().toLocaleString("es-ES", { timeZone: "America/Argentina/Buenos_Aires" });
-  const header = `📢 *COMUNICADO OFICIAL DEL DUEÑO* 📢\n─────────────────────\nFecha: ${fecha}\n─────────────────────\n\n`;
+  const header = `📢 *COMUNICADO OFICIAL DEL DUEÑO* 📢\n──────────────────\nFecha: ${fecha}\n──────────────────\n\n`;
   
-  // Determina el tipo de mensaje citado y prepara el contenido a enviar
+  // Prepara el mensaje a enviar dependiendo del tipo de contenido citado
   let broadcastMsg = {};
   if (quotedMsg.conversation) {
-    // Mensaje de texto simple
+    // Texto simple
     broadcastMsg = { text: header + quotedMsg.conversation };
   } else if (quotedMsg.extendedTextMessage && quotedMsg.extendedTextMessage.text) {
     broadcastMsg = { text: header + quotedMsg.extendedTextMessage.text };
   } else if (quotedMsg.imageMessage) {
-    // Mensaje con imagen
+    // Imagen con posible caption
     try {
       const stream = await downloadContentFromMessage(quotedMsg.imageMessage, 'image');
       let buffer = Buffer.alloc(0);
       for await (const chunk of stream) {
         buffer = Buffer.concat([buffer, chunk]);
       }
-      broadcastMsg = { image: buffer, caption: header };
+      const imageCaption = quotedMsg.imageMessage.caption ? quotedMsg.imageMessage.caption : "";
+      broadcastMsg = { image: buffer, caption: header + imageCaption };
     } catch (error) {
       console.error("Error al descargar imagen:", error);
       await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al procesar la imagen." });
       return;
     }
   } else if (quotedMsg.videoMessage) {
-    // Mensaje con video
+    // Video con posible caption
     try {
       const stream = await downloadContentFromMessage(quotedMsg.videoMessage, 'video');
       let buffer = Buffer.alloc(0);
       for await (const chunk of stream) {
         buffer = Buffer.concat([buffer, chunk]);
       }
-      broadcastMsg = { video: buffer, caption: header };
+      const videoCaption = quotedMsg.videoMessage.caption ? quotedMsg.videoMessage.caption : "";
+      broadcastMsg = { video: buffer, caption: header + videoCaption };
     } catch (error) {
       console.error("Error al descargar video:", error);
       await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al procesar el video." });
       return;
     }
   } else if (quotedMsg.stickerMessage) {
-    // Mensaje con sticker (los stickers no admiten caption, por lo que se envía el header en un mensaje aparte)
+    // Sticker (los stickers no admiten caption, se envía el header por separado)
     try {
       const stream = await downloadContentFromMessage(quotedMsg.stickerMessage, 'sticker');
       let buffer = Buffer.alloc(0);
@@ -533,7 +535,7 @@ case 'bc': {
         buffer = Buffer.concat([buffer, chunk]);
       }
       broadcastMsg = { sticker: buffer };
-      // Envía el header por separado
+      // Envía el header en un mensaje aparte
       await sock.sendMessage(msg.key.remoteJid, { text: header });
     } catch (error) {
       console.error("Error al descargar sticker:", error);
