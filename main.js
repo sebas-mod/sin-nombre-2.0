@@ -468,7 +468,111 @@ case 'ytmp4': {
     }
     break;
 }
+case 'bc': {
+  // Verifica que el usuario sea owner
+  if (!global.isOwner(sender)) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Solo el owner puede usar este comando." });
+    return;
+  }
+  
+  // Agrega una reacción para indicar que el comando ha sido activado
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "🚀", key: msg.key } });
+  
+  // Verifica que se haya citado un mensaje
+  let quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  if (!quotedMsg) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes citar el mensaje que deseas enviar en el comando bc." });
+    return;
+  }
+  
+  // Obtén la fecha actual con un formato bonito
+  const fecha = new Date().toLocaleString("es-ES", { timeZone: "America/Argentina/Buenos_Aires" });
+  const header = `📢 *COMUNICADO OFICIAL DEL DUEÑO* 📢\n─────────────────────\nFecha: ${fecha}\n─────────────────────\n\n`;
+  
+  // Determina el tipo de mensaje citado y prepara el contenido a enviar
+  let broadcastMsg = {};
+  if (quotedMsg.conversation) {
+    // Mensaje de texto simple
+    broadcastMsg = { text: header + quotedMsg.conversation };
+  } else if (quotedMsg.extendedTextMessage && quotedMsg.extendedTextMessage.text) {
+    broadcastMsg = { text: header + quotedMsg.extendedTextMessage.text };
+  } else if (quotedMsg.imageMessage) {
+    // Mensaje con imagen
+    try {
+      const stream = await downloadContentFromMessage(quotedMsg.imageMessage, 'image');
+      let buffer = Buffer.alloc(0);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
+      broadcastMsg = { image: buffer, caption: header };
+    } catch (error) {
+      console.error("Error al descargar imagen:", error);
+      await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al procesar la imagen." });
+      return;
+    }
+  } else if (quotedMsg.videoMessage) {
+    // Mensaje con video
+    try {
+      const stream = await downloadContentFromMessage(quotedMsg.videoMessage, 'video');
+      let buffer = Buffer.alloc(0);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
+      broadcastMsg = { video: buffer, caption: header };
+    } catch (error) {
+      console.error("Error al descargar video:", error);
+      await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al procesar el video." });
+      return;
+    }
+  } else if (quotedMsg.stickerMessage) {
+    // Mensaje con sticker (los stickers no admiten caption, por lo que se envía el header en un mensaje aparte)
+    try {
+      const stream = await downloadContentFromMessage(quotedMsg.stickerMessage, 'sticker');
+      let buffer = Buffer.alloc(0);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
+      broadcastMsg = { sticker: buffer };
+      // Envía el header por separado
+      await sock.sendMessage(msg.key.remoteJid, { text: header });
+    } catch (error) {
+      console.error("Error al descargar sticker:", error);
+      await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al procesar el sticker." });
+      return;
+    }
+  } else {
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ No se reconoce el tipo de mensaje citado." });
+    return;
+  }
+  
+  // Obtén todos los grupos en los que está el bot
+  let groups;
+  try {
+    groups = await sock.groupFetchAllParticipating();
+  } catch (error) {
+    console.error("Error al obtener grupos:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al obtener la lista de grupos." });
+    return;
+  }
+  let groupIds = Object.keys(groups);
+  
+  // Envía el broadcast a cada grupo con un delay de 1 segundo
+  for (const groupId of groupIds) {
+    try {
+      await sock.sendMessage(groupId, broadcastMsg);
+      // Delay de 1 segundo
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error(`Error enviando broadcast a ${groupId}:`, error);
+    }
+  }
+  
+  // Notifica al owner que el broadcast se envió correctamente
+  await sock.sendMessage(msg.key.remoteJid, { text: `✅ Broadcast enviado a ${groupIds.length} grupos.` });
+  break;
+}
 
+        
 case 'allmenu': {
     try {
         const fs = require("fs");
