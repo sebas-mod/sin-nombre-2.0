@@ -484,7 +484,7 @@ case 'ytmp4': {
 
 case 'allmenu': {
     try {
-        constcase 'ytmp4': {
+        /*constcase 'ytmp4': {
     const fetch = require('node-fetch');
 
     if (!text || text.trim() === '') {
@@ -548,7 +548,7 @@ case 'allmenu': {
         await sock.sendMessage(msg.key.remoteJid, { react: { text: '❌', key: msg.key } });
     }
     break;
-}        fs = require("fs");
+}  */      fs = require("fs");
 
         // 📂 Ruta del archivo principal
         const mainFilePath = "./main.js";
