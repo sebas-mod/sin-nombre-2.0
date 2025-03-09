@@ -468,6 +468,74 @@ case 'ytmp4': {
     }
     break;
 }
+
+case 'vergrupos': {
+  // Solo el owner puede usar este comando
+  if (!global.isOwner(sender)) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Solo el owner puede usar este comando." });
+    return;
+  }
+  
+  // Agrega una reacción para indicar que el comando se ha activado
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "👀", key: msg.key } });
+  
+  const fs = require("fs");
+  const activosPath = "./activos.json";
+  let activos = {};
+  if (fs.existsSync(activosPath)) {
+    activos = JSON.parse(fs.readFileSync(activosPath, "utf-8"));
+  }
+  
+  // Obtén todos los grupos en los que está el bot
+  let groups;
+  try {
+    groups = await sock.groupFetchAllParticipating();
+  } catch (error) {
+    console.error("Error al obtener grupos:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al obtener la lista de grupos." });
+    return;
+  }
+  
+  let groupIds = Object.keys(groups);
+  if (groupIds.length === 0) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "No estoy en ningún grupo." });
+    return;
+  }
+  
+  let messageText = "*📋 Lista de Grupos y Configuraciones Activas:*\n\n";
+  
+  for (const groupId of groupIds) {
+    let subject = groupId;
+    try {
+      const meta = await sock.groupMetadata(groupId);
+      subject = meta.subject || groupId;
+    } catch (e) {
+      console.error(`Error obteniendo metadata de ${groupId}:`, e);
+    }
+    
+    // Verifica las configuraciones por grupo en activos.json
+    let antiarabe = (activos.antiarabe && activos.antiarabe[groupId]) ? "✅" : "❌";
+    let antilink = (activos.antilink && activos.antilink[groupId]) ? "✅" : "❌";
+    let welcome = (activos.welcome && activos.welcome[groupId]) ? "✅" : "❌";
+    let modoadmins = (activos.modoAdmins && activos.modoAdmins[groupId]) ? "✅" : "❌";
+    // Modo privado es global
+    let modoPrivado = (activos.modoPrivado) ? "✅" : "❌";
+    
+    messageText += `*Nombre:* ${subject}\n`;
+    messageText += `*ID:* ${groupId}\n`;
+    messageText += `*antiarabe:* ${antiarabe}\n`;
+    messageText += `*antilink:* ${antilink}\n`;
+    messageText += `*welcome:* ${welcome}\n`;
+    messageText += `*modoAdmins:* ${modoadmins}\n`;
+    messageText += `*modoPrivado (global):* ${modoPrivado}\n`;
+    messageText += "─────────────────────────\n";
+  }
+  
+  // Envía la lista al owner
+  await sock.sendMessage(msg.key.remoteJid, { text: messageText });
+  break;
+}            
+        
 case 'bc': {
   // Verifica que el usuario sea owner
   if (!global.isOwner(sender)) {
