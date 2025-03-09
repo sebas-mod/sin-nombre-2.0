@@ -640,7 +640,7 @@ case 'vergrupos': {
     messageText += `*welcome:* ${welcome}\n`;
     messageText += `*modoAdmins:* ${modoadmins}\n`;
     messageText += `*modoPrivado (global):* ${modoPrivado}\n`;
-    messageText += "─────────────────────────\n";
+    messageText += "─────────────────\n";
   }
   
   // Envía la lista al owner
