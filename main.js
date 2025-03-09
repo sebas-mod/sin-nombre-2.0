@@ -484,71 +484,7 @@ case 'ytmp4': {
 
 case 'allmenu': {
     try {
-        /*constcase 'ytmp4': {
-    const fetch = require('node-fetch');
-
-    if (!text || text.trim() === '') {
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: \`${global.prefix}ytmp4 <url>\`\n🔗 _Proporciona un enlace de YouTube válido._` 
-        });
-        return;
-    }
-
-    const url = args[0];
-
-    if (!url.includes('youtu')) {
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Proporciona un enlace válido de YouTube.*\n\n📜 *Ejemplo:* \`${global.prefix}ytmp4 <url>\`` 
-        });
-        return;
-    }
-
-    // Reacción de proceso ⏳
-    await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
-
-    try {
-        // Obtener información de resoluciones disponibles 📥
-        const infoResponse = await fetch(`https://ytdownloader.nvlgroup.my.id/info?url=${url}`);
-        const info = await infoResponse.json();
-
-        if (!info.resolutions || info.resolutions.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *No se encontraron resoluciones disponibles.*' });
-        }
-
-        // Elegir la mejor calidad posible (720p, 480p, 320p)
-        const resoluciones = info.resolutions.map(r => r.height).sort((a, b) => b - a);
-        let selectedHeight = resoluciones.includes(720) ? 720 : 
-                             resoluciones.includes(480) ? 480 : 
-                             resoluciones.includes(320) ? 320 : 
-                             Math.max(...resoluciones);
-
-        // Confirmación de descarga 📥
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `📥 *Descargando tu video en calidad ${selectedHeight}p, espera un momento...*` 
-        });
-
-        // Construcción del enlace de descarga
-        const videoUrl = `https://ytdownloader.nvlgroup.my.id/download?url=${url}&resolution=${selectedHeight}`;
-
-        // Enviar el video con un mensaje bonito ✨
-        await sock.sendMessage(msg.key.remoteJid, {
-    video: { url: videoUrl },
-    caption: `🎬 *Aquí tienes tu video en calidad ${selectedHeight}p!* 📺\n\n💎✨ *Que lo disfrutes y sigue explorando el mundo digital.* 🚀\n\n━━━━━━━❰❖❱━━━━━━━\n© 𝙰𝚣𝚞𝚛𝚊 𝚄𝚕𝚝𝚛𝚊 𝟸.𝟶 𝙱𝚘𝚝 `
-}, { quoted: msg });
-        // ✅ Confirmación de éxito
-        await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
-
-    } catch (e) {
-        console.error("❌ Error en el comando .ytmp4:", e);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Ocurrió un error al descargar el video.*\n\n📜 *Error:* ${e.message}\n🔹 *Inténtalo de nuevo más tarde.*` 
-        });
-
-        // ❌ Enviar reacción de error
-        await sock.sendMessage(msg.key.remoteJid, { react: { text: '❌', key: msg.key } });
-    }
-    break;
-}  */      fs = require("fs");
+        const fs = require("fs");
 
         // 📂 Ruta del archivo principal
         const mainFilePath = "./main.js";
@@ -560,8 +496,8 @@ case 'allmenu': {
 
         const chatId = msg.key.remoteJid; // Definir chatId correctamente
 
-        // ✅ Enviar la reacción ANTES de mostrar el menú
-        await sock.sendMessage(chatId, {
+        // ✅ Enviar la reacción antes del mensaje
+        await sock.sendMessage(chatId, { 
             react: { text: "📜", key: msg.key }
         });
 
@@ -593,7 +529,7 @@ case 'allmenu': {
 `;
 
         commands.forEach(cmd => {
-            commandList += `➫ *${global.prefix}${cmd}*\n`;
+            commandList += `🔹 *${global.prefix}${cmd}*\n`;
         });
 
         commandList += `━━━━━━━━━━━━━━━━━━━  
@@ -602,18 +538,11 @@ case 'allmenu': {
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-        // 📥 Descargamos el MP4 para enviarlo como GIF
-        const { data: bufferVideo } = await axios.get(
-            "https://cdn.dorratz.com/files/1741471441432.mp4", 
-            { responseType: 'arraybuffer' }
-        );
-
-        // 📩 Enviar el "video" como GIF con la lista de comandos
+        // 📩 Enviar el mensaje con el GIF de fondo
         await sock.sendMessage(chatId, {
-            video: bufferVideo,
+            video: { url: "https://cdn.dorratz.com/files/1741471441432.mp4" },
             caption: commandList,
-            gifPlayback: true,
-            mimetype: 'video/mp4'
+            gifPlayback: true // Asegurar que el video se envíe como GIF
         }, { quoted: msg });
 
     } catch (error) {
