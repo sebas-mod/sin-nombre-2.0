@@ -444,8 +444,8 @@ case 'ytmp4': {
         if (videoMinutes > 28) quality = '144';
         else if (videoMinutes > 20) quality = '240';
         else if (videoMinutes > 15) quality = '360';
-        else if (videoMinutes > 6) quality = '480';
-        else if (videoMinutes > 2) quality = '720';
+        else if (videoMinutes > 8) quality = '480';
+        else if (videoMinutes > 8) quality = '720';
 
         const finalResult = await savetube.ytdl(videoUrl, quality);
         if (!finalResult.status || !finalResult.response || !finalResult.response.descarga) {
