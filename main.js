@@ -293,9 +293,9 @@ case 'play': {
     await sock.sendMessage(msg.key.remoteJid, { 
         image: { url: video.thumbnail }, 
         caption: 
-`╔══════════════╗  
+`╔═══════════════╗  
 ║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏  ║  
-╚═══════════════╝  
+╚════════════════╝  
 
 🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${video.title}  
 ⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${secondString(video.timestamp || 0)}  
@@ -335,7 +335,9 @@ case 'play2': {
     try { 
         const yt_play = await yts(query); 
         if (!yt_play || yt_play.all.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* No se encontraron resultados para tu búsqueda.' });
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: '❌ *Error:* No se encontraron resultados para tu búsqueda. Intenta con otro término.' 
+            });
         } 
 
         const firstResult = yt_play.all[0]; 
@@ -344,11 +346,13 @@ case 'play2': {
             title: firstResult.title, 
             thumbnail: firstResult.thumbnail || 'default-thumbnail.jpg', 
             timestamp: firstResult.duration.seconds, 
-            views: firstResult.views, 
+            views: firstResult.views.toLocaleString(), 
             author: firstResult.author.name, 
         }; 
     } catch { 
-        return sock.sendMessage(msg.key.remoteJid, { text: '❌ *Error:* Ocurrió un problema al buscar el video.' });
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: '❌ *Error:* Ocurrió un problema al buscar el video. Inténtalo de nuevo más tarde.' 
+        });
     } 
 
     function secondString(seconds) { 
@@ -361,23 +365,41 @@ case 'play2': {
             .join(':'); 
     } 
 
-    // Reacción antes de enviar el mensaje
+    // Reacción inmediata al comando
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: "🎬", key: msg.key } 
     });
 
+    // Envío del mensaje completo con información y aviso de descarga en un solo mensaje
     await sock.sendMessage(msg.key.remoteJid, { 
         image: { url: video.thumbnail }, 
-        caption: `🎬 *Título:* ${video.title}\n⏱️ *Duración:* ${secondString(video.timestamp || 0)}\n👁️ *Vistas:* ${video.views || 0}\n👤 *Autor:* ${video.author || 'Desconocido'}\n🔗 *Link:* ${video.url}\n\n📌 *Para descargar el video usa el comando:* \n➡️ *${global.prefix}play2* _nombre del video_\n➡️ *Para descargar solo el audio usa:* \n*${global.prefix}play* _nombre del video_`, 
-        footer: "𝙲𝙾𝚁𝚃𝙰𝙽𝙰 𝟸.𝟶", 
+        caption: 
+`╔════════════════╗  
+║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏  ║  
+╚═════════════════╝  
+
+🎬 *𝙏í𝙩𝙪𝙡𝙤:* ${video.title}  
+⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${secondString(video.timestamp || 0)}  
+👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${video.views}  
+👤 *𝘼𝙪𝙩𝙤𝙧:* ${video.author || 'Desconocido'}  
+🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${video.url}  
+
+📥 *𝘾𝙤𝙢𝙖𝙣𝙙𝙤𝙨 𝙙𝙚 𝙙𝙚𝙨𝙘𝙖𝙧𝙜𝙖:*  
+🎬 *Video:* _${global.prefix}play2 nombre del video_  
+🎵 *Audio:* _${global.prefix}play nombre del video_  
+
+⏳ *Por favor espera...*  
+🛠️ *Azura Ultra 2.0 Bot está descargando tu video...*  
+
+⎯⎯⎯ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯⎯`, 
+        footer: "𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕", 
     }, { quoted: msg });
 
-    // Ejecutar el comando .ytmp4 directamente
+    // Ejecutar el comando .ytmp4 directamente para iniciar la descarga
     handleCommand(sock, msg, "ytmp4", [video.url]);
 
     break; 
 }
-
 
 case 'ytmp3': {
     const fs = require('fs');
