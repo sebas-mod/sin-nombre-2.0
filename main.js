@@ -417,7 +417,74 @@ case 'ytmp3': {
     break;
 }
         
+       
 case 'ytmp4': {
+    const fetch = require('node-fetch');
+    const savetube = require('savetubedl');
+
+    if (!args.length || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
+        return sock.sendMessage(msg.key.remoteJid, { text: '⚠️ Error: Proporcione un enlace válido de YouTube.' });
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    await sock.sendMessage(msg.key.remoteJid, { text: 'Procesando su solicitud, por favor espere...' });
+
+    const videoUrl = args[0];
+
+    try {
+        const result = await savetube.ytdl(videoUrl, '1080');
+
+        if (!result.status || !result.response || !result.response.descarga) {
+            throw new Error('No se pudo obtener el enlace de descarga.');
+        }
+
+        const videoInfo = result.response;
+        const videoMinutes = videoInfo.duracion / 60;
+
+        let quality = '1080';
+        if (videoMinutes > 28) quality = '144';
+        else if (videoMinutes > 20) quality = '240';
+        else if (videoMinutes > 15) quality = '360';
+        else if (videoMinutes > 6) quality = '480';
+        else if (videoMinutes > 2) quality = '720';
+
+        const finalResult = await savetube.ytdl(videoUrl, quality);
+        if (!finalResult.status || !finalResult.response || !finalResult.response.descarga) {
+            throw new Error('No se pudo obtener el enlace de descarga con la calidad seleccionada.');
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `Descargando su video en calidad ${quality}p. Espere un momento...` 
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: finalResult.response.descarga },
+            caption: `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error("Error en el comando .ytmp4:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ Ocurrió un error al procesar la solicitud.\n\nError: ${error.message}\nInténtelo nuevamente más tarde.` 
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+}
+
+case 'allmenu': {
+    try {
+        constcase 'ytmp4': {
     const fetch = require('node-fetch');
 
     if (!text || text.trim() === '') {
@@ -481,12 +548,7 @@ case 'ytmp4': {
         await sock.sendMessage(msg.key.remoteJid, { react: { text: '❌', key: msg.key } });
     }
     break;
-}       
-
-
-case 'allmenu': {
-    try {
-        const fs = require("fs");
+}        fs = require("fs");
 
         // 📂 Ruta del archivo principal
         const mainFilePath = "./main.js";
