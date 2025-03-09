@@ -284,24 +284,18 @@ case 'play': {
             .join(':'); 
     } 
 
-    // Mensaje de espera mientras se procesa la solicitud
-    await sock.sendMessage(msg.key.remoteJid, {
-        text: `⌛ *Procesando solicitud...*  
-🛠️ *Azura Ultra 2.0 Bot está descargando tu música, espera un momento...*`
-    });
-
-    // Reacción antes de enviar el mensaje final
+    // Reacción inmediata al comando
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: "🎶", key: msg.key } 
     });
 
-    // Envío del mensaje con el diseño mejorado
+    // Envío del mensaje completo con información y aviso de descarga en un solo mensaje
     await sock.sendMessage(msg.key.remoteJid, { 
         image: { url: video.thumbnail }, 
         caption: 
-`╔════════════════════╗  
+`╔══════════════╗  
 ║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏  ║  
-╚════════════════════╝  
+╚═══════════════╝  
 
 🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${video.title}  
 ⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${secondString(video.timestamp || 0)}  
@@ -313,11 +307,14 @@ case 'play': {
 🎵 *Audio:* _${global.prefix}play nombre del video_  
 🎥 *Video:* _${global.prefix}play2 nombre del video_  
 
-⎯⎯⎯⎯⎯ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯⎯⎯⎯`, 
+⏳ *Por favor espera...*  
+🛠️ *Azura Ultra 2.0 Bot está descargando tu música...*  
+
+⎯⎯ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯`, 
         footer: "𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕", 
     }, { quoted: msg });
 
-    // Ejecutar el comando .ytmp3 directamente
+    // Ejecutar el comando .ytmp3 directamente para iniciar la descarga
     handleCommand(sock, msg, "ytmp3", [video.url]);
 
     break; 
