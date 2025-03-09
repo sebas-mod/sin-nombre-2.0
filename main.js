@@ -362,14 +362,12 @@ case 'ytmp3': {
     const savetube = require('savetubedl');
 
     if (!args.length || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
-        return sock.sendMessage(msg.key.remoteJid, { text: '⚠️ Error: Proporcione un enlace válido de YouTube.' });
+        return;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
-
-    await sock.sendMessage(msg.key.remoteJid, { text: 'Procesando su solicitud, por favor espere...' });
 
     const videoUrl = args[0];
 
@@ -377,7 +375,7 @@ case 'ytmp3': {
         const result = await savetube.ytdlaud(videoUrl);
 
         if (!result.status || !result.response || !result.response.descarga) {
-            throw new Error('No se pudo obtener el enlace de descarga.');
+            throw new Error();
         }
 
         const videoInfo = result.response;
@@ -387,7 +385,7 @@ case 'ytmp3': {
         const filePath = path.join(tmpDir, `${Date.now()}.mp3`);
 
         const response = await fetch(videoInfo.descarga);
-        if (!response.ok) throw new Error(`Error en la descarga: ${response.statusText}`);
+        if (!response.ok) throw new Error();
 
         const buffer = await response.buffer();
         fs.writeFileSync(filePath, buffer);
@@ -395,7 +393,7 @@ case 'ytmp3': {
         const fileSize = fs.statSync(filePath).size;
         if (fileSize < 10000) {
             fs.unlinkSync(filePath);
-            throw new Error('El archivo descargado no es válido.');
+            throw new Error();
         }
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -405,32 +403,30 @@ case 'ytmp3': {
         }, { quoted: msg });
 
         fs.unlinkSync(filePath);
-        
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (error) {
-        console.error("Error en el comando .ytmp3:", error);
-        await sock.sendMessage(msg.key.remoteJid, { text: "Ocurrió un error al procesar la solicitud. Inténtelo nuevamente más tarde." });
+    } catch {
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
     }
     break;
 }
-        
-       
+
 case 'ytmp4': {
     const fetch = require('node-fetch');
     const savetube = require('savetubedl');
 
     if (!args.length || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
-        return sock.sendMessage(msg.key.remoteJid, { text: '⚠️ Error: Proporcione un enlace válido de YouTube.' });
+        return;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
-
-    await sock.sendMessage(msg.key.remoteJid, { text: 'Procesando su solicitud, por favor espere...' });
 
     const videoUrl = args[0];
 
@@ -438,7 +434,7 @@ case 'ytmp4': {
         const result = await savetube.ytdl(videoUrl, '1080');
 
         if (!result.status || !result.response || !result.response.descarga) {
-            throw new Error('No se pudo obtener el enlace de descarga.');
+            throw new Error();
         }
 
         const videoInfo = result.response;
@@ -453,12 +449,8 @@ case 'ytmp4': {
 
         const finalResult = await savetube.ytdl(videoUrl, quality);
         if (!finalResult.status || !finalResult.response || !finalResult.response.descarga) {
-            throw new Error('No se pudo obtener el enlace de descarga con la calidad seleccionada.');
+            throw new Error();
         }
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `Descargando su video en calidad ${quality}p. Espere un momento...` 
-        });
 
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: finalResult.response.descarga },
@@ -469,12 +461,7 @@ case 'ytmp4': {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (error) {
-        console.error("Error en el comando .ytmp4:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ Ocurrió un error al procesar la solicitud.\n\nError: ${error.message}\nInténtelo nuevamente más tarde.` 
-        });
-
+    } catch {
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
