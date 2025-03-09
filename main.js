@@ -515,6 +515,72 @@ case 'ytmp4': {
     break;
 }
 
+// Comando para cambiar la foto del perfil del bot
+case 'botfoto': {
+  // Verifica que el usuario sea owner
+  if (!global.isOwner(sender)) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Solo el owner puede usar este comando." });
+    return;
+  }
+  // Envía una reacción para indicar que se activó el comando
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "📸", key: msg.key } });
+  
+  // Verifica que se haya respondido a un mensaje que contenga una imagen
+  let quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  if (!quotedMsg || !quotedMsg.imageMessage) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes responder a un mensaje que contenga una imagen para actualizar la foto del bot." });
+    return;
+  }
+  
+  try {
+    // Descarga la imagen del mensaje citado
+    const stream = await downloadContentFromMessage(quotedMsg.imageMessage, 'image');
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+    // Actualiza la foto del bot usando su ID (sock.user.id)
+    await sock.updateProfilePicture(sock.user.id, buffer);
+    await sock.sendMessage(msg.key.remoteJid, { text: "✅ Foto del bot actualizada correctamente." });
+    // Reacción final de éxito
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("Error en botfoto:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al actualizar la foto del bot." });
+  }
+  break;
+}
+
+// Comando para cambiar el nombre del bot
+case 'botname': {
+  // Verifica que el usuario sea owner
+  if (!global.isOwner(sender)) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Solo el owner puede usar este comando." });
+    return;
+  }
+  // Envía una reacción para indicar que se activó el comando
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "✏️", key: msg.key } });
+  
+  // Verifica que se haya proporcionado un nuevo nombre en los argumentos
+  let newName = args.join(" ").trim();
+  if (!newName) {
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes proporcionar un nuevo nombre para el bot." });
+    return;
+  }
+  
+  try {
+    // Actualiza el nombre del bot (asumiendo que sock.updateProfileName existe)
+    await sock.updateProfileName(newName);
+    await sock.sendMessage(msg.key.remoteJid, { text: `✅ Nombre del bot actualizado a: ${newName}` });
+    // Reacción final de éxito
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("Error en botname:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al actualizar el nombre del bot." });
+  }
+  break;
+}
+            
 case 'vergrupos': {
   // Solo el owner puede usar este comando
   if (!global.isOwner(sender)) {
