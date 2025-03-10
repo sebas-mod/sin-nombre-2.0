@@ -802,7 +802,7 @@ case 'allmenu': {
 `;
 
         commands.forEach(cmd => {
-            commandList += `🔹 *${global.prefix}${cmd}*\n`;
+            commandList += `➫ *${global.prefix}${cmd}*\n`;
         });
 
         commandList += `━━━━━━━━━━━━━━━━━━━  
