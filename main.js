@@ -732,7 +732,7 @@ case 'bc': {
   
   // Obtén la fecha actual en un formato bonito
   const fecha = new Date().toLocaleString("es-ES", { timeZone: "America/Argentina/Buenos_Aires" });
-  const header = `📢 *COMUNICADO OFICIAL DEL DUEÑO* 📢\n──────────────────\nFecha: ${fecha}\n──────────────────\n\n`;
+  const header = `📢 *COMUNICADO OFICIAL DEL DUEÑO* 📢\n──────────────\nFecha: ${fecha}\n──────────────\n\n`;
   
   // Prepara el mensaje a enviar dependiendo del tipo de contenido citado
   let broadcastMsg = {};
@@ -757,7 +757,7 @@ case 'bc': {
       return;
     }
   } else if (quotedMsg.videoMessage) {
-    // Video con posible caption
+    // Video o GIF con posible caption
     try {
       const stream = await downloadContentFromMessage(quotedMsg.videoMessage, 'video');
       let buffer = Buffer.alloc(0);
@@ -765,10 +765,31 @@ case 'bc': {
         buffer = Buffer.concat([buffer, chunk]);
       }
       const videoCaption = quotedMsg.videoMessage.caption ? quotedMsg.videoMessage.caption : "";
-      broadcastMsg = { video: buffer, caption: header + videoCaption };
+      // Si es un GIF (si tiene la propiedad gifPlayback activa), se añade esa opción
+      if (quotedMsg.videoMessage.gifPlayback) {
+        broadcastMsg = { video: buffer, caption: header + videoCaption, gifPlayback: true };
+      } else {
+        broadcastMsg = { video: buffer, caption: header + videoCaption };
+      }
     } catch (error) {
       console.error("Error al descargar video:", error);
       await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al procesar el video." });
+      return;
+    }
+  } else if (quotedMsg.audioMessage) {
+    // Audio o nota de audio
+    try {
+      const stream = await downloadContentFromMessage(quotedMsg.audioMessage, 'audio');
+      let buffer = Buffer.alloc(0);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
+      // Los mensajes de audio no admiten caption, así que se envía el header aparte
+      broadcastMsg = { audio: buffer, mimetype: 'audio/mpeg' };
+      await sock.sendMessage(msg.key.remoteJid, { text: header });
+    } catch (error) {
+      console.error("Error al descargar audio:", error);
+      await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al procesar el audio." });
       return;
     }
   } else if (quotedMsg.stickerMessage) {
@@ -818,7 +839,6 @@ case 'bc': {
   await sock.sendMessage(msg.key.remoteJid, { text: `✅ Broadcast enviado a ${groupIds.length} grupos.` });
   break;
 }
-
         
 case 'allmenu': {
     try {
