@@ -1,1 +1,9 @@
-{}
+{
+  "usuarios": {},
+  "tienda": {
+    "items": {},
+    "personajes": [],
+    "mascotas": []
+  },
+  "mercadoPersonajes": []
+}
