@@ -450,7 +450,14 @@ case 'ytmp3': {
     const fetch = require('node-fetch');
     const savetube = require('savetubedl');
 
-    if (!args.length || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
+        }, { quoted: msg });
+        return;
+    }
+
+    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
         return;
     }
 
@@ -509,7 +516,14 @@ case 'ytmp4': {
     const fetch = require('node-fetch');
     const savetube = require('savetubedl');
 
-    if (!args.length || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp4* https://www.youtube.com/watch?v=ejemplo`
+        }, { quoted: msg });
+        return;
+    }
+
+    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(args[0])) {
         return;
     }
 
