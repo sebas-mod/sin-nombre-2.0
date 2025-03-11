@@ -1104,6 +1104,7 @@ Así te registras
 ➤ ${global.prefix}deleteuser  
 ➤ ${global.prefix}deleteper  
 ➤ ${global.prefix}deletemascota  
+➤ ${global.prefix}totalper
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
 ➤ ${global.prefix}topuser  
