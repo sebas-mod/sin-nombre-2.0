@@ -580,6 +580,54 @@ case 'ytmp4': {
     break;
 }
 
+case 'totalper': {
+  try {
+    // Agrega una reacción para indicar que el comando se ha activado
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "🔢", key: msg.key } });
+    
+    const fs = require('fs');
+    const rpgFile = "./rpg.json";
+    if (!fs.existsSync(rpgFile)) {
+      await sock.sendMessage(msg.key.remoteJid, { text: "❌ No se encontró el archivo de RPG." }, { quoted: msg });
+      return;
+    }
+    
+    // Carga de datos RPG
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    
+    // Cuenta la cantidad de personajes en la tienda
+    let totalStore = Array.isArray(rpgData.tiendaPersonajes) ? rpgData.tiendaPersonajes.length : 0;
+    
+    // Cuenta la cantidad de personajes en las carteras de los usuarios
+    let totalUsers = 0;
+    if (rpgData.usuarios && typeof rpgData.usuarios === "object") {
+      for (let user in rpgData.usuarios) {
+        if (rpgData.usuarios[user].personajes && Array.isArray(rpgData.usuarios[user].personajes)) {
+          totalUsers += rpgData.usuarios[user].personajes.length;
+        }
+      }
+    }
+    
+    let totalCharacters = totalStore + totalUsers;
+    
+    let messageText = `📊 *TOTAL DE PERSONAJES EN EL SISTEMA* 📊\n\n`;
+    messageText += `*En la tienda:* ${totalStore}\n`;
+    messageText += `*En las carteras de usuarios:* ${totalUsers}\n`;
+    messageText += `─────────────────────────\n`;
+    messageText += `*Total:* ${totalCharacters}`;
+    
+    // Envía el mensaje con los resultados
+    await sock.sendMessage(msg.key.remoteJid, { text: messageText }, { quoted: msg });
+    
+    // Reacción final de éxito
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
+  } catch (error) {
+    console.error("Error en el comando totalper:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al calcular el total de personajes." }, { quoted: msg });
+  }
+  break;
+}
+            
 // Comando para cambiar la foto del perfil del bot
 case 'botfoto': {
   // Verifica que el usuario sea owner
