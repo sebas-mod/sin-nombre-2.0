@@ -222,9 +222,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
 // pon mas comando aqui abajo        
-            case 'play3': {
-    const fs = require('fs');
-    const path = require('path');
+case 'play3': {
     const fetch = require('node-fetch');
 
     if (!text) {
@@ -255,27 +253,6 @@ sock.ev.on('messages.delete', (messages) => {
         }
 
         const videoInfo = data.result;
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-        const thumbPath = path.join(tmpDir, `${Date.now()}_thumb.jpg`);
-        const thumbResponse = await fetch(videoInfo.thumb);
-        if (!thumbResponse.ok) throw new Error('Error al descargar la miniatura');
-        const thumbBuffer = await thumbResponse.buffer();
-        fs.writeFileSync(thumbPath, thumbBuffer);
-
-        const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
-        const audioResponse = await fetch(videoInfo.download);
-        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
-        const audioBuffer = await audioResponse.buffer();
-        fs.writeFileSync(audioPath, audioBuffer);
-
-        const fileSize = fs.statSync(audioPath).size;
-        if (fileSize < 10000) {
-            fs.unlinkSync(audioPath);
-            fs.unlinkSync(thumbPath);
-            throw new Error('El archivo es demasiado pequeño');
-        }
 
         const caption = `🎵 *Título:* ${videoInfo.title}\n` +
                         `🕒 *Duración:* ${videoInfo.durasi}\n` +
@@ -284,19 +261,16 @@ sock.ev.on('messages.delete', (messages) => {
                         `🔗 *Enlace:* ${videoInfo.video_url}`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: fs.readFileSync(thumbPath),
+            image: { url: videoInfo.thumb },
             caption: caption,
             mimetype: 'image/jpeg'
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(audioPath),
+            audio: { url: videoInfo.download },
             mimetype: 'audio/mpeg',
             fileName: `${videoInfo.title}.mp3`
         }, { quoted: msg });
-
-        fs.unlinkSync(audioPath);
-        fs.unlinkSync(thumbPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -309,7 +283,7 @@ sock.ev.on('messages.delete', (messages) => {
         });
     }
     break;
-            }
+}
 case "git": {
     try {
         // Verificar que el comando solo lo use el owner
