@@ -222,6 +222,94 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
 // pon mas comando aqui abajo        
+            case 'play3': {
+    const fs = require('fs');
+    const path = require('path');
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}play3* La Factoria - Perdoname`
+        }, { quoted: msg });
+        return;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    const query = encodeURIComponent(text);
+
+    try {
+        const apiUrl = `https://exonity.tech/api/dl/playmp3?query=${query}`;
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos de la API');
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result || !data.result.download) {
+            throw new Error('No se pudo obtener el enlace de descarga');
+        }
+
+        const videoInfo = data.result;
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+        const thumbPath = path.join(tmpDir, `${Date.now()}_thumb.jpg`);
+        const thumbResponse = await fetch(videoInfo.thumb);
+        if (!thumbResponse.ok) throw new Error('Error al descargar la miniatura');
+        const thumbBuffer = await thumbResponse.buffer();
+        fs.writeFileSync(thumbPath, thumbBuffer);
+
+        const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
+        const audioResponse = await fetch(videoInfo.download);
+        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
+        const audioBuffer = await audioResponse.buffer();
+        fs.writeFileSync(audioPath, audioBuffer);
+
+        const fileSize = fs.statSync(audioPath).size;
+        if (fileSize < 10000) {
+            fs.unlinkSync(audioPath);
+            fs.unlinkSync(thumbPath);
+            throw new Error('El archivo es demasiado pequeño');
+        }
+
+        const caption = `🎵 *Título:* ${videoInfo.title}\n` +
+                        `🕒 *Duración:* ${videoInfo.durasi}\n` +
+                        `👀 *Vistas:* ${videoInfo.views}\n` +
+                        `📅 *Subido:* ${videoInfo.upload}\n` +
+                        `🔗 *Enlace:* ${videoInfo.video_url}`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: fs.readFileSync(thumbPath),
+            caption: caption,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: fs.readFileSync(audioPath),
+            mimetype: 'audio/mpeg',
+            fileName: `${videoInfo.title}.mp3`
+        }, { quoted: msg });
+
+        fs.unlinkSync(audioPath);
+        fs.unlinkSync(thumbPath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+            }
 case "git": {
     try {
         // Verificar que el comando solo lo use el owner
