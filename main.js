@@ -281,7 +281,7 @@ sock.ev.on('messages.delete', (messages) => {
     }
     break;
 }
-  case 'ytmp3': {
+  case 'ytmp32': {
     const fetch = require('node-fetch');
 
     if (!text) {
