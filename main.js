@@ -281,80 +281,11 @@ sock.ev.on('messages.delete', (messages) => {
     }
     break;
 }
-case 'ytmp32': {
-    const fetch = require('node-fetch');
-    const fs = require('fs');
-    const path = require('path');
 
-    if (!text) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
-        }, { quoted: msg });
-        return;
-    }
 
-    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text)) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Enlace no válido.\n\n📌 Asegúrese de ingresar una URL de YouTube válida.\n\nEjemplo: *${prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
-        }, { quoted: msg });
-        return;
-    }
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
 
-    const videoUrl = text;
-    const apiKey = 'ex-f631534532';
-    const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(videoUrl)}&apikey=${apiKey}`;
-
-    try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Error al obtener el audio desde la API');
-
-        const data = await response.json();
-
-        if (!data.status || !data.result || !data.result.dl) {
-            throw new Error('No se pudo obtener el enlace de descarga del audio');
-        }
-
-        const audioUrl = data.result.dl;
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-        const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
-        const audioResponse = await fetch(audioUrl);
-        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
-
-        const buffer = await audioResponse.buffer();
-        fs.writeFileSync(audioPath, buffer);
-
-        const fileSize = fs.statSync(audioPath).size;
-        if (fileSize < 10000) {
-            fs.unlinkSync(audioPath);
-            throw new Error('El archivo es demasiado pequeño');
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(audioPath),
-            mimetype: 'audio/mpeg',
-            fileName: `${data.result.title}.mp3`
-        }, { quoted: msg });
-
-        fs.unlinkSync(audioPath);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (error) {
-        console.error(error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-    break;
-}
+            
 case 'play3': {
     const fetch = require('node-fetch');
 
@@ -651,78 +582,6 @@ case 'play2': {
 
     break; 
 }
-
-case 'ytmp3': {
-    const fs = require('fs');
-    const path = require('path');
-    const fetch = require('node-fetch');
-    const savetube = require('savetubedl');
-
-    if (!text) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
-        }, { quoted: msg });
-        return;
-    }
-
-    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text)) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Enlace no válido.\n\n📌 Asegúrese de ingresar una URL de YouTube válida.\n\nEjemplo: *${prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
-        }, { quoted: msg });
-        return;
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    const videoUrl = text;
-
-    try {
-        const result = await savetube.ytdlaud(videoUrl);
-
-        if (!result.status || !result.response || !result.response.descarga) {
-            throw new Error();
-        }
-
-        const videoInfo = result.response;
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-        const filePath = path.join(tmpDir, `${Date.now()}.mp3`);
-
-        const response = await fetch(videoInfo.descarga);
-        if (!response.ok) throw new Error();
-
-        const buffer = await response.buffer();
-        fs.writeFileSync(filePath, buffer);
-
-        const fileSize = fs.statSync(filePath).size;
-        if (fileSize < 10000) {
-            fs.unlinkSync(filePath);
-            throw new Error();
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(filePath),
-            mimetype: 'audio/mpeg',
-            fileName: `${videoInfo.titulo}.mp3`
-        }, { quoted: msg });
-
-        fs.unlinkSync(filePath);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch {
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-    break;
-}
-
 
             
 case 'ytmp4': {
