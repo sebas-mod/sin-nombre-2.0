@@ -537,69 +537,49 @@ case "git": {
 }
 
             
-case 'play': { 
-    const yts = require('yt-search'); 
+case 'play': {
+    const fetch = require('node-fetch');
 
-    if (!text || text.trim() === '') {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play boza yaya*\n🔍 _Proporciona el nombre o término de búsqueda del audio._` 
-        });
-    } 
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo:* *${global.prefix}play* La Factoria - Perdoname`
+        }, { quoted: msg });
+        return;
+    }
 
-    const query = args.join(' ') || text; 
-    let video = {}; 
-
-    try { 
-        const yt_play = await yts(query); 
-        if (!yt_play || yt_play.all.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: '❌ *Error:* No se encontraron resultados para tu búsqueda. Intenta con otro término.' 
-            });
-        } 
-
-        const firstResult = yt_play.all[0]; 
-        video = { 
-            url: firstResult.url, 
-            title: firstResult.title, 
-            thumbnail: firstResult.thumbnail || 'default-thumbnail.jpg', 
-            timestamp: firstResult.duration.seconds, 
-            views: firstResult.views.toLocaleString(), 
-            author: firstResult.author.name, 
-        }; 
-    } catch { 
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: '❌ *Error:* Ocurrió un problema al buscar el video. Inténtalo de nuevo más tarde.' 
-        });
-    } 
-
-    function secondString(seconds) { 
-        const h = Math.floor(seconds / 3600); 
-        const m = Math.floor((seconds % 3600) / 60); 
-        const s = seconds % 60; 
-        return [h, m, s]
-            .map(v => v < 10 ? `0${v}` : v)
-            .filter((v, i) => v !== '00' || i > 0)
-            .join(':'); 
-    } 
-
-    // Reacción inmediata al comando
+    // Reacción de carga antes de enviar la información
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: "🎶", key: msg.key } 
+        react: { text: '⏳', key: msg.key }
     });
 
-    // Envío del mensaje completo con información y aviso de descarga en un solo mensaje
-    await sock.sendMessage(msg.key.remoteJid, { 
-        image: { url: video.thumbnail }, 
-        caption: 
+    const query = encodeURIComponent(text);
+
+    try {
+        const apiUrl = `https://exonity.tech/api/dl/playmp3?query=${query}`;
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos de la API');
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result || !data.result.download) {
+            throw new Error('No se pudo obtener el enlace de descarga');
+        }
+
+        const videoInfo = data.result;
+
+        const caption = 
 `╔═════════════════╗  
 ║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏  ║  
 ╚═════════════════╝  
 
-🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${video.title}  
-⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${secondString(video.timestamp || 0)}  
-👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${video.views}  
-👤 *𝘼𝙪𝙩𝙤𝙧:* ${video.author || 'Desconocido'}  
-🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${video.url}  
+🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${videoInfo.title}  
+⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${videoInfo.durasi}  
+👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${videoInfo.views}  
+👤 *𝘼𝙪𝙩𝙤𝙧:* ${videoInfo.uploader}  
+🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${videoInfo.video_url}  
 
 📥 *𝘾𝙤𝙢𝙖𝙣𝙙𝙤𝙨 𝙙𝙚 𝙙𝙚𝙨𝙘𝙖𝙧𝙜𝙖:*  
 🎵 *Audio:* _${global.prefix}play nombre del video_  
@@ -608,14 +588,42 @@ case 'play': {
 ⏳ *Por favor espera...*  
 🛠️ *Azura Ultra 2.0 Bot está descargando tu música...*  
 
-⎯⎯ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯`, 
-        footer: "𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕", 
-    }, { quoted: msg });
+⎯⎯ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯`;
 
-    // Ejecutar el comando .ytmp3 directamente para iniciar la descarga
-    handleCommand(sock, msg, "ytmp3", [video.url]);
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: videoInfo.thumb },
+            caption: caption,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
 
-    break; 
+        const downloadResponse = await fetch(videoInfo.download, { method: 'HEAD' });
+        if (!downloadResponse.ok) {
+            throw new Error('El enlace de descarga no está disponible (Error 404)');
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: { url: videoInfo.download },
+            mimetype: 'audio/mpeg',
+            fileName: `${videoInfo.title}.mp3`
+        }, { quoted: msg });
+
+        // Reacción final de éxito ✅
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+        }, { quoted: msg });
+
+        // Reacción de error ❌
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
 }
             
 case 'play2': { 
