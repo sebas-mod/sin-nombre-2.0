@@ -282,11 +282,11 @@ sock.ev.on('messages.delete', (messages) => {
     break;
 }
 
-
 case 'ytmp3': {
     const fetch = require('node-fetch');
     const fs = require('fs');
     const path = require('path');
+    const ffmpeg = require('fluent-ffmpeg');
     const { pipeline } = require('stream');
     const { promisify } = require('util');
     const streamPipeline = promisify(pipeline);
@@ -328,11 +328,11 @@ case 'ytmp3': {
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
+        // Descarga el archivo original
         const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
         const audioResponse = await fetch(audioUrl);
         if (!audioResponse.ok) throw new Error('Error al descargar el audio');
 
-        // Descarga el archivo correctamente usando streams
         const fileStream = fs.createWriteStream(audioPath);
         await streamPipeline(audioResponse.body, fileStream);
 
@@ -342,16 +342,28 @@ case 'ytmp3': {
             throw new Error('El archivo descargado es demasiado pequeño para ser válido.');
         }
 
-        // Envío del audio con el tipo de archivo correcto
+        // Conversión del audio usando FFmpeg para asegurar compatibilidad
+        const convertedAudioPath = path.join(tmpDir, `${Date.now()}_converted.mp3`);
+        await new Promise((resolve, reject) => {
+            ffmpeg(audioPath)
+                .audioCodec('libmp3lame')
+                .format('mp3')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(convertedAudioPath);
+        });
+
+        // Envío del audio convertido con el tipo de archivo correcto
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(audioPath),
+            audio: fs.readFileSync(convertedAudioPath),
             mimetype: 'audio/mpeg',
-            ptt: false, // Asegura que se envíe como audio reproducible
+            ptt: false,
             fileName: `${data.result.title}.mp3`
         }, { quoted: msg });
 
-        // Eliminamos el archivo temporal después de enviarlo
+        // Eliminamos los archivos temporales
         fs.unlinkSync(audioPath);
+        fs.unlinkSync(convertedAudioPath);
 
         // Reacción de éxito ✅
         await sock.sendMessage(msg.key.remoteJid, {
