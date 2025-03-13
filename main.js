@@ -221,7 +221,6 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-// pon mas comando aqui abajo        
 case 'play3': {
     const fetch = require('node-fetch');
 
@@ -259,13 +258,15 @@ case 'play3': {
                         `👀 *Vistas:* ${videoInfo.views}\n` +
                         `📅 *Subido:* ${videoInfo.upload}\n` +
                         `🔗 *Enlace:* ${videoInfo.video_url}`;
-
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: videoInfo.thumb },
             caption: caption,
             mimetype: 'image/jpeg'
         }, { quoted: msg });
-
+        const downloadResponse = await fetch(videoInfo.download, { method: 'HEAD' });
+        if (!downloadResponse.ok) {
+            throw new Error('El enlace de descarga no está disponible (Error 404)');
+        }
         await sock.sendMessage(msg.key.remoteJid, {
             audio: { url: videoInfo.download },
             mimetype: 'audio/mpeg',
@@ -278,6 +279,9 @@ case 'play3': {
 
     } catch (error) {
         console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+        }, { quoted: msg });
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
