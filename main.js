@@ -281,9 +281,7 @@ sock.ev.on('messages.delete', (messages) => {
     }
     break;
 }
-     case 'ytmp32': {
-    const fs = require('fs');
-    const path = require('path');
+  case 'ytmp3': {
     const fetch = require('node-fetch');
 
     if (!text) {
@@ -309,7 +307,7 @@ sock.ev.on('messages.delete', (messages) => {
     const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(videoUrl)}&apikey=${apiKey}`;
 
     try {
-        const response = await fetch(apiUrl);
+          const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Error al obtener el audio desde la API');
 
         const data = await response.json();
@@ -319,13 +317,8 @@ sock.ev.on('messages.delete', (messages) => {
         }
 
         const audioUrl = data.result.dl;
-        const audioResponse = await fetch(audioUrl);
-        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
-
-        const buffer = await audioResponse.buffer();
-
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: buffer,
+            audio: { url: audioUrl },
             mimetype: 'audio/mpeg',
             fileName: `${data.result.title}.mp3`
         }, { quoted: msg });
@@ -341,7 +334,7 @@ sock.ev.on('messages.delete', (messages) => {
         });
     }
     break;
-}      
+}          
     case 'play4': {
     const fetch = require('node-fetch');
 
