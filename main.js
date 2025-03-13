@@ -245,7 +245,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 
     const videoUrl = text;
-    const apiKey = 'ex-f631534532'; // Reemplaza con tu API key si es necesario
+    const apiKey = 'ex-f631534532'; 
     const apiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(videoUrl)}&apikey=${apiKey}`;
 
     try {
