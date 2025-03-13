@@ -221,6 +221,127 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+            case 'ytmp42': {
+    const fs = require('fs');
+    const path = require('path');
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp4* https://www.youtube.com/watch?v=ejemplo`
+        }, { quoted: msg });
+        return;
+    }
+
+    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text)) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Enlace no válido.\n\n📌 Asegúrese de ingresar una URL de YouTube válida.\n\nEjemplo: *${prefix}ytmp4* https://www.youtube.com/watch?v=ejemplo`
+        }, { quoted: msg });
+        return;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    const videoUrl = text;
+    const apiKey = 'ex-f631534532'; // Reemplaza con tu API key si es necesario
+    const apiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(videoUrl)}&apikey=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('Error al obtener el video desde la API');
+
+        const data = await response.json();
+
+        if (!data.status || !data.result || !data.result.dl) {
+            throw new Error('No se pudo obtener el enlace de descarga del video');
+        }
+
+        const videoUrl = data.result.dl;
+        const videoResponse = await fetch(videoUrl);
+        if (!videoResponse.ok) throw new Error('Error al descargar el video');
+
+        const buffer = await videoResponse.buffer();
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: buffer,
+            mimetype: 'video/mp4',
+            caption: data.result.title
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+}
+     case 'ytmp32': {
+    const fs = require('fs');
+    const path = require('path');
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
+        }, { quoted: msg });
+        return;
+    }
+
+    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text)) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Enlace no válido.\n\n📌 Asegúrese de ingresar una URL de YouTube válida.\n\nEjemplo: *${prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
+        }, { quoted: msg });
+        return;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    const videoUrl = text;
+    const apiKey = 'ex-f631534532'; 
+    const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(videoUrl)}&apikey=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('Error al obtener el audio desde la API');
+
+        const data = await response.json();
+
+        if (!data.status || !data.result || !data.result.dl) {
+            throw new Error('No se pudo obtener el enlace de descarga del audio');
+        }
+
+        const audioUrl = data.result.dl;
+        const audioResponse = await fetch(audioUrl);
+        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
+
+        const buffer = await audioResponse.buffer();
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: buffer,
+            mimetype: 'audio/mpeg',
+            fileName: `${data.result.title}.mp3`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+}      
     case 'play4': {
     const fetch = require('node-fetch');
 
