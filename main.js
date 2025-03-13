@@ -221,6 +221,74 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+    case 'play4': {
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}play4* DJ Papa Liat`
+        }, { quoted: msg });
+        return;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    const query = encodeURIComponent(text);
+
+    try {
+        const apiUrl = `https://exonity.tech/api/dl/playmp4?query=${query}`;
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos de la API');
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result || !data.result.download) {
+            throw new Error('No se pudo obtener el enlace de descarga');
+        }
+
+        const videoInfo = data.result;
+
+        const caption = `🎥 *Título:* ${videoInfo.title}\n` +
+                        `🕒 *Duración:* ${videoInfo.durasi}\n` +
+                        `👀 *Vistas:* ${videoInfo.views}\n` +
+                        `📅 *Subido:* ${videoInfo.upload}\n` +
+                        `🔗 *Enlace:* ${videoInfo.video_url}`;
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: videoInfo.thumb },
+            caption: caption,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+        const downloadResponse = await fetch(videoInfo.download, { method: 'HEAD' });
+        if (!downloadResponse.ok) {
+            throw new Error('El enlace de descarga no está disponible (Error 404)');
+        }
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: videoInfo.download },
+            mimetype: 'video/mp4',
+            caption: `🎥 *Título:* ${videoInfo.title}`,
+            fileName: `${videoInfo.title}.mp4`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+}        
 case 'play3': {
     const fetch = require('node-fetch');
 
