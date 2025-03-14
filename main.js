@@ -222,7 +222,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
              
- case 'play5': {
+case 'play5': {
     const fetch = require('node-fetch');
 
     if (!text) {
@@ -232,7 +232,7 @@ sock.ev.on('messages.delete', (messages) => {
         return;
     }
 
-    // Reacción de carga antes de enviar la información
+    // Reacción de carga
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
@@ -257,7 +257,7 @@ sock.ev.on('messages.delete', (messages) => {
 
         const caption = 
 `╔═════════════════╗  
-║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏  ║  
+║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧  ║  
 ╚═════════════════╝  
 
 🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${videoInfo.title}  
@@ -281,14 +281,35 @@ sock.ev.on('messages.delete', (messages) => {
             mimetype: 'image/jpeg'
         }, { quoted: msg });
 
-        // Se elimina la verificación HEAD para evitar error 404
+        const downloadUrl = videoInfo.download;
+        let downloadOk = true;
+        try {
+            // Verificamos el enlace sin usar HEAD
+            const downloadResponse = await fetch(downloadUrl);
+            if (!downloadResponse.ok) {
+                downloadOk = false;
+            }
+        } catch (err) {
+            downloadOk = false;
+        }
+
+        if (!downloadOk) {
+            // Si el enlace falla, redirigimos al comando .ytmp3
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ *El enlace de descarga de audio no está disponible.*\n🔄 *Redirigiendo al comando .ytmp3...*`
+            }, { quoted: msg });
+            // Llama a la función que maneja el comando .ytmp3
+            return handleYtmp3(msg, text);
+        }
+
+        // Si el enlace es válido, enviamos el audio
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: videoInfo.download },
+            audio: { url: downloadUrl },
             mimetype: 'audio/mpeg',
             fileName: `${videoInfo.title}.mp3`
         }, { quoted: msg });
 
-        // Reacción final de éxito ✅
+        // Reacción final de éxito
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
@@ -299,13 +320,13 @@ sock.ev.on('messages.delete', (messages) => {
             text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
         }, { quoted: msg });
 
-        // Reacción de error ❌
+        // Reacción de error
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
     break;
-}       
+} 
         
         
         
