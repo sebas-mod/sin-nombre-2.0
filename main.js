@@ -221,13 +221,10 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'play8': {
+case 'play4': {
     const fetch = require('node-fetch');
-    const HttpsProxyAgent = require('https-proxy-agent');
-    
-    // Configura tu proxy aquí
-    const proxyUrl = 'http://YOUR_PROXY_IP:PORT'; // Reemplaza con tu proxy
-    const agent = new HttpsProxyAgent(proxyUrl);
+    const fs = require('fs');
+    const path = require('path');
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
@@ -236,56 +233,79 @@ case 'play8': {
         return;
     }
 
+    // Reacción de carga ⏳
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
 
-    const query = encodeURIComponent(text);
+    const isUrl = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text);
+    const apiKey = 'ex-f631534532';
+    let downloadLink, title, thumb, caption = '';
 
     try {
-        const apiUrl = `https://exonity.tech/api/dl/playmp4?query=${query}`;
-        const response = await fetch(apiUrl, {
-            agent, 
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-        });
-
-        if (!response.ok) {
-            throw new Error('Error al obtener los datos de la API');
+        if (isUrl) {
+            // Si se ingresa una URL, usamos directamente el endpoint ytmp42
+            const apiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(text)}&apikey=${apiKey}`;
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Error al obtener el video desde la API ytmp42');
+            }
+            const data = await response.json();
+            if (!data.status || !data.result || !data.result.dl) {
+                throw new Error('No se pudo obtener el enlace de descarga del video');
+            }
+            downloadLink = data.result.dl;
+            title = data.result.title || 'Video';
+        } else {
+            // Si se ingresa el nombre del video, usamos el endpoint playmp4 para obtener información
+            const query = encodeURIComponent(text);
+            const searchApiUrl = `https://exonity.tech/api/dl/playmp4?query=${query}`;
+            const searchResponse = await fetch(searchApiUrl);
+            if (!searchResponse.ok) {
+                throw new Error('Error al obtener los datos de la API playmp4');
+            }
+            const searchData = await searchResponse.json();
+            if (searchData.status !== 200 || !searchData.result || !searchData.result.video_url) {
+                throw new Error('No se pudo obtener el resultado de la búsqueda');
+            }
+            const searchResult = searchData.result;
+            title = searchResult.title || 'Video';
+            thumb = searchResult.thumb;
+            caption = `🎥 *Título:* ${searchResult.title}\n` +
+                      `🕒 *Duración:* ${searchResult.durasi}\n` +
+                      `👀 *Vistas:* ${searchResult.views}\n` +
+                      `📅 *Subido:* ${searchResult.upload}\n` +
+                      `🔗 *Enlace:* ${searchResult.video_url}`;
+            if (thumb) {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    image: { url: thumb },
+                    caption: caption,
+                    mimetype: 'image/jpeg'
+                }, { quoted: msg });
+            }
+            // Usamos la URL del video obtenido para llamar al endpoint ytmp42
+            const ytmp42ApiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(searchResult.video_url)}&apikey=${apiKey}`;
+            const ytmp42Response = await fetch(ytmp42ApiUrl);
+            if (!ytmp42Response.ok) {
+                throw new Error('Error al obtener el video desde la API ytmp42 para la búsqueda');
+            }
+            const ytmp42Data = await ytmp42Response.json();
+            if (!ytmp42Data.status || !ytmp42Data.result || !ytmp42Data.result.dl) {
+                throw new Error('No se pudo obtener el enlace de descarga del video desde ytmp42');
+            }
+            downloadLink = ytmp42Data.result.dl;
         }
 
-        const data = await response.json();
+        // Descargamos el video usando el enlace obtenido
+        const videoResponse = await fetch(downloadLink, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (!videoResponse.ok) throw new Error('Error al descargar el video');
+        const buffer = await videoResponse.buffer();
 
-        if (data.status !== 200 || !data.result || !data.result.download) {
-            throw new Error('No se pudo obtener el enlace de descarga');
-        }
-
-        const videoInfo = data.result;
-
-        const caption = `🎥 *Título:* ${videoInfo.title}\n` +
-                        `🕒 *Duración:* ${videoInfo.durasi}\n` +
-                        `👀 *Vistas:* ${videoInfo.views}\n` +
-                        `📅 *Subido:* ${videoInfo.upload}\n` +
-                        `🔗 *Enlace:* ${videoInfo.video_url}`;
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: videoInfo.thumb },
-            caption: caption,
-            mimetype: 'image/jpeg'
-        }, { quoted: msg });
-        
-        // Realiza la comprobación del enlace usando el proxy
-        const downloadResponse = await fetch(videoInfo.download, {
-            method: 'HEAD',
-            agent,
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-        });
-        if (!downloadResponse.ok) {
-            throw new Error('El enlace de descarga no está disponible (Error 404)');
-        }
-        await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: videoInfo.download },
+            video: buffer,
             mimetype: 'video/mp4',
-            caption: `🎥 *Título:* ${videoInfo.title}`,
-            fileName: `${videoInfo.title}.mp4`
+            caption: `🎥 *Título:* ${title}`,
+            fileName: `${title}.mp4`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -458,75 +478,6 @@ case 'play': {
 }
 
         
-        
-        case 'play4': {
-    const fetch = require('node-fetch');
-
-    if (!text) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}play4* DJ Papa Liat`
-        }, { quoted: msg });
-        return;
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    const query = encodeURIComponent(text);
-
-    try {
-        const apiUrl = `https://exonity.tech/api/dl/playmp4?query=${query}`;
-        const response = await fetch(apiUrl);
-
-        if (!response.ok) {
-            throw new Error('Error al obtener los datos de la API');
-        }
-
-        const data = await response.json();
-
-        if (data.status !== 200 || !data.result || !data.result.download) {
-            throw new Error('No se pudo obtener el enlace de descarga');
-        }
-
-        const videoInfo = data.result;
-
-        const caption = `🎥 *Título:* ${videoInfo.title}\n` +
-                        `🕒 *Duración:* ${videoInfo.durasi}\n` +
-                        `👀 *Vistas:* ${videoInfo.views}\n` +
-                        `📅 *Subido:* ${videoInfo.upload}\n` +
-                        `🔗 *Enlace:* ${videoInfo.video_url}`;
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: videoInfo.thumb },
-            caption: caption,
-            mimetype: 'image/jpeg'
-        }, { quoted: msg });
-        const downloadResponse = await fetch(videoInfo.download, { method: 'HEAD' });
-        if (!downloadResponse.ok) {
-            throw new Error('El enlace de descarga no está disponible (Error 404)');
-        }
-        await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: videoInfo.download },
-            mimetype: 'video/mp4',
-            caption: `🎥 *Título:* ${videoInfo.title}`,
-            fileName: `${videoInfo.title}.mp4`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (error) {
-        console.error(error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-    break;
-}        
             case 'ytmp42': {
     const fs = require('fs');
     const path = require('path');
