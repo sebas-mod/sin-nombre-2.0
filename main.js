@@ -11,26 +11,23 @@ const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
+global.zrapi = `ex-9bf9dc0318`
 //modos
 //modos
 // 📂 Crear la carpeta `stickers/` si no existe
 if (!fs.existsSync(stickersDir)) {
     fs.mkdirSync(stickersDir, { recursive: true });
 }
-// 📂 Crear el archivo `stickers.json` si no existe
 if (!fs.existsSync(stickersFile)) {
     fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
 }
-//juego rpg abajo
-// Ruta del archivo RPG
 const rpgFile = "./rpg.json";
-// Si el archivo no existe, crearlo con la estructura básica
 if (!fs.existsSync(rpgFile)) {
     const rpgDataInicial = {
         usuarios: {},
         tiendaMascotas: [],
         tiendaPersonajes: [],
-        mercadoPersonajes: [] // Nueva tienda para que los usuarios puedan vender personajes
+        mercadoPersonajes: [] 
     };
     fs.writeFileSync(rpgFile, JSON.stringify(rpgDataInicial, null, 2));
 }
@@ -54,10 +51,6 @@ function loadPrefix() {
 // Cargar el prefijo al iniciar el bot
 loadPrefix();
 console.log(`📌 Prefijo actual: ${global.prefix}`);
-//orivado
-// Almacenar owner los usuarios en línea por cada grupo (hacerlo accesible globalmente)
-// Si el modo owner privado está activado, bloquear comandos para quienes no sean dueños o el mismo bot
-//modoprivado ariba
 const guarFilePath = "./guar.json";
 if (!fs.existsSync(guarFilePath)) {
     fs.writeFileSync(guarFilePath, JSON.stringify({}, null, 2));
@@ -245,7 +238,7 @@ case 'play4': {
     try {
         if (isUrl) {
             // Si se ingresa una URL, usamos directamente el endpoint ytmp42
-            const apiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(text)}&apikey=${apiKey}`;
+            const apiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(text)}&apikey=${zrapi}`;
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error('Error al obtener el video desde la API ytmp42');
@@ -284,7 +277,7 @@ case 'play4': {
                 }, { quoted: msg });
             }
             // Usamos la URL del video obtenido para llamar al endpoint ytmp42
-            const ytmp42ApiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(searchResult.video_url)}&apikey=${apiKey}`;
+            const ytmp42ApiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(searchResult.video_url)}&apikey=${zrapi}`;
             const ytmp42Response = await fetch(ytmp42ApiUrl);
             if (!ytmp42Response.ok) {
                 throw new Error('Error al obtener el video desde la API ytmp42 para la búsqueda');
@@ -354,7 +347,7 @@ case 'play': {
         if (isUrl) {
             // Si se ingresa una URL, usamos directamente el endpoint ytmp3
             const apiKey = 'ex-f631534532';
-            const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(text)}&apikey=${apiKey}`;
+            const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(text)}&apikey=${zrapi}`;
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error('Error al obtener los datos de la API ytmp3');
@@ -408,7 +401,7 @@ case 'play': {
             }
             // Ahora usamos la URL del video obtenido para llamar al endpoint ytmp3
             const apiKey = 'ex-f631534532';
-            const ytmp3ApiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(searchResult.video_url)}&apikey=${apiKey}`;
+            const ytmp3ApiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(searchResult.video_url)}&apikey=${zrapi}`;
             const ytmp3Response = await fetch(ytmp3ApiUrl);
             if (!ytmp3Response.ok) {
                 throw new Error('Error al obtener los datos de la API ytmp3 para la búsqueda');
@@ -8976,7 +8969,61 @@ case 'gemini': {
     }
     break;
 }
-        
+case 'simi':
+case 'simisimi': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}simi Hola, ¿cómo estás?\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const query = args.join(" ");
+    const apiUrl = `https://exonity.tech/api/ai/simi?query=${encodeURIComponent(query)}&lang=es&apikey=${zrapi}`;
+    const userId = msg.key.participant || msg.key.remoteJid; // Obtener ID del usuario
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "🤖", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result) {
+            throw new Error("No se pudo obtener una respuesta de Simi Simi.");
+        }
+
+        const respuestaSimi = data.result;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✨ *Simi Simi responde a @${userId.replace("@s.whatsapp.net", "")}:*\n\n${respuestaSimi}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖`,
+            mentions: [userId] // Menciona al usuario en la respuesta
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .simi:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al obtener respuesta de Simi Simi:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}       
 case 'topuser': {
     try {
         const rpgFile = "./rpg.json";
@@ -11692,7 +11739,7 @@ case "info":
         const infoMessage = `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
 │ 🔹 *Prefijo actual:* ${global.prefix}
 │ 👑 *Dueño:* Russell xz
-│ 🛠️ *Bot desarrollado desde cero* con la ayuda de ChatGPT.
+│ 🛠️ *Bot desarrollado desde cero* con la ayuda de Chatgpt.
 │ 🚀 *Creado por:* Russell
 │  
 ├─〔 📥 *Descargas Redes* 〕─
