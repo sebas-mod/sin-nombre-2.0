@@ -222,8 +222,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
              
-
-case 'play6': {
+case 'play7': {
     const fetch = require('node-fetch');
     const fs = require('fs');
     const path = require('path');
@@ -244,53 +243,50 @@ case 'play6': {
         react: { text: '⏳', key: msg.key }
     });
 
-    // Determina si el texto es un enlace de YouTube o una consulta de búsqueda
+    // Verificamos si el input es una URL de YouTube o una búsqueda por nombre
     const isUrl = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text);
-    let apiUrl;
-    if (isUrl) {
-        // Endpoint para URL (ytmp3)
-        const apiKey = 'ex-f631534532';
-        apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(text)}&apikey=${apiKey}`;
-    } else {
-        // Endpoint para búsqueda (playmp3)
-        const query = encodeURIComponent(text);
-        apiUrl = `https://exonity.tech/api/dl/playmp3?query=${query}`;
-    }
+    let audioUrl, title, thumb, caption = '';
 
     try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-            throw new Error('Error al obtener los datos de la API');
-        }
-        const data = await response.json();
-
-        let audioUrl, title, thumb, caption = '';
-
         if (isUrl) {
-            // Respuesta del endpoint ytmp3
+            // Si se ingresa una URL, usamos directamente el endpoint ytmp3
+            const apiKey = 'ex-f631534532';
+            const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(text)}&apikey=${apiKey}`;
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Error al obtener los datos de la API ytmp3');
+            }
+            const data = await response.json();
             if (!data.status || !data.result || !data.result.dl) {
                 throw new Error('No se pudo obtener el enlace de descarga del audio');
             }
             audioUrl = data.result.dl;
             title = data.result.title || 'Audio';
         } else {
-            // Respuesta del endpoint playmp3
-            if (data.status !== 200 || !data.result || !data.result.download) {
-                throw new Error('No se pudo obtener el enlace de descarga');
+            // Si se ingresa el nombre de la canción, usamos el endpoint playmp3 para obtener los datos
+            const query = encodeURIComponent(text);
+            const searchApiUrl = `https://exonity.tech/api/dl/playmp3?query=${query}`;
+            const searchResponse = await fetch(searchApiUrl);
+            if (!searchResponse.ok) {
+                throw new Error('Error al obtener los datos de la API playmp3');
             }
-            audioUrl = data.result.download;
-            title = data.result.title || 'Audio';
-            thumb = data.result.thumb;
+            const searchData = await searchResponse.json();
+            if (searchData.status !== 200 || !searchData.result || !searchData.result.video_url) {
+                throw new Error('No se pudo obtener el resultado de la búsqueda');
+            }
+            const searchResult = searchData.result;
+            title = searchResult.title || 'Audio';
+            thumb = searchResult.thumb;
             caption =
 `╔═════════════════╗  
 ║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧  ║  
 ╚═════════════════╝  
 
-🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${data.result.title}  
-⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${data.result.durasi}  
-👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${data.result.views}  
-👤 *𝘼𝙪𝙩𝙤𝙧:* ${data.result.uploader}  
-🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${data.result.video_url}  
+🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${searchResult.title}  
+⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${searchResult.durasi}  
+👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${searchResult.views}  
+👤 *𝘼𝙪𝙩𝙤𝙧:* ${searchResult.uploader}  
+🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${searchResult.video_url}  
 
 📥 *𝘾𝙤𝙢𝙖𝙣𝙙𝙤𝙨 𝙙𝙚 𝙙𝙚𝙨𝙘𝙖𝙧𝙜𝙖:*  
 🎵 *Audio:* _${global.prefix}play nombre del video_  
@@ -299,8 +295,7 @@ case 'play6': {
 ⏳ *Por favor espera...*  
 🛠️ *Azura Ultra 2.0 Bot está descargando tu música...*  
 
-⎯⎯ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯`;
-            // Enviar mensaje informativo con miniatura
+⎯⎯ *𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯`;
             if (thumb) {
                 await sock.sendMessage(msg.key.remoteJid, {
                     image: { url: thumb },
@@ -308,16 +303,28 @@ case 'play6': {
                     mimetype: 'image/jpeg'
                 }, { quoted: msg });
             }
+            // Ahora usamos la URL del video obtenido para llamar al endpoint ytmp3
+            const apiKey = 'ex-f631534532';
+            const ytmp3ApiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(searchResult.video_url)}&apikey=${apiKey}`;
+            const ytmp3Response = await fetch(ytmp3ApiUrl);
+            if (!ytmp3Response.ok) {
+                throw new Error('Error al obtener los datos de la API ytmp3 para la búsqueda');
+            }
+            const ytmp3Data = await ytmp3Response.json();
+            if (!ytmp3Data.status || !ytmp3Data.result || !ytmp3Data.result.dl) {
+                throw new Error('No se pudo obtener el enlace de descarga del audio desde ytmp3');
+            }
+            audioUrl = ytmp3Data.result.dl;
         }
 
-        // Descarga del archivo de audio
+        // Descargamos el archivo de audio
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
         const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
-        const audioResponse = await fetch(audioUrl);
+        const audioResponse = await fetch(audioUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
         if (!audioResponse.ok) throw new Error('Error al descargar el audio');
-
         const fileStream = fs.createWriteStream(audioPath);
         await streamPipeline(audioResponse.body, fileStream);
 
@@ -327,7 +334,7 @@ case 'play6': {
             throw new Error('El archivo descargado es demasiado pequeño para ser válido.');
         }
 
-        // Conversión del audio usando FFmpeg para asegurar compatibilidad
+        // Convertimos el audio usando FFmpeg para asegurar compatibilidad
         const convertedAudioPath = path.join(tmpDir, `${Date.now()}_converted.mp3`);
         await new Promise((resolve, reject) => {
             ffmpeg(audioPath)
@@ -338,7 +345,7 @@ case 'play6': {
                 .save(convertedAudioPath);
         });
 
-        // Envío del audio convertido
+        // Enviamos el audio convertido
         await sock.sendMessage(msg.key.remoteJid, {
             audio: fs.readFileSync(convertedAudioPath),
             mimetype: 'audio/mpeg',
@@ -346,7 +353,7 @@ case 'play6': {
             fileName: `${title}.mp3`
         }, { quoted: msg });
 
-        // Eliminamos archivos temporales
+        // Eliminamos los archivos temporales
         fs.unlinkSync(audioPath);
         fs.unlinkSync(convertedAudioPath);
 
@@ -360,14 +367,13 @@ case 'play6': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`,
         }, { quoted: msg });
-
-        // Reacción de error ❌
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
     break;
-}        
+}
+
         
         
         case 'play4': {
