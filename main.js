@@ -222,8 +222,15 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
              
-case 'play5': {
+
+case 'play6': {
     const fetch = require('node-fetch');
+    const fs = require('fs');
+    const path = require('path');
+    const ffmpeg = require('fluent-ffmpeg');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const streamPipeline = promisify(pipeline);
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
@@ -232,39 +239,58 @@ case 'play5': {
         return;
     }
 
-    // Reacción de carga
+    // Reacción de carga ⏳
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
 
-    const query = encodeURIComponent(text);
+    // Determina si el texto es un enlace de YouTube o una consulta de búsqueda
+    const isUrl = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text);
+    let apiUrl;
+    if (isUrl) {
+        // Endpoint para URL (ytmp3)
+        const apiKey = 'ex-f631534532';
+        apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(text)}&apikey=${apiKey}`;
+    } else {
+        // Endpoint para búsqueda (playmp3)
+        const query = encodeURIComponent(text);
+        apiUrl = `https://exonity.tech/api/dl/playmp3?query=${query}`;
+    }
 
     try {
-        const apiUrl = `https://exonity.tech/api/dl/playmp3?query=${query}`;
         const response = await fetch(apiUrl);
-
         if (!response.ok) {
             throw new Error('Error al obtener los datos de la API');
         }
-
         const data = await response.json();
 
-        if (data.status !== 200 || !data.result || !data.result.download) {
-            throw new Error('No se pudo obtener el enlace de descarga');
-        }
+        let audioUrl, title, thumb, caption = '';
 
-        const videoInfo = data.result;
-
-        const caption = 
+        if (isUrl) {
+            // Respuesta del endpoint ytmp3
+            if (!data.status || !data.result || !data.result.dl) {
+                throw new Error('No se pudo obtener el enlace de descarga del audio');
+            }
+            audioUrl = data.result.dl;
+            title = data.result.title || 'Audio';
+        } else {
+            // Respuesta del endpoint playmp3
+            if (data.status !== 200 || !data.result || !data.result.download) {
+                throw new Error('No se pudo obtener el enlace de descarga');
+            }
+            audioUrl = data.result.download;
+            title = data.result.title || 'Audio';
+            thumb = data.result.thumb;
+            caption =
 `╔═════════════════╗  
 ║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧  ║  
 ╚═════════════════╝  
 
-🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${videoInfo.title}  
-⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${videoInfo.durasi}  
-👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${videoInfo.views}  
-👤 *𝘼𝙪𝙩𝙤𝙧:* ${videoInfo.uploader}  
-🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${videoInfo.video_url}  
+🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${data.result.title}  
+⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${data.result.durasi}  
+👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${data.result.views}  
+👤 *𝘼𝙪𝙩𝙤𝙧:* ${data.result.uploader}  
+🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${data.result.video_url}  
 
 📥 *𝘾𝙤𝙢𝙖𝙣𝙙𝙤𝙨 𝙙𝙚 𝙙𝙚𝙨𝙘𝙖𝙧𝙜𝙖:*  
 🎵 *Audio:* _${global.prefix}play nombre del video_  
@@ -274,42 +300,57 @@ case 'play5': {
 🛠️ *Azura Ultra 2.0 Bot está descargando tu música...*  
 
 ⎯⎯ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁* ⎯⎯`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: videoInfo.thumb },
-            caption: caption,
-            mimetype: 'image/jpeg'
-        }, { quoted: msg });
-
-        const downloadUrl = videoInfo.download;
-        let downloadOk = true;
-        try {
-            // Verificamos el enlace sin usar HEAD
-            const downloadResponse = await fetch(downloadUrl);
-            if (!downloadResponse.ok) {
-                downloadOk = false;
+            // Enviar mensaje informativo con miniatura
+            if (thumb) {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    image: { url: thumb },
+                    caption: caption,
+                    mimetype: 'image/jpeg'
+                }, { quoted: msg });
             }
-        } catch (err) {
-            downloadOk = false;
         }
 
-        if (!downloadOk) {
-            // Si el enlace falla, redirigimos al comando .ytmp3
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: `❌ *El enlace de descarga de audio no está disponible.*\n🔄 *Redirigiendo al comando .ytmp3...*`
-            }, { quoted: msg });
-            // Llama a la función que maneja el comando .ytmp3
-            return handleYtmp3(msg, text);
+        // Descarga del archivo de audio
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+        const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
+        const audioResponse = await fetch(audioUrl);
+        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
+
+        const fileStream = fs.createWriteStream(audioPath);
+        await streamPipeline(audioResponse.body, fileStream);
+
+        const fileSize = fs.statSync(audioPath).size;
+        if (fileSize < 10000) {
+            fs.unlinkSync(audioPath);
+            throw new Error('El archivo descargado es demasiado pequeño para ser válido.');
         }
 
-        // Si el enlace es válido, enviamos el audio
+        // Conversión del audio usando FFmpeg para asegurar compatibilidad
+        const convertedAudioPath = path.join(tmpDir, `${Date.now()}_converted.mp3`);
+        await new Promise((resolve, reject) => {
+            ffmpeg(audioPath)
+                .audioCodec('libmp3lame')
+                .format('mp3')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(convertedAudioPath);
+        });
+
+        // Envío del audio convertido
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: downloadUrl },
+            audio: fs.readFileSync(convertedAudioPath),
             mimetype: 'audio/mpeg',
-            fileName: `${videoInfo.title}.mp3`
+            ptt: false,
+            fileName: `${title}.mp3`
         }, { quoted: msg });
 
-        // Reacción final de éxito
+        // Eliminamos archivos temporales
+        fs.unlinkSync(audioPath);
+        fs.unlinkSync(convertedAudioPath);
+
+        // Reacción final de éxito ✅
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
@@ -317,17 +358,16 @@ case 'play5': {
     } catch (error) {
         console.error(error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`,
         }, { quoted: msg });
 
-        // Reacción de error
+        // Reacción de error ❌
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
     break;
-} 
-        
+}        
         
         
         case 'play4': {
