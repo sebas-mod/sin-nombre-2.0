@@ -221,7 +221,90 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-             
+case 'play8': {
+    const fetch = require('node-fetch');
+    const HttpsProxyAgent = require('https-proxy-agent');
+    
+    // Configura tu proxy aquí
+    const proxyUrl = 'http://YOUR_PROXY_IP:PORT'; // Reemplaza con tu proxy
+    const agent = new HttpsProxyAgent(proxyUrl);
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}play4* DJ Papa Liat`
+        }, { quoted: msg });
+        return;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    const query = encodeURIComponent(text);
+
+    try {
+        const apiUrl = `https://exonity.tech/api/dl/playmp4?query=${query}`;
+        const response = await fetch(apiUrl, {
+            agent, 
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos de la API');
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result || !data.result.download) {
+            throw new Error('No se pudo obtener el enlace de descarga');
+        }
+
+        const videoInfo = data.result;
+
+        const caption = `🎥 *Título:* ${videoInfo.title}\n` +
+                        `🕒 *Duración:* ${videoInfo.durasi}\n` +
+                        `👀 *Vistas:* ${videoInfo.views}\n` +
+                        `📅 *Subido:* ${videoInfo.upload}\n` +
+                        `🔗 *Enlace:* ${videoInfo.video_url}`;
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: videoInfo.thumb },
+            caption: caption,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+        
+        // Realiza la comprobación del enlace usando el proxy
+        const downloadResponse = await fetch(videoInfo.download, {
+            method: 'HEAD',
+            agent,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
+        if (!downloadResponse.ok) {
+            throw new Error('El enlace de descarga no está disponible (Error 404)');
+        }
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: videoInfo.download },
+            mimetype: 'video/mp4',
+            caption: `🎥 *Título:* ${videoInfo.title}`,
+            fileName: `${videoInfo.title}.mp4`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+}
+
+            
 case 'play': {
     const fetch = require('node-fetch');
     const fs = require('fs');
