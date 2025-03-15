@@ -366,45 +366,7 @@ case 'tovideo': {
     }
     break;
 }  
- case 'ppt':
-case 'piedrapapeltijera': {
-    const options = ['piedra', 'papel', 'tijera'];
-    const botChoice = options[Math.floor(Math.random() * options.length)];
 
-    if (!text) {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ *Uso incorrecto.*\n\n📌 *Ejemplo:* *${global.prefix}ppt piedra*`
-        }, { quoted: msg });
-    }
-
-    const userChoice = text.toLowerCase();
-    if (!options.includes(userChoice)) {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ *Opción no válida.*\n\n📌 *Opciones válidas:* piedra, papel, tijera`
-        }, { quoted: msg });
-    }
-
-    let result;
-    if (userChoice === botChoice) {
-        result = 'Empate 🤝';
-    } else if (
-        (userChoice === 'piedra' && botChoice === 'tijera') ||
-        (userChoice === 'papel' && botChoice === 'piedra') ||
-        (userChoice === 'tijera' && botChoice === 'papel')
-    ) {
-        result = '¡Ganaste! 🎉';
-    } else {
-        result = '¡Perdiste! 😢';
-    }
-
-    const response = `*${msg.pushName}* eligió: *${userChoice}*\n*El bot* eligió: *${botChoice}*\n\n*Resultado:* ${result}`;
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        text: response
-    }, { quoted: msg });
-
-    break;
-}
 case 'toanime': {
     const fetch = require('node-fetch');
     try {
