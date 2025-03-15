@@ -214,6 +214,81 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+    case 'mediafire': {
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}mediafire https://www.mediafire.com/file/ejemplo/file.zip\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    if (!/^https?:\/\/(www\.)?mediafire\.com/.test(text)) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Enlace no válido.*\n📌 Asegúrate de ingresar una URL de MediaFire válida.\n\nEjemplo: \`${global.prefix}mediafire https://www.mediafire.com/file/ejemplo/file.zip\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: '⏳', key: msg.key } 
+    });
+
+    const mediafireUrl = text;
+
+    try {
+        const apiUrl = `https://exonity.tech/api/dl/mediafire?url=${encodeURIComponent(mediafireUrl)}`;
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result || !data.result.download) {
+            throw new Error("No se pudo obtener el enlace de descarga.");
+        }
+
+        const fileInfo = data.result;
+        const fileResponse = await fetch(fileInfo.download);
+        if (!fileResponse.ok) {
+            throw new Error("No se pudo descargar el archivo.");
+        }
+
+        const fileBuffer = await fileResponse.buffer();
+        const caption = `📂 *Nombre del archivo:* ${fileInfo.filename}\n` +
+                        `📦 *Tipo:* ${fileInfo.type}\n` +
+                        `📏 *Tamaño:* ${fileInfo.size}\n` +
+                        `📅 *Subido:* ${fileInfo.uploaded}\n` +
+                        `🔗 *Enlace de descarga:* ${fileInfo.download}`;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: caption 
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            document: fileBuffer,
+            mimetype: fileInfo.mimetype,
+            fileName: fileInfo.filename
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: '✅', key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .mediafire:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Ocurrió un error al procesar la solicitud:*\n_${error.message}_\n\n🔹 Inténtalo de nuevo más tarde.` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: '❌', key: msg.key } 
+        });
+    }
+    break;
+}
 case 'play4': {
     const fetch = require('node-fetch');
     const fs = require('fs');
