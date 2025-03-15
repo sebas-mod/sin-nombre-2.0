@@ -240,11 +240,9 @@ case 'qc': {
     // Determinar el usuario objetivo (target)
     let target = null;
     if (msg.quoted) {
-        // Si se cita, intentamos obtener el ID del usuario citado
         target = msg.quoted.sender || msg.quoted.participant || (msg.quoted.key && msg.quoted.key.participant);
     }
     if (!target) {
-        // Para mensajes sin cita, usar la mención; si no, usar el participante del mensaje (en grupos) o msg.sender
         target = (msg.mentionedJid && msg.mentionedJid[0])
             ? msg.mentionedJid[0]
             : (msg.key && msg.key.participant)
@@ -309,7 +307,16 @@ case 'qc': {
         const response = await axios.post('https://bot.lyo.su/quote/generate', quoteObj, {
             headers: { 'Content-Type': 'application/json' }
         });
-        const buffer = Buffer.from(response.data.result.image, 'base64');
+        
+        // Verificar y limpiar el string de la imagen si es necesario
+        let imageData = response.data.result.image;
+        if (!imageData) {
+            throw new Error("No se recibió la imagen en la respuesta");
+        }
+        if (imageData.startsWith("data:image")) {
+            imageData = imageData.split(',')[1];
+        }
+        const buffer = Buffer.from(imageData, 'base64');
 
         await sock.sendMessage(msg.key.remoteJid, {
             sticker: buffer,
