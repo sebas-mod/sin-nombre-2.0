@@ -8866,6 +8866,61 @@ case 'toanime': {
     }
     break;
 }
+case 'chatgpt':
+case 'ia': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}chatgpt Hola, ¿cómo estás?\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const query = args.join(" ");
+    const apiUrl = `https://exonity.tech/api/ai/copilot?message=${encodeURIComponent(query)}`;
+    const userId = msg.key.participant || msg.key.remoteJid; // Obtener ID del usuario
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "🤖", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result) {
+            throw new Error("No se pudo obtener una respuesta de ChatGPT.");
+        }
+
+        const respuestaChatGPT = data.result;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `✨ *ChatGPT responde a @${userId.replace("@s.whatsapp.net", "")}:*\n\n${respuestaChatGPT}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖`,
+            mentions: [userId] // Menciona al usuario en la respuesta
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .chatgpt:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al obtener respuesta de ChatGPT:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
             
       case 'toaudio':
 case 'tomp3': {
