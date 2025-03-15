@@ -245,42 +245,58 @@ case 'tovideo': {
     }
 
     const stickerPath = path.join(__dirname, 'tmp', `${Date.now()}.webp`);
+    const imagePath = stickerPath.replace('.webp', '.png');
     const videoPath = stickerPath.replace('.webp', '.mp4');
 
     writeFileSync(stickerPath, buffer);
 
     ffmpeg(stickerPath)
-        .outputOptions([
-            '-vf scale=512:512',
-            '-c:v libx264',
-            '-preset fast',
-            '-crf 28'
-        ])
-        .save(videoPath)
-        .on('end', async () => {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                video: { url: videoPath },
-                caption: "🎥 *Aquí está tu video convertido del sticker.*"
-            }, { quoted: msg });
+        .output(imagePath)
+        .on('end', () => {
+            ffmpeg(imagePath)
+                .outputOptions([
+                    '-vf scale=512:512',
+                    '-c:v libx264',
+                    '-preset fast',
+                    '-crf 28'
+                ])
+                .save(videoPath)
+                .on('end', async () => {
+                    await sock.sendMessage(msg.key.remoteJid, { 
+                        video: { url: videoPath },
+                        caption: "🎥 *Aquí está tu video convertido del sticker.*"
+                    }, { quoted: msg });
 
-            fs.unlinkSync(stickerPath);
-            fs.unlinkSync(videoPath);
+                    fs.unlinkSync(stickerPath);
+                    fs.unlinkSync(imagePath);
+                    fs.unlinkSync(videoPath);
 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                react: { text: "✅", key: msg.key } 
-            });
+                    await sock.sendMessage(msg.key.remoteJid, { 
+                        react: { text: "✅", key: msg.key } 
+                    });
+                })
+                .on('error', async (err) => {
+                    console.error("❌ Error al convertir imagen a video:", err);
+
+                    await sock.sendMessage(msg.key.remoteJid, { 
+                        text: "❌ *No se pudo convertir el sticker en video.*" 
+                    }, { quoted: msg });
+
+                    fs.unlinkSync(stickerPath);
+                    fs.unlinkSync(imagePath);
+                    if (fs.existsSync(videoPath)) {
+                        fs.unlinkSync(videoPath);
+                    }
+                });
         })
         .on('error', async (err) => {
-            console.error("❌ Error al convertir sticker a video:", err);
+            console.error("❌ Error al convertir sticker a imagen:", err);
 
             await sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *No se pudo convertir el sticker en video.*" 
             }, { quoted: msg });
 
             fs.unlinkSync(stickerPath);
-            if (fs.existsSync(videoPath)) {
-                fs.unlinkSync(videoPath);
-            }
         });
 
     break;
