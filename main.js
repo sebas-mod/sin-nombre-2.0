@@ -247,18 +247,18 @@ case 'toanime': {
         }
         const base64Image = buffer.toString('base64');
 
-        // Construimos la URL de la API sin la imagen en la query
-        const apiUrl = `https://exonity.tech/api/ai/toanime?apikey=${zrapi}`;
-
-        // Enviamos la imagen en el body de la petición usando POST
+        // Supongamos que el endpoint correcto para POST es el siguiente (verifica la documentación)
+        const apiUrl = `https://exonity.tech/api/ai/toanime`;
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
-                url: `data:${mime};base64,${base64Image}`
+                apiKey: zrapi, // O el nombre de campo que indique la documentación
+                image: `data:${mime};base64,${base64Image}`
             })
         });
-
         if (!response.ok) {
             throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
         }
