@@ -214,49 +214,42 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-        case 'gay': {
-    if (!msg.isGroup) {
+ case 'ppt':
+case 'piedrapapeltijera': {
+    const options = ['piedra', 'papel', 'tijera'];
+    const botChoice = options[Math.floor(Math.random() * options.length)];
+
+    if (!text) {
         return sock.sendMessage(msg.key.remoteJid, {
-            text: "⚠️ *Este comando solo funciona en grupos.*"
+            text: `⚠️ *Uso incorrecto.*\n\n📌 *Ejemplo:* *${global.prefix}ppt piedra*`
         }, { quoted: msg });
     }
-    const mentionedJid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-    if (!mentionedJid) {
+
+    const userChoice = text.toLowerCase();
+    if (!options.includes(userChoice)) {
         return sock.sendMessage(msg.key.remoteJid, {
-            text: "⚠️ *Debes mencionar a un usuario.*\n\n📌 Ejemplo: `.gay @usuario`"
+            text: `⚠️ *Opción no válida.*\n\n📌 *Opciones válidas:* piedra, papel, tijera`
         }, { quoted: msg });
     }
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '🏳‍🌈', key: msg.key }
-    });
-    const random = Math.floor(Math.random() * 100);
-    const gay = random;
-    let ga;
-    if (gay < 20) {
-        ga = 'Usted es hetero 🤪🤙';
-    } else if (gay >= 21 && gay <= 30) {
-        ga = 'Mas o menos 🤔';
-    } else if (gay >= 31 && gay <= 40) {
-        ga = 'Tengo mis dudas 😑';
-    } else if (gay >= 41 && gay <= 50) {
-        ga = 'Tengo razón? 😏';
-    } else if (gay == 50) {
-        ga = 'Eres o no? 🧐';
-    } else if (gay > 51) {
-        ga = 'Usted es gay 🥸';
+
+    let result;
+    if (userChoice === botChoice) {
+        result = 'Empate 🤝';
+    } else if (
+        (userChoice === 'piedra' && botChoice === 'tijera') ||
+        (userChoice === 'papel' && botChoice === 'piedra') ||
+        (userChoice === 'tijera' && botChoice === 'papel')
+    ) {
+        result = '¡Ganaste! 🎉';
+    } else {
+        result = '¡Perdiste! 😢';
     }
-    const jawab = `@${mentionedJid.split("@")[0]} Es 🏳️‍🌈 ${random}% Gay\n\n${ga}`;
-    const imageUrl = `https://some-random-api.com/canvas/gay?avatar=${await sock.profilePictureUrl(mentionedJid, 'image').catch((_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')}`;
+
+    const response = `*${msg.pushName}* eligió: *${userChoice}*\n*El bot* eligió: *${botChoice}*\n\n*Resultado:* ${result}`;
+
     await sock.sendMessage(msg.key.remoteJid, {
-        image: { url: imageUrl },
-        caption: jawab,
-        mentions: [mentionedJid],
-        contextInfo: {
-            mentionedJid: [mentionedJid],
-            forwardingScore: 9999999,
-            isForwarded: false
-        }
-    }, { quoted: msg, ephemeralExpiration: 24 * 60 * 100, disappearingMessagesInChat: 24 * 60 * 100 });
+        text: response
+    }, { quoted: msg });
 
     break;
 }
