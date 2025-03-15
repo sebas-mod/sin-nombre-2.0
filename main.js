@@ -214,11 +214,11 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-            case 'tovideo': {
+case 'tovideo': {
     const fs = require('fs');
     const path = require('path');
     const { writeFileSync } = fs;
-    const { exec } = require('child_process');
+    const ffmpeg = require('fluent-ffmpeg');
 
     if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
         return sock.sendMessage(msg.key.remoteJid, { 
@@ -249,27 +249,39 @@ sock.ev.on('messages.delete', (messages) => {
 
     writeFileSync(stickerPath, buffer);
 
-    exec(`ffmpeg -i "${stickerPath}" -vf "scale=512:512" -c:v libx264 -preset fast -crf 28 "${videoPath}"`, async (error, stdout, stderr) => {
-        if (error) {
-            console.error("❌ Error al convertir sticker a video:", error);
-            console.error("stderr:", stderr);
-            return sock.sendMessage(msg.key.remoteJid, { 
+    ffmpeg(stickerPath)
+        .outputOptions([
+            '-vf scale=512:512',
+            '-c:v libx264',
+            '-preset fast',
+            '-crf 28'
+        ])
+        .save(videoPath)
+        .on('end', async () => {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                video: { url: videoPath },
+                caption: "🎥 *Aquí está tu video convertido del sticker.*"
+            }, { quoted: msg });
+
+            fs.unlinkSync(stickerPath);
+            fs.unlinkSync(videoPath);
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                react: { text: "✅", key: msg.key } 
+            });
+        })
+        .on('error', async (err) => {
+            console.error("❌ Error al convertir sticker a video:", err);
+
+            await sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *No se pudo convertir el sticker en video.*" 
             }, { quoted: msg });
-        }
 
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: videoPath },
-            caption: "🎥 *Aquí está tu video convertido del sticker.*"
-        }, { quoted: msg });
-
-        fs.unlinkSync(stickerPath);
-        fs.unlinkSync(videoPath);
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
+            fs.unlinkSync(stickerPath);
+            if (fs.existsSync(videoPath)) {
+                fs.unlinkSync(videoPath);
+            }
         });
-    });
 
     break;
 }
