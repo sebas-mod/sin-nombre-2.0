@@ -233,15 +233,16 @@ case 'qc': {
         }, { quoted: msg });
     }
 
-    // Solo reconocer al usuario que envía el mensaje
-    const who = msg.fromMe ? sock.user.jid : msg.sender;
+    // Reconocer siempre al usuario que envía el mensaje:
+    // En grupos se utiliza msg.key.participant; en chats individuales se usa msg.sender
+    const who = (msg.key && msg.key.participant) || (msg.fromMe ? sock.user.jid : msg.sender);
     if (!who) {
         return sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *No se pudo identificar al usuario.*" 
         }, { quoted: msg });
     }
 
-    // Eliminar menciones del texto
+    // Eliminar menciones del texto según el ID del usuario
     const mentionRegex = new RegExp(`@${who.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
     const mishi = text.replace(mentionRegex, '');
     if (mishi.length > 35) {
@@ -250,7 +251,7 @@ case 'qc': {
         }, { quoted: msg });
     }
 
-    // Obtener la foto de perfil
+    // Obtener la foto de perfil; si falla, se usa la imagen por defecto
     const pp = await sock.profilePictureUrl(who).catch((_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
     const nombre = msg.pushName || "Sin nombre";
 
@@ -309,7 +310,7 @@ case 'qc': {
         });
     }
     break;
-}    
+}
 
                 
 case 'mediafire': {
