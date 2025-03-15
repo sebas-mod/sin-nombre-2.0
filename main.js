@@ -214,6 +214,88 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'toanime2': {
+    const fetch = require('node-fetch');
+    try {
+        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quoted) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Responde a una imagen con el comando `.toanime` para convertirla a estilo anime.*"
+            }, { quoted: msg });
+        }
+        let mime = quoted.imageMessage?.mimetype || "";
+        if (!mime) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *El mensaje citado no contiene una imagen.*"
+            }, { quoted: msg });
+        }
+        if (!/image\/(jpe?g|png)/.test(mime)) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Solo se admiten imágenes en formato JPG o PNG.*"
+            }, { quoted: msg });
+        }
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🛠️", key: msg.key }
+        });
+        let img = await downloadContentFromMessage(quoted.imageMessage, "image");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of img) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+        if (buffer.length === 0) {
+            throw new Error("❌ Error: No se pudo descargar la imagen.");
+        }
+        const base64Image = buffer.toString('base64');
+
+        // URL de la API (sin incluir la imagen en la URL)
+        const apiUrl = `https://exonity.tech/api/ai/toanime`;
+
+        // Enviamos la imagen y el API key en el body de la petición (POST)
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                apikey: zrapi, // Asegúrate de que esta variable tenga tu API key correcta
+                image: `data:${mime};base64,${base64Image}`
+            })
+        });
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        // Verificamos la respuesta de la API según el formato proporcionado
+        if (
+            data.estado !== 200 ||
+            !data.resultado ||
+            !data.resultado.producción ||
+            data.resultado.producción.estado !== "exitoso" ||
+            !data.resultado.producción.resultado[0]
+        ) {
+            throw new Error("No se pudo convertir la imagen a estilo anime.");
+        }
+        const animeImageUrl = data.resultado.producción.resultado[0];
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: animeImageUrl },
+            caption: "✨ *Imagen convertida a estilo anime con éxito.*\n\n© Azura Ultra 2.0 Bot"
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "✅", key: msg.key }
+        });
+    } catch (error) {
+        console.error("❌ Error en el comando .toanime:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Hubo un error al convertir la imagen a estilo anime. Inténtalo de nuevo.*"
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "❌", key: msg.key }
+        });
+    }
+    break;
+}
+        
+        
 case 'toanime': {
     const fetch = require('node-fetch');
     try {
