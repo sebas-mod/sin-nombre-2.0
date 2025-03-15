@@ -214,7 +214,8 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-    case 'qc': {
+    
+case 'qc': {
     const axios = require('axios');
 
     let text;
@@ -223,8 +224,9 @@ sock.ev.on('messages.delete', (messages) => {
     } else if (msg.quoted && msg.quoted.text) {
         text = msg.quoted.text;
     } else {
+        // Si no se proporciona texto, enviar un mensaje de ejemplo de uso usando el prefijo global.
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ *Y el texto? Agregue un texto.*" 
+            text: `Ejemplo de uso:\n${global.prefix}qc Hola`
         }, { quoted: msg });
     }
 
@@ -234,29 +236,50 @@ sock.ev.on('messages.delete', (messages) => {
         }, { quoted: msg });
     }
 
-    // Asegurarse de que `who` tenga un valor válido
-    const who = msg.mentionedJid && msg.mentionedJid[0] ? msg.mentionedJid[0] : msg.fromMe ? sock.user.jid : msg.sender;
-    if (!who) {
+    // Determinar el usuario objetivo: si se cita, usar datos del mensaje citado; de lo contrario, usar mención o remitente
+    let target;
+    if (msg.quoted) {
+        target = msg.quoted.sender || msg.quoted.participant || (msg.quoted.key && msg.quoted.key.participant);
+    } else {
+        target = (msg.mentionedJid && msg.mentionedJid[0])
+            ? msg.mentionedJid[0]
+            : (msg.fromMe ? sock.user.jid : msg.sender);
+    }
+    if (!target) {
         return sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *No se pudo identificar al usuario.*" 
         }, { quoted: msg });
     }
 
-    // Eliminar menciones del texto
-    const mentionRegex = new RegExp(`@${who.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
+    // Eliminar menciones del texto según el id del usuario objetivo
+    const mentionRegex = new RegExp(`@${target.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
     const mishi = text.replace(mentionRegex, '');
-
     if (mishi.length > 35) {
         return sock.sendMessage(msg.key.remoteJid, { 
             text: "⚠️ *El texto no puede tener más de 35 caracteres.*" 
         }, { quoted: msg });
     }
 
-    // Obtener la foto de perfil
-    const pp = await sock.profilePictureUrl(who).catch((_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
-    const nombre = msg.pushName || "Sin nombre";
+    // Obtener la foto de perfil del usuario objetivo; si falla, asignar null para omitir el avatar
+    let pp;
+    try {
+        pp = await sock.profilePictureUrl(target);
+    } catch (e) {
+        pp = null;
+    }
 
-    const obj = {
+    // Determinar el nombre: si se cita, tratar de obtener el pushName del usuario citado; si no, usar el nombre del remitente o el número
+    let nombre;
+    if (msg.quoted) {
+        nombre = (msg.quoted.sender && msg.quoted.sender.pushName)
+            || msg.quoted.pushName
+            || target.split('@')[0];
+    } else {
+        nombre = msg.pushName || target.split('@')[0];
+    }
+
+    // Construir el objeto para generar la cita
+    const quoteObj = {
         type: "quote",
         format: "png",
         backgroundColor: "#000000",
@@ -265,11 +288,11 @@ sock.ev.on('messages.delete', (messages) => {
         scale: 2,
         messages: [{
             entities: [],
-            avatar: true,
+            avatar: pp ? true : false,
             from: {
                 id: 1,
                 name: nombre,
-                photo: { url: pp }
+                ...(pp ? { photo: { url: pp } } : {})
             },
             text: mishi,
             replyMessage: {}
@@ -277,11 +300,10 @@ sock.ev.on('messages.delete', (messages) => {
     };
 
     try {
-        const json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
+        const response = await axios.post('https://bot.lyo.su/quote/generate', quoteObj, {
             headers: { 'Content-Type': 'application/json' }
         });
-
-        const buffer = Buffer.from(json.data.result.image, 'base64');
+        const buffer = Buffer.from(response.data.result.image, 'base64');
 
         await sock.sendMessage(msg.key.remoteJid, {
             sticker: buffer,
@@ -302,7 +324,6 @@ sock.ev.on('messages.delete', (messages) => {
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: '✅', key: msg.key } 
         });
-
     } catch (error) {
         console.error("❌ Error en el comando .qc:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -314,8 +335,7 @@ sock.ev.on('messages.delete', (messages) => {
         });
     }
     break;
-}        
-    
+}    
         
         
         
