@@ -204,7 +204,7 @@ async function handleDeletedMessage(sock, msg) {
             await sock.sendMessage(chatId, { audio: audioBuffer }, { quoted: msg });
         } else if (deletedMessage.videoMessage) {
             const videoBuffer = await downloadContentFromMessage(deletedMessage.videoMessage, 'video');
-            await sock.sendMessage(chatId, { video: videoBuffer }, { quoted: msg });
+         await sock.sendMessage(chatId, { video: videoBuffer }, { quoted: msg });
         }
     }
 }
@@ -233,9 +233,13 @@ sock.ev.on('messages.delete', (messages) => {
             text: "⚠️ *Y el texto? Agregue un texto.*" 
         }, { quoted: msg });
     }
-
     const who = msg.mentionedJid && msg.mentionedJid[0] ? msg.mentionedJid[0] : msg.fromMe ? sock.user.jid : msg.sender;
-    const mentionRegex = new RegExp(`@${who.split('@')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
+    if (!who) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *No se pudo identificar al usuario.*" 
+        }, { quoted: msg });
+    }
+    const mentionRegex = new RegExp(`@${who.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
     const mishi = text.replace(mentionRegex, '');
 
     if (mishi.length > 35) {
@@ -243,7 +247,6 @@ sock.ev.on('messages.delete', (messages) => {
             text: "⚠️ *El texto no puede tener más de 35 caracteres.*" 
         }, { quoted: msg });
     }
-
     const pp = await sock.profilePictureUrl(who).catch((_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
     const nombre = msg.pushName || "Sin nombre";
 
@@ -306,6 +309,7 @@ sock.ev.on('messages.delete', (messages) => {
     }
     break;
 }
+        
 case 'toanime': {
     const fetch = require('node-fetch');
     try {
