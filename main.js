@@ -286,8 +286,82 @@ case 'toanime': {
     }
     break;
 }
-        
-        
+ case 'spotify': {
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo:* *${global.prefix}spotify* https://open.spotify.com/track/3NDEO1QeVlxskfRHHGm7KS`
+        }, { quoted: msg });
+        return;
+    }
+
+    if (!/^https?:\/\/(www\.)?open\.spotify\.com\/track\//.test(text)) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ *Enlace no válido.*\n\n📌 Asegúrate de ingresar una URL de Spotify válida.\n\nEjemplo: *${global.prefix}spotify* https://open.spotify.com/track/3NDEO1QeVlxskfRHHGm7KS`
+        }, { quoted: msg });
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const apiUrl = `https://exonity.tech/api/dl/spotifydl?url=${encodeURIComponent(text)}`;
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 200 || !data.result || !data.result.download) {
+            throw new Error("No se pudo obtener el enlace de descarga.");
+        }
+
+        const songInfo = data.result;
+
+        const caption = `🎵 *Título:* ${songInfo.title}\n` +
+                        `🎤 *Artista:* ${songInfo.artis}\n` +
+                        `⏱️ *Duración:* ${Math.floor(songInfo.durasi / 1000)} segundos\n` +
+                        `🔗 *Enlace de descarga:* ${songInfo.download}`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: songInfo.image },
+            caption: caption,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+
+        const audioResponse = await fetch(songInfo.download);
+        if (!audioResponse.ok) {
+            throw new Error("No se pudo descargar el archivo de audio.");
+        }
+
+        const audioBuffer = await audioResponse.buffer();
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: audioBuffer,
+            mimetype: 'audio/mpeg',
+            fileName: `${songInfo.title}.mp3`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .spotify:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+}     
 case 'qc': {
     const axios = require('axios');
 
