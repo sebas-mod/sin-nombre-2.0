@@ -261,8 +261,7 @@ sock.ev.on('messages.delete', (messages) => {
         const caption = `📂 *Nombre del archivo:* ${fileInfo.filename}\n` +
                         `📦 *Tipo:* ${fileInfo.type}\n` +
                         `📏 *Tamaño:* ${fileInfo.size}\n` +
-                        `📅 *Subido:* ${fileInfo.uploaded}\n` +
-                        `🔗 *Enlace de descarga:* ${fileInfo.download}`;
+                        `📅 *Subido:* ${fileInfo.uploaded}\n`;
 
         await sock.sendMessage(msg.key.remoteJid, { 
             text: caption 
