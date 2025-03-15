@@ -214,6 +214,71 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+          case 'tiktokstalk': {
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ *Uso incorrecto.*\n\n📌 *Ejemplo:* *${global.prefix}tiktokstalk russellxzpty*`
+        }, { quoted: msg });
+    }
+
+    const username = text.trim();
+    const apiUrl = `https://api.dorratz.com/v3/tiktok-stalk?username=${encodeURIComponent(username)}`;
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.userInfo) {
+            throw new Error("No se pudo obtener la información del usuario.");
+        }
+
+        const userInfo = data.userInfo;
+
+        const caption = `*Información de TikTok:*\n\n` +
+                        `👤 *Nombre:* ${userInfo.nombre}\n` +
+                        `📌 *Usuario:* @${userInfo.username}\n` +
+                        `🆔 *ID:* ${userInfo.id}\n` +
+                        `📝 *Bio:* ${userInfo.bio}\n` +
+                        `✅ *Verificado:* ${userInfo.verificado ? 'Sí' : 'No'}\n` +
+                        `👥 *Seguidores:* ${userInfo.seguidoresTotales}\n` +
+                        `👀 *Siguiendo:* ${userInfo.siguiendoTotal}\n` +
+                        `❤️ *Me gusta totales:* ${userInfo.meGustaTotales}\n` +
+                        `🎥 *Videos totales:* ${userInfo.videosTotales}\n` +
+                        `🤝 *Amigos totales:* ${userInfo.amigosTotales}\n\n` +
+                        `✨ *Información obtenida por Azura Ultra 2.0 Bot*`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: userInfo.avatar },
+            caption: caption,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .tiktokstalk:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+    break;
+}  
  case 'ppt':
 case 'piedrapapeltijera': {
     const options = ['piedra', 'papel', 'tijera'];
