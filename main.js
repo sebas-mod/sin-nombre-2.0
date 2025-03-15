@@ -249,9 +249,10 @@ sock.ev.on('messages.delete', (messages) => {
 
     writeFileSync(stickerPath, buffer);
 
-    exec(`ffmpeg -i "${stickerPath}" -vf "scale=512:512" -c:v libx264 -preset fast -crf 28 "${videoPath}"`, async (error) => {
+    exec(`ffmpeg -i "${stickerPath}" -vf "scale=512:512" -c:v libx264 -preset fast -crf 28 "${videoPath}"`, async (error, stdout, stderr) => {
         if (error) {
             console.error("❌ Error al convertir sticker a video:", error);
+            console.error("stderr:", stderr);
             return sock.sendMessage(msg.key.remoteJid, { 
                 text: "❌ *No se pudo convertir el sticker en video.*" 
             }, { quoted: msg });
