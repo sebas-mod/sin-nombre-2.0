@@ -214,49 +214,35 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-    
 case 'qc': {
     const axios = require('axios');
 
-    // Obtener el texto: usar argumentos o, si se cita, el texto del mensaje citado
     let text;
     if (args.length >= 1) {
         text = args.join(" ");
     } else if (msg.quoted && msg.quoted.text) {
         text = msg.quoted.text;
     } else {
-        // Si no hay texto, enviar un ejemplo de uso usando el prefijo global
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: `Ejemplo de uso:\n${global.prefix}qc Hola`
+            text: "⚠️ *Y el texto? Agregue un texto.*" 
         }, { quoted: msg });
     }
-
     if (!text) {
         return sock.sendMessage(msg.key.remoteJid, { 
             text: "⚠️ *Y el texto? Agregue un texto.*" 
         }, { quoted: msg });
     }
 
-    // Determinar el usuario objetivo (target)
-    let target = null;
-    if (msg.quoted) {
-        target = msg.quoted.sender || msg.quoted.participant || (msg.quoted.key && msg.quoted.key.participant);
-    }
-    if (!target) {
-        target = (msg.mentionedJid && msg.mentionedJid[0])
-            ? msg.mentionedJid[0]
-            : (msg.key && msg.key.participant)
-                ? msg.key.participant
-                : msg.sender || (msg.fromMe ? sock.user.jid : null);
-    }
-    if (!target) {
+    // Solo reconocer al usuario que envía el mensaje
+    const who = msg.fromMe ? sock.user.jid : msg.sender;
+    if (!who) {
         return sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *No se pudo identificar al usuario.*" 
         }, { quoted: msg });
     }
 
-    // Eliminar menciones del texto según el ID del usuario
-    const mentionRegex = new RegExp(`@${target.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
+    // Eliminar menciones del texto
+    const mentionRegex = new RegExp(`@${who.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
     const mishi = text.replace(mentionRegex, '');
     if (mishi.length > 35) {
         return sock.sendMessage(msg.key.remoteJid, { 
@@ -264,26 +250,11 @@ case 'qc': {
         }, { quoted: msg });
     }
 
-    // Obtener la foto de perfil; si no se encuentra, se asigna null para omitir el avatar
-    let pp;
-    try {
-        pp = await sock.profilePictureUrl(target);
-    } catch (e) {
-        pp = null;
-    }
+    // Obtener la foto de perfil
+    const pp = await sock.profilePictureUrl(who).catch((_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
+    const nombre = msg.pushName || "Sin nombre";
 
-    // Determinar el nombre: si se cita, intentar extraer el pushName; si no, usar msg.pushName o el número del ID
-    let nombre;
-    if (msg.quoted) {
-        nombre = (msg.quoted.sender && msg.quoted.sender.pushName)
-            || msg.quoted.pushName
-            || target.split('@')[0];
-    } else {
-        nombre = msg.pushName || target.split('@')[0];
-    }
-
-    // Construir el objeto para generar la cita (stikerz)
-    const quoteObj = {
+    const obj = {
         type: "quote",
         format: "png",
         backgroundColor: "#000000",
@@ -292,11 +263,11 @@ case 'qc': {
         scale: 2,
         messages: [{
             entities: [],
-            avatar: pp ? true : false,
+            avatar: true,
             from: {
                 id: 1,
                 name: nombre,
-                ...(pp ? { photo: { url: pp } } : {})
+                photo: { url: pp }
             },
             text: mishi,
             replyMessage: {}
@@ -304,19 +275,10 @@ case 'qc': {
     };
 
     try {
-        const response = await axios.post('https://bot.lyo.su/quote/generate', quoteObj, {
+        const json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
             headers: { 'Content-Type': 'application/json' }
         });
-        
-        // Verificar y limpiar el string de la imagen si es necesario
-        let imageData = response.data.result.image;
-        if (!imageData) {
-            throw new Error("No se recibió la imagen en la respuesta");
-        }
-        if (imageData.startsWith("data:image")) {
-            imageData = imageData.split(',')[1];
-        }
-        const buffer = Buffer.from(imageData, 'base64');
+        const buffer = Buffer.from(json.data.result.image, 'base64');
 
         await sock.sendMessage(msg.key.remoteJid, {
             sticker: buffer,
@@ -347,10 +309,9 @@ case 'qc': {
         });
     }
     break;
-}
-        
-        
-        
+}    
+
+                
 case 'mediafire': {
     const fetch = require('node-fetch');
 
