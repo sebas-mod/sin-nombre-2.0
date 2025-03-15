@@ -214,6 +214,64 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+            case 'tovideo': {
+    const fs = require('fs');
+    const path = require('path');
+    const { writeFileSync } = fs;
+    const { exec } = require('child_process');
+
+    if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "⚠️ *Debes responder a un sticker para convertirlo en video.*" 
+        }, { quoted: msg });
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    let quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage;
+    let stickerStream = await downloadContentFromMessage(quoted, "sticker");
+
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stickerStream) {
+        buffer = Buffer.concat([buffer, chunk]);
+    }
+
+    if (buffer.length === 0) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Error al procesar el sticker.*" 
+        }, { quoted: msg });
+    }
+
+    const stickerPath = path.join(__dirname, 'tmp', `${Date.now()}.webp`);
+    const videoPath = stickerPath.replace('.webp', '.mp4');
+
+    writeFileSync(stickerPath, buffer);
+
+    exec(`ffmpeg -i "${stickerPath}" -vf "scale=512:512" -c:v libx264 -preset fast -crf 28 "${videoPath}"`, async (error) => {
+        if (error) {
+            console.error("❌ Error al convertir sticker a video:", error);
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *No se pudo convertir el sticker en video.*" 
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: videoPath },
+            caption: "🎥 *Aquí está tu video convertido del sticker.*"
+        }, { quoted: msg });
+
+        fs.unlinkSync(stickerPath);
+        fs.unlinkSync(videoPath);
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+    });
+
+    break;
+}
           case 'tiktokstalk': {
     const fetch = require('node-fetch');
 
