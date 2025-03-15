@@ -218,13 +218,14 @@ sock.ev.on('messages.delete', (messages) => {
 case 'qc': {
     const axios = require('axios');
 
+    // Obtener el texto: usar argumentos o, si se cita, el texto del mensaje citado
     let text;
     if (args.length >= 1) {
         text = args.join(" ");
     } else if (msg.quoted && msg.quoted.text) {
         text = msg.quoted.text;
     } else {
-        // Si no se proporciona texto, enviar un mensaje de ejemplo de uso usando el prefijo global.
+        // Si no hay texto, enviar un ejemplo de uso usando el prefijo global
         return sock.sendMessage(msg.key.remoteJid, { 
             text: `Ejemplo de uso:\n${global.prefix}qc Hola`
         }, { quoted: msg });
@@ -236,14 +237,19 @@ case 'qc': {
         }, { quoted: msg });
     }
 
-    // Determinar el usuario objetivo: si se cita, usar datos del mensaje citado; de lo contrario, usar mención o remitente
-    let target;
+    // Determinar el usuario objetivo (target)
+    let target = null;
     if (msg.quoted) {
+        // Si se cita, intentamos obtener el ID del usuario citado
         target = msg.quoted.sender || msg.quoted.participant || (msg.quoted.key && msg.quoted.key.participant);
-    } else {
+    }
+    if (!target) {
+        // Para mensajes sin cita, usar la mención; si no, usar el participante del mensaje (en grupos) o msg.sender
         target = (msg.mentionedJid && msg.mentionedJid[0])
             ? msg.mentionedJid[0]
-            : (msg.fromMe ? sock.user.jid : msg.sender);
+            : (msg.key && msg.key.participant)
+                ? msg.key.participant
+                : msg.sender || (msg.fromMe ? sock.user.jid : null);
     }
     if (!target) {
         return sock.sendMessage(msg.key.remoteJid, { 
@@ -251,7 +257,7 @@ case 'qc': {
         }, { quoted: msg });
     }
 
-    // Eliminar menciones del texto según el id del usuario objetivo
+    // Eliminar menciones del texto según el ID del usuario
     const mentionRegex = new RegExp(`@${target.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
     const mishi = text.replace(mentionRegex, '');
     if (mishi.length > 35) {
@@ -260,7 +266,7 @@ case 'qc': {
         }, { quoted: msg });
     }
 
-    // Obtener la foto de perfil del usuario objetivo; si falla, asignar null para omitir el avatar
+    // Obtener la foto de perfil; si no se encuentra, se asigna null para omitir el avatar
     let pp;
     try {
         pp = await sock.profilePictureUrl(target);
@@ -268,7 +274,7 @@ case 'qc': {
         pp = null;
     }
 
-    // Determinar el nombre: si se cita, tratar de obtener el pushName del usuario citado; si no, usar el nombre del remitente o el número
+    // Determinar el nombre: si se cita, intentar extraer el pushName; si no, usar msg.pushName o el número del ID
     let nombre;
     if (msg.quoted) {
         nombre = (msg.quoted.sender && msg.quoted.sender.pushName)
@@ -278,7 +284,7 @@ case 'qc': {
         nombre = msg.pushName || target.split('@')[0];
     }
 
-    // Construir el objeto para generar la cita
+    // Construir el objeto para generar la cita (stikerz)
     const quoteObj = {
         type: "quote",
         format: "png",
@@ -329,13 +335,12 @@ case 'qc': {
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Ocurrió un error al generar la cita. Inténtalo de nuevo.*" 
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: '❌', key: msg.key } 
         });
     }
     break;
-}    
+}
         
         
         
