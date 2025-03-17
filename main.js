@@ -219,73 +219,80 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
 case 'tovideo': {
-  const fs = require('fs');
-  const path = require('path');
-  const ffmpeg = require('fluent-ffmpeg');
-
-  // Verifica que se haya citado un sticker
-  if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
-    return sock.sendMessage(msg.key.remoteJid, { 
-      text: "⚠️ *Debes responder a un sticker para convertirlo en video.*" 
-    }, { quoted: msg });
-  }
-
-  // Envía reacción inicial
-  await sock.sendMessage(msg.key.remoteJid, { 
-    react: { text: "⏳", key: msg.key } 
-  });
-
-  // Descarga el sticker
-  let quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage;
-  let stickerStream = await downloadContentFromMessage(quoted, "sticker");
-  let buffer = Buffer.alloc(0);
-  for await (const chunk of stickerStream) {
-    buffer = Buffer.concat([buffer, chunk]);
-  }
-
-  if (buffer.length === 0) {
-    return sock.sendMessage(msg.key.remoteJid, { 
-      text: "❌ *Error al procesar el sticker.*" 
-    }, { quoted: msg });
-  }
-
-  // Define rutas temporales
-  const stickerPath = path.join(__dirname, 'tmp', `${Date.now()}.webp`);
-  const videoPath = stickerPath.replace('.webp', '.mp4');
-
-  fs.writeFileSync(stickerPath, buffer);
-
-  // Usa ffmpeg para convertir directamente de WebP a MP4
-  ffmpeg(stickerPath)
-    .outputOptions([
-      '-movflags faststart',
-      '-pix_fmt yuv420p',
-      '-vf scale=512:512'
-    ])
-    .save(videoPath)
-    .on('end', async () => {
-      await sock.sendMessage(msg.key.remoteJid, { 
-        video: { url: videoPath },
-        caption: "🎥 *Aquí está tu video convertido del sticker.*"
+  try {
+    // Verifica que se haya citado un sticker
+    let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage;
+    if (!quoted) {
+      return sock.sendMessage(msg.key.remoteJid, { 
+        text: "⚠️ *Debes responder a un sticker para convertirlo en video.*" 
       }, { quoted: msg });
+    }
 
-      // Elimina archivos temporales
-      fs.unlinkSync(stickerPath);
-      fs.unlinkSync(videoPath);
-
-      await sock.sendMessage(msg.key.remoteJid, { 
-        react: { text: "✅", key: msg.key } 
-      });
-    })
-    .on('error', async (err) => {
-      console.error("❌ Error al convertir sticker a video:", err);
-      await sock.sendMessage(msg.key.remoteJid, { 
-        text: "❌ *No se pudo convertir el sticker en video.*" 
-      }, { quoted: msg });
-      fs.unlinkSync(stickerPath);
-      if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+    // Reacción inicial para indicar que el proceso inició
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "⏳", key: msg.key } 
     });
 
+    // Descarga el sticker
+    let stickerStream = await downloadContentFromMessage(quoted, "sticker");
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stickerStream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+    if (buffer.length === 0) {
+      return sock.sendMessage(msg.key.remoteJid, { 
+        text: "❌ *Error al procesar el sticker.*" 
+      }, { quoted: msg });
+    }
+
+    // Define rutas temporales para el sticker y el video
+    const fs = require('fs');
+    const path = require('path');
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+    const stickerPath = path.join(tmpDir, `${Date.now()}.webp`);
+    const videoPath = stickerPath.replace('.webp', '.mp4');
+    fs.writeFileSync(stickerPath, buffer);
+
+    // Utiliza ffmpeg para convertir el sticker (WebP animado) a video (MP4)
+    const ffmpeg = require('fluent-ffmpeg');
+    ffmpeg(stickerPath)
+      .outputOptions([
+        '-movflags faststart',
+        '-pix_fmt yuv420p',
+        '-vf scale=512:512'
+      ])
+      .save(videoPath)
+      .on('end', async () => {
+        // Envía el video convertido con un caption
+        await sock.sendMessage(msg.key.remoteJid, { 
+          video: { url: videoPath },
+          caption: "🎥 *Aquí está tu video convertido del sticker animado.*"
+        }, { quoted: msg });
+
+        // Limpieza de archivos temporales
+        fs.unlinkSync(stickerPath);
+        fs.unlinkSync(videoPath);
+
+        // Reacción final de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+          react: { text: "✅", key: msg.key } 
+        });
+      })
+      .on('error', async (err) => {
+        console.error("❌ Error al convertir sticker a video:", err);
+        await sock.sendMessage(msg.key.remoteJid, { 
+          text: "❌ *No se pudo convertir el sticker en video.*" 
+        }, { quoted: msg });
+        fs.unlinkSync(stickerPath);
+        if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+      });
+  } catch (error) {
+    console.error("❌ Error en el comando tovideo:", error);
+    await sock.sendMessage(msg.key.remoteJid, { 
+      text: "❌ *Ocurrió un error al convertir el sticker en video.*" 
+    }, { quoted: msg });
+  }
   break;
 }
       
