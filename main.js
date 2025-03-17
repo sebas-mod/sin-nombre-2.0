@@ -218,6 +218,55 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'play1': {
+  // Envía la reacción para indicar que el comando se ha activado
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "🎶", key: msg.key } });
+  
+  try {
+    // Verifica que se haya ingresado el nombre de la canción (consulta)
+    if (!text || text.trim() === "") {
+      // Ejemplo de uso con el prefijo global
+      await sock.sendMessage(msg.key.remoteJid, { 
+        text: `⚠️ Escribe por favor el nombre de la canción.\nEjemplo: *${global.prefix}play1 Boza Yaya*` 
+      }, { quoted: msg });
+      return;
+    }
+    
+    // Llama a la API para buscar en YouTube
+    let play2 = await fetchJson(`https://carisys.online/api/pesquisas/youtube?query=${encodeURIComponent(text)}`);
+    
+    // Construye la URL de descarga del audio
+    const audioUrl = `https://carisys.online/api/downloads/youtube/mp3-2?url=${play2.resultado.url}`;
+    
+    // Descarga el audio usando fetch y conviértelo a buffer
+    const res = await fetch(audioUrl);
+    if (!res.ok) throw new Error("Error descargando audio");
+    const audioBuffer = await res.buffer();
+    
+    // Envía el audio descargado como buffer, especificando el mimetype y el nombre de archivo
+    await sock.sendMessage(msg.key.remoteJid, {
+      audio: audioBuffer,
+      fileName: play2.resultado.titulo + '.mp3',
+      mimetype: "audio/mpeg",
+      contextInfo: {
+        externalAdReply: {
+          title: play2.resultado.titulo,
+          body: "αʑυrα υℓτrα 2.0 вστ",
+          mediaType: 1,
+          reviewType: "PHOTO",
+          thumbnailUrl: play2.resultado.imagem,
+          showAdAttribution: true,
+          renderLargerThumbnail: true
+        }
+      }
+    }, { quoted: msg });
+  } catch (error) {
+    console.log(error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Hubo un pequeño error :(" }, { quoted: msg });
+  }
+  break;
+}
+      
 case 'tovideo': {
   const fs = require('fs');
   const path = require('path');
@@ -1957,6 +2006,7 @@ case 'menu': {
 │ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
 ╰──────────────╯  
 ⎔ ${global.prefix}play → título  
+⎔ ${global.prefix}play1 → título  
 ⎔ ${global.prefix}play2 → título  
 ⎔ ${global.prefix}ytmp3 → link  
 ⎔ ${global.prefix}ytmp4 → link  
