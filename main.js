@@ -214,6 +214,47 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'play5': {
+  // Envía la reacción para indicar que el comando se ha activado
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "🎶", key: msg.key } });
+  
+  try {
+    // Verifica que se haya ingresado el nombre de la canción (consulta)
+    if (!text || text.trim() === "") {
+      await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Escribe por favor el nombre de la canción :)" }, { quoted: msg });
+      return;
+    }
+    
+    // Llama a la API para buscar en YouTube
+    let play2 = await fetchJson(`https://carisys.online/api/pesquisas/youtube?query=${encodeURIComponent(text)}`);
+    
+    // Envía el audio obtenido desde la URL de descarga
+    await sock.sendMessage(msg.key.remoteJid, {
+      audio: {
+        url: `https://carisys.online/api/downloads/youtube/mp3-2?url=${play2.resultado.url}`
+      },
+      fileName: play2.resultado.titulo + '.mpeg',
+      mimetype: "audio/mpeg",
+      contextInfo: {
+        externalAdReply: {
+          title: play2.resultado.titulo,
+          body: "𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛",
+          mediaType: 1,
+          reviewType: "PHOTO",
+          thumbnailUrl: play2.resultado.imagem,
+          showAdAttribution: true,
+          renderLargerThumbnail: true
+        }
+      }
+    }, { quoted: msg });
+  } catch (error) {
+    console.log(error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Hubo un pequeño error :(" }, { quoted: msg });
+  }
+  break;
+}
+        
+        
 case 'tovideo': {
     const fs = require('fs');
     const path = require('path');
