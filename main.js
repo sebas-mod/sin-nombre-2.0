@@ -13,6 +13,13 @@ const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`
 //modos
+const fetch = require('node-fetch');
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, options);
+  return res.json();
+}
+
+
 //modos
 // 📂 Crear la carpeta `stickers/` si no existe
 if (!fs.existsSync(stickersDir)) {
