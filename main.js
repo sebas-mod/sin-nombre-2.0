@@ -830,14 +830,14 @@ case 'play': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp4* https://www.youtube.com/watch?v=ejemplo`
+            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}ytmp42* https://www.youtube.com/watch?v=ejemplo`
         }, { quoted: msg });
         return;
     }
 
     if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text)) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Enlace no válido.\n\n📌 Asegúrese de ingresar una URL de YouTube válida.\n\nEjemplo: *${prefix}ytmp4* https://www.youtube.com/watch?v=ejemplo`
+            text: `⚠️ Enlace no válido.\n\n📌 Asegúrese de ingresar una URL de YouTube válida.\n\nEjemplo: *${prefix}ytmp42* https://www.youtube.com/watch?v=ejemplo`
         }, { quoted: msg });
         return;
     }
