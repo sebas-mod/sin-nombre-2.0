@@ -412,77 +412,7 @@ case 'tovideo': {
     break;
 }  
 
-case 'toanime': {
-    const fetch = require('node-fetch');
-    try {
-        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        if (!quoted) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Responde a una imagen con el comando `.toanime` para convertirla a estilo anime.*"
-            }, { quoted: msg });
-        }
-        let mime = quoted.imageMessage?.mimetype || "";
-        if (!mime) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *El mensaje citado no contiene una imagen.*"
-            }, { quoted: msg });
-        }
-        if (!/image\/(jpe?g|png)/.test(mime)) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Solo se admiten imágenes en formato JPG o PNG.*"
-            }, { quoted: msg });
-        }
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "🛠️", key: msg.key }
-        });
-        let img = await downloadContentFromMessage(quoted.imageMessage, "image");
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of img) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-        if (buffer.length === 0) {
-            throw new Error("❌ Error: No se pudo descargar la imagen.");
-        }
-        const base64Image = buffer.toString('base64');
 
-        // Supongamos que el endpoint correcto para POST es el siguiente (verifica la documentación)
-        const apiUrl = `https://exonity.tech/api/ai/toanime`;
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                apiKey: zrapi, // O el nombre de campo que indique la documentación
-                image: `data:${mime};base64,${base64Image}`
-            })
-        });
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-        if (data.status !== 200 || !data.result?.output?.result?.[0]) {
-            throw new Error("No se pudo convertir la imagen a estilo anime.");
-        }
-        const animeImageUrl = data.result.output.result[0];
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: animeImageUrl },
-            caption: "✨ *Imagen convertida a estilo anime con éxito.*\n\n© Azura Ultra 2.0 Bot"
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "✅", key: msg.key }
-        });
-    } catch (error) {
-        console.error("❌ Error en el comando .toanime:", error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Hubo un error al convertir la imagen a estilo anime. Inténtalo de nuevo.*"
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "❌", key: msg.key }
-        });
-    }
-    break;
-}
  case 'spotify': {
     const fetch = require('node-fetch');
 
@@ -559,103 +489,7 @@ case 'toanime': {
     }
     break;
 }     
-case 'qc': {
-    const axios = require('axios');
 
-    let text;
-    if (args.length >= 1) {
-        text = args.join(" ");
-    } else if (msg.quoted && msg.quoted.text) {
-        text = msg.quoted.text;
-    } else {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ *Y el texto? Agregue un texto.*" 
-        }, { quoted: msg });
-    }
-    if (!text) {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ *Y el texto? Agregue un texto.*" 
-        }, { quoted: msg });
-    }
-
-    // Reconocer siempre al usuario que envía el mensaje:
-    // En grupos se utiliza msg.key.participant; en chats individuales se usa msg.sender
-    const who = (msg.key && msg.key.participant) || (msg.fromMe ? sock.user.jid : msg.sender);
-    if (!who) {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *No se pudo identificar al usuario.*" 
-        }, { quoted: msg });
-    }
-
-    // Eliminar menciones del texto según el ID del usuario
-    const mentionRegex = new RegExp(`@${who.split('@')[0]?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
-    const mishi = text.replace(mentionRegex, '');
-    if (mishi.length > 35) {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ *El texto no puede tener más de 35 caracteres.*" 
-        }, { quoted: msg });
-    }
-
-    // Obtener la foto de perfil; si falla, se usa la imagen por defecto
-    const pp = await sock.profilePictureUrl(who).catch((_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
-    const nombre = msg.pushName || "Sin nombre";
-
-    const obj = {
-        type: "quote",
-        format: "png",
-        backgroundColor: "#000000",
-        width: 512,
-        height: 768,
-        scale: 2,
-        messages: [{
-            entities: [],
-            avatar: true,
-            from: {
-                id: 1,
-                name: nombre,
-                photo: { url: pp }
-            },
-            text: mishi,
-            replyMessage: {}
-        }]
-    };
-
-    try {
-        const json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const buffer = Buffer.from(json.data.result.image, 'base64');
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            sticker: buffer,
-            contextInfo: {
-                forwardingScore: 200,
-                isForwarded: false,
-                externalAdReply: {
-                    showAdAttribution: false,
-                    title: global.packname,
-                    body: global.author,
-                    mediaType: 2,
-                    sourceUrl: 'https://example.com', // Cambia esto por tu URL
-                    thumbnail: 'https://telegra.ph/file/24fa902ead26340f3df2c.png' // Cambia esto por tu miniatura
-                }
-            }
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: '✅', key: msg.key } 
-        });
-    } catch (error) {
-        console.error("❌ Error en el comando .qc:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al generar la cita. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: '❌', key: msg.key } 
-        });
-    }
-    break;
-}
 
                 
 case 'mediafire': {
@@ -1813,9 +1647,9 @@ case 'menurpg': {
     const chatId = msg.key.remoteJid;
 
     // Construcción del mensaje (tu texto de menú)
-    const captionText = `╔════════════════════╗  
+    const captionText = `╔═════════════════╗  
 ║   𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏   ║  
-╚════════════════════╝  
+╚═════════════════╝  
 
 ✦ 𝐁𝐈𝐄𝐍𝐕𝐄𝐍𝐈𝐃𝐎 𝐀𝐋 𝐌𝐄𝐍𝐔 𝐑𝐏𝐆 ✦  
 ━━━━━━━━━━━━━━━━━━  
@@ -1960,11 +1794,15 @@ case 'menu': {
 ⎔ ${global.prefix}play → título  
 ⎔ ${global.prefix}play1 → título  
 ⎔ ${global.prefix}play2 → título  
+⎔ ${global.prefix}play4 → titulo
 ⎔ ${global.prefix}ytmp3 → link  
 ⎔ ${global.prefix}ytmp4 → link  
+⎔ ${global.prefix}ytmp42 → link  
 ⎔ ${global.prefix}tiktok → link  
 ⎔ ${global.prefix}fb → link  
 ⎔ ${global.prefix}ig → link  
+⎔ ${global.prefix}spotify → link
+⎔ ${global.prefix}mediafire → link
 
 ╭──────────────╮  
 │ ✦ 𝙊𝙏𝙍𝙊𝙎 𝘾𝙊𝙈𝘼𝙉𝘿𝙊𝙎 ✦ │  
@@ -1986,11 +1824,14 @@ case 'menu': {
 ⎔ ${global.prefix}reto  
 ⎔ ${global.prefix}géminis  
 ⎔ ${global.prefix}gemini  
+⎔ ${global.prefix}chatgpt
+⎔ ${global.prefix}IA
 ⎔ ${global.prefix}pixai  
 ⎔ ${global.prefix}newpack
 ⎔ ${global.prefix}addsticker
 ⎔ ${global.prefix}listpacks
 ⎔ ${global.prefix}sendpack
+⎔ ${global.prefix}tiktokstalk
 
 ╭─────────────────╮  
  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟚.𝟘 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. 
@@ -11768,120 +11609,6 @@ case 'speed': {
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
-    }
-    break;
-}
-
-            
-case 'link': {
-    const fs = require('fs');
-    const axios = require('axios');
-    const FormData = require('form-data');
-    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-
-    try {
-        let quotedMessage = msg.message.extendedTextMessage?.contextInfo?.quotedMessage || msg.quoted?.message;
-
-        if (!quotedMessage) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "⚠️ *Aviso:* Responde a cualquier archivo multimedia (imagen, video, audio, documento, sticker) para generar un enlace URL. 🔗" },
-                { quoted: msg }
-            );
-        }
-
-        // 📌 Detectar el tipo de multimedia (imagen, video, audio, documento, sticker)
-        let mediaMessage;
-        let mediaType;
-        
-        if (quotedMessage.imageMessage) {
-            mediaMessage = quotedMessage.imageMessage;
-            mediaType = "image";
-        } else if (quotedMessage.videoMessage) {
-            mediaMessage = quotedMessage.videoMessage;
-            mediaType = "video";
-        } else if (quotedMessage.audioMessage) {
-            mediaMessage = quotedMessage.audioMessage;
-            mediaType = "audio";
-        } else if (quotedMessage.documentMessage) {
-            mediaMessage = quotedMessage.documentMessage;
-            mediaType = "document";
-        } else if (quotedMessage.stickerMessage) {
-            mediaMessage = quotedMessage.stickerMessage;
-            mediaType = "sticker";
-        } else {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "❌ *Error:* No se detectó un archivo multimedia válido. 📂" },
-                { quoted: msg }
-            );
-        }
-
-        // 🔄 Reacción mientras procesa
-        await sock.sendMessage(msg.key.remoteJid, { react: { text: "⏳", key: msg.key } });
-
-        const mimetype = mediaMessage.mimetype || `${mediaType}/unknown`;
-        const mediaStream = await downloadContentFromMessage(mediaMessage, mediaType);
-        let mediaBuffer = Buffer.alloc(0);
-
-        for await (const chunk of mediaStream) {
-            mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
-        }
-
-        // 📤 Subir el archivo
-        const formData = new FormData();
-        formData.append('file', mediaBuffer, {
-            filename: `file.${mimetype.split('/')[1] || 'bin'}`,
-            contentType: mimetype
-        });
-
-        const response = await axios.post('https://cdn.dorratz.com/upload34', formData, {
-            headers: {
-                ...formData.getHeaders(),
-                'x-api-key': 'dv-aws78',
-                'Content-Length': formData.getLengthSync()
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-        });
-
-        const shareLink = response.data.link;
-
-        // ✅ Confirmación con enlace
-        await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text: `✅ *Enlace generado con éxito:* 🔗\n\n📤 *Archivo:* ${mediaType.toUpperCase()}\n🌐 *URL:* ${shareLink}`
-            },
-            { quoted: msg }
-        );
-
-        // ✔️ Reacción de confirmación
-        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .tourl:", error);
-
-        if (error.response?.status === 413) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "❌ *Error:* El archivo es demasiado grande. 🚫" },
-                { quoted: msg }
-            );
-        }
-        if (error.response?.status === 401) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "❌ *Error:* Clave de acceso no válida. 🔑" },
-                { quoted: msg }
-            );
-        }
-
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "❌ *Error:* No se pudo generar el enlace URL. Inténtalo de nuevo más tarde. 🚫" },
-            { quoted: msg }
-        );
     }
     break;
 }
