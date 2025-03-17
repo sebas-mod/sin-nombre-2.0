@@ -232,7 +232,7 @@ case 'tovideo': {
       }, { quoted: msg });
     }
 
-    // Reacción inicial para indicar el inicio del proceso
+    // Envía reacción inicial
     await sock.sendMessage(msg.key.remoteJid, { 
       react: { text: "⏳", key: msg.key } 
     });
@@ -257,13 +257,14 @@ case 'tovideo': {
 
     fs.writeFileSync(stickerPath, buffer);
 
-    // Convierte el sticker a video especificando el formato de entrada como webp
+    // Convierte el sticker a video forzando el formato de entrada como WebP y 
+    // usando opciones para stickers animados
     ffmpeg(stickerPath)
-      .inputFormat('webp')
+      .inputOptions(['-f', 'webp', '-ignore_loop', '0'])
       .outputOptions([
         '-movflags faststart',
-        '-pix_fmt yuv420p',
-        '-vf scale=512:512'
+        '-pix_fmt', 'yuv420p',
+        '-vf', 'scale=512:512'
       ])
       .save(videoPath)
       .on('end', async () => {
@@ -326,7 +327,7 @@ case 'play5': {
       contextInfo: {
         externalAdReply: {
           title: play2.resultado.titulo,
-          body: "AZURA. ULTRA 2.0 BOT",
+          body: "AZURA ULTRA 2.0 BOT",
           mediaType: 1,
           reviewType: "PHOTO",
           thumbnailUrl: play2.resultado.imagem,
