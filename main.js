@@ -13,13 +13,10 @@ const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`
 //modos
-
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options);
   return res.json();
 }
-
-
 //modos
 // 📂 Crear la carpeta `stickers/` si no existe
 if (!fs.existsSync(stickersDir)) {
@@ -235,12 +232,18 @@ case 'play5': {
     // Llama a la API para buscar en YouTube
     let play2 = await fetchJson(`https://carisys.online/api/pesquisas/youtube?query=${encodeURIComponent(text)}`);
     
-    // Envía el audio obtenido desde la URL de descarga
+    // Construye la URL de descarga del audio
+    const audioUrl = `https://carisys.online/api/downloads/youtube/mp3-2?url=${play2.resultado.url}`;
+    
+    // Descarga el audio usando fetch y conviértelo a buffer
+    const res = await fetch(audioUrl);
+    if (!res.ok) throw new Error("Error descargando audio");
+    const audioBuffer = await res.buffer();
+    
+    // Envía el audio descargado como buffer, especificando el mimetype y el nombre de archivo
     await sock.sendMessage(msg.key.remoteJid, {
-      audio: {
-        url: `https://carisys.online/api/downloads/youtube/mp3-2?url=${play2.resultado.url}`
-      },
-      fileName: play2.resultado.titulo + '.mpeg',
+      audio: audioBuffer,
+      fileName: play2.resultado.titulo + '.mp3',
       mimetype: "audio/mpeg",
       contextInfo: {
         externalAdReply: {
