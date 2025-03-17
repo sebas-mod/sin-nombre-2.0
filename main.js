@@ -219,6 +219,10 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
 case 'tovideo': {
+  const fs = require('fs');
+  const path = require('path');
+  const ffmpeg = require('fluent-ffmpeg');
+
   try {
     // Verifica que se haya citado un sticker
     let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage;
@@ -228,7 +232,7 @@ case 'tovideo': {
       }, { quoted: msg });
     }
 
-    // Reacción inicial para indicar que el proceso inició
+    // Reacción inicial para indicar el inicio del proceso
     await sock.sendMessage(msg.key.remoteJid, { 
       react: { text: "⏳", key: msg.key } 
     });
@@ -245,18 +249,17 @@ case 'tovideo': {
       }, { quoted: msg });
     }
 
-    // Define rutas temporales para el sticker y el video
-    const fs = require('fs');
-    const path = require('path');
+    // Define rutas temporales
     const tmpDir = path.join(__dirname, 'tmp');
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
     const stickerPath = path.join(tmpDir, `${Date.now()}.webp`);
     const videoPath = stickerPath.replace('.webp', '.mp4');
+
     fs.writeFileSync(stickerPath, buffer);
 
-    // Utiliza ffmpeg para convertir el sticker (WebP animado) a video (MP4)
-    const ffmpeg = require('fluent-ffmpeg');
+    // Convierte el sticker a video especificando el formato de entrada como webp
     ffmpeg(stickerPath)
+      .inputFormat('webp')
       .outputOptions([
         '-movflags faststart',
         '-pix_fmt yuv420p',
@@ -264,16 +267,13 @@ case 'tovideo': {
       ])
       .save(videoPath)
       .on('end', async () => {
-        // Envía el video convertido con un caption
         await sock.sendMessage(msg.key.remoteJid, { 
           video: { url: videoPath },
           caption: "🎥 *Aquí está tu video convertido del sticker animado.*"
         }, { quoted: msg });
-
         // Limpieza de archivos temporales
         fs.unlinkSync(stickerPath);
         fs.unlinkSync(videoPath);
-
         // Reacción final de éxito
         await sock.sendMessage(msg.key.remoteJid, { 
           react: { text: "✅", key: msg.key } 
@@ -326,7 +326,7 @@ case 'play5': {
       contextInfo: {
         externalAdReply: {
           title: play2.resultado.titulo,
-          body: "𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛",
+          body: "AZURA. ULTRA 2.0 BOT",
           mediaType: 1,
           reviewType: "PHOTO",
           thumbnailUrl: play2.resultado.imagem,
