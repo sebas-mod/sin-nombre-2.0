@@ -267,80 +267,40 @@ case 'play1': {
   break;
 }
       
-case 'tovideo': {
-  const fs = require('fs');
-  const path = require('path');
-  const ffmpeg = require('fluent-ffmpeg');
-
+case 'infogrupo': {
+  // Verifica que el comando se ejecute en un grupo
+  if (!msg.key.remoteJid.endsWith("@g.us")) {
+    await sock.sendMessage(msg.key.remoteJid, { 
+      text: "⚠️ *Este comando solo funciona en grupos.*" 
+    }, { quoted: msg });
+    return;
+  }
+  
+  // Envía reacción inicial
+  await sock.sendMessage(msg.key.remoteJid, { 
+    react: { text: "🔍", key: msg.key } 
+  });
+  
   try {
-    // Verifica que se haya citado un sticker
-    let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage;
-    if (!quoted) {
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: "⚠️ *Debes responder a un sticker para convertirlo en video.*" 
-      }, { quoted: msg });
-    }
-
-    // Envía reacción inicial
+    // Obtiene la metadata del grupo
+    let meta = await sock.groupMetadata(msg.key.remoteJid);
+    let subject = meta.subject || "Sin nombre";
+    let description = meta.desc || "No hay descripción.";
+    
+    // Construye el mensaje de información del grupo
+    let messageText = `*Información del Grupo:*\n\n*Nombre:* ${subject}\n*Descripción:* ${description}`;
+    
+    // Envía el mensaje con la información
+    await sock.sendMessage(msg.key.remoteJid, { text: messageText }, { quoted: msg });
+    
+    // Envía reacción final de éxito
     await sock.sendMessage(msg.key.remoteJid, { 
-      react: { text: "⏳", key: msg.key } 
+      react: { text: "✅", key: msg.key } 
     });
-
-    // Descarga el sticker
-    let stickerStream = await downloadContentFromMessage(quoted, "sticker");
-    let buffer = Buffer.alloc(0);
-    for await (const chunk of stickerStream) {
-      buffer = Buffer.concat([buffer, chunk]);
-    }
-    if (buffer.length === 0) {
-      return sock.sendMessage(msg.key.remoteJid, { 
-        text: "❌ *Error al procesar el sticker.*" 
-      }, { quoted: msg });
-    }
-
-    // Define rutas temporales
-    const tmpDir = path.join(__dirname, 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-    const stickerPath = path.join(tmpDir, `${Date.now()}.webp`);
-    const videoPath = stickerPath.replace('.webp', '.mp4');
-
-    fs.writeFileSync(stickerPath, buffer);
-
-    // Convierte el sticker a video forzando el formato de entrada como WebP y 
-    // usando opciones para stickers animados
-    ffmpeg(stickerPath)
-      .inputOptions(['-f', 'webp', '-ignore_loop', '0'])
-      .outputOptions([
-        '-movflags faststart',
-        '-pix_fmt', 'yuv420p',
-        '-vf', 'scale=512:512'
-      ])
-      .save(videoPath)
-      .on('end', async () => {
-        await sock.sendMessage(msg.key.remoteJid, { 
-          video: { url: videoPath },
-          caption: "🎥 *Aquí está tu video convertido del sticker animado.*"
-        }, { quoted: msg });
-        // Limpieza de archivos temporales
-        fs.unlinkSync(stickerPath);
-        fs.unlinkSync(videoPath);
-        // Reacción final de éxito
-        await sock.sendMessage(msg.key.remoteJid, { 
-          react: { text: "✅", key: msg.key } 
-        });
-      })
-      .on('error', async (err) => {
-        console.error("❌ Error al convertir sticker a video:", err);
-        await sock.sendMessage(msg.key.remoteJid, { 
-          text: "❌ *No se pudo convertir el sticker en video.*" 
-        }, { quoted: msg });
-        fs.unlinkSync(stickerPath);
-        if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
-      });
-  } catch (error) {
-    console.error("❌ Error en el comando tovideo:", error);
+  } catch (err) {
+    console.error("Error en el comando infogrupo:", err);
     await sock.sendMessage(msg.key.remoteJid, { 
-      text: "❌ *Ocurrió un error al convertir el sticker en video.*" 
+      text: "❌ *Error al obtener la información del grupo.*" 
     }, { quoted: msg });
   }
   break;
