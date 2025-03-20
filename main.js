@@ -11157,8 +11157,8 @@ case 'tiendaper': {
         let mensaje = `🏪 *Tienda de Personajes - Azura Ultra* 🏪\n\n`;
         mensaje += `🎭 *Compra personajes de anime y mejora sus habilidades.*\n`;
         mensaje += `🛒 *Para comprar un personaje usa:* \n`;
-        mensaje += `   📌 \`${global.prefix}compra <nombre_personaje>\`\n`;
-        mensaje += `   📌 \`${global.prefix}compra <número_personaje>\`\n`;
+        mensaje += `   📌 \`${global.prefix}comprar <nombre_personaje>\`\n`;
+        mensaje += `   📌 \`${global.prefix}comprar <número_personaje>\`\n`;
         mensaje += `📜 Usa \`${global.prefix}menurpg\` para más información.\n\n`;
 
         // Crear la lista de personajes disponibles 📜
