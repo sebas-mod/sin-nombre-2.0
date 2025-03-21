@@ -218,6 +218,55 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'tran':
+case 'transferir': {
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "💎", key: msg.key } });
+
+  const cantidad = parseInt(args[0]);
+  if (!cantidad || cantidad <= 0) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ Uso correcto: \`${global.prefix}tran <cantidad>\` (citando o mencionando al destinatario).` }, { quoted: msg });
+  }
+
+  // Determina destinatario (citado o mencionado)
+  let targetJid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+    || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.contextInfo?.participant;
+  if (!targetJid) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes citar o mencionar al usuario al que quieres transferir." }, { quoted: msg });
+  }
+
+  // Normaliza IDs para rpgData
+  const senderId = sender;
+  const targetId = targetJid.split('@')[0];
+
+  // Carga datos
+  const rpgFile = "./rpg.json";
+  const rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+  // Inicializa cuentas si no existen
+  rpgData.usuarios[senderId] ??= { diamantes: 0 };
+  rpgData.usuarios[targetId] ??= { diamantes: 0 };
+
+  // Verifica saldo
+  if (rpgData.usuarios[senderId].diamantes < cantidad) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: `❌ No tienes suficientes diamantes. Tu saldo: ${rpgData.usuarios[senderId].diamantes}` }, { quoted: msg });
+  }
+
+  // Realiza transferencia
+  rpgData.usuarios[senderId].diamantes -= cantidad;
+  rpgData.usuarios[targetId].diamantes += cantidad;
+
+  // Guarda cambios
+  fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+
+  // Mensaje de confirmación
+  await sock.sendMessage(msg.key.remoteJid, {
+    text: `✅ Transferencia exitosa:\n\n💰 *Transferiste:* ${cantidad} diamante(s)\n👤 *A:* @${targetId}\n💎 *Tu nuevo saldo:* ${rpgData.usuarios[senderId].diamantes}`
+  }, { quoted: msg, mentions: [targetJid] });
+
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
+  break;
+}
+      
 case 'gifvideo': {
     try {
         // Reacción inicial
