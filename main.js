@@ -258,52 +258,71 @@ case 'gifvideo': {
 }
       
 case 'gremio2': {
-  try {
-    const rpgFile = "./rpg.json";
-    await sock.sendMessage(msg.key.remoteJid, { react: { text: "🏰", key: msg.key } });
+    try {
+        const rpgFile = "./rpg.json";
 
-    if (!fs.existsSync(rpgFile)) {
-      return await sock.sendMessage(msg.key.remoteJid, { text: `❌ *El gremio aún no tiene miembros.* Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` }, { quoted: msg });
+        // 🔄 Reacción inicial
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🏰", key: msg.key }
+        });
+
+        // Verificar si existe el archivo RPG
+        if (!fs.existsSync(rpgFile)) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "❌ *El gremio aún no tiene miembros.* Usa `" + global.prefix + "rpg <nombre> <edad>` para registrarte." 
+            }, { quoted: msg });
+            return;
+        }
+
+        // Leer datos del RPG
+        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+        if (!rpgData.usuarios || Object.keys(rpgData.usuarios).length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "📜 *No hay miembros registrados en el Gremio Azura Ultra.*\nUsa `" + global.prefix + "rpg <nombre> <edad>` para unirte." 
+            }, { quoted: msg });
+            return;
+        }
+
+        let miembros = Object.values(rpgData.usuarios);
+        miembros.sort((a, b) => b.nivel - a.nivel); // Orden por nivel descendente
+
+        // Encabezado del mensaje con el total al principio
+        let listaMiembros = 
+`╔══════════════════════════╗  
+║ 🏰 *Gremio Azura Ultra* 🏰 ║  
+╚══════════════════════════╝  
+
+📋 *Total de miembros registrados:* ${miembros.length}\n`;
+
+        // Lista detallada de cada usuario
+        miembros.forEach((usuario, index) => {
+            const numMascotas = usuario.mascotas ? usuario.mascotas.length : 0;
+            const numPersonajes = usuario.personajes ? usuario.personajes.length : 0;
+
+            listaMiembros += `\n══════════════════════\n`;
+            listaMiembros += `🔹 *${index + 1}.* ${usuario.nombre}\n`;
+            listaMiembros += `   🏅 *Rango:* ${usuario.rango}\n`;
+            listaMiembros += `   🎚️ *Nivel:* ${usuario.nivel}\n`;
+            listaMiembros += `   🎂 *Edad:* ${usuario.edad} años\n`;
+            listaMiembros += `   🐾 *Mascotas:* ${numMascotas}\n`;
+            listaMiembros += `   🎭 *Personajes:* ${numPersonajes}\n`;
+        });
+
+        // Enviar resultado con fondo animado
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: "https://cdn.dorratz.com/files/1740565316697.mp4" }, 
+            gifPlayback: true, 
+            caption: listaMiembros 
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .gremio:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al obtener la lista del gremio. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
     }
-
-    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-    let miembros = Object.values(rpgData.usuarios || {});
-    if (!miembros.length) {
-      return await sock.sendMessage(msg.key.remoteJid, { text: `📜 *No hay miembros registrados en el Gremio Azura Ultra.*\nUsa \`${global.prefix}rpg <nombre> <edad>\` para unirte.` }, { quoted: msg });
-    }
-
-    miembros.sort((a, b) => (b.nivel || 0) - (a.nivel || 0));
-    const header = `🏰 *Gremio Azura Ultra — Total miembros:* ${miembros.length}\n────────────────────────\n`;
-    const lines = miembros.map((u,i) => {
-      const masc = Array.isArray(u.mascotas)? u.mascotas.length : 0;
-      const pers = Array.isArray(u.personajes)? u.personajes.length : 0;
-      return `🔹 ${i+1}. ${u.nombre}\n   🎚 Nivel: ${u.nivel || 0} | 🎂 Edad: ${u.edad || "?"}\n   🐾 Mascotas: ${masc} | 🎭 Personajes: ${pers}`;
-    }).join("\n────────────────────────\n");
-
-    function splitText(txt, size=800) {
-      const chunks=[]; for (let i=0;i<txt.length;i+=size) chunks.push(txt.slice(i,i+size));
-      return chunks;
-    }
-
-    const pages = splitText(lines);
-    // Envía el video‑GIF con el header + primera página
-    await sock.sendMessage(msg.key.remoteJid, {
-      video: { url: "https://cdn.dorratz.com/files/1740565316697.mp4" },
-      gifPlayback: true,
-      caption: header + pages.shift()
-    }, { quoted: msg });
-
-    // Envía el resto como mensajes separados
-    for (const page of pages) {
-      await sock.sendMessage(msg.key.remoteJid, { text: page });
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
-  } catch (error) {
-    console.error("❌ Error en el comando gremio:", error);
-    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al obtener la lista del gremio. Inténtalo de nuevo.*" }, { quoted: msg });
-  }
-  break;
+    break;
 }
       
       
