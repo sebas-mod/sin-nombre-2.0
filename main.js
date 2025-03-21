@@ -218,7 +218,53 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'play1': {
+case 'gremio2': {
+  try {
+    const rpgFile = "./rpg.json";
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "🏰", key: msg.key } });
+
+    if (!fs.existsSync(rpgFile)) {
+      return await sock.sendMessage(msg.key.remoteJid, { text: `❌ *El gremio aún no tiene miembros.* Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` }, { quoted: msg });
+    }
+
+    const rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+    const usuarios = rpgData.usuarios || {};
+    const miembros = Object.values(usuarios);
+
+    if (miembros.length === 0) {
+      return await sock.sendMessage(msg.key.remoteJid, { text: `📜 *No hay miembros registrados en el Gremio Azura Ultra.*\nUsa \`${global.prefix}rpg <nombre> <edad>\` para unirte.` }, { quoted: msg });
+    }
+
+    // Ordenar por nivel descendente
+    miembros.sort((a, b) => (b.nivel || 0) - (a.nivel || 0));
+
+    // Construir mensaje
+    let lista = `🏰 *Gremio Azura Ultra — Total miembros:* ${miembros.length}\n────────────────────────\n`;
+    miembros.forEach((u, i) => {
+      lista += `🔹 ${i + 1}. ${u.nombre || "Desconocido"}\n   🎚 Nivel: ${u.nivel || 0} | 🎂 Edad: ${u.edad || "?"}\n   🐾 Mascotas: ${Array.isArray(u.mascotas)? u.mascotas.length : 0} | 🎭 Personajes: ${Array.isArray(u.personajes)? u.personajes.length : 0}\n────────────────────────\n`;
+    });
+
+    // Si excede el límite de WhatsApp, envía como archivo .txt
+    if (lista.length > 4000) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        document: Buffer.from(lista, "utf-8"),
+        fileName: "gremio.txt",
+        mimetype: "text/plain"
+      }, { quoted: msg });
+    } else {
+      await sock.sendMessage(msg.key.remoteJid, { text: lista }, { quoted: msg });
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
+  } catch (err) {
+    console.error("❌ Error en el comando gremio:", err);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al obtener la lista del gremio.*" }, { quoted: msg });
+  }
+  break;
+}
+      
+      
+  case 'play1': {
   // Envía la reacción para indicar que el comando se ha activado
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "🎶", key: msg.key } });
   
