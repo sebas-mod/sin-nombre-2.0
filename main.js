@@ -218,6 +218,49 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'gifconaudio': {
+    try {
+        // Validar que haya video en la respuesta
+        if (!msg.message?.videoMessage) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Responde a un video para convertirlo en estilo GIF con audio activable.*"
+            }, { quoted: msg });
+            return;
+        }
+
+        // Descargar el video del mensaje citado
+        const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const video = quotedMsg?.videoMessage;
+        if (!video) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *No se encontró un video en el mensaje citado.*"
+            }, { quoted: msg });
+            return;
+        }
+
+        const stream = await downloadMediaMessage(
+            { message: quotedMsg },
+            "buffer",
+            {},
+            { logger: sock.logger, reuploadRequest: sock.updateMediaMessage }
+        );
+
+        // Enviar como video estilo GIF
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: stream,
+            gifPlayback: true,
+            caption: "🎭 *Aquí está tu video estilo GIF con audio activable.*"
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en .gifconaudio:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Ocurrió un error al procesar el video. Intenta de nuevo.*"
+        }, { quoted: msg });
+    }
+    break;
+}
+      
 case 'gremio2': {
   try {
     const rpgFile = "./rpg.json";
