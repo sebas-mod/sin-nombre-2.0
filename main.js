@@ -220,6 +220,11 @@ sock.ev.on('messages.delete', (messages) => {
     switch (lowerCommand) {
 case 'gifvideo': {
     try {
+        // Reacción inicial
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🎞️", key: msg.key }
+        });
+
         const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
         if (!quoted || !quoted.videoMessage) {
@@ -236,7 +241,7 @@ case 'gifvideo': {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
-        // Enviar como video con gifPlayback activado
+        // Enviar como video estilo GIF largo (sin audio)
         await sock.sendMessage(msg.key.remoteJid, {
             video: buffer,
             gifPlayback: true,
