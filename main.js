@@ -218,34 +218,35 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'gifconaudio': {
+case 'gifvideo': {
     try {
         const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-        const msgKey = msg.message?.extendedTextMessage?.contextInfo;
 
         if (!quoted || !quoted.videoMessage) {
             await sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Debes responder a un video para convertirlo en GIF con audio.*"
+                text: "⚠️ *Responde a un video para convertirlo en estilo GIF largo.*"
             }, { quoted: msg });
             return;
         }
 
+        // Descargar el video citado
         const stream = await downloadContentFromMessage(quoted.videoMessage, "video");
         let buffer = Buffer.from([]);
         for await (const chunk of stream) {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
+        // Enviar como video con gifPlayback activado
         await sock.sendMessage(msg.key.remoteJid, {
             video: buffer,
             gifPlayback: true,
-            caption: "🎭 *Video estilo GIF con audio activable.*"
+            caption: "🎬 *Video convertido a estilo GIF largo* (sin audio)"
         }, { quoted: msg });
 
     } catch (error) {
-        console.error("❌ Error en .gifconaudio:", error);
+        console.error("❌ Error en .gifvideo:", error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Ocurrió un error al convertir el video.*"
+            text: "❌ *Ocurrió un error al procesar el video.*"
         }, { quoted: msg });
     }
     break;
