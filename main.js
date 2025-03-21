@@ -340,7 +340,7 @@ case 'gremio2': {
         let listaMiembros = 
 `╔══════════════════╗  
 ║ 🏰 *Gremio Azura Ultra* 🏰 ║  
-╚═══════════════════╝  
+╚══════════════════╝  
 
 📋 *Total de miembros registrados:* ${miembros.length}\n`;
 
