@@ -289,9 +289,9 @@ case 'gremio2': {
 
         // Encabezado del mensaje con el total al principio
         let listaMiembros = 
-`╔══════════════════════════╗  
+`╔══════════════════╗  
 ║ 🏰 *Gremio Azura Ultra* 🏰 ║  
-╚══════════════════════════╝  
+╚═══════════════════╝  
 
 📋 *Total de miembros registrados:* ${miembros.length}\n`;
 
@@ -300,7 +300,7 @@ case 'gremio2': {
             const numMascotas = usuario.mascotas ? usuario.mascotas.length : 0;
             const numPersonajes = usuario.personajes ? usuario.personajes.length : 0;
 
-            listaMiembros += `\n══════════════════════\n`;
+            listaMiembros += `\n════════════════════\n`;
             listaMiembros += `🔹 *${index + 1}.* ${usuario.nombre}\n`;
             listaMiembros += `   🏅 *Rango:* ${usuario.rango}\n`;
             listaMiembros += `   🎚️ *Nivel:* ${usuario.nivel}\n`;
