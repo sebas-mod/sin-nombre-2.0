@@ -220,42 +220,32 @@ sock.ev.on('messages.delete', (messages) => {
     switch (lowerCommand) {
 case 'gifconaudio': {
     try {
-        // Validar que haya video en la respuesta
-        if (!msg.message?.videoMessage) {
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Responde a un video para convertirlo en estilo GIF con audio activable.*"
-            }, { quoted: msg });
-            return;
-        }
+        const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-        // Descargar el video del mensaje citado
-        const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-        const video = quotedMsg?.videoMessage;
-        if (!video) {
+        if (!quoted || !quoted.videoMessage) {
             await sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *No se encontró un video en el mensaje citado.*"
+                text: "⚠️ *Debes responder a un video para convertirlo en GIF con audio.*"
             }, { quoted: msg });
             return;
         }
 
         const stream = await downloadMediaMessage(
-            { message: quotedMsg },
+            { message: quoted, key: msg.message.extendedTextMessage.contextInfo.stanzaId },
             "buffer",
             {},
             { logger: sock.logger, reuploadRequest: sock.updateMediaMessage }
         );
 
-        // Enviar como video estilo GIF
         await sock.sendMessage(msg.key.remoteJid, {
             video: stream,
             gifPlayback: true,
-            caption: "🎭 *Aquí está tu video estilo GIF con audio activable.*"
+            caption: "🎭 *Video convertido a estilo GIF con audio activable.*"
         }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en .gifconaudio:", error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Ocurrió un error al procesar el video. Intenta de nuevo.*"
+            text: "❌ *Ocurrió un error al procesar el video.*"
         }, { quoted: msg });
     }
     break;
