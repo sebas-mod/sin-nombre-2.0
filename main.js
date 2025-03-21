@@ -219,46 +219,44 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
 case 'gremio2': {
+  // Reacción inicial
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "🏰", key: msg.key } });
+
   try {
     const rpgFile = "./rpg.json";
-    await sock.sendMessage(msg.key.remoteJid, { react: { text: "🏰", key: msg.key } });
-
     if (!fs.existsSync(rpgFile)) {
-      return await sock.sendMessage(msg.key.remoteJid, { text: `❌ *El gremio aún no tiene miembros.* Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` }, { quoted: msg });
+      return await sock.sendMessage(msg.key.remoteJid, { text: `❌ El gremio aún no tiene miembros. Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` }, { quoted: msg });
     }
 
     const rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-    const usuarios = rpgData.usuarios || {};
-    const miembros = Object.values(usuarios);
+    const miembros = Object.values(rpgData.usuarios || {});
 
-    if (miembros.length === 0) {
-      return await sock.sendMessage(msg.key.remoteJid, { text: `📜 *No hay miembros registrados en el Gremio Azura Ultra.*\nUsa \`${global.prefix}rpg <nombre> <edad>\` para unirte.` }, { quoted: msg });
+    if (!miembros.length) {
+      return await sock.sendMessage(msg.key.remoteJid, { text: `📜 No hay miembros registrados en el Gremio Azura Ultra.\nUsa \`${global.prefix}rpg <nombre> <edad>\` para unirte.` }, { quoted: msg });
     }
 
-    // Ordenar por nivel descendente
+    // Ordena por nivel descendente
     miembros.sort((a, b) => (b.nivel || 0) - (a.nivel || 0));
 
-    // Construir mensaje
-    let lista = `🏰 *Gremio Azura Ultra — Total miembros:* ${miembros.length}\n────────────────────────\n`;
-    miembros.forEach((u, i) => {
-      lista += `🔹 ${i + 1}. ${u.nombre || "Desconocido"}\n   🎚 Nivel: ${u.nivel || 0} | 🎂 Edad: ${u.edad || "?"}\n   🐾 Mascotas: ${Array.isArray(u.mascotas)? u.mascotas.length : 0} | 🎭 Personajes: ${Array.isArray(u.personajes)? u.personajes.length : 0}\n────────────────────────\n`;
+    // Construye líneas individuales
+    const lines = miembros.map((u, i) => {
+      const mascotas = Array.isArray(u.mascotas) ? u.mascotas.length : 0;
+      const personajes = Array.isArray(u.personajes) ? u.personajes.length : 0;
+      return `🔹 ${i + 1}. ${u.nombre}\n   🎚 Nivel: ${u.nivel || 0} | 🎂 Edad: ${u.edad || "?"}\n   🐾 Mascotas: ${mascotas} | 🎭 Personajes: ${personajes}`;
     });
 
-    // Si excede el límite de WhatsApp, envía como archivo .txt
-    if (lista.length > 4000) {
-      await sock.sendMessage(msg.key.remoteJid, {
-        document: Buffer.from(lista, "utf-8"),
-        fileName: "gremio.txt",
-        mimetype: "text/plain"
-      }, { quoted: msg });
-    } else {
-      await sock.sendMessage(msg.key.remoteJid, { text: lista }, { quoted: msg });
+    // Divide en páginas de 10 líneas cada una
+    for (let i = 0; i < lines.length; i += 10) {
+      const page = lines.slice(i, i + 10).join("\n────────────────────────\n");
+      const header = `🏰 *Gremio Azura Ultra* — Total: ${miembros.length} miembros\n────────────────────────\n`;
+      await sock.sendMessage(msg.key.remoteJid, { text: header + page }, { quoted: msg });
     }
 
+    // Reacción de éxito
     await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
-  } catch (err) {
-    console.error("❌ Error en el comando gremio:", err);
-    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Hubo un error al obtener la lista del gremio.*" }, { quoted: msg });
+  } catch (error) {
+    console.error("❌ Error en el comando gremio:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Hubo un error al obtener la lista del gremio. Inténtalo de nuevo." }, { quoted: msg });
   }
   break;
 }
