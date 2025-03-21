@@ -221,6 +221,7 @@ sock.ev.on('messages.delete', (messages) => {
 case 'gifconaudio': {
     try {
         const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const msgKey = msg.message?.extendedTextMessage?.contextInfo;
 
         if (!quoted || !quoted.videoMessage) {
             await sock.sendMessage(msg.key.remoteJid, {
@@ -229,23 +230,22 @@ case 'gifconaudio': {
             return;
         }
 
-        const stream = await downloadMediaMessage(
-            { message: quoted, key: msg.message.extendedTextMessage.contextInfo.stanzaId },
-            "buffer",
-            {},
-            { logger: sock.logger, reuploadRequest: sock.updateMediaMessage }
-        );
+        const stream = await downloadContentFromMessage(quoted.videoMessage, "video");
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
 
         await sock.sendMessage(msg.key.remoteJid, {
-            video: stream,
+            video: buffer,
             gifPlayback: true,
-            caption: "🎭 *Video convertido a estilo GIF con audio activable.*"
+            caption: "🎭 *Video estilo GIF con audio activable.*"
         }, { quoted: msg });
 
     } catch (error) {
         console.error("❌ Error en .gifconaudio:", error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Ocurrió un error al procesar el video.*"
+            text: "❌ *Ocurrió un error al convertir el video.*"
         }, { quoted: msg });
     }
     break;
