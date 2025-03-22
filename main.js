@@ -225,7 +225,7 @@ case 'sends': {
             react: { text: "📤", key: msg.key }
         });
 
-        // Solo Owner o el mismo bot
+        // Validar si es el owner o el mismo bot
         const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net";
         if (!isOwner(sender) && sender !== botNumber) {
             return sock.sendMessage(msg.key.remoteJid, {
@@ -237,22 +237,14 @@ case 'sends': {
         const citado = contextInfo?.quotedMessage;
         const texto = args.join(" ") || "";
 
-        // Si no hay nada citado ni texto
-        if (!citado && !texto) {
+        // Verificar si se respondió a un medio
+        if (!citado) {
             return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Escribe un mensaje o responde a un archivo para subirlo como estado.*\n📌 Ejemplo:\n- `.sends Hola mundo`\n- `.sends Miren esto` (respondiendo a imagen/video/audio)"
+                text: "⚠️ *Debes responder a una imagen, video o audio para subirlo como estado.*"
             }, { quoted: msg });
         }
 
-        // Subir estado de texto
-        if (!citado && texto) {
-            await sock.sendMessage("status@broadcast", {
-                text: texto
-            });
-            return;
-        }
-
-        // Procesar medios citados
+        // Detectar tipo de archivo
         const tipo = citado?.imageMessage
             ? "image"
             : citado?.videoMessage
@@ -263,25 +255,27 @@ case 'sends': {
 
         if (!tipo) {
             return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Solo puedes subir imágenes, videos, audios o texto como estados.*"
+                text: "⚠️ *Solo puedes subir imágenes, videos o audios como estados.*"
             }, { quoted: msg });
         }
 
-        const mediaStream = await downloadContentFromMessage(citado[`${tipo}Message`], tipo);
+        // Descargar el medio
+        const stream = await downloadContentFromMessage(citado[`${tipo}Message`], tipo);
         let buffer = Buffer.alloc(0);
-        for await (const chunk of mediaStream) {
+        for await (const chunk of stream) {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
-        // Enviar a estado
+        // Armar objeto de estado
         const estado = {};
         estado[tipo] = buffer;
-        if (texto) estado.caption = texto;
+        if (texto && tipo !== "audio") estado.caption = texto; // No se puede usar caption con audio
 
+        // Subir a estado
         await sock.sendMessage("status@broadcast", estado);
-        
+
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ *Estado subido correctamente como ${tipo}.*`
+            text: `✅ *Estado de ${tipo} subido correctamente.*`
         }, { quoted: msg });
 
     } catch (error) {
