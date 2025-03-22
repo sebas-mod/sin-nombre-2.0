@@ -218,6 +218,45 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'copiarpg': {
+    try {
+        // Reacción de archivo listo 📁
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "📁", key: msg.key }
+        });
+
+        // Verificar si es owner
+        if (!isOwner(sender)) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⛔ *Solo el propietario del bot puede usar este comando.*"
+            }, { quoted: msg });
+        }
+
+        const fs = require("fs");
+        const filePath = "./rpg.json";
+
+        if (!fs.existsSync(filePath)) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "❌ *El archivo rpg.json no existe.*"
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            document: fs.readFileSync(filePath),
+            fileName: "rpg.json",
+            mimetype: "application/json",
+            caption: "📂 *Aquí tienes el archivo RPG actualizado*"
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en .copiarpg:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Ocurrió un error al enviar el archivo RPG.*"
+        }, { quoted: msg });
+    }
+    break;
+}
+      
 case 'robar': {
   try {
     const fs = require("fs");
