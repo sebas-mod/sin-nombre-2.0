@@ -218,6 +218,180 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'robar2': {
+  try {
+    const fs = require("fs");
+    const rpgFile = "./rpg.json";
+    const userId = msg.key.participant || msg.key.remoteJid;
+    const cooldownTime = 10 * 60 * 1000; // 10 minutos
+
+    // 🥷 Reacción inicial
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "🥷", key: msg.key }
+    });
+
+    // Verificar si el archivo existe
+    if (!fs.existsSync(rpgFile)) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: "❌ *Los datos del RPG no están disponibles.*"
+      }, { quoted: msg });
+    }
+
+    let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+
+    // Verificar que el ladrón esté registrado
+    if (!rpgData.usuarios[userId]) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.`
+      }, { quoted: msg });
+    }
+
+    let usuario = rpgData.usuarios[userId];
+
+    // Verificar que el ladrón tenga vida
+    if (usuario.vida <= 0) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `🚑 *¡No puedes robar! Tu vida es 0.*\n💉 Usa \`${global.prefix}hospital\` para curarte.`
+      }, { quoted: msg });
+    }
+
+    let tiempoActual = Date.now();
+    if (usuario.cooldowns?.robar && (tiempoActual - usuario.cooldowns.robar) < cooldownTime) {
+      let tiempoRestante = ((usuario.cooldowns.robar + cooldownTime - tiempoActual) / (60 * 1000)).toFixed(1);
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `⏳ *Debes esperar ${tiempoRestante} minutos antes de volver a robar.*`
+      }, { quoted: msg });
+    }
+
+    // Obtener ID de la víctima por mención o cita
+    let targetId = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0] ||
+                   msg.message?.extendedTextMessage?.contextInfo?.participant;
+
+    if (!targetId) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `⚠️ *Debes citar o mencionar al usuario que deseas robar.*\n📌 Ejemplo: \`${global.prefix}robar @usuario\``
+      }, { quoted: msg });
+    }
+
+    // Verificar si la víctima está registrada
+    if (!rpgData.usuarios[targetId]) {
+      return sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *El usuario al que intentas robar no está registrado en el RPG.*`
+      }, { quoted: msg });
+    }
+
+    // Agregamos el ID para poder usarlo en las menciones
+    let victima = {
+      ...rpgData.usuarios[targetId],
+      id: targetId
+    };
+
+    // Calcular si el robo tiene éxito
+    let exito = Math.random() < 0.5;
+    let vidaPerdida = exito
+      ? Math.floor(Math.random() * (10 - 5 + 1)) + 5
+      : Math.floor(Math.random() * (20 - 10 + 1)) + 10;
+
+    usuario.vida = Math.max(0, usuario.vida - vidaPerdida);
+
+    let xpRobado = 0;
+    let diamantesRobados = 0;
+
+    if (exito) {
+      xpRobado = Math.floor(Math.random() * (3000 - 500 + 1)) + 500;
+
+      if (victima.diamantes > 0) {
+        diamantesRobados = Math.min(victima.diamantes, Math.floor(Math.random() * (1500 - 20 + 1)) + 20);
+      } else {
+        xpRobado += Math.floor(Math.random() * (1000 - 300 + 1)) + 300;
+      }
+
+      usuario.experiencia += xpRobado;
+      usuario.diamantes += diamantesRobados;
+
+      victima.diamantes = Math.max(0, victima.diamantes - diamantesRobados);
+      victima.experiencia = Math.max(0, victima.experiencia - xpRobado);
+    } else {
+      let xpPerdido = Math.floor(Math.random() * (1000 - 300 + 1)) + 300;
+      usuario.experiencia = Math.max(0, usuario.experiencia - xpPerdido);
+    }
+
+    // Resultado del robo
+    const textosExito = [
+      `🥷 *${usuario.nombre} robó exitosamente a @${victima.id.split('@')[0]}.*\n💎 *Diamantes robados:* ${diamantesRobados}\n✨ *XP robada:* ${xpRobado}`,
+      `💰 *¡Plan maestro! ${usuario.nombre} engañó a @${victima.id.split('@')[0]} y se fue con el botín.*\n💎 *Diamantes:* ${diamantesRobados}\n🎯 *XP:* ${xpRobado}`,
+      `🚀 *Sigiloso como un ninja, ${usuario.nombre} despojó a @${victima.id.split('@')[0]}.*\n💎 *Diamantes:* ${diamantesRobados}\n🧠 *XP:* ${xpRobado}`
+    ];
+    const textosFracaso = [
+      `🚨 *¡${usuario.nombre} fue atrapado intentando robar y recibió un castigo!*\n❤️ *Vida perdida:* ${vidaPerdida}`,
+      `❌ *Intento fallido... ${usuario.nombre} quiso robar a @${victima.id.split('@')[0]} pero fue descubierto.*\n❤️ *Vida perdida:* ${vidaPerdida}`
+    ];
+
+    const mensajeResultado = exito
+      ? textosExito[Math.floor(Math.random() * textosExito.length)]
+      : textosFracaso[Math.floor(Math.random() * textosFracaso.length)];
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: mensajeResultado,
+      mentions: [userId, targetId]
+    }, { quoted: msg });
+
+    // Posibilidad de subir habilidad
+    let habilidadesArray = Object.keys(usuario.habilidades || {});
+    if (habilidadesArray.length > 0 && Math.random() < 0.3) {
+      let habilidadSubida = habilidadesArray[Math.floor(Math.random() * habilidadesArray.length)];
+      usuario.habilidades[habilidadSubida].nivel += 1;
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: `🌟 *¡${usuario.nombre} ha mejorado su habilidad!*\n🔹 *${habilidadSubida}: Nivel ${usuario.habilidades[habilidadSubida].nivel}*`
+      }, { quoted: msg });
+    }
+
+    // Subida de nivel
+    let xpMaxNivel = usuario.nivel === 1 ? 1000 : usuario.nivel * 1500;
+    while (usuario.experiencia >= xpMaxNivel && usuario.nivel < 50) {
+      usuario.experiencia -= xpMaxNivel;
+      usuario.nivel += 1;
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: `🎉 *¡${usuario.nombre} ha subido al nivel ${usuario.nivel}! 🏆*`
+      }, { quoted: msg });
+      xpMaxNivel = usuario.nivel * 1500;
+    }
+
+    // Subida de rango
+    const rangos = [
+      { nivel: 1, rango: "🌟 Novato" },
+      { nivel: 5, rango: "⚔️ Ladrón Aprendiz" },
+      { nivel: 10, rango: "🔥 Criminal Experto" },
+      { nivel: 20, rango: "👑 Maestro del Robo" },
+      { nivel: 30, rango: "🌀 Señor del Crimen" },
+      { nivel: 40, rango: "💀 Rey de los Ladrones" },
+      { nivel: 50, rango: "🚀 Legendario" }
+    ];
+
+    let rangoAnterior = usuario.rango;
+    usuario.rango = rangos.reduce((acc, curr) => (usuario.nivel >= curr.nivel ? curr.rango : acc), usuario.rango);
+
+    if (usuario.rango !== rangoAnterior) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: `🎖️ *¡${usuario.nombre} ha subido de rango a ${usuario.rango}!*`
+      }, { quoted: msg });
+    }
+
+    usuario.cooldowns = usuario.cooldowns || {};
+    usuario.cooldowns.robar = tiempoActual;
+
+    // Guardar cambios
+    fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
+    
+  } catch (error) {
+    console.error("❌ Error en el comando .robar:", error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ *Ocurrió un error al intentar robar. Inténtalo de nuevo más tarde.*"
+    }, { quoted: msg });
+  }
+  break;
+}
+      
 case 'tran':
 case 'transferir': {
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "💱", key: msg.key } });
