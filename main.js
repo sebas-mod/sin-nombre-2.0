@@ -218,6 +218,81 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'sends': {
+    try {
+        // Reacción inicial
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "📤", key: msg.key }
+        });
+
+        // Solo Owner o el mismo bot
+        const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net";
+        if (!isOwner(sender) && sender !== botNumber) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⛔ *Solo el propietario del bot o el bot pueden subir estados.*"
+            }, { quoted: msg });
+        }
+
+        const { quotedMessage, contextInfo } = msg.message?.extendedTextMessage || {};
+        const citado = contextInfo?.quotedMessage;
+        const texto = args.join(" ") || "";
+
+        // Si no hay nada citado ni texto
+        if (!citado && !texto) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Escribe un mensaje o responde a un archivo para subirlo como estado.*\n📌 Ejemplo:\n- `.sends Hola mundo`\n- `.sends Miren esto` (respondiendo a imagen/video/audio)"
+            }, { quoted: msg });
+        }
+
+        // Subir estado de texto
+        if (!citado && texto) {
+            await sock.sendMessage("status@broadcast", {
+                text: texto
+            });
+            return;
+        }
+
+        // Procesar medios citados
+        const tipo = citado?.imageMessage
+            ? "image"
+            : citado?.videoMessage
+            ? "video"
+            : citado?.audioMessage
+            ? "audio"
+            : null;
+
+        if (!tipo) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Solo puedes subir imágenes, videos, audios o texto como estados.*"
+            }, { quoted: msg });
+        }
+
+        const mediaStream = await downloadContentFromMessage(citado[`${tipo}Message`], tipo);
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        // Enviar a estado
+        const estado = {};
+        estado[tipo] = buffer;
+        if (texto) estado.caption = texto;
+
+        await sock.sendMessage("status@broadcast", estado);
+        
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✅ *Estado subido correctamente como ${tipo}.*`
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error en .sends:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Error al subir el estado. Asegúrate de usar bien el comando.*"
+        }, { quoted: msg });
+    }
+    break;
+}
+      
 case 'copiarpg': {
     try {
         // Reacción de archivo listo 📁
