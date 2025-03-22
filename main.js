@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
       
-case 'ytmp38': {
+case 'ytmp3': {
     const yts = require('yt-search');
     const axios = require('axios');
     const fetch = require('node-fetch');
@@ -275,8 +275,12 @@ case 'ytmp38': {
         break;
     }
 
+    // Reacción inicial ⏳
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
     try {
-        // Buscar en YouTube
         const search = await yts(text);
         if (!search.videos || search.videos.length === 0) {
             throw new Error('No se encontraron resultados.');
@@ -285,7 +289,6 @@ case 'ytmp38': {
         const video = search.videos[0];
         const { title, url, timestamp, thumbnail } = video;
 
-        // Enviar imagen previa
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
             caption: `🎧 *Título:* ${title}\n🕒 *Duración:* ${timestamp}\n\n⏳ *Descargando...*`
@@ -293,7 +296,6 @@ case 'ytmp38': {
 
         const { downloadUrl } = await ddownr.download(url, 'mp3');
 
-        // Enviar audio
         await sock.sendMessage(msg.key.remoteJid, {
             audio: { url: downloadUrl },
             mimetype: 'audio/mpeg',
@@ -1003,7 +1005,7 @@ case 'play4': {
     const yts = require('yt-search');
     const axios = require('axios');
 
-    const formatVideo = ['360', '480', '720', '1080'];
+    const formatVideo = ['240', '360', '480', '720'];
 
     const ddownr = {
         download: async (url, format) => {
@@ -1081,11 +1083,11 @@ case 'play4': {
             ? durParts[0] * 60 + durParts[1]
             : durParts[0];
 
-        // Seleccionamos calidad según duración
+        // Selección de calidad según duración
         let quality = '360';
-        if (minutes <= 4) quality = '720';
-        else if (minutes <= 9) quality = '480';
-        else quality = '360';
+        if (minutes <= 3) quality = '720';
+        else if (minutes <= 5) quality = '480';
+        else quality = '360'; // O cambia a '240' si prefieres menos peso
 
         const infoMessage = `
 ╔══════════════════╗
@@ -1103,7 +1105,7 @@ case 'play4': {
 
 📥 *Opciones de Descarga:*  
 ┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
-┗ 🎥 *Video:* _${global.prefix}play2 ${text}_
+┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
 
 ⏳ *Espera un momento...*  
 ⚙️ *Azura Ultra 2.0 está procesando tu video...*
@@ -1119,7 +1121,6 @@ case 'play4': {
 
         const { downloadUrl } = await ddownr.download(url, quality);
 
-        // Texto final elegante
         const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -1138,6 +1139,7 @@ case 'play4': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
@@ -1145,6 +1147,7 @@ case 'play4': {
 
     break;
 }        
+
 case 'play': {
     const yts = require('yt-search');
     const axios = require('axios');
