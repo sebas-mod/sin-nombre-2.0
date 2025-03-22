@@ -999,105 +999,128 @@ case 'mediafire': {
     break;
 }
 case 'play4': {
-    const fetch = require('node-fetch');
-    const fs = require('fs');
-    const path = require('path');
+    const yts = require('yt-search');
+    const axios = require('axios');
+
+    const formatVideo = ['360', '480', '720', '1080', '1440', '4k'];
+
+    const ddownr = {
+        download: async (url, format) => {
+            if (!formatVideo.includes(format)) {
+                throw new Error('Formato de video no soportado.');
+            }
+
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                }
+            };
+
+            const response = await axios.request(config);
+            if (response.data && response.data.success) {
+                const { id, title, info } = response.data;
+                const downloadUrl = await ddownr.cekProgress(id);
+                return { title, downloadUrl, thumbnail: info.image, uploader: info.author, duration: info.duration, views: info.views, video_url: info.video_url };
+            } else {
+                throw new Error('No se pudo obtener la información del video.');
+            }
+        },
+        cekProgress: async (id) => {
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                }
+            };
+
+            while (true) {
+                const response = await axios.request(config);
+                if (response.data?.success && response.data.progress === 1000) {
+                    return response.data.download_url;
+                }
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    };
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Uso incorrecto del comando.\n\n📌 Ejemplo: *${prefix}play4* DJ Papa Liat`
+            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}play4* La Factoria - Perdoname`
         }, { quoted: msg });
-        return;
+        break;
     }
 
-    // Reacción de carga ⏳
+    // Reacción inicial ⏳
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
 
-    const isUrl = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text);
-    const apiKey = 'ex-f631534532';
-    let downloadLink, title, thumb, caption = '';
-
     try {
-        if (isUrl) {
-            // Si se ingresa una URL, usamos directamente el endpoint ytmp42
-            const apiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(text)}&apikey=${zrapi}`;
-            const response = await fetch(apiUrl);
-            if (!response.ok) {
-                throw new Error('Error al obtener el video desde la API ytmp42');
-            }
-            const data = await response.json();
-            if (!data.status || !data.result || !data.result.dl) {
-                throw new Error('No se pudo obtener el enlace de descarga del video');
-            }
-            downloadLink = data.result.dl;
-            title = data.result.title || 'Video';
-        } else {
-            // Si se ingresa el nombre del video, usamos el endpoint playmp4 para obtener información
-            const query = encodeURIComponent(text);
-            const searchApiUrl = `https://exonity.tech/api/dl/playmp4?query=${query}`;
-            const searchResponse = await fetch(searchApiUrl);
-            if (!searchResponse.ok) {
-                throw new Error('Error al obtener los datos de la API playmp4');
-            }
-            const searchData = await searchResponse.json();
-            if (searchData.status !== 200 || !searchData.result || !searchData.result.video_url) {
-                throw new Error('No se pudo obtener el resultado de la búsqueda');
-            }
-            const searchResult = searchData.result;
-            title = searchResult.title || 'Video';
-            thumb = searchResult.thumb;
-            caption = `🎥 *Título:* ${searchResult.title}\n` +
-                      `🕒 *Duración:* ${searchResult.durasi}\n` +
-                      `👀 *Vistas:* ${searchResult.views}\n` +
-                      `📅 *Subido:* ${searchResult.upload}\n` +
-                      `🔗 *Enlace:* ${searchResult.video_url}`;
-            if (thumb) {
-                await sock.sendMessage(msg.key.remoteJid, {
-                    image: { url: thumb },
-                    caption: caption,
-                    mimetype: 'image/jpeg'
-                }, { quoted: msg });
-            }
-            // Usamos la URL del video obtenido para llamar al endpoint ytmp42
-            const ytmp42ApiUrl = `https://exonity.tech/api/dl/ytmp4?url=${encodeURIComponent(searchResult.video_url)}&apikey=${zrapi}`;
-            const ytmp42Response = await fetch(ytmp42ApiUrl);
-            if (!ytmp42Response.ok) {
-                throw new Error('Error al obtener el video desde la API ytmp42 para la búsqueda');
-            }
-            const ytmp42Data = await ytmp42Response.json();
-            if (!ytmp42Data.status || !ytmp42Data.result || !ytmp42Data.result.dl) {
-                throw new Error('No se pudo obtener el enlace de descarga del video desde ytmp42');
-            }
-            downloadLink = ytmp42Data.result.dl;
+        const search = await yts(text);
+        if (!search.videos || search.videos.length === 0) {
+            throw new Error('No se encontraron resultados.');
         }
 
-        // Descargamos el video usando el enlace obtenido
-        const videoResponse = await fetch(downloadLink, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        if (!videoResponse.ok) throw new Error('Error al descargar el video');
-        const buffer = await videoResponse.buffer();
+        const video = search.videos[0];
+        const { title, url, timestamp, views, author, thumbnail } = video;
+
+        const infoMessage = `
+╔══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦  ║
+╚══════════════════╝
+
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${timestamp}
+├ 👁️ *Vistas:* ${views.toLocaleString()}
+├ 👤 *Autor:* ${author.name}
+└ 🔗 *Enlace:* ${url}
+╰───────────────╯
+
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┗ 🎥 *Video:* _${global.prefix}play2 ${text}_
+
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu video...*
+
+═════════════════════  
+         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+═════════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            video: buffer,
+            image: { url: thumbnail },
+            caption: infoMessage
+        }, { quoted: msg });
+
+        const { downloadUrl } = await ddownr.download(url, '480');
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: downloadUrl },
             mimetype: 'video/mp4',
-            caption: `🎥 *Título:* ${title}`,
-            fileName: `${title}.mp4`
+            fileName: `${title}.mp4`,
+            caption: `✅ Aquí está tu video, mi Xixi`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (error) {
-        console.error(error);
+    } catch (err) {
+        console.error(err);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 Inténtalo de nuevo más tarde.`
+            text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
+
     break;
 }
 
@@ -1288,109 +1311,7 @@ case 'play': {
     break;
 }
 
-case 'ytmp3': {
-    const fetch = require('node-fetch');
-    const fs = require('fs');
-    const path = require('path');
-    const ffmpeg = require('fluent-ffmpeg');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const streamPipeline = promisify(pipeline);
 
-    if (!text) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo:* *${global.prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
-        }, { quoted: msg });
-        return;
-    }
-
-    if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text)) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ *Enlace no válido.*\n\n📌 *Asegúrese de ingresar una URL de YouTube válida.*\n\n📌 *Ejemplo:* *${global.prefix}ytmp3* https://www.youtube.com/watch?v=ejemplo`
-        }, { quoted: msg });
-        return;
-    }
-
-    // Reacción de carga ⏳
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    const videoUrl = text;
-    const apiKey = 'ex-f631534532';
-    const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(videoUrl)}&apikey=${apiKey}`;
-
-    try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Error al obtener el audio desde la API');
-
-        const data = await response.json();
-
-        if (!data.status || !data.result || !data.result.dl) {
-            throw new Error('No se pudo obtener el enlace de descarga del audio');
-        }
-
-        const audioUrl = data.result.dl;
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-        // Descarga el archivo original
-        const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
-        const audioResponse = await fetch(audioUrl);
-        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
-
-        const fileStream = fs.createWriteStream(audioPath);
-        await streamPipeline(audioResponse.body, fileStream);
-
-        const fileSize = fs.statSync(audioPath).size;
-        if (fileSize < 10000) {
-            fs.unlinkSync(audioPath);
-            throw new Error('El archivo descargado es demasiado pequeño para ser válido.');
-        }
-
-        // Conversión del audio usando FFmpeg para asegurar compatibilidad
-        const convertedAudioPath = path.join(tmpDir, `${Date.now()}_converted.mp3`);
-        await new Promise((resolve, reject) => {
-            ffmpeg(audioPath)
-                .audioCodec('libmp3lame')
-                .format('mp3')
-                .on('end', resolve)
-                .on('error', reject)
-                .save(convertedAudioPath);
-        });
-
-        // Envío del audio convertido con el tipo de archivo correcto
-        await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(convertedAudioPath),
-            mimetype: 'audio/mpeg',
-            ptt: false,
-            fileName: `${data.result.title}.mp3`
-        }, { quoted: msg });
-
-        // Eliminamos los archivos temporales
-        fs.unlinkSync(audioPath);
-        fs.unlinkSync(convertedAudioPath);
-
-        // Reacción de éxito ✅
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (error) {
-        console.error(error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Ocurrió un error:* ${error.message}\n\n🔹 *Inténtalo de nuevo más tarde.*`
-        }, { quoted: msg });
-
-        // Reacción de error ❌
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-    break;
-}
-
-            
 
 case "git": {
     try {
