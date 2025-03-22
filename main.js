@@ -220,7 +220,6 @@ sock.ev.on('messages.delete', (messages) => {
     switch (lowerCommand) {
 case 'tran':
 case 'transferir': {
-  // Reacción de activación
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "💱", key: msg.key } });
 
   const amount = parseInt(args[0]);
@@ -228,43 +227,45 @@ case 'transferir': {
     return await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ Uso correcto: \`${global.prefix}tran <cantidad>\` (cita o menciona al usuario).` }, { quoted: msg });
   }
 
-  // Determinar destinatario por mención o cita
   const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-  const quotedParticipant = msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.contextInfo?.participant;
+  const quotedParticipant = msg.message.extendedTextMessage?.contextInfo?.participant;
   const targetJid = mentioned || quotedParticipant;
   if (!targetJid) {
     return await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes citar o mencionar al usuario al que quieres transferir." }, { quoted: msg });
   }
 
-  const fullSender = `${sender}@s.whatsapp.net`;
-  if (fullSender === targetJid) {
+  const senderJid = `${sender}@s.whatsapp.net`;
+  if (senderJid === targetJid) {
     return await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ No puedes transferirte a ti mismo." }, { quoted: msg });
   }
 
-  // Cargar datos RPG
   const rpgFile = "./rpg.json";
   const rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-  rpgData.usuarios ??= {};
-  rpgData.usuarios[fullSender] ??= { diamantes: 0, diamantesGuardados: 0 };
-  rpgData.usuarios[targetJid] ??= { diamantes: 0, diamantesGuardados: 0 };
+  const usuarios = rpgData.usuarios || {};
 
-  const senderBalance = rpgData.usuarios[fullSender].diamantes;
+  // Validar que remitente y destinatario estén registrados
+  if (!usuarios[senderJid]) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: `❌ No estás registrado en el gremio. Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` }, { quoted: msg });
+  }
+  if (!usuarios[targetJid]) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: `❌ El usuario @${targetJid.split("@")[0]} no está registrado en el gremio.` }, { quoted: msg, mentions: [targetJid] });
+  }
+
+  const senderBalance = usuarios[senderJid].diamantes || 0;
   if (senderBalance < amount) {
     return await sock.sendMessage(msg.key.remoteJid, { text: `❌ No tienes suficientes diamantes. Tu saldo actual: ${senderBalance}` }, { quoted: msg });
   }
 
-  // Ejecutar transferencia
-  rpgData.usuarios[fullSender].diamantes -= amount;
-  rpgData.usuarios[targetJid].diamantes += amount;
+  // Realizar transferencia
+  usuarios[senderJid].diamantes -= amount;
+  usuarios[targetJid].diamantes += amount;
   fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-  // Confirmación
   await sock.sendMessage(msg.key.remoteJid, {
-    text: `✅ Transferencia exitosa de *${amount}* diamante(s) a @${targetJid.split("@")[0]}.\n💎 Tu nuevo saldo: ${rpgData.usuarios[fullSender].diamantes}`,
+    text: `✅ Transferencia exitosa de *${amount}* diamante(s) a @${targetJid.split("@")[0]}.\n💎 Tu nuevo saldo: ${usuarios[senderJid].diamantes}`,
     mentions: [targetJid]
   }, { quoted: msg });
 
-  // Reacción final
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
   break;
 }
