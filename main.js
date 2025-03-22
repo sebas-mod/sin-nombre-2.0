@@ -3183,7 +3183,7 @@ case 'robar': {
     if (!targetId) {
       return sock.sendMessage(
         msg.key.remoteJid,
-        { text: `⚠️ *Debes citar o mencionar a la persona a la que quieres robar.*\nEjemplo: \`${global.prefix}robar @usuario\`` },
+        { text: `⚠️ *Debes citar el mensaje a la persona a la que quieres robar.*\nEjemplo: \`${global.prefix}robar\`` },
         { quoted: msg }
       );
     }
