@@ -233,6 +233,7 @@ case 'sends': {
             }, { quoted: msg });
         }
 
+        // Obtener el mensaje citado
         const { quotedMessage, contextInfo } = msg.message?.extendedTextMessage || {};
         const citado = contextInfo?.quotedMessage;
         const texto = args.join(" ") || "";
@@ -266,9 +267,9 @@ case 'sends': {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
-        // Armar objeto de estado
-        const estado = {};
-        estado[tipo] = buffer;
+        // Obtener el mimetype y armar objeto de estado
+        const mimetype = citado[`${tipo}Message`].mimetype;
+        const estado = { [tipo]: buffer, mimetype };
         if (texto && tipo !== "audio") estado.caption = texto; // No se puede usar caption con audio
 
         // Subir a estado
