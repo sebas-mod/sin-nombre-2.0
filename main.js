@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
       
-case 'play': {
+case 'play7': {
   const fs = require('fs');
   const path = require('path');
   const ffmpeg = require('fluent-ffmpeg');
