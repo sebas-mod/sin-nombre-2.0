@@ -219,106 +219,101 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
       
-case 'play8': {
+case 'ytmp38': {
     const yts = require('yt-search');
+    const axios = require('axios');
     const fetch = require('node-fetch');
-    const fs = require('fs');
-    const path = require('path');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const streamPipeline = promisify(pipeline);
+
+    const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
+
+    const ddownr = {
+        download: async (url, format) => {
+            if (!formatAudio.includes(format)) {
+                throw new Error('Formato no soportado.');
+            }
+
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                }
+            };
+
+            const response = await axios.request(config);
+            if (response.data && response.data.success) {
+                const { id, title, info } = response.data;
+                const downloadUrl = await ddownr.cekProgress(id);
+                return { title, downloadUrl, thumbnail: info.image };
+            } else {
+                throw new Error('No se pudo obtener la info del video.');
+            }
+        },
+        cekProgress: async (id) => {
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                }
+            };
+
+            while (true) {
+                const response = await axios.request(config);
+                if (response.data?.success && response.data.progress === 1000) {
+                    return response.data.download_url;
+                }
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    };
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo:* *${global.prefix}play* La Factoria - Perdoname`
+            text: '✳️ Escribe el nombre de una canción o el link de YouTube.'
         }, { quoted: msg });
-        return;
+        break;
     }
 
-    // Reacción de carga ⏳
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
     try {
+        // Buscar en YouTube
         const search = await yts(text);
         if (!search.videos || search.videos.length === 0) {
-            throw new Error('No se encontraron resultados para tu búsqueda.');
+            throw new Error('No se encontraron resultados.');
         }
 
         const video = search.videos[0];
-        const { title, timestamp, views, ago, url, thumbnail } = video;
+        const { title, url, timestamp, thumbnail } = video;
 
-        const caption = `
-╔═════════════════╗
-║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧  ║
-╚═════════════════╝
-
-🎼 *𝙏í𝙩𝙪𝙡𝙤:* ${title}
-⏱️ *𝘿𝙪𝙧𝙖𝙘𝙞ó𝙣:* ${timestamp}
-👁️ *𝙑𝙞𝙨𝙩𝙖𝙨:* ${views.toLocaleString()}
-📅 *𝙎𝙪𝙗𝙞𝙙𝙤:* ${ago}
-🔗 *𝙀𝙣𝙡𝙖𝙘𝙚:* ${url}
-
-⏳ *Azura Ultra 2.0 está descargando tu música...*`;
-
-        // Enviamos imagen con info
+        // Enviar imagen previa
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
-            caption,
-            mimetype: 'image/jpeg'
+            caption: `🎧 *Título:* ${title}\n🕒 *Duración:* ${timestamp}\n\n⏳ *Descargando...*`
         }, { quoted: msg });
 
-        // Usamos la API nueva de Neoxr
-        const response = await fetch(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(url)}&type=audio&quality=128kbps&apikey=GataDios`);
-        const json = await response.json();
+        const { downloadUrl } = await ddownr.download(url, 'mp3');
 
-        if (!json.status || !json.data || !json.data.url) {
-            throw new Error('No se pudo obtener el audio desde la API.');
-        }
-
-        const audioUrl = json.data.url;
-
-        // Descargamos el audio y lo guardamos temporalmente
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
-        const audioResponse = await fetch(audioUrl);
-        if (!audioResponse.ok) throw new Error('Error al descargar el audio');
-
-        const fileStream = fs.createWriteStream(audioPath);
-        await streamPipeline(audioResponse.body, fileStream);
-
-        const fileSize = fs.statSync(audioPath).size;
-        if (fileSize < 10000) {
-            fs.unlinkSync(audioPath);
-            throw new Error('El archivo descargado es demasiado pequeño.');
-        }
-
-        // Enviamos el audio descargado
+        // Enviar audio
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(audioPath),
+            audio: { url: downloadUrl },
             mimetype: 'audio/mpeg',
             fileName: `${title}.mp3`
         }, { quoted: msg });
 
-        fs.unlinkSync(audioPath); // Limpieza
-
-        // Reacción de éxito ✅
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (error) {
-        console.error(error);
+    } catch (err) {
+        console.error(err);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${error.message}`
+            text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
+
     break;
 }
       
