@@ -218,7 +218,165 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'ytmp45': {
+case 'play': {
+    const yts = require('yt-search');
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+
+    const streamPipeline = promisify(pipeline);
+
+    const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
+
+    const ddownr = {
+        download: async (url, format) => {
+            if (!formatAudio.includes(format)) {
+                throw new Error('Formato no soportado.');
+            }
+
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            };
+
+            const response = await axios.request(config);
+            if (response.data && response.data.success) {
+                const { id, title, info } = response.data;
+                const downloadUrl = await ddownr.cekProgress(id);
+                return { title, downloadUrl, thumbnail: info.image, uploader: info.author, duration: info.duration, views: info.views, video_url: info.video_url };
+            } else {
+                throw new Error('No se pudo obtener la información del audio.');
+            }
+        },
+        cekProgress: async (id) => {
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            };
+
+            while (true) {
+                const response = await axios.request(config);
+                if (response.data?.success && response.data.progress === 1000) {
+                    return response.data.download_url;
+                }
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    };
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* La Factoria - Perdoname`
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const search = await yts(text);
+        if (!search.videos || search.videos.length === 0) {
+            throw new Error('No se encontraron resultados.');
+        }
+
+        const video = search.videos[0];
+        const { title, url, timestamp, views, author, thumbnail } = video;
+
+        const infoMessage = `
+╔═══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+╚═══════════════════╝
+
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${timestamp}
+├ 👁️ *Vistas:* ${views.toLocaleString()}
+├ 👤 *Autor:* ${author.name}
+└ 🔗 *Enlace:* ${url}
+╰───────────────╯
+
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
+
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu música...*
+
+═════════════════════  
+         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+═════════════════════`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption: infoMessage
+        }, { quoted: msg });
+
+        const { downloadUrl } = await ddownr.download(url, 'mp3');
+
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp3`);
+
+        const audioRes = await axios.get(downloadUrl, {
+            responseType: 'stream',
+            headers: {
+                'User-Agent': 'Mozilla/5.0'
+            }
+        });
+
+        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+
+        // Compresión del audio con ffmpeg
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioBitrate('128k')
+                .format('mp3')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(finalPath);
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: fs.readFileSync(finalPath),
+            mimetype: 'audio/mpeg',
+            fileName: `${title}.mp3`
+        }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+      
+case 'ytmp42': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -339,13 +497,214 @@ Disfrútelo y continúe explorando el mundo digital.
 
     break;
 }      
+case 'play4': {
+    const yts = require('yt-search');
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+    const streamPipeline = promisify(pipeline);
 
+    const formatVideo = ['240', '360', '480', '720'];
+
+    const ddownr = {
+        download: async (url, format) => {
+            if (!formatVideo.includes(format)) {
+                throw new Error('Formato de video no soportado.');
+            }
+
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            };
+
+            const response = await axios.request(config);
+            if (response.data && response.data.success) {
+                const { id, title, info } = response.data;
+                const downloadUrl = await ddownr.cekProgress(id);
+                return {
+                    title,
+                    downloadUrl,
+                    thumbnail: info.image,
+                    uploader: info.author,
+                    duration: info.duration,
+                    views: info.views,
+                    video_url: info.video_url
+                };
+            } else {
+                throw new Error('No se pudo obtener la información del video.');
+            }
+        },
+        cekProgress: async (id) => {
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            };
+
+            while (true) {
+                const response = await axios.request(config);
+                if (response.data?.success && response.data.progress === 1000) {
+                    return response.data.download_url;
+                }
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    };
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play4* La Factoria - Perdoname`
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const search = await yts(text);
+        if (!search.videos || search.videos.length === 0) {
+            throw new Error('No se encontraron resultados.');
+        }
+
+        const video = search.videos[0];
+        const { title, url, timestamp, views, author, thumbnail } = video;
+
+        // Convertimos duración a minutos
+        const durParts = timestamp.split(':').map(Number);
+        const minutes = durParts.length === 3
+            ? durParts[0] * 60 + durParts[1]
+            : durParts[0];
+
+        // Selección de calidad según duración
+        let quality = '360';
+        if (minutes <= 3) quality = '720';
+        else if (minutes <= 5) quality = '480';
+        else quality = '360';
+
+        const infoMessage = `
+╔══════════════════════╗
+║        ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+╚══════════════════════╝
+
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${timestamp}
+├ 👁️ *Vistas:* ${views.toLocaleString()}
+├ 👤 *Autor:* ${author.name}
+└ 🔗 *Enlace:* ${url}
+╰───────────────╯
+
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
+
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu video...*
+
+═════════════════════  
+         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+═════════════════════`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption: infoMessage
+        }, { quoted: msg });
+
+        const { downloadUrl } = await ddownr.download(url, quality);
+
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp4`);
+
+        const videoRes = await axios.get(downloadUrl, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        await streamPipeline(videoRes.data, fs.createWriteStream(rawPath));
+
+        // Ajuste dinámico de compresión
+        let crf = 26;
+        let bVideo = '600k';
+        let bAudio = '128k';
+        if (minutes <= 2) {
+            crf = 24; bVideo = '800k';
+        } else if (minutes > 5) {
+            crf = 28; bVideo = '400k'; bAudio = '96k';
+        }
+
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .videoCodec('libx264')
+                .audioCodec('aac')
+                .outputOptions([
+                    '-preset', 'veryfast',
+                    `-crf`, `${crf}`,
+                    `-b:v`, bVideo,
+                    `-b:a`, bAudio,
+                    '-movflags', '+faststart'
+                ])
+                .on('end', resolve)
+                .on('error', reject)
+                .save(finalPath);
+        });
+
+        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.
+
+Disfrútelo y continúe explorando el mundo digital.
+
+© Azura Ultra 2.0 Bot`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: fs.readFileSync(finalPath),
+            mimetype: 'video/mp4',
+            fileName: `${title}.mp4`,
+            caption: finalText
+        }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
       
 case 'ytmp3': {
     const yts = require('yt-search');
     const axios = require('axios');
-    const fetch = require('node-fetch');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+    const streamPipeline = promisify(pipeline);
 
+    const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
     const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
 
     const ddownr = {
@@ -358,7 +717,7 @@ case 'ytmp3': {
                 method: 'GET',
                 url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                    'User-Agent': 'Mozilla/5.0'
                 }
             };
 
@@ -366,9 +725,9 @@ case 'ytmp3': {
             if (response.data && response.data.success) {
                 const { id, title, info } = response.data;
                 const downloadUrl = await ddownr.cekProgress(id);
-                return { title, downloadUrl, thumbnail: info.image };
+                return { title, downloadUrl, thumbnail: info.image, duration: info.duration };
             } else {
-                throw new Error('No se pudo obtener la info del video.');
+                throw new Error('No se pudo obtener la información del audio.');
             }
         },
         cekProgress: async (id) => {
@@ -376,7 +735,7 @@ case 'ytmp3': {
                 method: 'GET',
                 url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                    'User-Agent': 'Mozilla/5.0'
                 }
             };
 
@@ -397,19 +756,38 @@ case 'ytmp3': {
         break;
     }
 
-    // Reacción inicial ⏳
+    // Reacción inicial
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
 
     try {
-        const search = await yts(text);
-        if (!search.videos || search.videos.length === 0) {
-            throw new Error('No se encontraron resultados.');
+        let videoData;
+
+        if (isYoutubeUrl) {
+            // Si es link directo
+            videoData = {
+                title: 'Audio Descargado',
+                url: text,
+                thumbnail: 'https://i.ytimg.com/vi/' + new URL(text).searchParams.get("v") + '/0.jpg',
+                timestamp: '0:00'
+            };
+        } else {
+            const search = await yts(text);
+            if (!search.videos || search.videos.length === 0) {
+                throw new Error('No se encontraron resultados.');
+            }
+
+            const video = search.videos[0];
+            videoData = {
+                title: video.title,
+                url: video.url,
+                thumbnail: video.thumbnail,
+                timestamp: video.timestamp
+            };
         }
 
-        const video = search.videos[0];
-        const { title, url, timestamp, thumbnail } = video;
+        const { title, url, thumbnail, timestamp } = videoData;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
@@ -418,11 +796,38 @@ case 'ytmp3': {
 
         const { downloadUrl } = await ddownr.download(url, 'mp3');
 
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp3`);
+
+        const audioRes = await axios.get(downloadUrl, {
+            responseType: 'stream',
+            headers: {
+                'User-Agent': 'Mozilla/5.0'
+            }
+        });
+
+        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+
+        // Comprimir audio con ffmpeg
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioBitrate('128k')
+                .format('mp3')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(finalPath);
+        });
+
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: downloadUrl },
+            audio: fs.readFileSync(finalPath),
             mimetype: 'audio/mpeg',
             fileName: `${title}.mp3`
         }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -433,6 +838,7 @@ case 'ytmp3': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
@@ -1123,426 +1529,6 @@ case 'mediafire': {
     break;
 }
 
-case 'play4': {
-    const yts = require('yt-search');
-    const axios = require('axios');
-    const fs = require('fs');
-    const path = require('path');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const ffmpeg = require('fluent-ffmpeg');
-
-    const streamPipeline = promisify(pipeline);
-
-    const formatVideo = ['240', '360', '480', '720'];
-
-    const ddownr = {
-        download: async (url, format) => {
-            if (!formatVideo.includes(format)) {
-                throw new Error('Formato de video no soportado.');
-            }
-
-            const config = {
-                method: 'GET',
-                url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0'
-                }
-            };
-
-            const response = await axios.request(config);
-            if (response.data && response.data.success) {
-                const { id, title, info } = response.data;
-                const downloadUrl = await ddownr.cekProgress(id);
-                return {
-                    title,
-                    downloadUrl,
-                    thumbnail: info.image,
-                    uploader: info.author,
-                    duration: info.duration,
-                    views: info.views,
-                    video_url: info.video_url
-                };
-            } else {
-                throw new Error('No se pudo obtener la información del video.');
-            }
-        },
-        cekProgress: async (id) => {
-            const config = {
-                method: 'GET',
-                url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0'
-                }
-            };
-
-            while (true) {
-                const response = await axios.request(config);
-                if (response.data?.success && response.data.progress === 1000) {
-                    return response.data.download_url;
-                }
-                await new Promise(resolve => setTimeout(resolve, 5000));
-            }
-        }
-    };
-
-    if (!text) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play4* La Factoria - Perdoname`
-        }, { quoted: msg });
-        break;
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    try {
-        const search = await yts(text);
-        if (!search.videos || search.videos.length === 0) {
-            throw new Error('No se encontraron resultados.');
-        }
-
-        const video = search.videos[0];
-        const { title, url, timestamp, views, author, thumbnail } = video;
-
-        // Convertimos duración a minutos
-        const durParts = timestamp.split(':').map(Number);
-        const minutes = durParts.length === 3
-            ? durParts[0] * 60 + durParts[1]
-            : durParts[0];
-
-        // Selección de calidad según duración
-        let quality = '360';
-        if (minutes <= 3) quality = '720';
-        else if (minutes <= 5) quality = '480';
-        else quality = '360'; // O '240' si lo quieres más ligero
-
-        const infoMessage = `
-╔══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
-╚══════════════════╝
-
-📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
-╭───────────────╮  
-├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${timestamp}
-├ 👁️ *Vistas:* ${views.toLocaleString()}
-├ 👤 *Autor:* ${author.name}
-└ 🔗 *Enlace:* ${url}
-╰───────────────╯
-
-📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
-┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
-
-⏳ *Espera un momento...*  
-⚙️ *Azura Ultra 2.0 está procesando tu video...*
-
-═════════════════════  
-         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
-═════════════════════`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: thumbnail },
-            caption: infoMessage
-        }, { quoted: msg });
-
-        const { downloadUrl } = await ddownr.download(url, quality);
-
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_converted.mp4`);
-
-        const videoRes = await axios.get(downloadUrl, {
-            responseType: 'stream',
-            headers: {
-                'User-Agent': 'Mozilla/5.0'
-            }
-        });
-
-        const rawStream = fs.createWriteStream(rawPath);
-        await streamPipeline(videoRes.data, rawStream);
-
-        // Convertir el video con ffmpeg a formato compatible
-        await new Promise((resolve, reject) => {
-            ffmpeg(rawPath)
-                .videoCodec('libx264')
-                .audioCodec('aac')
-                .outputOptions('-preset', 'fast')
-                .on('end', resolve)
-                .on('error', reject)
-                .save(finalPath);
-        });
-
-        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.
-
-Disfrútelo y continúe explorando el mundo digital.
-
-© Azura Ultra 2.0 Bot`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            video: fs.readFileSync(finalPath),
-            mimetype: 'video/mp4',
-            fileName: `${title}.mp4`,
-            caption: finalText
-        }, { quoted: msg });
-
-        fs.unlinkSync(rawPath);
-        fs.unlinkSync(finalPath);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}
-
-case 'play': {
-    const yts = require('yt-search');
-    const axios = require('axios');
-
-    const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
-
-    const ddownr = {
-        download: async (url, format) => {
-            if (!formatAudio.includes(format)) {
-                throw new Error('Formato no soportado.');
-            }
-
-            const config = {
-                method: 'GET',
-                url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                }
-            };
-
-            const response = await axios.request(config);
-            if (response.data && response.data.success) {
-                const { id, title, info } = response.data;
-                const downloadUrl = await ddownr.cekProgress(id);
-                return { title, downloadUrl, thumbnail: info.image, uploader: info.author, duration: info.duration, views: info.views, video_url: info.video_url };
-            } else {
-                throw new Error('No se pudo obtener la información del video.');
-            }
-        },
-        cekProgress: async (id) => {
-            const config = {
-                method: 'GET',
-                url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                }
-            };
-
-            while (true) {
-                const response = await axios.request(config);
-                if (response.data?.success && response.data.progress === 1000) {
-                    return response.data.download_url;
-                }
-                await new Promise(resolve => setTimeout(resolve, 5000));
-            }
-        }
-    };
-
-    if (!text) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}play* La Factoria - Perdoname`
-        }, { quoted: msg });
-        break;
-    }
-
-    // Reacción inicial ⏳
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    try {
-        const search = await yts(text);
-        if (!search.videos || search.videos.length === 0) {
-            throw new Error('No se encontraron resultados.');
-        }
-
-        const video = search.videos[0];
-        const { title, url, timestamp, views, author, thumbnail } = video;
-
-        const infoMessage = `
-╔═══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
-╚═══════════════════╝
-
-📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
-╭───────────────╮  
-├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${timestamp}
-├ 👁️ *Vistas:* ${views.toLocaleString()}
-├ 👤 *Autor:* ${author.name}
-└ 🔗 *Enlace:* ${url}
-╰───────────────╯
-
-📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
-┗ 🎥 *Video:* _${global.prefix}play2 ${text}_
-
-⏳ *Espera un momento...*  
-⚙️ *Azura Ultra 2.0 está procesando tu música...*
-
-═════════════════════  
-         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
-═════════════════════`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: thumbnail },
-            caption: infoMessage
-        }, { quoted: msg });
-
-        const { downloadUrl } = await ddownr.download(url, 'mp3');
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: downloadUrl },
-            mimetype: 'audio/mpeg',
-            fileName: `${title}.mp3`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}            
-
-case 'ytmp42': {
-    const axios = require('axios');
-    const fs = require('fs');
-    const path = require('path');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const ffmpeg = require('fluent-ffmpeg');
-    const streamPipeline = promisify(pipeline);
-
-    const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text);
-
-    if (!text || !isYoutubeUrl) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}ytmp42* https://youtube.com/watch?v=abc123`
-        }, { quoted: msg });
-        break;
-    }
-
-    // Reacción inicial ⏳
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    const format = '480'; // Calidad por defecto
-    const apiURL = `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(text)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`;
-
-    try {
-        const res = await axios.get(apiURL, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0'
-            }
-        });
-
-        if (!res.data || !res.data.success) throw new Error('La API no devolvió datos válidos.');
-
-        const { id, title, info } = res.data;
-
-        // Esperar que se genere el archivo
-        const cekURL = `https://p.oceansaver.in/ajax/progress.php?id=${id}`;
-        let downloadUrl;
-        while (true) {
-            const cek = await axios.get(cekURL, {
-                headers: { 'User-Agent': 'Mozilla/5.0' }
-            });
-            if (cek.data?.success && cek.data.progress === 1000) {
-                downloadUrl = cek.data.download_url;
-                break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 5000));
-        }
-
-        // Descarga y conversión
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_converted.mp4`);
-
-        const videoRes = await axios.get(downloadUrl, {
-            responseType: 'stream',
-            headers: {
-                'User-Agent': 'Mozilla/5.0'
-            }
-        });
-
-        const rawStream = fs.createWriteStream(rawPath);
-        await streamPipeline(videoRes.data, rawStream);
-
-        await new Promise((resolve, reject) => {
-            ffmpeg(rawPath)
-                .videoCodec('libx264')
-                .audioCodec('aac')
-                .outputOptions('-preset', 'fast')
-                .on('end', resolve)
-                .on('error', reject)
-                .save(finalPath);
-        });
-
-        const finalText = `🎬 Aquí tiene su video en calidad ${format}p.
-
-Disfrútelo y continúe explorando el mundo digital.
-
-© Azura Ultra 2.0 Bot`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            video: fs.readFileSync(finalPath),
-            mimetype: 'video/mp4',
-            fileName: `${title}.mp4`,
-            caption: finalText
-        }, { quoted: msg });
-
-        fs.unlinkSync(rawPath);
-        fs.unlinkSync(finalPath);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message.includes('502') ? 'La API está caída temporalmente.' : err.message}`
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}
         
 case "git": {
     try {
