@@ -1312,8 +1312,7 @@ case 'play': {
     break;
 }            
 
-        
-            case 'ytmp42': {
+case 'ytmp42': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -1422,9 +1421,7 @@ Disfrútelo y continúe explorando el mundo digital.
 
     break;
 }
-
-
-
+        
 case "git": {
     try {
         // Verificar que el comando solo lo use el owner
