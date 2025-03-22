@@ -219,6 +219,34 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
       
+case 'play6': {
+  const chatId = msg.key.remoteJid;
+  await sock.sendMessage(chatId, { react: { text: "🎶", key: msg.key } });
+
+  const query = args.join(" ");
+  if (!query) {
+    return await sock.sendMessage(chatId, { text: `⚠️ Uso: \`${global.prefix}play <título de la canción>\`` }, { quoted: msg });
+  }
+
+  const ytSearch = await yts(query);
+  if (!ytSearch.all.length) {
+    return await sock.sendMessage(chatId, { text: "❌ No se encontraron resultados." }, { quoted: msg });
+  }
+
+  const info = ytSearch.all[0];
+  const apiRes = await fetch(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(info.url)}&type=audio&quality=128kbps&apikey=GataDios`);
+  const json = await apiRes.json();
+
+  await sock.sendMessage(chatId, {
+    audio: { url: json.data.url },
+    mimetype: "audio/mpeg",
+    fileName: `${info.title}.mp3`,
+    contextInfo: { externalAdReply: { title: info.title, body: wm, thumbnailUrl: info.thumbnail, sourceUrl: info.url } }
+  }, { quoted: msg });
+
+  break;
+}
+      
 case 'copiarpg': {
     try {
         // Reacción de archivo listo 📁
