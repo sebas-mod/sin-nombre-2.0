@@ -220,49 +220,51 @@ sock.ev.on('messages.delete', (messages) => {
     switch (lowerCommand) {
 case 'tran':
 case 'transferir': {
-  await sock.sendMessage(msg.key.remoteJid, { react: { text: "💎", key: msg.key } });
+  // Reacción de activación
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: "💱", key: msg.key } });
 
-  const cantidad = parseInt(args[0]);
-  if (!cantidad || cantidad <= 0) {
-    return await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ Uso correcto: \`${global.prefix}tran <cantidad>\` (citando o mencionando al destinatario).` }, { quoted: msg });
+  const amount = parseInt(args[0]);
+  if (!amount || amount <= 0) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ Uso correcto: \`${global.prefix}tran <cantidad>\` (cita o menciona al usuario).` }, { quoted: msg });
   }
 
-  // Determina destinatario (citado o mencionado)
-  let targetJid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-    || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.contextInfo?.participant;
+  // Determinar destinatario por mención o cita
+  const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+  const quotedParticipant = msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.contextInfo?.participant;
+  const targetJid = mentioned || quotedParticipant;
   if (!targetJid) {
     return await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Debes citar o mencionar al usuario al que quieres transferir." }, { quoted: msg });
   }
 
-  // Normaliza IDs para rpgData
-  const senderId = sender;
-  const targetId = targetJid.split('@')[0];
-
-  // Carga datos
-  const rpgFile = "./rpg.json";
-  const rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-
-  // Inicializa cuentas si no existen
-  rpgData.usuarios[senderId] ??= { diamantes: 0 };
-  rpgData.usuarios[targetId] ??= { diamantes: 0 };
-
-  // Verifica saldo
-  if (rpgData.usuarios[senderId].diamantes < cantidad) {
-    return await sock.sendMessage(msg.key.remoteJid, { text: `❌ No tienes suficientes diamantes. Tu saldo: ${rpgData.usuarios[senderId].diamantes}` }, { quoted: msg });
+  const fullSender = `${sender}@s.whatsapp.net`;
+  if (fullSender === targetJid) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ No puedes transferirte a ti mismo." }, { quoted: msg });
   }
 
-  // Realiza transferencia
-  rpgData.usuarios[senderId].diamantes -= cantidad;
-  rpgData.usuarios[targetId].diamantes += cantidad;
+  // Cargar datos RPG
+  const rpgFile = "./rpg.json";
+  const rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
+  rpgData.usuarios ??= {};
+  rpgData.usuarios[fullSender] ??= { diamantes: 0, diamantesGuardados: 0 };
+  rpgData.usuarios[targetJid] ??= { diamantes: 0, diamantesGuardados: 0 };
 
-  // Guarda cambios
+  const senderBalance = rpgData.usuarios[fullSender].diamantes;
+  if (senderBalance < amount) {
+    return await sock.sendMessage(msg.key.remoteJid, { text: `❌ No tienes suficientes diamantes. Tu saldo actual: ${senderBalance}` }, { quoted: msg });
+  }
+
+  // Ejecutar transferencia
+  rpgData.usuarios[fullSender].diamantes -= amount;
+  rpgData.usuarios[targetJid].diamantes += amount;
   fs.writeFileSync(rpgFile, JSON.stringify(rpgData, null, 2));
 
-  // Mensaje de confirmación
+  // Confirmación
   await sock.sendMessage(msg.key.remoteJid, {
-    text: `✅ Transferencia exitosa:\n\n💰 *Transferiste:* ${cantidad} diamante(s)\n👤 *A:* @${targetId}\n💎 *Tu nuevo saldo:* ${rpgData.usuarios[senderId].diamantes}`
-  }, { quoted: msg, mentions: [targetJid] });
+    text: `✅ Transferencia exitosa de *${amount}* diamante(s) a @${targetJid.split("@")[0]}.\n💎 Tu nuevo saldo: ${rpgData.usuarios[fullSender].diamantes}`,
+    mentions: [targetJid]
+  }, { quoted: msg });
 
+  // Reacción final
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
   break;
 }
