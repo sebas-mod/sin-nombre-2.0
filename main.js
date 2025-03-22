@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
       
-case 'play': {
+case 'play8': {
     const yts = require('yt-search');
     const fetch = require('node-fetch');
     const fs = require('fs');
