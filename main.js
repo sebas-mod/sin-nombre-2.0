@@ -218,90 +218,6 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'sends': {
-    try {
-        // Reacción inicial
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "📤", key: msg.key }
-        });
-
-        // Validar si es el owner o el mismo bot
-        const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net";
-        if (!isOwner(sender) && sender !== botNumber) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⛔ *Solo el propietario del bot o el bot pueden subir estados.*"
-            }, { quoted: msg });
-        }
-
-        // Extraer el mensaje multimedia:
-        // 1. Verifica si se respondió a un mensaje (citado)
-        // 2. Si no, verifica si el mensaje actual contiene un multimedia
-        let multimedia;
-        if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-            multimedia = msg.message.extendedTextMessage.contextInfo.quotedMessage;
-        } else if (msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.audioMessage) {
-            multimedia = msg.message;
-        } else {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Debes responder a una imagen, video o audio, o enviarlo directamente para subirlo como estado.*"
-            }, { quoted: msg });
-        }
-
-        // Detectar el tipo de archivo
-        const tipo = multimedia.imageMessage
-            ? "image"
-            : multimedia.videoMessage
-            ? "video"
-            : multimedia.audioMessage
-            ? "audio"
-            : null;
-
-        if (!tipo) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Solo puedes subir imágenes, videos o audios como estados.*"
-            }, { quoted: msg });
-        }
-
-        // Descargar el medio
-        const stream = await downloadContentFromMessage(multimedia[`${tipo}Message`], tipo);
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        // Verificar que el buffer tenga contenido
-        if (buffer.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "❌ *No se pudo descargar el medio, intenta nuevamente.*"
-            }, { quoted: msg });
-        }
-
-        // Obtener el mimetype y armar el objeto de estado
-        const mimetype = multimedia[`${tipo}Message`].mimetype;
-        if (!mimetype) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "❌ *No se encontró el mimetype del archivo.*"
-            }, { quoted: msg });
-        }
-        const caption = args.join(" ") || "";
-        const estado = { [tipo]: buffer, mimetype };
-        if (caption && tipo !== "audio") estado.caption = caption;
-
-        // Subir a estado
-        await sock.sendMessage("status@broadcast", estado);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ *Estado de ${tipo} subido correctamente.*`
-        }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en .sends:", error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Error al subir el estado. Asegúrate de usar bien el comando.*"
-        }, { quoted: msg });
-    }
-    break;
-}
       
 case 'copiarpg': {
     try {
@@ -607,7 +523,7 @@ case 'gifvideo': {
     break;
 }
       
-case 'gremio2': {
+case 'gremio': {
     try {
         const rpgFile = "./rpg.json";
 
@@ -10431,74 +10347,7 @@ case 'compra': {
         });
     }
     break;
-}
-
-        
-        
-case 'gremio': {
-    try {
-        const rpgFile = "./rpg.json";
-
-        // 🔄 Enviar una única reacción antes de procesar
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🏰", key: msg.key } // Emoji de castillo 🏰
-        });
-
-        // Verificar si el archivo RPG existe
-        if (!fs.existsSync(rpgFile)) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *El gremio aún no tiene miembros.* Usa `"+global.prefix+"rpg <nombre> <edad>` para registrarte." 
-            }, { quoted: msg });
-            return;
-        }
-
-        // Cargar datos del gremio
-        let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
-
-        if (!rpgData.usuarios || Object.keys(rpgData.usuarios).length === 0) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "📜 *No hay miembros registrados en el Gremio Azura Ultra.*\nUsa `"+global.prefix+"rpg <nombre> <edad>` para unirte." 
-            }, { quoted: msg });
-            return;
-        }
-
-        let miembros = Object.values(rpgData.usuarios);
-        let listaMiembros = `🏰 *Gremio Azura Ultra - Miembros Registrados* 🏰\n\n`;
-
-        // Ordenar por nivel (de mayor a menor)
-        miembros.sort((a, b) => b.nivel - a.nivel);
-
-        // Construir la lista con los datos de cada usuario
-        miembros.forEach((usuario, index) => {
-            let numMascotas = usuario.mascotas ? usuario.mascotas.length : 0;
-            let numPersonajes = usuario.personajes ? usuario.personajes.length : 0;
-
-            listaMiembros += `══════════════════════\n`;
-            listaMiembros += `🔹 *${index + 1}.* ${usuario.nombre}\n`;
-            listaMiembros += `   🏅 *Rango:* ${usuario.rango}\n`;
-            listaMiembros += `   🎚️ *Nivel:* ${usuario.nivel}\n`;
-            listaMiembros += `   🎂 *Edad:* ${usuario.edad} años\n`;
-            listaMiembros += `   🐾 *Mascotas:* ${numMascotas}\n`;
-            listaMiembros += `   🎭 *Personajes:* ${numPersonajes}\n`;
-        });
-
-        listaMiembros += `══════════════════════\n🏆 *Total de miembros:* ${miembros.length}`;
-
-        // Enviar el video como GIF con el listado 📜
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740565316697.mp4" }, 
-            gifPlayback: true, 
-            caption: listaMiembros
-        }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .gremio:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Hubo un error al obtener la lista del gremio. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
-}
+}        
         
 case 'rpg': { 
     try { 
