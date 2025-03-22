@@ -233,12 +233,11 @@ case 'sends': {
             }, { quoted: msg });
         }
 
-        // Obtener el mensaje citado
-        const { quotedMessage, contextInfo } = msg.message?.extendedTextMessage || {};
+        // Extraer el mensaje citado de forma genérica
+        const contextInfo = msg.message?.contextInfo;
         const citado = contextInfo?.quotedMessage;
         const texto = args.join(" ") || "";
 
-        // Verificar si se respondió a un medio
         if (!citado) {
             return sock.sendMessage(msg.key.remoteJid, {
                 text: "⚠️ *Debes responder a una imagen, video o audio para subirlo como estado.*"
@@ -246,11 +245,11 @@ case 'sends': {
         }
 
         // Detectar tipo de archivo
-        const tipo = citado?.imageMessage
+        const tipo = citado.imageMessage
             ? "image"
-            : citado?.videoMessage
+            : citado.videoMessage
             ? "video"
-            : citado?.audioMessage
+            : citado.audioMessage
             ? "audio"
             : null;
 
@@ -267,8 +266,20 @@ case 'sends': {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
+        // Verificar que el buffer tenga contenido
+        if (buffer.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "❌ *No se pudo descargar el medio, intenta nuevamente.*"
+            }, { quoted: msg });
+        }
+
         // Obtener el mimetype y armar objeto de estado
         const mimetype = citado[`${tipo}Message`].mimetype;
+        if (!mimetype) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "❌ *No se encontró el mimetype del archivo.*"
+            }, { quoted: msg });
+        }
         const estado = { [tipo]: buffer, mimetype };
         if (texto && tipo !== "audio") estado.caption = texto; // No se puede usar caption con audio
 
