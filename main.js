@@ -219,31 +219,108 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {
       
-case 'play6': {
-  const chatId = msg.key.remoteJid;
-  await sock.sendMessage(chatId, { react: { text: "🎶", key: msg.key } });
+case 'play': {
+  const fs = require('fs');
+  const path = require('path');
+  const ffmpeg = require('fluent-ffmpeg');
+  const { pipeline } = require('stream');
+  const { promisify } = require('util');
+  const streamPipeline = promisify(pipeline);
 
-  const query = args.join(" ");
-  if (!query) {
-    return await sock.sendMessage(chatId, { text: `⚠️ Uso: \`${global.prefix}play <título de la canción>\`` }, { quoted: msg });
+  if (!text) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `⚠️ *Uso incorrecto del comando.*\n\n📌 *Ejemplo:* *${global.prefix}play* La Factoria - Perdoname`
+    }, { quoted: msg });
+    return;
   }
 
-  const ytSearch = await yts(query);
-  if (!ytSearch.all.length) {
-    return await sock.sendMessage(chatId, { text: "❌ No se encontraron resultados." }, { quoted: msg });
+  // Reacción de carga ⏳
+  await sock.sendMessage(msg.key.remoteJid, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    // Determinar si es URL de YouTube
+    const isUrl = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(text);
+    let audioUrl, title, thumb, caption = '';
+
+    if (isUrl) {
+      // Descarga directa vía Exonity API ytmp3
+      const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(text)}&apikey=ex-f631534532`;
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      if (!data.status || !data.result?.dl) throw new Error('No se pudo obtener enlace de descarga');
+      audioUrl = data.result.dl;
+      title = data.result.title || 'Audio';
+    } else {
+      // Búsqueda + descarga vía Exonity API playmp3
+      const searchUrl = `https://exonity.tech/api/dl/playmp3?query=${encodeURIComponent(text)}`;
+      const searchRes = await fetch(searchUrl);
+      const searchData = await searchRes.json();
+      if (searchData.status !== 200 || !searchData.result?.video_url) throw new Error('No se encontró resultado');
+      title = searchData.result.title;
+      thumb = searchData.result.thumb;
+      caption =
+`╔═════════════════╗  
+║  AZURA ULTRA 2.0 BOT ║  
+╚═════════════════╝  
+
+🎼 *Título:* ${title}  
+⏳ Descargando tu audio...`;
+
+      if (thumb) {
+        await sock.sendMessage(msg.key.remoteJid, {
+          image: { url: thumb },
+          caption: caption
+        }, { quoted: msg });
+      }
+
+      const apiUrl = `https://exonity.tech/api/dl/ytmp3?url=${encodeURIComponent(searchData.result.video_url)}&apikey=ex-f631534532`;
+      const apiRes = await fetch(apiUrl);
+      const apiData = await apiRes.json();
+      if (!apiData.status || !apiData.result?.dl) throw new Error('Error al obtener enlace de descarga');
+      audioUrl = apiData.result.dl;
+    }
+
+    // Descarga el audio
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+    const audioPath = path.join(tmpDir, `${Date.now()}.mp3`);
+    const audioResp = await fetch(audioUrl);
+    if (!audioResp.ok) throw new Error('Error descargando el audio');
+    await streamPipeline(audioResp.body, fs.createWriteStream(audioPath));
+
+    // Convierte para compatibilidad
+    const converted = path.join(tmpDir, `${Date.now()}_converted.mp3`);
+    await new Promise((resolve, reject) => {
+      ffmpeg(audioPath)
+        .audioCodec('libmp3lame')
+        .format('mp3')
+        .on('end', resolve)
+        .on('error', reject)
+        .save(converted);
+    });
+
+    // Envía el audio
+    await sock.sendMessage(msg.key.remoteJid, {
+      audio: fs.readFileSync(converted),
+      mimetype: 'audio/mpeg',
+      fileName: `${title}.mp3`
+    }, { quoted: msg });
+
+    // Limpieza
+    fs.unlinkSync(audioPath);
+    fs.unlinkSync(converted);
+
+    // Reacción final ✅
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
+  } catch (err) {
+    console.error(err);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ Error: ${err.message}`
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '❌', key: msg.key } });
   }
-
-  const info = ytSearch.all[0];
-  const apiRes = await fetch(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(info.url)}&type=audio&quality=128kbps&apikey=GataDios`);
-  const json = await apiRes.json();
-
-  await sock.sendMessage(chatId, {
-    audio: { url: json.data.url },
-    mimetype: "audio/mpeg",
-    fileName: `${info.title}.mp3`,
-    contextInfo: { externalAdReply: { title: info.title, body: wm, thumbnailUrl: info.thumbnail, sourceUrl: info.url } }
-  }, { quoted: msg });
-
   break;
 }
       
