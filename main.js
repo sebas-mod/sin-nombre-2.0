@@ -1004,6 +1004,13 @@ case 'mediafire': {
 case 'play4': {
     const yts = require('yt-search');
     const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+
+    const streamPipeline = promisify(pipeline);
 
     const formatVideo = ['240', '360', '480', '720'];
 
@@ -1087,11 +1094,11 @@ case 'play4': {
         let quality = '360';
         if (minutes <= 3) quality = '720';
         else if (minutes <= 5) quality = '480';
-        else quality = '360'; // O cambia a '240' si prefieres menos peso
+        else quality = '360'; // O '240' si lo quieres más ligero
 
         const infoMessage = `
 ╔══════════════════╗
-║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
 ╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
@@ -1121,14 +1128,47 @@ case 'play4': {
 
         const { downloadUrl } = await ddownr.download(url, quality);
 
-        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_converted.mp4`);
+
+        const videoRes = await axios.get(downloadUrl, {
+            responseType: 'stream',
+            headers: {
+                'User-Agent': 'Mozilla/5.0'
+            }
+        });
+
+        const rawStream = fs.createWriteStream(rawPath);
+        await streamPipeline(videoRes.data, rawStream);
+
+        // Convertir el video con ffmpeg a formato compatible
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .videoCodec('libx264')
+                .audioCodec('aac')
+                .outputOptions('-preset', 'fast')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(finalPath);
+        });
+
+        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.
+
+Disfrútelo y continúe explorando el mundo digital.
+
+© Azura Ultra 2.0 Bot`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: downloadUrl },
+            video: fs.readFileSync(finalPath),
             mimetype: 'video/mp4',
             fileName: `${title}.mp4`,
             caption: finalText
         }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -1139,14 +1179,13 @@ case 'play4': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
 
     break;
-}        
+}
 
 case 'play': {
     const yts = require('yt-search');
