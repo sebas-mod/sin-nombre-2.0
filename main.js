@@ -998,11 +998,12 @@ case 'mediafire': {
     }
     break;
 }
+
 case 'play4': {
     const yts = require('yt-search');
     const axios = require('axios');
 
-    const formatVideo = ['360', '480', '720', '1080', '1440', '4k'];
+    const formatVideo = ['360', '480', '720', '1080'];
 
     const ddownr = {
         download: async (url, format) => {
@@ -1014,7 +1015,7 @@ case 'play4': {
                 method: 'GET',
                 url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                    'User-Agent': 'Mozilla/5.0'
                 }
             };
 
@@ -1022,7 +1023,15 @@ case 'play4': {
             if (response.data && response.data.success) {
                 const { id, title, info } = response.data;
                 const downloadUrl = await ddownr.cekProgress(id);
-                return { title, downloadUrl, thumbnail: info.image, uploader: info.author, duration: info.duration, views: info.views, video_url: info.video_url };
+                return {
+                    title,
+                    downloadUrl,
+                    thumbnail: info.image,
+                    uploader: info.author,
+                    duration: info.duration,
+                    views: info.views,
+                    video_url: info.video_url
+                };
             } else {
                 throw new Error('No se pudo obtener la información del video.');
             }
@@ -1032,7 +1041,7 @@ case 'play4': {
                 method: 'GET',
                 url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                    'User-Agent': 'Mozilla/5.0'
                 }
             };
 
@@ -1048,12 +1057,11 @@ case 'play4': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}play4* La Factoria - Perdoname`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play4* La Factoria - Perdoname`
         }, { quoted: msg });
         break;
     }
 
-    // Reacción inicial ⏳
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
@@ -1067,9 +1075,21 @@ case 'play4': {
         const video = search.videos[0];
         const { title, url, timestamp, views, author, thumbnail } = video;
 
+        // Convertimos duración a minutos
+        const durParts = timestamp.split(':').map(Number);
+        const minutes = durParts.length === 3
+            ? durParts[0] * 60 + durParts[1]
+            : durParts[0];
+
+        // Seleccionamos calidad según duración
+        let quality = '360';
+        if (minutes <= 4) quality = '720';
+        else if (minutes <= 9) quality = '480';
+        else quality = '360';
+
         const infoMessage = `
 ╔══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦  ║
+║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
 ╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
@@ -1097,13 +1117,16 @@ case 'play4': {
             caption: infoMessage
         }, { quoted: msg });
 
-        const { downloadUrl } = await ddownr.download(url, '480');
+        const { downloadUrl } = await ddownr.download(url, quality);
+
+        // Texto final elegante
+        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             video: { url: downloadUrl },
             mimetype: 'video/mp4',
             fileName: `${title}.mp4`,
-            caption: `✅ Aquí está tu video, mi Xixi`
+            caption: finalText
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -1115,15 +1138,13 @@ case 'play4': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
 
     break;
-}
-
+}        
 case 'play': {
     const yts = require('yt-search');
     const axios = require('axios');
