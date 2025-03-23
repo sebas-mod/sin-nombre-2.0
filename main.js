@@ -286,7 +286,6 @@ case 'play5': {
 }
 
 case 'play6': {
-    const yts = require('yt-search');
     const fetch = require('node-fetch');
 
     if (!text) {
@@ -301,45 +300,27 @@ case 'play6': {
     });
 
     try {
-        const search = await yts(text);
-        const video = search.videos[0];
-        if (!video) throw new Error('No se encontró el video.');
-
-        const { title, url, timestamp, views, author, thumbnail } = video;
-
-        const caption = `
-╔══════════════════════╗
-║     ✦ 𝘼𝙯𝙪𝙧𝙖 𝙐𝙡𝙩𝙧𝙖 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
-╚══════════════════════╝
-
-🎼 *Título:* ${title}
-⏱️ *Duración:* ${timestamp}
-👤 *Autor:* ${author.name}
-👁️ *Vistas:* ${views.toLocaleString()}
-🔗 *Enlace:* ${url}
-
-🎬 *Enviando el video...*`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: thumbnail },
-            caption
-        }, { quoted: msg });
-
-        const res = await fetch(`https://api.neoxr.eu/api/youtube?url=${url}&type=video&quality=360p&apikey=GataDios`);
+        const apiUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=azhF78`;
+        const res = await fetch(apiUrl);
         const json = await res.json();
-        const downloadUrl = json.data.url;
 
-        const finalCaption = `🎬 Aquí tiene su video en calidad 360p.
+        if (!json.status || !json.data?.url) {
+            throw new Error('No se pudo obtener el enlace del video');
+        }
+
+        const { title, url, thumbnail, quality } = json.data;
+
+        const caption = `🎬 Aquí tiene su video en calidad ${quality || 'desconocida'}.
 
 Disfrútelo y continúe explorando el mundo digital.
 
 © Azura Ultra 2.0 Bot`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: downloadUrl },
+            video: { url },
             mimetype: 'video/mp4',
             fileName: `${title}.mp4`,
-            caption: finalCaption
+            caption
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -351,6 +332,7 @@ Disfrútelo y continúe explorando el mundo digital.
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
@@ -358,7 +340,6 @@ Disfrútelo y continúe explorando el mundo digital.
 
     break;
 }
-
         
 case 'play3': {
     const fetch = require('node-fetch');
