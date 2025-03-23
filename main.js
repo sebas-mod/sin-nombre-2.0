@@ -309,6 +309,7 @@ case 'play': {
 
 📥 *Opciones de Descarga:*  
 ┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┣ 🎥 *video:* _${global.prefix}play2 ${text}_  
 ┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
 
 ⏳ *Espera un momento...*  
@@ -607,6 +608,7 @@ case 'play4': {
 
 📥 *Opciones de Descarga:*  
 ┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┣ 🎥 *video:* _${global.prefix}play2 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
 
 ⏳ *Espera un momento...*  
