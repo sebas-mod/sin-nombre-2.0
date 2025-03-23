@@ -1990,8 +1990,6 @@ case 'spotify': {
     }
     break;
 }
-
-                
 case 'mediafire': {
     const fetch = require('node-fetch');
 
@@ -2016,7 +2014,7 @@ case 'mediafire': {
     const mediafireUrl = text;
 
     try {
-        const apiUrl = `https://exonity.tech/api/dl/mediafire?url=${encodeURIComponent(mediafireUrl)}`;
+        const apiUrl = `https://api.neoxr.eu/api/mediafire?url=${encodeURIComponent(mediafireUrl)}&apikey=russellxz`;
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
@@ -2025,29 +2023,29 @@ case 'mediafire': {
 
         const data = await response.json();
 
-        if (data.status !== 200 || !data.result || !data.result.download) {
+        if (!data.status || !data.data || !data.data.url) {
             throw new Error("No se pudo obtener el enlace de descarga.");
         }
 
-        const fileInfo = data.result;
-        const fileResponse = await fetch(fileInfo.download);
+        const fileInfo = data.data;
+        const fileResponse = await fetch(fileInfo.url);
         if (!fileResponse.ok) {
             throw new Error("No se pudo descargar el archivo.");
         }
 
         const fileBuffer = await fileResponse.buffer();
-        const caption = `📂 *Nombre del archivo:* ${fileInfo.filename}\n` +
-                        `📦 *Tipo:* ${fileInfo.type}\n` +
-                        `📏 *Tamaño:* ${fileInfo.size}\n` +
-                        `📅 *Subido:* ${fileInfo.uploaded}\n`;
+        const caption = `📂 *Nombre del archivo:* ${fileInfo.title}\n` +
+                        `📦 *Tamaño:* ${fileInfo.size}\n` +
+                        `📏 *Tipo:* ${fileInfo.mime}\n` +
+                        `🔗 *Extensión:* ${fileInfo.extension}\n`;
 
         await sock.sendMessage(msg.key.remoteJid, { 
             text: caption 
         }, { quoted: msg });
         await sock.sendMessage(msg.key.remoteJid, {
             document: fileBuffer,
-            mimetype: fileInfo.mimetype,
-            fileName: fileInfo.filename
+            mimetype: fileInfo.mime,
+            fileName: fileInfo.title
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -2066,8 +2064,7 @@ case 'mediafire': {
     }
     break;
 }
-
-        
+                
 case "git": {
     try {
         // Verificar que el comando solo lo use el owner
