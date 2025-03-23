@@ -387,20 +387,16 @@ case 'play5': {
     try {
         const apiUrl = `https://api.neoxr.eu/api/play?q=${encodeURIComponent(text)}&apikey=russellxz`;
         const response = await axios.get(apiUrl);
-        const audioData = response.data.data;
+        const data = response.data;
 
-        if (!audioData || !audioData.url || !response.data.title) {
+        if (!data || !data.data || !data.data.url || !data.title) {
             throw new Error('No se pudo obtener el audio');
         }
 
-        const title = response.data.title;
-        const url = audioData.url;
-        const views = response.data.views || 'N/A';
-        const author = response.data.channel || 'Desconocido';
-        const timestamp = response.data.fduration || '0:00';
-        const thumbnail = response.data.thumbnail;
+        const { title, thumbnail, channel, fduration, views, id } = data;
+        const url = data.data.url;
 
-        const durParts = timestamp.split(':').map(Number);
+        const durParts = fduration.split(':').map(Number);
         const minutes = durParts.length === 3 ? durParts[0] * 60 + durParts[1] : durParts[0];
 
         const infoMessage = `
@@ -411,13 +407,14 @@ case 'play5': {
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
 ╭───────────────╮  
 ├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${timestamp}
+├ ⏱️ *Duración:* ${fduration}
 ├ 👁️ *Vistas:* ${views}
-├ 👤 *Autor:* ${author}
+├ 👤 *Autor:* ${channel}
+└ 🔗 *Enlace:* https://youtu.be/${id}
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_  
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
 ⏳ *Espera un momento...*  
@@ -447,6 +444,7 @@ case 'play5': {
             ffmpeg(rawPath)
                 .audioCodec('libmp3lame')
                 .audioBitrate('128k')
+                .format('mp3')
                 .on('end', resolve)
                 .on('error', reject)
                 .save(finalPath);
