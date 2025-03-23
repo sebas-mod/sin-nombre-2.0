@@ -365,12 +365,16 @@ case 'ytmp35': {
 }
       
 case 'play5': {
-    const yts = require('yt-search');
-    const fetch = require('node-fetch');
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const streamPipeline = promisify(pipeline);
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play5* La Factoria - Perdoname`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play5* Komang`
         }, { quoted: msg });
         break;
     }
@@ -380,39 +384,56 @@ case 'play5': {
     });
 
     try {
-        const search = await yts(text);
-        const video = search.videos[0];
-        if (!video) throw new Error('No se encontró el video.');
+        const apiUrl = `https://api.neoxr.eu/api/play?q=${encodeURIComponent(text)}&apikey=russellxz`;
+        const { data } = await axios.get(apiUrl);
 
-        const { title, url, timestamp, views, author, thumbnail } = video;
+        if (!data || !data.data || !data.data.url) throw new Error("No se pudo obtener el audio.");
 
-        const caption = `
+        const { title, url, thumbnail, duration, views, channel } = data.data;
+
+        const infoMessage = `
 ╔══════════════════════╗
-║     ✦ 𝘼𝙯𝙪𝙧𝙖 𝙐𝙡𝙩𝙧𝙖 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+║        ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
 ╚══════════════════════╝
 
-🎼 *Título:* ${title}
-⏱️ *Duración:* ${timestamp}
-👤 *Autor:* ${author.name}
-👁️ *Vistas:* ${views.toLocaleString()}
-🔗 *Enlace:* ${url}
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${duration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Canal:* ${channel}
+╰───────────────╯
 
-🎧 *Enviando el audio...*`;
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_  
+┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
+
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu música...*
+
+═════════════════════  
+        𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+═════════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
-            caption
+            caption: infoMessage
         }, { quoted: msg });
 
-        const res = await fetch(`https://api.neoxr.eu/api/youtube?url=${url}&type=audio&quality=128kbps&apikey=GataDios`);
-        const json = await res.json();
-        const downloadUrl = json.data.url;
+        const audioPath = path.join(__dirname, 'tmp', `${Date.now()}_audio.mp3`);
+        const audioRes = await axios.get(url, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        await streamPipeline(audioRes.data, fs.createWriteStream(audioPath));
 
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: downloadUrl },
+            audio: fs.readFileSync(audioPath),
             mimetype: 'audio/mpeg',
             fileName: `${title}.mp3`
         }, { quoted: msg });
+
+        fs.unlinkSync(audioPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -423,6 +444,7 @@ case 'play5': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
@@ -489,7 +511,7 @@ case 'play6': {
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play ${text}_
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
 ⏳ *Espera un momento...*  
@@ -2858,8 +2880,12 @@ case 'menu': {
 ⎔ ${global.prefix}play2 → título  
 ⎔ ${global.prefix}play3 → titulo
 ⎔ ${global.prefix}play4 → titulo
+⎔ ${global.prefix}play5 → titulo
+⎔ ${global.prefix}play6 → titulo
 ⎔ ${global.prefix}ytmp3 → link  
+⎔ ${global.prefix}ytmp35 → link  
 ⎔ ${global.prefix}ytmp4 → link  
+⎔ ${global.prefix}ytmp45 → link  
 ⎔ ${global.prefix}ytmp42 → link  
 ⎔ ${global.prefix}tiktok → link  
 ⎔ ${global.prefix}fb → link  
