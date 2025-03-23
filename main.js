@@ -2199,6 +2199,8 @@ case 'play2': {
 📥 *𝘾𝙤𝙢𝙖𝙣𝙙𝙤𝙨 𝙙𝙚 𝙙𝙚𝙨𝙘𝙖𝙧𝙜𝙖:*  
 🎬 *Video:* _${global.prefix}play2 nombre del video_  
 🎵 *Audio:* _${global.prefix}play nombre del video_  
+🎬 *Video:* _${global.prefix}play6 nombre del video_  
+🎵 *Audio:* _${global.prefix}play5 nombre del video_  
 
 ⏳ *Por favor espera...*  
 🛠️ *Azura Ultra 2.0 Bot está descargando tu video...*  
