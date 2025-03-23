@@ -218,6 +218,54 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+        case 'dalle': {
+    const axios = require('axios');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}dalle Gato en la luna\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const text = args.join(' ');
+    const apiUrl = `https://api.hiuraa.my.id/ai-img/imagen?text=${encodeURIComponent(text)}`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    try {
+        const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+
+        if (!response.data) {
+            throw new Error('No se pudo generar la imagen.');
+        }
+
+        const imageBuffer = Buffer.from(response.data, 'binary');
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: imageBuffer,
+            caption: `🖼️ *Imagen generada para:* ${text}`,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .dalle:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al generar la imagen:*\n_${error.message}_` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
 case 'ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
