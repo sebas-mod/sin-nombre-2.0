@@ -10499,6 +10499,115 @@ case 'gemini': {
     }
     break;
 }
+case 'gitanime': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}gitanime https://www.animebatch.id/jujutsu-kaisen-season-2-sub-indo/\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const url = args[0];
+    const apiUrl = `https://api.neoxr.eu/api/anime-get?url=${encodeURIComponent(url)}&apikey=russellxz`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (!data.status || !data.data || !data.data.episode || data.data.episode.length === 0) {
+            throw new Error("No se encontraron episodios o datos válidos.");
+        }
+
+        const animeInfo = data.data;
+
+        const caption = `🎬 *Título:* ${animeInfo.title}\n` +
+                        `📺 *Tipo:* ${animeInfo.type}\n` +
+                        `📅 *Lanzamiento:* ${animeInfo.release}\n` +
+                        `⏱️ *Duración:* ${animeInfo.duration}\n` +
+                        `⭐ *Puntuación:* ${animeInfo.score || "N/A"}\n` +
+                        `📊 *Vistas:* ${animeInfo.views}\n` +
+                        `🎭 *Género:* ${animeInfo.genre}\n` +
+                        `📝 *Descripción:* ${animeInfo.description.substring(0, 200)}...`;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: animeInfo.thumbnail },
+            caption: caption,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+
+        const firstEpisode = animeInfo.episode[0];
+        const downloadLinks = firstEpisode.link;
+
+        if (!downloadLinks || downloadLinks.length === 0) {
+            throw new Error("No se encontraron enlaces de descarga.");
+        }
+
+        let downloadMessage = `🔗 *Enlaces de descarga para:* ${firstEpisode.episode}\n\n`;
+        downloadLinks.forEach((link, index) => {
+            downloadMessage += `📦 *Calidad:* ${link.quality}\n`;
+            link.url.forEach((server, serverIndex) => {
+                downloadMessage += `🌐 *Servidor ${serverIndex + 1}:* ${server.server}\n` +
+                                  `🔗 *Enlace:* ${server.url}\n\n`;
+            });
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: downloadMessage 
+        }, { quoted: msg });
+
+        try {
+            const firstServer = downloadLinks[0].url[0];
+            const fileResponse = await fetch(firstServer.url);
+
+            if (!fileResponse.ok) {
+                throw new Error("No se pudo descargar el archivo.");
+            }
+
+            const fileBuffer = await fileResponse.buffer();
+            const fileName = `${animeInfo.title.replace(/[^a-zA-Z0-9]/g, '_')}_${firstEpisode.episode}.mp4`;
+
+            await sock.sendMessage(msg.key.remoteJid, {
+                video: fileBuffer,
+                mimetype: 'video/mp4',
+                fileName: fileName
+            }, { quoted: msg });
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                react: { text: "✅", key: msg.key } 
+            });
+
+        } catch (downloadError) {
+            console.error("❌ Error al descargar el archivo:", downloadError.message);
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `❌ *Error al descargar el archivo:*\n_${downloadError.message}_\n\n🔹 Intenta descargar manualmente desde los enlaces proporcionados.` 
+            }, { quoted: msg });
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                react: { text: "❌", key: msg.key } 
+            });
+        }
+
+    } catch (error) {
+        console.error("❌ Error en el comando .gitanime:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al procesar la solicitud:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
 case 'simi':
 case 'simisimi': {
     const fetch = require('node-fetch');
