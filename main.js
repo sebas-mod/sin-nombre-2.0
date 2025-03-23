@@ -413,7 +413,9 @@ case 'play': {
 
 📥 *Opciones de Descarga:*  
 ┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
-┗ 🎥 *Video:* _${global.prefix}play2 ${text}_
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
+┣ 🎥 *video:* _${global.prefix}play2 ${text}_
+┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
 ⏳ *Espera un momento...*  
 ⚙️ *Azura Ultra 2.0 está procesando tu música...*
@@ -494,9 +496,9 @@ case 'play2': {
         else if (minutes <= 5) quality = '480';
 
         const infoMessage = `
-╔══════════════════════╗
-║        ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════════╝
+╔══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
 ╭───────────────╮  
@@ -504,19 +506,21 @@ case 'play2': {
 ├ ⏱️ *Duración:* ${timestamp}
 ├ 👁️ *Vistas:* ${views}
 ├ 👤 *Autor:* ${author}
-└ 🔗 *Enlace:* ${response.data.id}
+└ 🔗 *Enlace:* ${videoUrl}
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
 ┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
+┣ 🎥 *video:* _${global.prefix}play2 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
 ⏳ *Espera un momento...*  
 ⚙️ *Azura Ultra 2.0 está procesando tu video...*
 
-═════════════════════  
+═══════════════════  
         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
-═════════════════════`;
+═══════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
