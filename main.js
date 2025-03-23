@@ -463,7 +463,7 @@ case 'play6': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play2* nombre del video'
+            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play6* nombre del video'
         }, { quoted: msg });
         break;
     }
