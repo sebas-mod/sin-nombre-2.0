@@ -218,7 +218,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'ytmp45': {
+case 'ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -307,7 +307,7 @@ case 'ytmp45': {
     break;
 }
       
-case 'ytmp35': {
+case 'ytmp3': {
   const axios = require('axios');
   const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
 
@@ -364,13 +364,13 @@ case 'ytmp35': {
   break;
 }
       
-case 'play5': {
+case 'play': {
     const axios = require('axios');
     const yts = require('yt-search');
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play5* Komang`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* Komang`
         }, { quoted: msg });
         break;
     }
@@ -450,7 +450,7 @@ case 'play5': {
     break;
 }
 
-case 'play6': {
+case 'play2': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -461,7 +461,7 @@ case 'play6': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play6* nombre del video'
+            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play2* nombre del video'
         }, { quoted: msg });
         break;
     }
@@ -680,7 +680,7 @@ case 'play3': {
     break;
 }
       
-case 'play': {
+case 'play5': {
     const yts = require('yt-search');
     const axios = require('axios');
     const fs = require('fs');
@@ -737,7 +737,7 @@ case 'play': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* La Factoria - Perdoname`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play5* La Factoria - Perdoname`
         }, { quoted: msg });
         break;
     }
@@ -757,7 +757,7 @@ case 'play': {
 
         const infoMessage = `
 ╔══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   
 ╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
@@ -770,9 +770,9 @@ case 'play': {
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_  
 ┣ 🎵 *Audio de spotify:* _${global.prefix}play3 ${text}_
-┣ 🎥 *video:* _${global.prefix}play2 ${text}_  
+┣ 🎥 *video:* _${global.prefix}play6 ${text}_  
 ┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
 
 ⏳ *Espera un momento...*  
@@ -1281,7 +1281,7 @@ case 'play1': {
     break;
 }
         
-case 'ytmp3': {
+case 'ytmp35': {
     const yts = require('yt-search');
     const axios = require('axios');
     const fs = require('fs');
@@ -2128,12 +2128,12 @@ case "git": {
 
             
             
-case 'play2': { 
+case 'play20': { 
     const yts = require('yt-search'); 
 
     if (!text || text.trim() === '') {
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play2 boza yaya*\n🎬 _Proporciona el nombre o término de búsqueda del video._` 
+            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play20 boza yaya*\n🎬 _Proporciona el nombre o término de búsqueda del video._` 
         });
     } 
 
@@ -2210,7 +2210,7 @@ case 'play2': {
 }
 
             
-case 'ytmp4': {
+case 'ytmp45': {
     const fetch = require('node-fetch');
     const savetube = require('savetubedl');
 
