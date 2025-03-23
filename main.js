@@ -286,7 +286,13 @@ case 'play5': {
 }
 
 case 'play6': {
-    const fetch = require('node-fetch');
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+    const streamPipeline = promisify(pipeline);
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
@@ -300,28 +306,92 @@ case 'play6': {
     });
 
     try {
-        const apiUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=azhF78`;
-        const res = await fetch(apiUrl);
-        const json = await res.json();
+        const res = await axios.get(`https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`);
+        const data = res.data?.data;
+        if (!data || !data.url) throw new Error('No se pudo obtener el video.');
 
-        if (!json.status || !json.data?.url) {
-            throw new Error('No se pudo obtener el enlace del video');
-        }
+        const { title, url, thumbnail, duration, views, quality, source } = data;
+        const durParts = duration.split(':').map(Number);
+        const minutes = durParts.length === 3 ? durParts[0] * 60 + durParts[1] : durParts[0];
+        const qualityUsed = quality || (minutes <= 3 ? '720' : minutes <= 5 ? '480' : '360');
 
-        const { title, url, thumbnail, quality } = json.data;
+        const infoMessage = `
+╔══════════════════════╗
+║        ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+╚══════════════════════╝
 
-        const caption = `🎬 Aquí tiene su video en calidad ${quality || 'desconocida'}.
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${duration}
+├ 👁️ *Vistas:* ${views}
+└ 🔗 *Enlace:* ${source}
+╰───────────────╯
 
-Disfrútelo y continúe explorando el mundo digital.
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_  
+┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
-© Azura Ultra 2.0 Bot`;
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu video...*
+
+═════════════════════  
+         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+═════════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            video: { url },
+            image: { url: thumbnail },
+            caption: infoMessage
+        }, { quoted: msg });
+
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp4`);
+
+        const videoRes = await axios.get(url, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        await streamPipeline(videoRes.data, fs.createWriteStream(rawPath));
+
+        let crf = 26;
+        let bVideo = '600k';
+        let bAudio = '128k';
+        if (minutes <= 2) {
+            crf = 24; bVideo = '800k';
+        } else if (minutes > 5) {
+            crf = 28; bVideo = '400k'; bAudio = '96k';
+        }
+
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .videoCodec('libx264')
+                .audioCodec('aac')
+                .outputOptions([
+                    '-preset', 'veryfast',
+                    `-crf`, `${crf}`,
+                    `-b:v`, bVideo,
+                    `-b:a`, bAudio,
+                    '-movflags', '+faststart'
+                ])
+                .on('end', resolve)
+                .on('error', reject)
+                .save(finalPath);
+        });
+
+        const finalText = `🎬 Aquí tiene su video en calidad ${qualityUsed}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: fs.readFileSync(finalPath),
             mimetype: 'video/mp4',
             fileName: `${title}.mp4`,
-            caption
+            caption: finalText
         }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
