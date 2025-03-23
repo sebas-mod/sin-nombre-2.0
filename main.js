@@ -695,7 +695,128 @@ Disfrútelo y continúe explorando el mundo digital.
 
     break;
 }
-      
+
+case 'play1': {
+    const yts = require('yt-search');
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+    const streamPipeline = promisify(pipeline);
+
+    const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
+
+    const ddownr = {
+        download: async (url, format) => {
+            if (!formatAudio.includes(format)) {
+                throw new Error('Formato no soportado.');
+            }
+
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`,
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            };
+
+            const response = await axios.request(config);
+            if (response.data && response.data.success) {
+                const { id, title, info } = response.data;
+                const downloadUrl = await ddownr.cekProgress(id);
+                return { title, downloadUrl, thumbnail: info.image };
+            } else {
+                throw new Error('No se pudo obtener la info del video.');
+            }
+        },
+        cekProgress: async (id) => {
+            const config = {
+                method: 'GET',
+                url: `https://p.oceansaver.in/ajax/progress.php?id=${id}`,
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            };
+
+            while (true) {
+                const response = await axios.request(config);
+                if (response.data?.success && response.data.progress === 1000) {
+                    return response.data.download_url;
+                }
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    };
+
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "🎶", key: msg.key } });
+
+    try {
+        if (!text || text.trim() === "") {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `⚠️ Escribe por favor el nombre de la canción.\nEjemplo: *${global.prefix}play1 Boza Yaya*`
+            }, { quoted: msg });
+            return;
+        }
+
+        const search = await yts(text);
+        if (!search.videos || search.videos.length === 0) {
+            throw new Error('No se encontraron resultados.');
+        }
+
+        const video = search.videos[0];
+        const { title, url, thumbnail } = video;
+
+        const { downloadUrl } = await ddownr.download(url, 'mp3');
+
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp3`);
+
+        const audioRes = await axios.get(downloadUrl, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioBitrate('128k')
+                .format('mp3')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(finalPath);
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: fs.readFileSync(finalPath),
+            fileName: `${title}.mp3`,
+            mimetype: "audio/mpeg",
+            contextInfo: {
+                externalAdReply: {
+                    title: title,
+                    body: "αʑυrα υℓτrα 2.0 вστ",
+                    mediaType: 1,
+                    previewType: "PHOTO",
+                    thumbnailUrl: thumbnail,
+                    showAdAttribution: true,
+                    renderLargerThumbnail: true
+                }
+            }
+        }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
+
+    } catch (error) {
+        console.error(error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "⚠️ Hubo un pequeño error :("
+        }, { quoted: msg });
+    }
+
+    break;
+}
+        
 case 'ytmp3': {
     const yts = require('yt-search');
     const axios = require('axios');
@@ -1219,56 +1340,6 @@ case 'gremio': {
         }, { quoted: msg });
     }
     break;
-}
-      
-      
-  case 'play1': {
-  // Envía la reacción para indicar que el comando se ha activado
-  await sock.sendMessage(msg.key.remoteJid, { react: { text: "🎶", key: msg.key } });
-  
-  try {
-    // Verifica que se haya ingresado el nombre de la canción (consulta)
-    if (!text || text.trim() === "") {
-      // Ejemplo de uso con el prefijo global
-      await sock.sendMessage(msg.key.remoteJid, { 
-        text: `⚠️ Escribe por favor el nombre de la canción.\nEjemplo: *${global.prefix}play1 Boza Yaya*` 
-      }, { quoted: msg });
-      return;
-    }
-    
-    // Llama a la API para buscar en YouTube
-    let play2 = await fetchJson(`https://carisys.online/api/pesquisas/youtube?query=${encodeURIComponent(text)}`);
-    
-    // Construye la URL de descarga del audio
-    const audioUrl = `https://carisys.online/api/downloads/youtube/mp3-2?url=${play2.resultado.url}`;
-    
-    // Descarga el audio usando fetch y conviértelo a buffer
-    const res = await fetch(audioUrl);
-    if (!res.ok) throw new Error("Error descargando audio");
-    const audioBuffer = await res.buffer();
-    
-    // Envía el audio descargado como buffer, especificando el mimetype y el nombre de archivo
-    await sock.sendMessage(msg.key.remoteJid, {
-      audio: audioBuffer,
-      fileName: play2.resultado.titulo + '.mp3',
-      mimetype: "audio/mpeg",
-      contextInfo: {
-        externalAdReply: {
-          title: play2.resultado.titulo,
-          body: "αʑυrα υℓτrα 2.0 вστ",
-          mediaType: 1,
-          reviewType: "PHOTO",
-          thumbnailUrl: play2.resultado.imagem,
-          showAdAttribution: true,
-          renderLargerThumbnail: true
-        }
-      }
-    }, { quoted: msg });
-  } catch (error) {
-    console.log(error);
-    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Hubo un pequeño error :(" }, { quoted: msg });
-  }
-  break;
 }
       
 case 'infogrupo': {
