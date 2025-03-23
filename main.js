@@ -10374,6 +10374,81 @@ case 'tomp3': {
     }
     break;
 }
+case 'whatmusic': {
+    const fetch = require('node-fetch');
+
+    try {
+        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quoted) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Responde a un audio con el comando `.whatmusic` para detectar la música.*" 
+            }, { quoted: msg });
+        }
+
+        if (!quoted.audioMessage) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Solo puedes detectar música en audios.*" 
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🛠️", key: msg.key } 
+        });
+
+        let mediaStream = await downloadContentFromMessage(quoted.audioMessage, "audio");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        if (buffer.length === 0) {
+            throw new Error("❌ Error: No se pudo descargar el archivo.");
+        }
+
+        const apiUrl = "https://api.neoxr.eu/api/whatmusic";
+        const formData = new FormData();
+        formData.append("file", buffer, { filename: "audio.mp3" });
+
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "apikey": "russellxz"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.status || !data.data) {
+            throw new Error("No se pudo detectar la música.");
+        }
+
+        const musicInfo = data.data;
+        const caption = `🎵 *Título:* ${musicInfo.title}\n` +
+                        `🎤 *Artista:* ${musicInfo.artist}\n` +
+                        `💿 *Álbum:* ${musicInfo.album}\n` +
+                        `📅 *Lanzamiento:* ${musicInfo.release}`;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: caption 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .whatmusic:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al detectar la música. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
 case "tiktok":
 case "tt":
     if (!text) {
