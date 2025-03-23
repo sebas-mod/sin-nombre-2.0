@@ -1702,7 +1702,86 @@ case 'transferir': {
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
   break;
 }
-      
+      case 'audio-text': {
+    const { Readable } = require('stream');
+    const vosk = require('vosk');
+    const fs = require('fs');
+    const path = require('path');
+
+    try {
+        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quoted) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Responde a un audio con el comando `.audio-text` para convertirlo a texto.*" 
+            }, { quoted: msg });
+        }
+
+        if (!quoted.audioMessage) {
+            return sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ *Solo puedes convertir audios a texto.*" 
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "🛠️", key: msg.key } 
+        });
+
+        let mediaStream = await downloadContentFromMessage(quoted.audioMessage, "audio");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        if (buffer.length === 0) {
+            throw new Error("❌ Error: No se pudo descargar el archivo.");
+        }
+
+        const tempFilePath = path.join(__dirname, '../tmp/temp_audio.ogg');
+        fs.writeFileSync(tempFilePath, buffer);
+
+        const modelPath = path.join(__dirname, '../model');
+        if (!fs.existsSync(modelPath)) {
+            throw new Error("❌ Error: El modelo Vosk no está instalado.");
+        }
+
+        const model = new vosk.Model(modelPath);
+        const recognizer = new vosk.Recognizer({ model: model, sampleRate: 16000 });
+
+        const audioStream = fs.createReadStream(tempFilePath);
+        const readableStream = new Readable({
+            read() {
+                this.push(audioStream.read());
+            },
+        });
+
+        let transcription = "";
+        readableStream.on('data', (chunk) => {
+            if (recognizer.acceptWaveform(chunk)) {
+                transcription += recognizer.result().text;
+            }
+        });
+
+        readableStream.on('end', async () => {
+            transcription += recognizer.finalResult().text;
+            fs.unlinkSync(tempFilePath);
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: `🎤 *Texto detectado:*\n\n${transcription}` 
+            }, { quoted: msg });
+
+            await sock.sendMessage(msg.key.remoteJid, { 
+                react: { text: "✅", key: msg.key } 
+            });
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .audio-text:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Hubo un error al convertir el audio a texto. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}
 case 'gifvideo': {
     try {
         // Reacción inicial
