@@ -367,24 +367,19 @@ case 'play6': {
         const response = await axios.get(apiUrl);
         const videoData = response.data.data;
 
-        if (!videoData || !videoData.url || !videoData.title) {
+        if (!videoData || !videoData.url || !response.data.title) {
             throw new Error('No se pudo obtener el video');
         }
 
-        const title = videoData.title;
+        const title = response.data.title;
         const url = videoData.url;
-        const views = videoData.views || 'N/A';
-        const author = videoData.uploader || 'Desconocido';
-        const timestamp = videoData.duration || '0:00';
-        const thumbnail = videoData.thumbnail;
+        const views = response.data.views || 'N/A';
+        const author = response.data.channel || 'Desconocido';
+        const timestamp = response.data.fduration || '0:00';
+        const thumbnail = response.data.thumbnail;
 
-        let minutes = 3;
-        if (timestamp && timestamp.includes(':')) {
-            const durParts = timestamp.split(':').map(Number);
-            minutes = durParts.length === 3
-                ? durParts[0] * 60 + durParts[1]
-                : durParts[0];
-        }
+        const durParts = timestamp.split(':').map(Number);
+        const minutes = durParts.length === 3 ? durParts[0] * 60 + durParts[1] : durParts[0];
 
         let quality = '360';
         if (minutes <= 3) quality = '720';
@@ -401,7 +396,7 @@ case 'play6': {
 ├ ⏱️ *Duración:* ${timestamp}
 ├ 👁️ *Vistas:* ${views}
 ├ 👤 *Autor:* ${author}
-└ 🔗 *Enlace:* ${videoData.video_url || url}
+└ 🔗 *Enlace:* ${response.data.id}
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
