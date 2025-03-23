@@ -10075,7 +10075,6 @@ case 'hd': {
     break;
 }
 
-
 case 'chatgpt':
 case 'ia': {
     const fetch = require('node-fetch');
@@ -10088,8 +10087,8 @@ case 'ia': {
     }
 
     const query = args.join(" ");
-    const apiUrl = `https://exonity.tech/api/ai/copilot?message=${encodeURIComponent(query)}`;
-    const userId = msg.key.participant || msg.key.remoteJid; // Obtener ID del usuario
+    const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodeURIComponent(query)}&session=1727468410446638&apikey=russellxz`;
+    const userId = msg.key.participant || msg.key.remoteJid;
 
     await sock.sendMessage(msg.key.remoteJid, { 
         react: { text: "🤖", key: msg.key } 
@@ -10104,15 +10103,15 @@ case 'ia': {
 
         const data = await response.json();
 
-        if (data.status !== 200 || !data.result) {
-            throw new Error("No se pudo obtener una respuesta de ChatGPT.");
+        if (!data.status || !data.data || !data.data.message) {
+            throw new Error("No se pudo obtener una respuesta de GPT-4.");
         }
 
-        const respuestaChatGPT = data.result;
+        const respuestaGPT4 = data.data.message;
 
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✨ *ChatGPT responde a @${userId.replace("@s.whatsapp.net", "")}:*\n\n${respuestaChatGPT}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖`,
-            mentions: [userId] // Menciona al usuario en la respuesta
+            text: `✨ *GPT-4 responde a @${userId.replace("@s.whatsapp.net", "")}:*\n\n${respuestaGPT4}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖`,
+            mentions: [userId] 
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -10122,7 +10121,7 @@ case 'ia': {
     } catch (error) {
         console.error("❌ Error en el comando .chatgpt:", error.message);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Error al obtener respuesta de ChatGPT:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+            text: `❌ *Error al obtener respuesta de GPT-4:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -10131,7 +10130,7 @@ case 'ia': {
     }
     break;
 }
-            
+         
       case 'toaudio':
 case 'tomp3': {
     try {
