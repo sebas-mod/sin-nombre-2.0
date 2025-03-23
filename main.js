@@ -1737,7 +1737,7 @@ case 'audio-text': {
             throw new Error("❌ Error: No se pudo descargar el archivo.");
         }
 
-        tempFilePath = path.join(__dirname, '../tmp/temp_audio.ogg'); 
+        tempFilePath = path.join(__dirname, './tmp/temp_audio.ogg'); 
         fs.writeFileSync(tempFilePath, buffer);
 
         const apiUrl = `https://api.neoxr.eu/api/whisper?apikey=russellxz`;
