@@ -370,11 +370,12 @@ case 'play5': {
     const path = require('path');
     const { pipeline } = require('stream');
     const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
     const streamPipeline = promisify(pipeline);
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play5* Komang`
+            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play5* nombre de la canción'
         }, { quoted: msg });
         break;
     }
@@ -385,11 +386,22 @@ case 'play5': {
 
     try {
         const apiUrl = `https://api.neoxr.eu/api/play?q=${encodeURIComponent(text)}&apikey=russellxz`;
-        const { data } = await axios.get(apiUrl);
+        const response = await axios.get(apiUrl);
+        const audioData = response.data.data;
 
-        if (!data || !data.data || !data.data.url) throw new Error("No se pudo obtener el audio.");
+        if (!audioData || !audioData.url || !response.data.title) {
+            throw new Error('No se pudo obtener el audio');
+        }
 
-        const { title, url, thumbnail, duration, views, channel } = data.data;
+        const title = response.data.title;
+        const url = audioData.url;
+        const views = response.data.views || 'N/A';
+        const author = response.data.channel || 'Desconocido';
+        const timestamp = response.data.fduration || '0:00';
+        const thumbnail = response.data.thumbnail;
+
+        const durParts = timestamp.split(':').map(Number);
+        const minutes = durParts.length === 3 ? durParts[0] * 60 + durParts[1] : durParts[0];
 
         const infoMessage = `
 ╔══════════════════════╗
@@ -399,9 +411,9 @@ case 'play5': {
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
 ╭───────────────╮  
 ├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${duration}
+├ ⏱️ *Duración:* ${timestamp}
 ├ 👁️ *Vistas:* ${views}
-├ 👤 *Canal:* ${channel}
+├ 👤 *Autor:* ${author}
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
@@ -420,20 +432,34 @@ case 'play5': {
             caption: infoMessage
         }, { quoted: msg });
 
-        const audioPath = path.join(__dirname, 'tmp', `${Date.now()}_audio.mp3`);
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp3`);
+
         const audioRes = await axios.get(url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        await streamPipeline(audioRes.data, fs.createWriteStream(audioPath));
+        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioCodec('libmp3lame')
+                .audioBitrate('128k')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(finalPath);
+        });
 
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(audioPath),
+            audio: fs.readFileSync(finalPath),
             mimetype: 'audio/mpeg',
             fileName: `${title}.mp3`
         }, { quoted: msg });
 
-        fs.unlinkSync(audioPath);
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -444,7 +470,6 @@ case 'play5': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
