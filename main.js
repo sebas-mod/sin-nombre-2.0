@@ -452,7 +452,7 @@ case 'play': {
     break;
 }
 
-case 'play2': {
+case 'play6': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -2132,12 +2132,12 @@ case "git": {
 
             
             
-case 'play20': { 
+case 'play2': { 
     const yts = require('yt-search'); 
 
     if (!text || text.trim() === '') {
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play20 boza yaya*\n🎬 _Proporciona el nombre o término de búsqueda del video._` 
+            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play2 boza yaya*\n🎬 _Proporciona el nombre o término de búsqueda del video._` 
         });
     } 
 
@@ -2879,7 +2879,7 @@ case 'menu': {
 ⎔ ${global.prefix}play → título  
 ⎔ ${global.prefix}play1 → título  
 ⎔ ${global.prefix}play2 → título  
-⎔ ${global.prefix}play3 → titulo
+⎔ ${global.prefix}play3 spotify → titulo
 ⎔ ${global.prefix}play4 → titulo
 ⎔ ${global.prefix}play5 → titulo
 ⎔ ${global.prefix}play6 → titulo
