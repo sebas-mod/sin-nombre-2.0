@@ -218,6 +218,108 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'play5': {
+    const axios = require('axios');
+    const fetch = require('node-fetch');
+    const yts = require('yt-search');
+    const { getBuffer } = require('./utils'); // Asegúrate de tener una función para obtener buffers de URLs
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '✳️ Por favor, proporciona un enlace de Spotify o YouTube.'
+        }, { quoted: msg });
+        break;
+    }
+
+    // Reacción inicial ⏳
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        let downloadUrl, title, thumbnail;
+
+        // Verificar si es un enlace de Spotify
+        if (text.includes('spotify.com')) {
+            // Llamar a la API para obtener información de la canción de Spotify
+            const spotifyApiUrl = `https://api.spotify.com/v1/tracks/${extractSpotifyId(text)}`;
+            const spotifyResponse = await axios.get(spotifyApiUrl, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.SPOTIFY_API_TOKEN}`
+                }
+            });
+
+            const spotifyData = spotifyResponse.data;
+            title = spotifyData.name;
+            thumbnail = spotifyData.album.images[0].url;
+
+            // Convertir el enlace de Spotify a un enlace de YouTube
+            const search = await yts(`${title} ${spotifyData.artists[0].name}`);
+            if (!search.videos || search.videos.length === 0) {
+                throw new Error('No se encontraron resultados en YouTube.');
+            }
+            const video = search.videos[0];
+            downloadUrl = video.url;
+        } 
+        // Verificar si es un enlace de YouTube
+        else if (text.includes('youtube.com') || text.includes('youtu.be')) {
+            downloadUrl = text;
+            const search = await yts({ videoId: extractYouTubeId(text) });
+            if (!search || !search.title) {
+                throw new Error('No se encontró el video en YouTube.');
+            }
+            title = search.title;
+            thumbnail = search.thumbnail;
+        } else {
+            throw new Error('URL no válida. Proporcione un enlace de Spotify o YouTube.');
+        }
+
+        // Descargar el audio
+        const audioBuffer = await getBuffer(downloadUrl);
+
+        // Enviar el audio
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: audioBuffer,
+            mimetype: 'audio/mpeg',
+            fileName: `${title}.mp3`,
+            contextInfo: {
+                externalAdReply: {
+                    title: title,
+                    body: 'Azura Ultra 2.0 Bot',
+                    mediaType: 1,
+                    thumbnailUrl: thumbnail,
+                    showAdAttribution: true,
+                    renderLargerThumbnail: true
+                }
+            }
+        }, { quoted: msg });
+
+        // Reacción de éxito ✅
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        let errorMessage = '❌ Ocurrió un error al procesar su solicitud.';
+        if (err.response && err.response.status === 404) {
+            errorMessage = '❌ Error 404: Recurso no encontrado.';
+        } else if (err.message) {
+            errorMessage = `❌ Error: ${err.message}`;
+        }
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: errorMessage
+        }, { quoted: msg });
+
+        // Reacción de error ❌
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+      
 case 'play3': {
     const fetch = require('node-fetch');
     const axios = require('axios');
@@ -232,35 +334,20 @@ case 'play3': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Escribe el nombre de la canción o pega el link de Spotify.\nEjemplo: *${global.prefix}play3* Bizarrap Quevedo\nO también:\n*${global.prefix}play3* https://open.spotify.com/track/...`
+            text: `⚠️ Escribe lo que deseas buscar en Spotify.\nEjemplo: *${global.prefix}play3* Marshmello - Alone`
         }, { quoted: msg });
         break;
     }
 
-    const isSpotifyUrl = /^(https?:\/\/)?(open\.spotify\.com\/track\/|spotify:track:)/.test(text.trim());
-
     try {
-        let result, url, img;
-
-        if (isSpotifyUrl) {
-            // Si es un link de Spotify
-            url = text.trim();
-
-            // Consultamos la info del tema
-            const res = await axios.get(`${apis.delirius}search/spotifytrack?url=${encodeURIComponent(url)}`);
-            result = res.data.data;
-            img = result.image;
-
-        } else {
-            // Es texto, buscamos por nombre
-            const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
-            if (!res.data.data || res.data.data.length === 0) throw 'No se encontraron resultados en Spotify.';
-
-            result = res.data.data[0];
-            url = result.url;
-            img = result.image;
+        const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
+        if (!res.data.data || res.data.data.length === 0) {
+            throw '❌ No se encontraron resultados en Spotify.';
         }
 
+        const result = res.data.data[0];
+        const img = result.image;
+        const url = result.url;
         const info = `⧁ 𝙏𝙄𝙏𝙐𝙇𝙊: ${result.title}
 ⧁ 𝘼𝙍𝙏𝙄𝙎𝙏𝘼: ${result.artist}
 ⧁ 𝘿𝙐𝙍𝘼𝘾𝙄𝙊́𝙉: ${result.duration}
@@ -268,7 +355,7 @@ case 'play3': {
 ⧁ 𝙋𝙊𝙋𝙐𝙇𝘼𝙍𝙄𝘿𝘼𝘿: ${result.popularity}
 ⧁ 𝙀𝙉𝙇𝘼𝘾𝙀: ${url}
 
-🎶 *Azura Ultra 2.0 Bot enviando tu música...*`;
+🎶 *Azura Ultra 2.0 Bot enviando tu música...*`.trim();
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: img },
@@ -283,26 +370,29 @@ case 'play3': {
             }, { quoted: msg });
         };
 
-        // Fallback por orden
+        // Intento 1
         try {
-            const r1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
-            const j1 = await r1.json();
-            return await sendAudio(j1.data.url);
+            const res1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
+            const json1 = await res1.json();
+            return await sendAudio(json1.data.url);
         } catch (e1) {
+            // Intento 2
             try {
-                const r2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
-                const j2 = await r2.json();
-                return await sendAudio(j2.data.url);
+                const res2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
+                const json2 = await res2.json();
+                return await sendAudio(json2.data.url);
             } catch (e2) {
+                // Intento 3
                 try {
-                    const r3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
-                    const j3 = await r3.json();
-                    return await sendAudio(j3.data.response);
+                    const res3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
+                    const json3 = await res3.json();
+                    return await sendAudio(json3.data.response);
                 } catch (e3) {
+                    // Intento 4
                     try {
-                        const r4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
-                        const j4 = await r4.json();
-                        return await sendAudio(j4.link);
+                        const res4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
+                        const json4 = await res4.json();
+                        return await sendAudio(json4.link);
                     } catch (e4) {
                         await sock.sendMessage(msg.key.remoteJid, {
                             text: `❌ No se pudo descargar el audio.\nError: ${e4.message}`
