@@ -220,7 +220,7 @@ sock.ev.on('messages.delete', (messages) => {
     switch (lowerCommand) {
 case 'ytmp35': {
   const axios = require('axios');
-  const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
+  const isYoutubeUrl = /^(https?:\/\/)?(www\.|music\.)?(youtube\.com|youtu\.be)\//i.test(text);
 
   if (!text || !isYoutubeUrl) {
     await sock.sendMessage(msg.key.remoteJid, {
@@ -238,24 +238,28 @@ case 'ytmp35': {
     const apiURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=audio&quality=128kbps&apikey=russellxz`;
     const res = await axios.get(apiURL);
 
-    if (!res.data || !res.data.data || !res.data.data.url) throw new Error('No se pudo obtener el audio');
+    if (!res.data || !res.data.data || !res.data.data.url) {
+      throw new Error('La API no devolvió una URL válida');
+    }
 
-    const { title, filename, url: audioUrl, thumbnail } = res.data.data;
+    const audioUrl = res.data.data.url;
+    const title = res.data.data.title || 'Audio';
+    const fileName = res.data.data.filename || 'audio.mp3';
+    const thumbnail = res.data.data.thumbnail;
 
-    // Enviar imagen informativa
+    // Confirmación visual
     await sock.sendMessage(msg.key.remoteJid, {
       image: { url: thumbnail },
-      caption: `🎧 *Título:* ${title}\n\n⏳ Descargando audio...`
+      caption: `🎧 *Título:* ${title}\n\n⏳ *Descargando...*`
     }, { quoted: msg });
 
-    // Enviar audio
+    // Enviar audio como archivo
     await sock.sendMessage(msg.key.remoteJid, {
       audio: { url: audioUrl },
       mimetype: 'audio/mpeg',
-      fileName: `${filename || title}.mp3`
+      fileName: `${fileName}`
     }, { quoted: msg });
 
-    // Reacción exitosa
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: '✅', key: msg.key }
     });
