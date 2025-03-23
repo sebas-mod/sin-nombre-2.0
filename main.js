@@ -218,6 +218,64 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+        case 'tiktoksearch': {
+    const axios = require('axios');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}tiktoksearch <query>\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const query = args.join(' ');
+    const apiUrl = `https://api.dorratz.com/v2/tiktok-s?q=${encodeURIComponent(query)}`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    try {
+        const response = await axios.get(apiUrl);
+
+        if (response.data.status !== 200 || !response.data.data || response.data.data.length === 0) {
+            return await sock.sendMessage(msg.key.remoteJid, { 
+                text: "No se encontraron resultados para tu consulta." 
+            }, { quoted: msg });
+        }
+
+        const results = response.data.data.slice(0, 5);
+
+        const resultText = results.map((video, index) => `
+📌 *Resultado ${index + 1}:*
+📹 *Título:* ${video.title}
+👤 *Autor:* ${video.author.nickname} (@${video.author.username})
+👀 *Reproducciones:* ${video.play.toLocaleString()}
+❤️ *Me gusta:* ${video.like.toLocaleString()}
+💬 *Comentarios:* ${video.coment.toLocaleString()}
+🔗 *Enlace:* ${video.url}
+        `).join('\n');
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `🔍 *Resultados de búsqueda en TikTok para "${query}":*\n\n${resultText}` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .tiktoksearch:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al procesar tu solicitud.*" 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
         case 'dalle': {
     const axios = require('axios');
 
