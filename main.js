@@ -401,6 +401,7 @@ case 'play': {
 
 📥 *Opciones de Descarga:*  
 ┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┣ 🎵 *Audio de spotify:* _${global.prefix}play3 ${text}_
 ┣ 🎥 *video:* _${global.prefix}play2 ${text}_  
 ┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
 
@@ -700,6 +701,7 @@ case 'play4': {
 
 📥 *Opciones de Descarga:*  
 ┣ 🎵 *Audio:* _${global.prefix}play ${text}_  
+┣ 🎵 *Audio de spotify:* _${global.prefix}play3 ${text}_
 ┣ 🎥 *video:* _${global.prefix}play2 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play4 ${text}_
 
@@ -2503,6 +2505,7 @@ case 'menu': {
 ⎔ ${global.prefix}play → título  
 ⎔ ${global.prefix}play1 → título  
 ⎔ ${global.prefix}play2 → título  
+⎔ ${global.prefix}play3 → titulo
 ⎔ ${global.prefix}play4 → titulo
 ⎔ ${global.prefix}ytmp3 → link  
 ⎔ ${global.prefix}ytmp4 → link  
