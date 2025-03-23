@@ -218,7 +218,56 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-        case 'tiktoksearch': {
+case 'ytmp40': {
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'ytmp40* enlace de YouTube'
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏱️', key: msg.key }
+    });
+
+    if (!text.includes("youtube.com") && !text.includes("youtu.be")) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '❌ *Por favor, proporciona un enlace válido de YouTube.*'
+        }, { quoted: msg });
+        break;
+    }
+
+    try {
+        const apiUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (!data.status || !data.data || !data.data.url) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: '❌ *No se pudo obtener el video. Verifica el enlace e intenta de nuevo.*'
+            }, { quoted: msg });
+            break;
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: data.data.url },
+            caption: `🎥 *${data.title}*\n\n📅 Publicado: ${data.publish}\n⏳ Duración: ${data.fduration}\n👀 Vistas: ${data.views}\n\n✅ *Video descargado correctamente.*`
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("Error al descargar el video:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '❌ *Ocurrió un error al procesar tu solicitud. Intenta de nuevo más tarde.*'
+        }, { quoted: msg });
+    }
+
+    break;
+}
+      
+      
+      case 'tiktoksearch': {
     const axios = require('axios');
 
     if (!args.length) {
