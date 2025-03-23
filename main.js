@@ -1702,83 +1702,64 @@ case 'transferir': {
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
   break;
 }
-case 'audio-text': {
-    const fetch = require('node-fetch');
-    const fs = require('fs');
-    const path = require('path');
-    const FormData = require('form-data'); 
+case 'yts': 
+case 'ytsearch': {
+    const axios = require('axios');
 
-    let tempFilePath; 
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}yts <query>\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const query = args.join(' ');
+    const apiUrl = `https://api.dorratz.com/v3/yt-search?query=${encodeURIComponent(query)}`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
     try {
-        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        if (!quoted) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Responde a un audio con el comando `.audio-text` para convertirlo a texto.*" 
-            }, { quoted: msg });
+        const response = await axios.get(apiUrl);
+        const { data } = response.data;
+
+        if (!data || data.length === 0) {
+            throw new Error('No se encontraron resultados para el texto proporcionado.');
         }
 
-        if (!quoted.audioMessage) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Solo puedes convertir audios a texto.*" 
-            }, { quoted: msg });
-        }
+        let results = `🎬 *Resultados de búsqueda para:* ${query}\n\n`;
+        results += data.slice(0, 5).map((video, index) => `
+🔹 *Resultado ${index + 1}:*
+   > *Título:* ${video.title}
+   > *Canal:* ${video.author.name}
+   > *Publicado en:* ${video.publishedAt}
+   > *Duración:* ${video.duration}
+   > *Vistas:* ${video.views.toLocaleString()}
+   > *Enlace:* ${video.url}
+        `).join('\n\n');
+
+        const thumbnail = data[0].thumbnail;
 
         await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🛠️", key: msg.key } 
-        });
-
-        let mediaStream = await downloadContentFromMessage(quoted.audioMessage, "audio");
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of mediaStream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        if (buffer.length === 0) {
-            throw new Error("❌ Error: No se pudo descargar el archivo.");
-        }
-
-        tempFilePath = path.join(__dirname, './tmp/temp_audio.ogg');
-        fs.writeFileSync(tempFilePath, buffer);
-
-        const apiUrl = `https://api.neoxr.eu/api/whisper?apikey=russellxz`;
-        const formData = new FormData();
-        formData.append('audio', fs.createReadStream(tempFilePath), { filename: 'temp_audio.ogg' });
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            body: formData,
-            headers: formData.getHeaders(), 
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (!data.status || !data.data || !data.data.text) {
-            throw new Error("No se pudo transcribir el audio.");
-        }
-
-        const transcription = data.data.text;
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `🎤 *Texto detectado:*\n\n${transcription}` 
+            image: { url: thumbnail },
+            caption: results,
+            mimetype: 'image/jpeg'
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, { 
             react: { text: "✅", key: msg.key } 
         });
 
-        fs.unlinkSync(tempFilePath);   } catch (error) {
-        console.error("❌ Error en el comando .audio-text:", error);
+    } catch (error) {
+        console.error("❌ Error en el comando .yts:", error.message);
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Hubo un error al convertir el audio a texto. Inténtalo de nuevo.*" 
+            text: `❌ *Error al buscar en YouTube:*\n_${error.message}_` 
         }, { quoted: msg });
 
-        if (tempFilePath && fs.existsSync(tempFilePath)) { 
-            fs.unlinkSync(tempFilePath); 
-        }
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
     }
     break;
 }
