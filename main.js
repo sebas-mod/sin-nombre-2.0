@@ -463,7 +463,7 @@ case 'play2': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play5* komang'
+            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play2* nombre del video'
         }, { quoted: msg });
         break;
     }
@@ -473,43 +473,50 @@ case 'play2': {
     });
 
     try {
-        const apiUrl = `https://api.neoxr.eu/api/play?q=${encodeURIComponent(text)}&apikey=russellxz`;
+        const apiUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
         const response = await axios.get(apiUrl);
-        const data = response.data;
+        const videoData = response.data.data;
 
-        if (!data.status || !data.data?.url || !data.title) {
-            throw new Error('No se pudo obtener el audio');
+        if (!videoData || !videoData.url || !response.data.title) {
+            throw new Error('No se pudo obtener el video');
         }
 
-        const title = data.title;
-        const url = data.data.url;
-        const views = data.views || 'N/A';
-        const author = data.channel || 'Desconocido';
-        const timestamp = data.fduration || '0:00';
-        const thumbnail = data.thumbnail;
-        const yturl = `https://youtu.be/${data.id}`;
+        const title = response.data.title;
+        const url = videoData.url;
+        const views = response.data.views || 'N/A';
+        const author = response.data.channel || 'Desconocido';
+        const timestamp = response.data.fduration || '0:00';
+        const thumbnail = response.data.thumbnail;
+
+        const durParts = timestamp.split(':').map(Number);
+        const minutes = durParts.length === 3 ? durParts[0] * 60 + durParts[1] : durParts[0];
+
+        let quality = '360';
+        if (minutes <= 3) quality = '720';
+        else if (minutes <= 5) quality = '480';
 
         const infoMessage = `
-╔═════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚═════════════════╝
+╔══════════════════╗
+║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
 
-📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
 ╭───────────────╮  
 ├ 🎼 *Título:* ${title}
 ├ ⏱️ *Duración:* ${timestamp}
 ├ 👁️ *Vistas:* ${views}
 ├ 👤 *Autor:* ${author}
-└ 🔗 *Enlace:* ${yturl}
+└ 🔗 *Enlace:* ${response.data.id}
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_  
+┣ 🎵 *Audio:* _${global.prefix}play ${text}_
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
 ┣ 🎥 *video:* _${global.prefix}play2 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
 ⏳ *Espera un momento...*  
-⚙️ *Azura Ultra 2.0 está procesando tu música...*
+⚙️ *Azura Ultra 2.0 está procesando tu video...*
 
 ═════════════════════  
         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
@@ -522,28 +529,47 @@ case 'play2': {
 
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp3`);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp4`);
 
-        const audioRes = await axios.get(url, {
+        const videoRes = await axios.get(url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+        await streamPipeline(videoRes.data, fs.createWriteStream(rawPath));
+
+        let crf = 26;
+        let bVideo = '600k';
+        let bAudio = '128k';
+        if (minutes <= 2) {
+            crf = 24; bVideo = '800k';
+        } else if (minutes > 5) {
+            crf = 28; bVideo = '400k'; bAudio = '96k';
+        }
 
         await new Promise((resolve, reject) => {
             ffmpeg(rawPath)
-                .audioCodec('libmp3lame')
-                .audioBitrate(128)
+                .videoCodec('libx264')
+                .audioCodec('aac')
+                .outputOptions([
+                    '-preset', 'veryfast',
+                    `-crf`, `${crf}`,
+                    `-b:v`, bVideo,
+                    `-b:a`, bAudio,
+                    '-movflags', '+faststart'
+                ])
                 .on('end', resolve)
                 .on('error', reject)
                 .save(finalPath);
         });
 
+        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(finalPath),
-            mimetype: 'audio/mpeg',
-            fileName: `${title}.mp3`
+            video: fs.readFileSync(finalPath),
+            mimetype: 'video/mp4',
+            fileName: `${title}.mp4`,
+            caption: finalText
         }, { quoted: msg });
 
         fs.unlinkSync(rawPath);
