@@ -222,60 +222,26 @@ case 'play7': {
     const fetch = require('node-fetch');
     const axios = require('axios');
 
-    const spotifyxv = async (query) => {
-        const token = await getSpotifyToken();
-        const res = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track`, {
-            headers: {
-                Authorization: 'Bearer ' + token
-            }
-        });
-        const tracks = res.data.tracks.items;
-        return tracks.map(track => ({
-            title: track.name,
-            artist: track.artists.map(a => a.name).join(', '),
-            album: track.album.name,
-            duration: msToTime(track.duration_ms),
-            url: track.external_urls.spotify,
-            image: track.album.images.length ? track.album.images[0].url : ''
-        }));
-    };
-
-    const getSpotifyToken = async () => {
-        const clientId = 'acc6302297e040aeb6e4ac1fbdfd62c3';
-        const clientSecret = '0e8439a1280a43aba9a5bc0a16f3f009';
-        const response = await axios.post('https://accounts.spotify.com/api/token', 'grant_type=client_credentials', {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                Authorization: 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-            }
-        });
-        return response.data.access_token;
-    };
-
-    const msToTime = (ms) => {
-        const minutes = Math.floor(ms / 60000);
-        const seconds = Math.floor((ms % 60000) / 1000);
-        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-    };
-
-    if (!text) {
+    if (!text || !text.includes('spotify.com/track')) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Escribe el nombre de una canción.\n\n📌 Ejemplo: *${global.prefix}play7* Bellyache`
+            text: `✳️ Este comando es solo para *enlaces de canciones de Spotify.*\n\n📌 Ejemplo:\n${global.prefix}play7 https://open.spotify.com/track/4LRPiXqCikLlN15c3yImP7`
         }, { quoted: msg });
         break;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '🎧', key: msg.key }
+        react: { text: '⌛️', key: msg.key }
     });
 
     try {
+        // 1. Obtener detalles del track desde Delirius API
         const res = await fetch(`https://delirius-api-ofc.vercel.app/search/spotify?q=${encodeURIComponent(text)}`);
         const json = await res.json();
         if (!json.data || json.data.length === 0) throw 'No se encontraron resultados.';
 
         const track = json.data[0];
 
+        // Mostrar datos del track
         const caption = `
 🪼 *Título:* ${track.title}
 🪩 *Artista:* ${track.artist}
@@ -283,7 +249,7 @@ case 'play7': {
 ⏳ *Duración:* ${track.duration}
 🔗 *Enlace:* ${track.url}
 
-🎶 *Azura Ultra 2.0 Bot descargando tu canción...*`;
+🎶 *Azura Ultra 2.0 Bot está descargando tu música...*`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: track.image },
@@ -302,42 +268,47 @@ case 'play7': {
             }
         }, { quoted: msg });
 
-        // API 1
+        // INTENTO 1: Siputzx
         try {
-            const res1 = await fetch(`https://api.siputzx.my.id/api/d/spotify?url=${track.url}`);
-            const data1 = await res1.json();
+            const r1 = await fetch(`https://api.siputzx.my.id/api/d/spotify?url=${track.url}`);
+            const d1 = await r1.json();
             await sock.sendMessage(msg.key.remoteJid, {
-                audio: { url: data1.data.download },
+                audio: { url: d1.data.download },
                 mimetype: 'audio/mpeg',
                 fileName: `${track.title}.mp3`
             }, { quoted: msg });
-            await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅️', key: msg.key } });
+            await sock.sendMessage(msg.key.remoteJid, {
+                react: { text: '✅', key: msg.key }
+            });
         } catch (e1) {
+            // INTENTO 2: Delirius
             try {
-                const res2 = await fetch(`https://delirius-api-ofc.vercel.app/download/spotifydl?url=${track.url}`);
-                const data2 = await res2.json();
+                const r2 = await fetch(`https://delirius-api-ofc.vercel.app/download/spotifydl?url=${track.url}`);
+                const d2 = await r2.json();
                 await sock.sendMessage(msg.key.remoteJid, {
-                    audio: { url: data2.data.url },
+                    audio: { url: d2.data.url },
                     mimetype: 'audio/mpeg',
                     fileName: `${track.title}.mp3`
                 }, { quoted: msg });
-                await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅️', key: msg.key } });
+                await sock.sendMessage(msg.key.remoteJid, {
+                    react: { text: '✅', key: msg.key }
+                });
             } catch (e2) {
+                // INTENTO 3: Tanakadomp
                 try {
-                    const fallback = await spotifyxv(text);
-                    if (!fallback.length) throw 'No se encontraron resultados.';
-                    const res3 = await fetch(`https://archive-ui.tanakadomp.biz.id/download/spotify?url=${track.url}`);
-                    const data3 = await res3.json();
+                    const r3 = await fetch(`https://archive-ui.tanakadomp.biz.id/download/spotify?url=${track.url}`);
+                    const d3 = await r3.json();
                     await sock.sendMessage(msg.key.remoteJid, {
-                        audio: { url: data3.result.data.download },
+                        audio: { url: d3.result.data.download },
                         mimetype: 'audio/mpeg',
-                        fileName: `${data3.result.data.title}.mp3`
+                        fileName: `${d3.result.data.title}.mp3`
                     }, { quoted: msg });
-                    await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅️', key: msg.key } });
-                } catch (err3) {
-                    console.error(err3);
                     await sock.sendMessage(msg.key.remoteJid, {
-                        text: `❌ No se pudo descargar el audio desde ninguna fuente.`
+                        react: { text: '✅', key: msg.key }
+                    });
+                } catch (e3) {
+                    await sock.sendMessage(msg.key.remoteJid, {
+                        text: `❌ *No se pudo descargar la canción desde ninguna fuente.*`
                     }, { quoted: msg });
                     await sock.sendMessage(msg.key.remoteJid, {
                         react: { text: '❌', key: msg.key }
@@ -349,7 +320,111 @@ case 'play7': {
     } catch (err) {
         console.error(err);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message || 'No se pudo obtener información del tema'}`
+            text: `❌ *Error:* ${err.message || 'Fallo la descarga'}`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+      
+case 'play6': {
+    const axios = require('axios');
+
+    const credentials = {
+        clientId: 'acc6302297e040aeb6e4ac1fbdfd62c3',
+        clientSecret: '0e8439a1280a43aba9a5bc0a16f3f009'
+    };
+
+    const obtenerTokenSpotify = async () => {
+        const response = await axios({
+            method: 'post',
+            url: 'https://accounts.spotify.com/api/token',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization: 'Basic ' + Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString('base64')
+            },
+            data: 'grant_type=client_credentials'
+        });
+        return response.data.access_token;
+    };
+
+    const spotifyxv = async (query) => {
+        const token = await obtenerTokenSpotify();
+        const response = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track`, {
+            headers: { Authorization: 'Bearer ' + token }
+        });
+        const tracks = response.data.tracks.items;
+        return tracks.map(track => ({
+            nombre: track.name,
+            artistas: track.artists.map(a => a.name),
+            album: track.album.name,
+            duracion: track.duration_ms,
+            url: track.external_urls.spotify,
+            imagen: track.album.images.length ? track.album.images[0].url : ''
+        }));
+    };
+
+    const obtenerAlbumInfo = async (albumName) => {
+        const token = await obtenerTokenSpotify();
+        const response = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(albumName)}&type=album`, {
+            headers: { Authorization: 'Bearer ' + token }
+        });
+        const album = response.data.albums.items[0];
+        return {
+            nombre: album.name,
+            imagen: album.images.length ? album.images[0].url : ''
+        };
+    };
+
+    const timestamp = (ms) => {
+        const minutes = Math.floor(ms / 60000);
+        const seconds = Math.floor((ms % 60000) / 1000);
+        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    };
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Ingresa el nombre de un artista o canción.\n\n📌 Ejemplo: *${global.prefix}play6* Feid`
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '🎧', key: msg.key } });
+
+    try {
+        const resultados = await spotifyxv(text);
+        if (!resultados.length) throw '❌ No se encontraron resultados.';
+
+        const resTexto = resultados.map((v, i) => {
+            return `*${i + 1}.* 🎵 *${v.nombre}*\n👤 *Artista:* ${v.artistas.join(', ')}\n💽 *Álbum:* ${v.album}\n⏱️ *Duración:* ${timestamp(v.duracion)}\n🔗 *Enlace:* ${v.url}\n────────────────────`;
+        }).join('\n\n');
+
+        const albumInfo = await obtenerAlbumInfo(resultados[0].album);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: albumInfo.imagen },
+            caption: `╔════════════════╗
+║        ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 ✦
+╚══════════════════╝
+
+🔍 *Resultados de Spotify para:* _${text}_
+
+${resTexto}
+
+*Puedes usar el enlace para escuchar directamente en Spotify.*`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message || 'No se pudo obtener información de Spotify'}`
         }, { quoted: msg });
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
