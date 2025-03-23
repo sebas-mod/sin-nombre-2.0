@@ -239,24 +239,22 @@ case 'ytmp35': {
     const res = await axios.get(apiURL);
     const json = res.data;
 
-    if (!json.estado || !json.datos?.url) {
+    if (!json.status || !json.data?.url) {
       console.log('Respuesta de la API:', JSON.stringify(json, null, 2));
-      throw new Error(json.mensaje || "No se pudo obtener el audio");
+      throw new Error("No se pudo obtener el audio");
     }
 
-    const { datos, titulo, fduration } = json;
+    const { data, title, fduration, thumbnail } = json;
 
-    // Enviar mensaje informativo
     await sock.sendMessage(msg.key.remoteJid, {
-      image: { url: json.miniatura },
-      caption: `🎧 *Título:* ${titulo}\n🕒 *Duración:* ${fduration}\n📥 *Tamaño:* ${datos.tamaño}\n\n⏳ Descargando audio...`
+      image: { url: thumbnail },
+      caption: `🎧 *Título:* ${title}\n🕒 *Duración:* ${fduration}\n📥 *Tamaño:* ${data.size}\n\n⏳ Descargando audio...`
     }, { quoted: msg });
 
-    // Enviar el audio
     await sock.sendMessage(msg.key.remoteJid, {
-      audio: { url: datos.url },
+      audio: { url: data.url },
       mimetype: 'audio/mpeg',
-      fileName: `${datos.nombre_archivo}`
+      fileName: data.filename || `${title}.mp3`
     }, { quoted: msg });
 
     await sock.sendMessage(msg.key.remoteJid, {
