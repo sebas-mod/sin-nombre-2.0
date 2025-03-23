@@ -232,20 +232,35 @@ case 'play3': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Escribe lo que deseas buscar en Spotify.\nEjemplo: *${global.prefix}play3* Marshmello - Alone`
+            text: `⚠️ Escribe el nombre de la canción o pega el link de Spotify.\nEjemplo: *${global.prefix}play3* Bizarrap Quevedo\nO también:\n*${global.prefix}play3* https://open.spotify.com/track/...`
         }, { quoted: msg });
         break;
     }
 
+    const isSpotifyUrl = /^(https?:\/\/)?(open\.spotify\.com\/track\/|spotify:track:)/.test(text.trim());
+
     try {
-        const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
-        if (!res.data.data || res.data.data.length === 0) {
-            throw '❌ No se encontraron resultados en Spotify.';
+        let result, url, img;
+
+        if (isSpotifyUrl) {
+            // Si es un link de Spotify
+            url = text.trim();
+
+            // Consultamos la info del tema
+            const res = await axios.get(`${apis.delirius}search/spotifytrack?url=${encodeURIComponent(url)}`);
+            result = res.data.data;
+            img = result.image;
+
+        } else {
+            // Es texto, buscamos por nombre
+            const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
+            if (!res.data.data || res.data.data.length === 0) throw 'No se encontraron resultados en Spotify.';
+
+            result = res.data.data[0];
+            url = result.url;
+            img = result.image;
         }
 
-        const result = res.data.data[0];
-        const img = result.image;
-        const url = result.url;
         const info = `⧁ 𝙏𝙄𝙏𝙐𝙇𝙊: ${result.title}
 ⧁ 𝘼𝙍𝙏𝙄𝙎𝙏𝘼: ${result.artist}
 ⧁ 𝘿𝙐𝙍𝘼𝘾𝙄𝙊́𝙉: ${result.duration}
@@ -253,7 +268,7 @@ case 'play3': {
 ⧁ 𝙋𝙊𝙋𝙐𝙇𝘼𝙍𝙄𝘿𝘼𝘿: ${result.popularity}
 ⧁ 𝙀𝙉𝙇𝘼𝘾𝙀: ${url}
 
-🎶 *Azura Ultra 2.0 Bot enviando tu música...*`.trim();
+🎶 *Azura Ultra 2.0 Bot enviando tu música...*`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: img },
@@ -268,29 +283,26 @@ case 'play3': {
             }, { quoted: msg });
         };
 
-        // Intento 1
+        // Fallback por orden
         try {
-            const res1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
-            const json1 = await res1.json();
-            return await sendAudio(json1.data.url);
+            const r1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
+            const j1 = await r1.json();
+            return await sendAudio(j1.data.url);
         } catch (e1) {
-            // Intento 2
             try {
-                const res2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
-                const json2 = await res2.json();
-                return await sendAudio(json2.data.url);
+                const r2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
+                const j2 = await r2.json();
+                return await sendAudio(j2.data.url);
             } catch (e2) {
-                // Intento 3
                 try {
-                    const res3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
-                    const json3 = await res3.json();
-                    return await sendAudio(json3.data.response);
+                    const r3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
+                    const j3 = await r3.json();
+                    return await sendAudio(j3.data.response);
                 } catch (e3) {
-                    // Intento 4
                     try {
-                        const res4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
-                        const json4 = await res4.json();
-                        return await sendAudio(json4.link);
+                        const r4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
+                        const j4 = await r4.json();
+                        return await sendAudio(j4.link);
                     } catch (e4) {
                         await sock.sendMessage(msg.key.remoteJid, {
                             text: `❌ No se pudo descargar el audio.\nError: ${e4.message}`
