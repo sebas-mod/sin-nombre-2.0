@@ -23,7 +23,6 @@
     "@hiudyy/ytdl": "^0.2.3",
     "hispamemes": "^1.0.7",
     "child_process": "^1.0.2",
-    "vosk": "^0.3.39",
     "figlet": "^1.8.0",
     "google-tts-api": "^2.0.2",
     "fluent-ffmpeg": "^2.1.2",
