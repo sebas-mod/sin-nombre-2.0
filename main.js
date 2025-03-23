@@ -1914,6 +1914,62 @@ case 'infogrupo': {
     }
     break;
 }  
+case 'vision':
+case 'visión': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}visión mujer cabello plateado\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const query = args.join(" ");
+    const apiUrl = `https://api.neoxr.eu/api/ai-anime?q=${encodeURIComponent(query)}&apikey=russellxz`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.status || !data.data || !data.data.url) {
+            throw new Error("No se pudo generar la imagen.");
+        }
+
+        const imageUrl = data.data.url;
+        const caption = `🎨 *Prompt:* ${data.data.prompt}\n🔗 *Enlace de la imagen:* ${imageUrl}`;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: imageUrl },
+            caption: caption,
+            mimetype: 'image/png'
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .visión:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al generar la imagen:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
 case 'spotify': {
     const fetch = require('node-fetch');
 
