@@ -1914,9 +1914,7 @@ case 'infogrupo': {
     }
     break;
 }  
-
-
- case 'spotify': {
+case 'spotify': {
     const fetch = require('node-fetch');
 
     if (!text) {
@@ -1937,7 +1935,7 @@ case 'infogrupo': {
     });
 
     try {
-        const apiUrl = `https://exonity.tech/api/dl/spotifydl?url=${encodeURIComponent(text)}`;
+        const apiUrl = `https://api.neoxr.eu/api/spotify?url=${encodeURIComponent(text)}&apikey=russellxz`;
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
@@ -1946,24 +1944,24 @@ case 'infogrupo': {
 
         const data = await response.json();
 
-        if (data.status !== 200 || !data.result || !data.result.download) {
+        if (!data.status || !data.data || !data.data.url) {
             throw new Error("No se pudo obtener el enlace de descarga.");
         }
 
-        const songInfo = data.result;
+        const songInfo = data.data;
 
         const caption = `🎵 *Título:* ${songInfo.title}\n` +
-                        `🎤 *Artista:* ${songInfo.artis}\n` +
-                        `⏱️ *Duración:* ${Math.floor(songInfo.durasi / 1000)} segundos\n` +
-                        `🔗 *Enlace de descarga:* ${songInfo.download}`;
+                        `🎤 *Artista:* ${songInfo.artist.name}\n` +
+                        `⏱️ *Duración:* ${songInfo.duration}\n` +
+                        `🔗 *Enlace de descarga:* ${songInfo.url}`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: songInfo.image },
+            image: { url: songInfo.thumbnail },
             caption: caption,
             mimetype: 'image/jpeg'
         }, { quoted: msg });
 
-        const audioResponse = await fetch(songInfo.download);
+        const audioResponse = await fetch(songInfo.url);
         if (!audioResponse.ok) {
             throw new Error("No se pudo descargar el archivo de audio.");
         }
@@ -1991,8 +1989,7 @@ case 'infogrupo': {
         });
     }
     break;
-}     
-
+}
 
                 
 case 'mediafire': {
