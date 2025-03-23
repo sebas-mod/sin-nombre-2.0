@@ -1707,6 +1707,8 @@ case 'audio-text': {
     const fs = require('fs');
     const path = require('path');
 
+    let tempFilePath; 
+
     try {
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
@@ -1735,7 +1737,7 @@ case 'audio-text': {
             throw new Error("❌ Error: No se pudo descargar el archivo.");
         }
 
-        const tempFilePath = path.join(__dirname, '../tmp/temp_audio.ogg');
+        tempFilePath = path.join(__dirname, '../tmp/temp_audio.ogg'); 
         fs.writeFileSync(tempFilePath, buffer);
 
         const apiUrl = `https://api.neoxr.eu/api/whisper?apikey=russellxz`;
@@ -1767,7 +1769,7 @@ case 'audio-text': {
             react: { text: "✅", key: msg.key } 
         });
 
-        fs.unlinkSync(tempFilePath);
+        fs.unlinkSync(tempFilePath); 
 
     } catch (error) {
         console.error("❌ Error en el comando .audio-text:", error);
@@ -1775,7 +1777,7 @@ case 'audio-text': {
             text: "❌ *Hubo un error al convertir el audio a texto. Inténtalo de nuevo.*" 
         }, { quoted: msg });
 
-        if (fs.existsSync(tempFilePath)) {
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
             fs.unlinkSync(tempFilePath);
         }
     }
