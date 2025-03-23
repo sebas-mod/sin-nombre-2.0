@@ -1706,9 +1706,9 @@ case 'audio-text': {
     const fetch = require('node-fetch');
     const fs = require('fs');
     const path = require('path');
+    const FormData = require('form-data'); 
 
     let tempFilePath; 
-
     try {
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
@@ -1737,7 +1737,7 @@ case 'audio-text': {
             throw new Error("❌ Error: No se pudo descargar el archivo.");
         }
 
-        tempFilePath = path.join(__dirname, './tmp/temp_audio.ogg'); 
+        tempFilePath = path.join(__dirname, './tmp/temp_audio.ogg');
         fs.writeFileSync(tempFilePath, buffer);
 
         const apiUrl = `https://api.neoxr.eu/api/whisper?apikey=russellxz`;
@@ -1747,6 +1747,7 @@ case 'audio-text': {
         const response = await fetch(apiUrl, {
             method: 'POST',
             body: formData,
+            headers: formData.getHeaders(), 
         });
 
         if (!response.ok) {
@@ -1769,16 +1770,14 @@ case 'audio-text': {
             react: { text: "✅", key: msg.key } 
         });
 
-        fs.unlinkSync(tempFilePath); 
-
-    } catch (error) {
+        fs.unlinkSync(tempFilePath);   } catch (error) {
         console.error("❌ Error en el comando .audio-text:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Hubo un error al convertir el audio a texto. Inténtalo de nuevo.*" 
         }, { quoted: msg });
 
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
+        if (tempFilePath && fs.existsSync(tempFilePath)) { 
+            fs.unlinkSync(tempFilePath); 
         }
     }
     break;
@@ -1994,8 +1993,8 @@ case 'infogrupo': {
     }
     break;
 }  
-case 'vision':
-case 'visión': {
+case 'vision2':
+case 'visión2': {
     const fetch = require('node-fetch');
 
     if (!args.length) {
