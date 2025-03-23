@@ -218,6 +218,98 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'play3': {
+    const fetch = require('node-fetch');
+    const axios = require('axios');
+
+    const apis = {
+        delirius: 'https://delirius-apiofc.vercel.app/',
+        ryzen: 'https://apidl.asepharyana.cloud/',
+        rioo: 'https://restapi.apibotwa.biz.id/'
+    };
+
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: "🎶", key: msg.key } });
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Escribe lo que deseas buscar en Spotify.\nEjemplo: *${global.prefix}play3* Marshmello - Alone`
+        }, { quoted: msg });
+        break;
+    }
+
+    try {
+        const res = await axios.get(`${apis.delirius}search/spotify?q=${encodeURIComponent(text)}&limit=1`);
+        if (!res.data.data || res.data.data.length === 0) {
+            throw '❌ No se encontraron resultados en Spotify.';
+        }
+
+        const result = res.data.data[0];
+        const img = result.image;
+        const url = result.url;
+        const info = `⧁ 𝙏𝙄𝙏𝙐𝙇𝙊: ${result.title}
+⧁ 𝘼𝙍𝙏𝙄𝙎𝙏𝘼: ${result.artist}
+⧁ 𝘿𝙐𝙍𝘼𝘾𝙄𝙊́𝙉: ${result.duration}
+⧁ 𝙋𝙐𝘽𝙇𝙄𝘾𝘼𝘿𝙊: ${result.publish}
+⧁ 𝙋𝙊𝙋𝙐𝙇𝘼𝙍𝙄𝘿𝘼𝘿: ${result.popularity}
+⧁ 𝙀𝙉𝙇𝘼𝘾𝙀: ${url}
+
+🎶 *Azura Ultra 2.0 Bot enviando tu música...*`.trim();
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: img },
+            caption: info
+        }, { quoted: msg });
+
+        const sendAudio = async (link) => {
+            await sock.sendMessage(msg.key.remoteJid, {
+                audio: { url: link },
+                fileName: `${result.title}.mp3`,
+                mimetype: 'audio/mpeg'
+            }, { quoted: msg });
+        };
+
+        // Intento 1
+        try {
+            const res1 = await fetch(`${apis.delirius}download/spotifydl?url=${encodeURIComponent(url)}`);
+            const json1 = await res1.json();
+            return await sendAudio(json1.data.url);
+        } catch (e1) {
+            // Intento 2
+            try {
+                const res2 = await fetch(`${apis.delirius}download/spotifydlv3?url=${encodeURIComponent(url)}`);
+                const json2 = await res2.json();
+                return await sendAudio(json2.data.url);
+            } catch (e2) {
+                // Intento 3
+                try {
+                    const res3 = await fetch(`${apis.rioo}api/spotify?url=${encodeURIComponent(url)}`);
+                    const json3 = await res3.json();
+                    return await sendAudio(json3.data.response);
+                } catch (e3) {
+                    // Intento 4
+                    try {
+                        const res4 = await fetch(`${apis.ryzen}api/downloader/spotify?url=${encodeURIComponent(url)}`);
+                        const json4 = await res4.json();
+                        return await sendAudio(json4.link);
+                    } catch (e4) {
+                        await sock.sendMessage(msg.key.remoteJid, {
+                            text: `❌ No se pudo descargar el audio.\nError: ${e4.message}`
+                        }, { quoted: msg });
+                    }
+                }
+            }
+        }
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ Ocurrió un error: ${err.message || err}`
+        }, { quoted: msg });
+    }
+
+    break;
+}
+      
 case 'play': {
     const yts = require('yt-search');
     const axios = require('axios');
