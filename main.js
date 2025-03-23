@@ -390,26 +390,37 @@ case 'play5': {
         const json = res.data;
 
         if (!json.status || !json.data?.url) {
-            console.log('Respuesta de la API:', JSON.stringify(json, null, 2));
             throw new Error("No se pudo obtener el audio");
         }
 
         const { data, title, fduration, thumbnail } = json;
+        const views = video.views.toLocaleString();
+        const channel = video.author.name || 'Desconocido';
 
         const infoMessage = `
-╔══════════════════════╗
-║     ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════════╝
+╔══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
 
-🎼 *Título:* ${title}
-⏱️ *Duración:* ${fduration}
-📥 *Tamaño:* ${data.size}
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${fduration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Autor:* ${channel}
+└ 🔗 *Enlace:* ${videoUrl}
+╰───────────────╯
 
-⏳ *Descargando audio...*
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
+┗ 🎥 *Video:* _${global.prefix}play2 ${text}_
 
-═════════════════════  
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu música...*
+
+═══════════════════  
      𖥔 Azura Ultra 2.0 Bot 𖥔
-═════════════════════`;
+═══════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
@@ -431,7 +442,6 @@ case 'play5': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
