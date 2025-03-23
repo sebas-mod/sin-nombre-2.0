@@ -366,16 +366,11 @@ case 'ytmp35': {
       
 case 'play5': {
     const axios = require('axios');
-    const fs = require('fs');
-    const path = require('path');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const ffmpeg = require('fluent-ffmpeg');
-    const streamPipeline = promisify(pipeline);
+    const yts = require('yt-search');
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play5* nombre de la canción'
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play5* Komang`
         }, { quoted: msg });
         break;
     }
@@ -385,47 +380,35 @@ case 'play5': {
     });
 
     try {
-        const apiUrl = `https://api.neoxr.eu/api/play?q=${encodeURIComponent(text)}&apikey=russellxz`;
-        const response = await axios.get(apiUrl);
-        const audioData = response.data.data;
+        const search = await yts(text);
+        const video = search.videos[0];
+        if (!video) throw new Error('No se encontraron resultados');
 
-        if (!audioData || !audioData.url || !response.data.title) {
-            throw new Error('No se pudo obtener el audio');
+        const videoUrl = video.url;
+        const apiURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
+        const res = await axios.get(apiURL);
+        const json = res.data;
+
+        if (!json.status || !json.data?.url) {
+            console.log('Respuesta de la API:', JSON.stringify(json, null, 2));
+            throw new Error("No se pudo obtener el audio");
         }
 
-        const title = response.data.title;
-        const url = audioData.url;
-        const views = response.data.views || 'N/A';
-        const author = response.data.channel || 'Desconocido';
-        const timestamp = response.data.fduration || '0:00';
-        const thumbnail = response.data.thumbnail;
-
-        const durParts = timestamp.split(':').map(Number);
-        const minutes = durParts.length === 3 ? durParts[0] * 60 + durParts[1] : durParts[0];
+        const { data, title, fduration, thumbnail } = json;
 
         const infoMessage = `
 ╔══════════════════════╗
-║        ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+║     ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
 ╚══════════════════════╝
 
-🎧 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
-╭───────────────╮  
-├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${timestamp}
-├ 👁️ *Vistas:* ${views}
-├ 👤 *Autor:* ${author}
-└ 🔗 *Enlace:* https://youtu.be/${response.data.id}
-╰───────────────╯
+🎼 *Título:* ${title}
+⏱️ *Duración:* ${fduration}
+📥 *Tamaño:* ${data.size}
 
-📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
-┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
-
-⏳ *Espera un momento...*  
-⚙️ *Azura Ultra 2.0 está procesando tu música...*
+⏳ *Descargando audio...*
 
 ═════════════════════  
-        𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+     𖥔 Azura Ultra 2.0 Bot 𖥔
 ═════════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -433,35 +416,11 @@ case 'play5': {
             caption: infoMessage
         }, { quoted: msg });
 
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp3`);
-
-        const audioRes = await axios.get(url, {
-            responseType: 'stream',
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
-
-        await new Promise((resolve, reject) => {
-            ffmpeg(rawPath)
-                .audioCodec('libmp3lame')
-                .audioBitrate('128k')
-                .format('mp3')
-                .on('end', resolve)
-                .on('error', reject)
-                .save(finalPath);
-        });
-
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(finalPath),
+            audio: { url: data.url },
             mimetype: 'audio/mpeg',
-            fileName: `${title}.mp3`
+            fileName: data.filename || `${title}.mp3`
         }, { quoted: msg });
-
-        fs.unlinkSync(rawPath);
-        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -472,6 +431,7 @@ case 'play5': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
