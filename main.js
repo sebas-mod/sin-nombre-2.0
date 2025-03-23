@@ -389,7 +389,7 @@ case 'ytmp42': {
     const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text);
     if (!text || !isYoutubeUrl) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}ytmp4* https://youtube.com/watch?v=abc123`
+            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}ytmp42* https://youtube.com/watch?v=abc123`
         }, { quoted: msg });
         break;
     }
@@ -2263,6 +2263,8 @@ Así te registras
 ➤ ${global.prefix}deleteper  
 ➤ ${global.prefix}deletemascota  
 ➤ ${global.prefix}totalper
+➤ ${global.prefix}tran
+➤ ${global.prefix}transferir
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
 ➤ ${global.prefix}topuser  
