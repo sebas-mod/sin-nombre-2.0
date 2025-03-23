@@ -1702,9 +1702,8 @@ case 'transferir': {
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
   break;
 }
-      case 'audio-text': {
-    const { Readable } = require('stream');
-    const vosk = require('vosk');
+case 'audio-text': {
+    const fetch = require('node-fetch');
     const fs = require('fs');
     const path = require('path');
 
@@ -1739,46 +1738,46 @@ case 'transferir': {
         const tempFilePath = path.join(__dirname, '../tmp/temp_audio.ogg');
         fs.writeFileSync(tempFilePath, buffer);
 
-        const modelPath = path.join(__dirname, '../model');
-        if (!fs.existsSync(modelPath)) {
-            throw new Error("❌ Error: El modelo Vosk no está instalado.");
+        const apiUrl = `https://api.neoxr.eu/api/whisper?apikey=russellxz`;
+        const formData = new FormData();
+        formData.append('audio', fs.createReadStream(tempFilePath), { filename: 'temp_audio.ogg' });
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
         }
 
-        const model = new vosk.Model(modelPath);
-        const recognizer = new vosk.Recognizer({ model: model, sampleRate: 16000 });
+        const data = await response.json();
 
-        const audioStream = fs.createReadStream(tempFilePath);
-        const readableStream = new Readable({
-            read() {
-                this.push(audioStream.read());
-            },
+        if (!data.status || !data.data || !data.data.text) {
+            throw new Error("No se pudo transcribir el audio.");
+        }
+
+        const transcription = data.data.text;
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `🎤 *Texto detectado:*\n\n${transcription}` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
         });
 
-        let transcription = "";
-        readableStream.on('data', (chunk) => {
-            if (recognizer.acceptWaveform(chunk)) {
-                transcription += recognizer.result().text;
-            }
-        });
-
-        readableStream.on('end', async () => {
-            transcription += recognizer.finalResult().text;
-            fs.unlinkSync(tempFilePath);
-
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `🎤 *Texto detectado:*\n\n${transcription}` 
-            }, { quoted: msg });
-
-            await sock.sendMessage(msg.key.remoteJid, { 
-                react: { text: "✅", key: msg.key } 
-            });
-        });
+        fs.unlinkSync(tempFilePath);
 
     } catch (error) {
         console.error("❌ Error en el comando .audio-text:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "❌ *Hubo un error al convertir el audio a texto. Inténtalo de nuevo.*" 
         }, { quoted: msg });
+
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
     }
     break;
 }
