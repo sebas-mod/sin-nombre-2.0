@@ -218,203 +218,54 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'play7': {
+case 'play5': {
+    const yts = require('yt-search');
     const fetch = require('node-fetch');
-    const axios = require('axios');
 
-    if (!text || !text.includes('spotify.com/track')) {
+    if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Este comando es solo para *enlaces de canciones de Spotify.*\n\n📌 Ejemplo:\n${global.prefix}play7 https://open.spotify.com/track/4LRPiXqCikLlN15c3yImP7`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play5* La Factoria - Perdoname`
         }, { quoted: msg });
         break;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⌛️', key: msg.key }
+        react: { text: '⏳', key: msg.key }
     });
 
     try {
-        // 1. Obtener detalles del track desde Delirius API
-        const res = await fetch(`https://delirius-api-ofc.vercel.app/search/spotify?q=${encodeURIComponent(text)}`);
-        const json = await res.json();
-        if (!json.data || json.data.length === 0) throw 'No se encontraron resultados.';
+        const search = await yts(text);
+        const video = search.videos[0];
+        if (!video) throw new Error('No se encontró el video.');
 
-        const track = json.data[0];
+        const { title, url, timestamp, views, author, thumbnail } = video;
 
-        // Mostrar datos del track
         const caption = `
-🪼 *Título:* ${track.title}
-🪩 *Artista:* ${track.artist}
-🦋 *Álbum:* ${track.album}
-⏳ *Duración:* ${track.duration}
-🔗 *Enlace:* ${track.url}
+╔══════════════════════╗
+║     ✦ 𝘼𝙯𝙪𝙧𝙖 𝙐𝙡𝙩𝙧𝙖 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+╚══════════════════════╝
 
-🎶 *Azura Ultra 2.0 Bot está descargando tu música...*`;
+🎼 *Título:* ${title}
+⏱️ *Duración:* ${timestamp}
+👤 *Autor:* ${author.name}
+👁️ *Vistas:* ${views.toLocaleString()}
+🔗 *Enlace:* ${url}
+
+🎧 *Enviando el audio...*`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: track.image },
-            caption,
-            contextInfo: {
-                externalAdReply: {
-                    title: track.title,
-                    body: 'Azura Ultra 2.0 Bot',
-                    thumbnailUrl: track.image,
-                    mediaType: 1,
-                    mediaUrl: track.url,
-                    sourceUrl: track.url,
-                    showAdAttribution: true,
-                    renderLargerThumbnail: true
-                }
-            }
+            image: { url: thumbnail },
+            caption
         }, { quoted: msg });
 
-        // INTENTO 1: Siputzx
-        try {
-            const r1 = await fetch(`https://api.siputzx.my.id/api/d/spotify?url=${track.url}`);
-            const d1 = await r1.json();
-            await sock.sendMessage(msg.key.remoteJid, {
-                audio: { url: d1.data.download },
-                mimetype: 'audio/mpeg',
-                fileName: `${track.title}.mp3`
-            }, { quoted: msg });
-            await sock.sendMessage(msg.key.remoteJid, {
-                react: { text: '✅', key: msg.key }
-            });
-        } catch (e1) {
-            // INTENTO 2: Delirius
-            try {
-                const r2 = await fetch(`https://delirius-api-ofc.vercel.app/download/spotifydl?url=${track.url}`);
-                const d2 = await r2.json();
-                await sock.sendMessage(msg.key.remoteJid, {
-                    audio: { url: d2.data.url },
-                    mimetype: 'audio/mpeg',
-                    fileName: `${track.title}.mp3`
-                }, { quoted: msg });
-                await sock.sendMessage(msg.key.remoteJid, {
-                    react: { text: '✅', key: msg.key }
-                });
-            } catch (e2) {
-                // INTENTO 3: Tanakadomp
-                try {
-                    const r3 = await fetch(`https://archive-ui.tanakadomp.biz.id/download/spotify?url=${track.url}`);
-                    const d3 = await r3.json();
-                    await sock.sendMessage(msg.key.remoteJid, {
-                        audio: { url: d3.result.data.download },
-                        mimetype: 'audio/mpeg',
-                        fileName: `${d3.result.data.title}.mp3`
-                    }, { quoted: msg });
-                    await sock.sendMessage(msg.key.remoteJid, {
-                        react: { text: '✅', key: msg.key }
-                    });
-                } catch (e3) {
-                    await sock.sendMessage(msg.key.remoteJid, {
-                        text: `❌ *No se pudo descargar la canción desde ninguna fuente.*`
-                    }, { quoted: msg });
-                    await sock.sendMessage(msg.key.remoteJid, {
-                        react: { text: '❌', key: msg.key }
-                    });
-                }
-            }
-        }
-
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message || 'Fallo la descarga'}`
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}
-      
-case 'play6': {
-    const axios = require('axios');
-
-    const credentials = {
-        clientId: 'acc6302297e040aeb6e4ac1fbdfd62c3',
-        clientSecret: '0e8439a1280a43aba9a5bc0a16f3f009'
-    };
-
-    const obtenerTokenSpotify = async () => {
-        const response = await axios({
-            method: 'post',
-            url: 'https://accounts.spotify.com/api/token',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                Authorization: 'Basic ' + Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString('base64')
-            },
-            data: 'grant_type=client_credentials'
-        });
-        return response.data.access_token;
-    };
-
-    const spotifyxv = async (query) => {
-        const token = await obtenerTokenSpotify();
-        const response = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track`, {
-            headers: { Authorization: 'Bearer ' + token }
-        });
-        const tracks = response.data.tracks.items;
-        return tracks.map(track => ({
-            nombre: track.name,
-            artistas: track.artists.map(a => a.name),
-            album: track.album.name,
-            duracion: track.duration_ms,
-            url: track.external_urls.spotify,
-            imagen: track.album.images.length ? track.album.images[0].url : ''
-        }));
-    };
-
-    const obtenerAlbumInfo = async (albumName) => {
-        const token = await obtenerTokenSpotify();
-        const response = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(albumName)}&type=album`, {
-            headers: { Authorization: 'Bearer ' + token }
-        });
-        const album = response.data.albums.items[0];
-        return {
-            nombre: album.name,
-            imagen: album.images.length ? album.images[0].url : ''
-        };
-    };
-
-    const timestamp = (ms) => {
-        const minutes = Math.floor(ms / 60000);
-        const seconds = Math.floor((ms % 60000) / 1000);
-        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-    };
-
-    if (!text) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Ingresa el nombre de un artista o canción.\n\n📌 Ejemplo: *${global.prefix}play6* Feid`
-        }, { quoted: msg });
-        break;
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, { react: { text: '🎧', key: msg.key } });
-
-    try {
-        const resultados = await spotifyxv(text);
-        if (!resultados.length) throw '❌ No se encontraron resultados.';
-
-        const resTexto = resultados.map((v, i) => {
-            return `*${i + 1}.* 🎵 *${v.nombre}*\n👤 *Artista:* ${v.artistas.join(', ')}\n💽 *Álbum:* ${v.album}\n⏱️ *Duración:* ${timestamp(v.duracion)}\n🔗 *Enlace:* ${v.url}\n────────────────────`;
-        }).join('\n\n');
-
-        const albumInfo = await obtenerAlbumInfo(resultados[0].album);
+        const res = await fetch(`https://api.neoxr.eu/api/youtube?url=${url}&type=audio&quality=128kbps&apikey=GataDios`);
+        const json = await res.json();
+        const downloadUrl = json.data.url;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: albumInfo.imagen },
-            caption: `╔════════════════╗
-║        ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 ✦
-╚══════════════════╝
-
-🔍 *Resultados de Spotify para:* _${text}_
-
-${resTexto}
-
-*Puedes usar el enlace para escuchar directamente en Spotify.*`
+            audio: { url: downloadUrl },
+            mimetype: 'audio/mpeg',
+            fileName: `${title}.mp3`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -424,7 +275,81 @@ ${resTexto}
     } catch (err) {
         console.error(err);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message || 'No se pudo obtener información de Spotify'}`
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+
+case 'play6': {
+    const yts = require('yt-search');
+    const fetch = require('node-fetch');
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play6* La Factoria - Perdoname`
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const search = await yts(text);
+        const video = search.videos[0];
+        if (!video) throw new Error('No se encontró el video.');
+
+        const { title, url, timestamp, views, author, thumbnail } = video;
+
+        const caption = `
+╔══════════════════════╗
+║     ✦ 𝘼𝙯𝙪𝙧𝙖 𝙐𝙡𝙩𝙧𝙖 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+╚══════════════════════╝
+
+🎼 *Título:* ${title}
+⏱️ *Duración:* ${timestamp}
+👤 *Autor:* ${author.name}
+👁️ *Vistas:* ${views.toLocaleString()}
+🔗 *Enlace:* ${url}
+
+🎬 *Enviando el video...*`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption
+        }, { quoted: msg });
+
+        const res = await fetch(`https://api.neoxr.eu/api/youtube?url=${url}&type=video&quality=360p&apikey=GataDios`);
+        const json = await res.json();
+        const downloadUrl = json.data.url;
+
+        const finalCaption = `🎬 Aquí tiene su video en calidad 360p.
+
+Disfrútelo y continúe explorando el mundo digital.
+
+© Azura Ultra 2.0 Bot`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: downloadUrl },
+            mimetype: 'video/mp4',
+            fileName: `${title}.mp4`,
+            caption: finalCaption
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
