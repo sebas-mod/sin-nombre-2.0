@@ -10074,6 +10074,60 @@ case 'hd': {
     }
     break;
 }
+case 'imagen': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}imagen gatos\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const query = args.join(" ");
+    const apiUrl = `https://api.neoxr.eu/api/goimg?q=${encodeURIComponent(query)}&apikey=russellxz`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.status || !data.data || data.data.length === 0) {
+            throw new Error("No se encontraron imágenes.");
+        }
+
+        const image = data.data[0]; // Tomar la primera imagen de la lista
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            image: { url: image.url },
+            caption: `🖼️ *Imagen de:* ${query}\n\n🔗 *Fuente:* ${image.origin.website.url}`,
+            mimetype: 'image/jpeg'
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .imagen:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al obtener la imagen:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
 case 'apk': {
     const fetch = require('node-fetch');
 
