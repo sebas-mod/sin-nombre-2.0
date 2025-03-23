@@ -569,7 +569,7 @@ case 'play6': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'play6* nombre del video'
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play6* La Factoría - Perdoname`
         }, { quoted: msg });
         break;
     }
@@ -579,44 +579,36 @@ case 'play6': {
     });
 
     try {
-        const apiUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
-        const response = await axios.get(apiUrl);
-        const videoData = response.data.data;
+        const searchUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
+        const searchRes = await axios.get(searchUrl);
+        const videoInfo = searchRes.data;
 
-        if (!videoData || !videoData.url || !response.data.title) {
-            throw new Error('No se pudo obtener el video');
-        }
+        if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
 
-        const title = response.data.title;
-        const url = videoData.url;
-        const views = response.data.views || 'N/A';
-        const author = response.data.channel || 'Desconocido';
-        const timestamp = response.data.fduration || '0:00';
-        const thumbnail = response.data.thumbnail;
+        const title = videoInfo.title || 'video';
+        const url = videoInfo.data.url;
+        const thumbnail = videoInfo.thumbnail;
+        const duration = videoInfo.fduration || '0:00';
+        const views = videoInfo.views || 'N/A';
+        const author = videoInfo.channel || 'Desconocido';
+        const videoLink = `https://www.youtube.com/watch?v=${videoInfo.id}`;
 
-        const durParts = timestamp.split(':').map(Number);
-        const minutes = durParts.length === 3 ? durParts[0] * 60 + durParts[1] : durParts[0];
-
-        let quality = '360';
-        if (minutes <= 3) quality = '720';
-        else if (minutes <= 5) quality = '480';
-
-        const infoMessage = `
-╔══════════════════╗
-║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════╝
+        const captionPreview = `
+╔═══════════════╗
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚═══════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
 ╭───────────────╮  
 ├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${timestamp}
+├ ⏱️ *Duración:* ${duration}
 ├ 👁️ *Vistas:* ${views}
 ├ 👤 *Autor:* ${author}
-└ 🔗 *Enlace:* ${response.data.id}
+└ 🔗 *Enlace:* ${videoLink}
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play ${text}_
+┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
 ┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
 ┣ 🎥 *video:* _${global.prefix}play2 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
@@ -630,28 +622,21 @@ case 'play6': {
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
-            caption: infoMessage
+            caption: captionPreview
         }, { quoted: msg });
 
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_compressed.mp4`);
 
-        const videoRes = await axios.get(url, {
+        const rawPath = path.join(tmpDir, `${Date.now()}_ytvideo_raw.mp4`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_ytvideo_final.mp4`);
+
+        const res = await axios.get(url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        await streamPipeline(videoRes.data, fs.createWriteStream(rawPath));
 
-        let crf = 26;
-        let bVideo = '600k';
-        let bAudio = '128k';
-        if (minutes <= 2) {
-            crf = 24; bVideo = '800k';
-        } else if (minutes > 5) {
-            crf = 28; bVideo = '400k'; bAudio = '96k';
-        }
+        await streamPipeline(res.data, fs.createWriteStream(rawPath));
 
         await new Promise((resolve, reject) => {
             ffmpeg(rawPath)
@@ -659,17 +644,17 @@ case 'play6': {
                 .audioCodec('aac')
                 .outputOptions([
                     '-preset', 'veryfast',
-                    `-crf`, `${crf}`,
-                    `-b:v`, bVideo,
-                    `-b:a`, bAudio,
-                    '-movflags', '+faststart'
+                    '-movflags', '+faststart',
+                    '-crf', '28',
+                    '-b:v', '500k',
+                    '-b:a', '96k'
                 ])
                 .on('end', resolve)
                 .on('error', reject)
                 .save(finalPath);
         });
 
-        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+        const finalText = `🎬 Aquí tiene su video en calidad 720p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(finalPath),
@@ -690,6 +675,7 @@ case 'play6': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
