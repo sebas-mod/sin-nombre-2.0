@@ -10128,6 +10128,66 @@ case 'imagen': {
     }
     break;
 }
+case 'anime': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}anime jujutsu kaisen\`` 
+        }, { quoted: msg });
+        return;
+    }
+
+    const query = args.join(" ");
+    const apiUrl = `https://api.neoxr.eu/api/anime?q=${encodeURIComponent(query)}&apikey=russellxz`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    try {
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.status || !data.data || data.data.length === 0) {
+            throw new Error("No se encontraron resultados de anime.");
+        }
+
+        const animeResults = data.data;
+        let caption = `🔍 *Resultados de anime para:* ${query}\n\n`;
+
+        animeResults.forEach((anime, index) => {
+            caption += `🎬 *Título:* ${anime.title}\n` +
+                       `⭐ *Puntuación:* ${anime.score || "N/A"}\n` +
+                       `📺 *Tipo:* ${anime.type}\n` +
+                       `🔗 *Enlace:* ${anime.url}\n\n`;
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: caption 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .anime:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `❌ *Error al buscar anime:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
+}
 case 'apk': {
     const fetch = require('node-fetch');
 
