@@ -6224,10 +6224,7 @@ case 'gomascota': {
     );
   }
   break;
-}
-    
-        
-            
+}          
         
 case 'addlista': {
   try {
@@ -9555,7 +9552,6 @@ case 'daragua': {
     break;
 }
         
-
         
 case 'hospital':
 case 'hosp': {
@@ -10315,66 +10311,7 @@ case 'imagen': {
     }
     break;
 }
-case 'anime': {
-    const fetch = require('node-fetch');
 
-    if (!args.length) {
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}anime jujutsu kaisen\`` 
-        }, { quoted: msg });
-        return;
-    }
-
-    const query = args.join(" ");
-    const apiUrl = `https://api.neoxr.eu/api/anime?q=${encodeURIComponent(query)}&apikey=russellxz`;
-
-    await sock.sendMessage(msg.key.remoteJid, { 
-        react: { text: "⏳", key: msg.key } 
-    });
-
-    try {
-        const response = await fetch(apiUrl);
-
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (!data.status || !data.data || data.data.length === 0) {
-            throw new Error("No se encontraron resultados de anime.");
-        }
-
-        const animeResults = data.data;
-        let caption = `🔍 *Resultados de anime para:* ${query}\n\n`;
-
-        animeResults.forEach((anime, index) => {
-            caption += `🎬 *Título:* ${anime.title}\n` +
-                       `⭐ *Puntuación:* ${anime.score || "N/A"}\n` +
-                       `📺 *Tipo:* ${anime.type}\n` +
-                       `🔗 *Enlace:* ${anime.url}\n\n`;
-        });
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: caption 
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .anime:", error.message);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Error al buscar anime:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
-        });
-    }
-    break;
-}
 case 'apk': {
     const fetch = require('node-fetch');
 
@@ -10561,81 +10498,7 @@ case 'tomp3': {
     }
     break;
 }
-case 'whatmusic': {
-    const fetch = require('node-fetch');
 
-    try {
-        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        if (!quoted) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Responde a un audio con el comando `.whatmusic` para detectar la música.*" 
-            }, { quoted: msg });
-        }
-
-        if (!quoted.audioMessage) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Solo puedes detectar música en audios.*" 
-            }, { quoted: msg });
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🛠️", key: msg.key } 
-        });
-
-        let mediaStream = await downloadContentFromMessage(quoted.audioMessage, "audio");
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of mediaStream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        if (buffer.length === 0) {
-            throw new Error("❌ Error: No se pudo descargar el archivo.");
-        }
-
-        const apiUrl = "https://api.neoxr.eu/api/whatmusic";
-        const formData = new FormData();
-        formData.append("file", buffer, { filename: "audio.mp3" });
-
-        const response = await fetch(apiUrl, {
-            method: "POST",
-            body: formData,
-            headers: {
-                "apikey": "russellxz"
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (!data.status || !data.data) {
-            throw new Error("No se pudo detectar la música.");
-        }
-
-        const musicInfo = data.data;
-        const caption = `🎵 *Título:* ${musicInfo.title}\n` +
-                        `🎤 *Artista:* ${musicInfo.artist}\n` +
-                        `💿 *Álbum:* ${musicInfo.album}\n` +
-                        `📅 *Lanzamiento:* ${musicInfo.release}`;
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: caption 
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .whatmusic:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Hubo un error al detectar la música. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
-}
 case "tiktok":
 case "tt":
     if (!text) {
@@ -10761,115 +10624,8 @@ case 'gemini': {
     }
     break;
 }
-case 'gitanime': {
-    const fetch = require('node-fetch');
 
-    if (!args.length) {
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: \`${global.prefix}gitanime https://www.animebatch.id/jujutsu-kaisen-season-2-sub-indo/\`` 
-        }, { quoted: msg });
-        return;
-    }
 
-    const url = args[0];
-    const apiUrl = `https://api.neoxr.eu/api/anime-get?url=${encodeURIComponent(url)}&apikey=russellxz`;
-
-    await sock.sendMessage(msg.key.remoteJid, { 
-        react: { text: "⏳", key: msg.key } 
-    });
-
-    try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        if (!data.status || !data.data || !data.data.episode || data.data.episode.length === 0) {
-            throw new Error("No se encontraron episodios o datos válidos.");
-        }
-
-        const animeInfo = data.data;
-
-        const caption = `🎬 *Título:* ${animeInfo.title}\n` +
-                        `📺 *Tipo:* ${animeInfo.type}\n` +
-                        `📅 *Lanzamiento:* ${animeInfo.release}\n` +
-                        `⏱️ *Duración:* ${animeInfo.duration}\n` +
-                        `⭐ *Puntuación:* ${animeInfo.score || "N/A"}\n` +
-                        `📊 *Vistas:* ${animeInfo.views}\n` +
-                        `🎭 *Género:* ${animeInfo.genre}\n` +
-                        `📝 *Descripción:* ${animeInfo.description.substring(0, 200)}...`;
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            image: { url: animeInfo.thumbnail },
-            caption: caption,
-            mimetype: 'image/jpeg'
-        }, { quoted: msg });
-
-        const firstEpisode = animeInfo.episode[0];
-        const downloadLinks = firstEpisode.link;
-
-        if (!downloadLinks || downloadLinks.length === 0) {
-            throw new Error("No se encontraron enlaces de descarga.");
-        }
-
-        let downloadMessage = `🔗 *Enlaces de descarga para:* ${firstEpisode.episode}\n\n`;
-        downloadLinks.forEach((link, index) => {
-            downloadMessage += `📦 *Calidad:* ${link.quality}\n`;
-            link.url.forEach((server, serverIndex) => {
-                downloadMessage += `🌐 *Servidor ${serverIndex + 1}:* ${server.server}\n` +
-                                  `🔗 *Enlace:* ${server.url}\n\n`;
-            });
-        });
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: downloadMessage 
-        }, { quoted: msg });
-
-        try {
-            const firstServer = downloadLinks[0].url[0];
-            const fileResponse = await fetch(firstServer.url);
-
-            if (!fileResponse.ok) {
-                throw new Error("No se pudo descargar el archivo.");
-            }
-
-            const fileBuffer = await fileResponse.buffer();
-            const fileName = `${animeInfo.title.replace(/[^a-zA-Z0-9]/g, '_')}_${firstEpisode.episode}.mp4`;
-
-            await sock.sendMessage(msg.key.remoteJid, {
-                video: fileBuffer,
-                mimetype: 'video/mp4',
-                fileName: fileName
-            }, { quoted: msg });
-
-            await sock.sendMessage(msg.key.remoteJid, { 
-                react: { text: "✅", key: msg.key } 
-            });
-
-        } catch (downloadError) {
-            console.error("❌ Error al descargar el archivo:", downloadError.message);
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *Error al descargar el archivo:*\n_${downloadError.message}_\n\n🔹 Intenta descargar manualmente desde los enlaces proporcionados.` 
-            }, { quoted: msg });
-
-            await sock.sendMessage(msg.key.remoteJid, { 
-                react: { text: "❌", key: msg.key } 
-            });
-        }
-
-    } catch (error) {
-        console.error("❌ Error en el comando .gitanime:", error.message);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: `❌ *Error al procesar la solicitud:*\n_${error.message}_\n\n🔹 Inténtalo más tarde.` 
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
-        });
-    }
-    break;
-}
 case 'simi':
 case 'simisimi': {
     const fetch = require('node-fetch');
@@ -11387,9 +11143,7 @@ case 'alaventa': {
     }
     break;
 }
-        
-
-        
+              
         
 case 'mascota': {
     try {
@@ -12348,9 +12102,7 @@ case 'ok': {
     }
     break;
 }
-        
-
-     
+             
 
 case 'bal':
 case 'saldo': {
@@ -13631,9 +13383,6 @@ case "ping":
         });
     }
     break;
-
-
-
             
 case "get": {
     try {
