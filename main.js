@@ -679,18 +679,17 @@ case 'play': {
     break;
 }
 
-case 'play6': {
+case 'play2': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
     const { pipeline } = require('stream');
     const { promisify } = require('util');
-    const ffmpeg = require('fluent-ffmpeg');
     const streamPipeline = promisify(pipeline);
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play6* La Factoría - Perdoname`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play2* La Factoría - Perdoname`
         }, { quoted: msg });
         break;
     }
@@ -748,44 +747,26 @@ case 'play6': {
 
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-        const rawPath = path.join(tmpDir, `${Date.now()}_ytvideo_raw.mp4`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_ytvideo_final.mp4`);
+        const filename = `${Date.now()}_video.mp4`;
+        const filePath = path.join(tmpDir, filename);
 
         const res = await axios.get(url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
 
-        await streamPipeline(res.data, fs.createWriteStream(rawPath));
+        await streamPipeline(res.data, fs.createWriteStream(filePath));
 
-        await new Promise((resolve, reject) => {
-            ffmpeg(rawPath)
-                .videoCodec('libx264')
-                .audioCodec('aac')
-                .outputOptions([
-                    '-preset', 'veryfast',
-                    '-movflags', '+faststart',
-                    '-crf', '28',
-                    '-b:v', '500k',
-                    '-b:a', '96k'
-                ])
-                .on('end', resolve)
-                .on('error', reject)
-                .save(finalPath);
-        });
-
-        const finalText = `🎬 Aquí tiene su video en calidad 720p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+        const finalText = `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            video: fs.readFileSync(finalPath),
+            video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
             fileName: `${title}.mp4`,
             caption: finalText
         }, { quoted: msg });
 
-        fs.unlinkSync(rawPath);
-        fs.unlinkSync(finalPath);
+        fs.unlinkSync(filePath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -796,7 +777,6 @@ case 'play6': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
@@ -1057,127 +1037,6 @@ case 'play5': {
     break;
 }
       
-case 'ytmp42': {
-    const axios = require('axios');
-    const fs = require('fs');
-    const path = require('path');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const ffmpeg = require('fluent-ffmpeg');
-    const streamPipeline = promisify(pipeline);
-
-    const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(text);
-    if (!text || !isYoutubeUrl) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}ytmp42* https://youtube.com/watch?v=abc123`
-        }, { quoted: msg });
-        break;
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    try {
-        const format = '480'; // calidad original de descarga
-        const apiURL = `https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(text)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`;
-
-        const res = await axios.get(apiURL, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-        if (!res.data || !res.data.success) throw new Error('No se pudo obtener el video.');
-
-        const { id, title, info } = res.data;
-        const cekURL = `https://p.oceansaver.in/ajax/progress.php?id=${id}`;
-
-        let downloadUrl;
-        while (true) {
-            const cek = await axios.get(cekURL, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-            if (cek.data?.success && cek.data.progress === 1000) {
-                downloadUrl = cek.data.download_url;
-                break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 5000));
-        }
-
-        const timestamp = info.duration || '0:00';
-        const durParts = timestamp.split(':').map(Number);
-        const minutes = durParts.length === 3
-            ? durParts[0] * 60 + durParts[1]
-            : durParts[0];
-
-        // Selección dinámica
-        let crf = 26;
-        let bVideo = '600k';
-        let bAudio = '128k';
-        if (minutes <= 2) {
-            crf = 24; bVideo = '800k';
-        } else if (minutes > 5) {
-            crf = 28; bVideo = '400k'; bAudio = '96k';
-        }
-
-        // Paths y descarga
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_converted.mp4`);
-
-        const videoRes = await axios.get(downloadUrl, {
-            responseType: 'stream',
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-
-        await streamPipeline(videoRes.data, fs.createWriteStream(rawPath));
-
-        // Conversión real
-        await new Promise((resolve, reject) => {
-            ffmpeg(rawPath)
-                .videoCodec('libx264')
-                .audioCodec('aac')
-                .outputOptions([
-                    '-preset', 'veryfast',
-                    '-crf', `${crf}`,
-                    '-b:v', bVideo,
-                    '-b:a', bAudio,
-                    '-movflags', '+faststart'
-                ])
-                .on('end', resolve)
-                .on('error', reject)
-                .save(finalPath);
-        });
-
-        const finalText = `🎬 Aquí tiene su video optimizado.
-
-Disfrútelo y continúe explorando el mundo digital.
-
-© Azura Ultra 2.0 Bot`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            video: fs.readFileSync(finalPath),
-            mimetype: 'video/mp4',
-            fileName: `${title}.mp4`,
-            caption: finalText
-        }, { quoted: msg });
-
-        fs.unlinkSync(rawPath);
-        fs.unlinkSync(finalPath);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}      
 case 'play4': {
     const yts = require('yt-search');
     const axios = require('axios');
@@ -2455,12 +2314,12 @@ case "git": {
 
             
             
-case 'play2': { 
+case 'play6': { 
     const yts = require('yt-search'); 
 
     if (!text || text.trim() === '') {
         return sock.sendMessage(msg.key.remoteJid, { 
-            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play2 boza yaya*\n🎬 _Proporciona el nombre o término de búsqueda del video._` 
+            text: `⚠️ *Uso correcto del comando:*\n\n📌 Ejemplo: *${global.prefix}play6 boza yaya*\n🎬 _Proporciona el nombre o término de búsqueda del video._` 
         });
     } 
 
@@ -3212,7 +3071,6 @@ case 'menu': {
 ⎔ ${global.prefix}ytmp35 → link  
 ⎔ ${global.prefix}ytmp4 → link  
 ⎔ ${global.prefix}ytmp45 → link  
-⎔ ${global.prefix}ytmp42 → link  
 ⎔ ${global.prefix}tiktok → link  
 ⎔ ${global.prefix}fb → link  
 ⎔ ${global.prefix}ig → link  
