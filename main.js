@@ -229,11 +229,11 @@ case 'f': {
     const FormData = require('form-data');
 
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    const imageMsg = quoted?.imageMessage;
+    const image = quoted?.imageMessage;
 
-    if (!imageMsg) {
+    if (!image) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Debes responder a una imagen para aplicar el efecto latte.*'
+            text: '⚠️ *Debes responder a una imagen para aplicar el efecto.*'
         }, { quoted: msg });
         break;
     }
@@ -243,46 +243,48 @@ case 'f': {
     });
 
     try {
-        // Descargar imagen
-        const stream = await downloadContentFromMessage(imageMsg, 'image');
+        const stream = await downloadContentFromMessage(image, 'image');
         let buffer = Buffer.alloc(0);
         for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-        const type = await fromBuffer(buffer);
-        const tmpFile = path.join(__dirname, `tmp_${Date.now()}.${type.ext}`);
-        fs.writeFileSync(tmpFile, buffer);
+        const type = await fromBuffer(buffer) || { ext: 'jpg' };
+        const tempPath = path.join(__dirname, `tmp_${Date.now()}.${type.ext}`);
+        fs.writeFileSync(tempPath, buffer);
 
         // Subir a Telegra.ph
         const form = new FormData();
-        form.append('file', fs.createReadStream(tmpFile));
+        form.append('file', fs.createReadStream(tempPath));
 
-        const telegraphRes = await axios.post('https://telegra.ph/upload', form, {
+        const uploadRes = await axios.post('https://telegra.ph/upload', form, {
             headers: form.getHeaders(),
-            timeout: 15000
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
         });
 
-        const telegraphUrl = `https://telegra.ph${telegraphRes.data[0].src}`;
+        if (!uploadRes.data[0]?.src) throw new Error("No se pudo subir la imagen a Telegra.ph");
 
-        // Llamar a la API de efecto
-        const effectApi = `https://api.neoxr.eu/api/effect?style=latte&image=${encodeURIComponent(telegraphUrl)}&apikey=russellxz`;
-        const result = await axios.get(effectApi, { responseType: 'arraybuffer' });
+        const telegraphUrl = `https://telegra.ph${uploadRes.data[0].src}`;
 
-        // Enviar imagen modificada
+        // Aplicar el efecto con la API
+        const effectUrl = `https://api.neoxr.eu/api/effect?style=latte&image=${encodeURIComponent(telegraphUrl)}&apikey=russellxz`;
+        const result = await axios.get(effectUrl, { responseType: 'arraybuffer' });
+
         await sock.sendMessage(msg.key.remoteJid, {
             image: result.data,
             mimetype: 'image/jpeg',
-            caption: `✨ *Aquí tienes tu imagen con efecto latte aplicado.*`
+            caption: `✨ *Efecto latte aplicado con éxito.*`
         }, { quoted: msg });
 
-        fs.unlinkSync(tmpFile);
+        fs.unlinkSync(tempPath);
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (error) {
-        console.error("❌ Error al aplicar efecto:", error.message);
+    } catch (err) {
+        console.error('❌ Error al aplicar efecto:', err.message);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error al aplicar el efecto:* ${error.message}`
+            text: `❌ *Error al aplicar el efecto:* ${err.message}`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
