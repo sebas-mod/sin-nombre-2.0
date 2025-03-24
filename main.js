@@ -219,17 +219,18 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-case 'play10': {
+case 'play11': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
     const { pipeline } = require('stream');
     const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
     const streamPipeline = promisify(pipeline);
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* bad bunny diles`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* La Factoría - Perdoname`
         }, { quoted: msg });
         break;
     }
@@ -246,13 +247,13 @@ case 'play10': {
         if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
 
         const title = videoInfo.title || 'audio';
-        const videoUrl = `https://www.youtube.com/watch?v=${videoInfo.id}`;
+        const url = videoInfo.data.url;
         const thumbnail = videoInfo.thumbnail;
-        const fduration = videoInfo.fduration || 'N/A';
+        const duration = videoInfo.fduration || '0:00';
         const views = videoInfo.views || 'N/A';
-        const channel = videoInfo.channel || 'Desconocido';
+        const author = videoInfo.channel || 'Desconocido';
+        const videoLink = `https://www.youtube.com/watch?v=${videoInfo.id}`;
 
-        // Enviamos la info primero
         const infoMessage = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
@@ -261,10 +262,10 @@ case 'play10': {
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
 ╭───────────────╮  
 ├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${fduration}
+├ ⏱️ *Duración:* ${duration}
 ├ 👁️ *Vistas:* ${views}
-├ 👤 *Autor:* ${channel}
-└ 🔗 *Enlace:* ${videoUrl}
+├ 👤 *Autor:* ${author}
+└ 🔗 *Enlace:* ${videoLink}
 ╰───────────────╯
 
 📥 *Opciones de Descarga:*  
@@ -285,22 +286,35 @@ case 'play10': {
             caption: infoMessage
         }, { quoted: msg });
 
-        // Descargamos el audio
-        const apiURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
-        const res = await axios.get(apiURL);
-        const json = res.data;
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
+        const audioPath = path.join(tmpDir, `${Date.now()}_final.mp3`);
 
-        if (!json.status || !json.data?.url) {
-            throw new Error("No se pudo obtener el audio");
-        }
+        const res = await axios.get(url, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        await streamPipeline(res.data, fs.createWriteStream(rawPath));
 
-        const { data } = json;
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioCodec('libmp3lame')
+                .audioBitrate('128k')
+                .format('mp3')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(audioPath);
+        });
 
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: data.url },
+            audio: fs.readFileSync(audioPath),
             mimetype: 'audio/mpeg',
-            fileName: data.filename || `${title}.mp3`
+            fileName: `${title}.mp3`
         }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(audioPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -311,7 +325,6 @@ case 'play10': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
@@ -319,7 +332,6 @@ case 'play10': {
 
     break;
 }
-
       
 case 'whatmusic': {
     const fetch = require('node-fetch');
