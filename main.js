@@ -218,7 +218,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'ytmp50': {
+case 'ytmp80': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -238,11 +238,26 @@ case 'ytmp50': {
     });
 
     try {
-        const qualities = ['720p', '480p', '360p'];
+        let selectedQualities = ['720p', '480p', '360p']; // orden por defecto
         let video = null;
 
-        // Intentamos con cada calidad
-        for (let quality of qualities) {
+        // Paso 1: obtener duración para decidir calidad
+        const tempRes = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=360p&apikey=russellxz`);
+        const tempData = tempRes.data;
+        if (!tempData.status || !tempData.fduration) throw new Error('No se pudo obtener la duración del video');
+
+        // Convertir duración "mm:ss" o "hh:mm:ss" a minutos
+        const durParts = tempData.fduration.split(':').map(Number);
+        const minutes = durParts.length === 3
+            ? durParts[0] * 60 + durParts[1]
+            : durParts[0];
+
+        if (minutes <= 5) selectedQualities = ['720p', '480p', '360p'];
+        else if (minutes <= 10) selectedQualities = ['480p', '360p'];
+        else selectedQualities = ['360p'];
+
+        // Paso 2: intentar descarga por calidad
+        for (let quality of selectedQualities) {
             try {
                 const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
                 const response = await axios.get(apiUrl);
@@ -275,11 +290,10 @@ case 'ytmp50': {
         });
         await streamPipeline(response.data, fs.createWriteStream(filePath));
 
-        // Enviamos el video con diseño bonito
         const caption = `
-╔══════════════════════╗
-║   ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════════╝
+╔═════════════════╗
+║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚═════════════════╝
 
 🎬 *Título:* ${video.title}
 ⏱️ *Duración:* ${video.duration}
