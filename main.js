@@ -218,73 +218,53 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-case 'f': {
+case 'video2': {
     const axios = require('axios');
-    const fs = require('fs');
-    const path = require('path');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const streamPipeline = promisify(pipeline);
-    const { fromBuffer } = require('file-type');
-    const FormData = require('form-data');
 
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    const image = quoted?.imageMessage;
+    const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+    const isSticker = quoted?.stickerMessage;
 
-    if (!image) {
+    if (!isSticker) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Debes responder a una imagen para aplicar el efecto.*'
+            text: '✳️ *Usa este comando respondiendo a un sticker.*\n\n📌 Ejemplo: responde al sticker con _video2_ para convertirlo a video.'
         }, { quoted: msg });
         break;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '🎨', key: msg.key }
+        react: { text: '⏳', key: msg.key }
     });
 
     try {
-        const stream = await downloadContentFromMessage(image, 'image');
+        const mediaStream = await downloadContentFromMessage(quoted.stickerMessage, 'sticker');
         let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
 
-        const type = await fromBuffer(buffer) || { ext: 'jpg' };
-        const tempPath = path.join(__dirname, `tmp_${Date.now()}.${type.ext}`);
-        fs.writeFileSync(tempPath, buffer);
+        const uploadRes = await uploadImage(buffer);
+        const imageUrl = uploadRes;
 
-        // Subir a Telegra.ph
-        const form = new FormData();
-        form.append('file', fs.createReadStream(tempPath));
+        const apiUrl = `https://api.neoxr.eu/api/webp2mp4?url=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
+        const response = await axios.get(apiUrl);
 
-        const uploadRes = await axios.post('https://telegra.ph/upload', form, {
-            headers: form.getHeaders(),
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-        });
-
-        if (!uploadRes.data[0]?.src) throw new Error("No se pudo subir la imagen a Telegra.ph");
-
-        const telegraphUrl = `https://telegra.ph${uploadRes.data[0].src}`;
-
-        // Aplicar el efecto con la API
-        const effectUrl = `https://api.neoxr.eu/api/effect?style=latte&image=${encodeURIComponent(telegraphUrl)}&apikey=russellxz`;
-        const result = await axios.get(effectUrl, { responseType: 'arraybuffer' });
+        if (!response.data.status || !response.data.result) {
+            throw new Error('No se pudo convertir el sticker a video.');
+        }
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: result.data,
-            mimetype: 'image/jpeg',
-            caption: `✨ *Efecto latte aplicado con éxito.*`
+            video: { url: response.data.result },
+            caption: `🎥 *Aquí está tu sticker convertido a video.*\n\n© Azura Ultra 2.0 Bot`
         }, { quoted: msg });
-
-        fs.unlinkSync(tempPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (err) {
-        console.error('❌ Error al aplicar efecto:', err.message);
+    } catch (error) {
+        console.error('Error en .video2:', error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error al aplicar el efecto:* ${err.message}`
+            text: `❌ *Error al convertir el sticker a video:*\n_${error.message}_`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
