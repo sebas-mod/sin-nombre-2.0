@@ -223,6 +223,11 @@ case 'f': {
     const axios = require('axios');
     const FormData = require('form-data');
     const { fromBuffer } = require('file-type');
+    const { spawn } = require('child_process');
+    const fs = require('fs');
+    const path = require('path');
+    const tmpPath = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpPath)) fs.mkdirSync(tmpPath);
 
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     const imageMsg = quoted?.imageMessage;
@@ -243,23 +248,30 @@ case 'f': {
         let buffer = Buffer.alloc(0);
         for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-        // Subimos la imagen a telegraph
-        const upload = await axios({
-            method: 'POST',
-            url: 'https://telegra.ph/upload',
-            headers: { 'Content-Type': 'multipart/form-data' },
-            data: (() => {
-                const data = new FormData();
-                data.append('file', buffer, 'image.jpg');
-                return data;
-            })()
+        const type = await fromBuffer(buffer);
+        const tempInput = `${tmpPath}/${Date.now()}.${type.ext}`;
+        const tempOutput = `${tmpPath}/${Date.now()}_output.jpg`;
+
+        fs.writeFileSync(tempInput, buffer);
+
+        // Convertimos a JPG con ffmpeg (opcional pero más estable)
+        await new Promise((resolve, reject) => {
+            spawn('ffmpeg', ['-i', tempInput, tempOutput])
+                .on('exit', resolve)
+                .on('error', reject);
+        });
+
+        const form = new FormData();
+        form.append('file', fs.createReadStream(tempOutput), 'image.jpg');
+
+        const upload = await axios.post('https://telegra.ph/upload', form, {
+            headers: form.getHeaders()
         });
 
         if (!upload.data[0]?.src) throw new Error('No se pudo subir la imagen a Telegra.ph');
 
         const imageUrl = `https://telegra.ph${upload.data[0].src}`;
         const effectApi = `https://api.neoxr.eu/api/effect?style=latte&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
-
         const result = await axios.get(effectApi, { responseType: 'arraybuffer' });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -267,6 +279,9 @@ case 'f': {
             mimetype: 'image/jpeg',
             caption: '✨ *Aquí está tu imagen con el efecto Latte aplicado.*'
         }, { quoted: msg });
+
+        fs.unlinkSync(tempInput);
+        fs.unlinkSync(tempOutput);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
