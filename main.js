@@ -597,7 +597,7 @@ case 'play': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* Komang`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* bad bunny diles`
         }, { quoted: msg });
         break;
     }
