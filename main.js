@@ -731,93 +731,107 @@ case 'ytmp50': {
     break;
 }
         
+
 case 'ytmp3': {
-    const axios = require('axios');
-    const fs = require('fs');
-    const path = require('path');
-    const { pipeline } = require('stream');
-    const { promisify } = require('util');
-    const ffmpeg = require('fluent-ffmpeg');
-    const streamPipeline = promisify(pipeline);
+  const axios = require('axios');
+  const fs = require('fs');
+  const path = require('path');
+  const { pipeline } = require('stream');
+  const { promisify } = require('util');
+  const ffmpeg = require('fluent-ffmpeg');
+  const streamPipeline = promisify(pipeline);
 
-    const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
+  if (!text || !text.includes('youtube.com') && !text.includes('youtu.be')) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ytmp3* https://youtube.com/watch?v=...`
+    }, { quoted: msg });
+    break;
+  }
 
-    if (!text || !isYoutubeUrl) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}ytmp3* https://music.youtube.com/watch?v=abc123`
-        }, { quoted: msg });
-        break;
-    }
+  await sock.sendMessage(msg.key.remoteJid, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    const searchUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
+    const searchRes = await axios.get(searchUrl);
+    const videoInfo = searchRes.data;
+
+    if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
+
+    const title = videoInfo.title || 'audio';
+    const url = videoInfo.data.url;
+    const thumbnail = videoInfo.thumbnail;
+    const duration = videoInfo.fduration || '0:00';
+    const views = videoInfo.views || 'N/A';
+    const author = videoInfo.channel || 'Desconocido';
+
+    const captionPreview = `
+╔══════════════════╗
+║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
+
+🎵 *Título:* ${title}
+⏱️ *Duración:* ${duration}
+👁️ *Vistas:* ${views}
+👤 *Canal:* ${author}
+📥 *Formato:* MP3
+
+⏳ *Procesando tu música...*
+═════════════════════`;
 
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
+      image: { url: thumbnail },
+      caption: captionPreview
+    }, { quoted: msg });
+
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+    const rawPath = path.join(tmpDir, `${Date.now()}_ytvideo.mp4`);
+    const mp3Path = path.join(tmpDir, `${Date.now()}_final.mp3`);
+
+    const res = await axios.get(url, {
+      responseType: 'stream',
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
-    try {
-        const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=360p&apikey=russellxz`;
-        const response = await axios.get(apiUrl);
-        const data = response.data;
+    await streamPipeline(res.data, fs.createWriteStream(rawPath));
 
-        if (!data.status || !data.data?.url) throw new Error("No se pudo obtener el video");
+    await new Promise((resolve, reject) => {
+      ffmpeg(rawPath)
+        .audioCodec('libmp3lame')
+        .format('mp3')
+        .audioBitrate(128)
+        .on('end', resolve)
+        .on('error', reject)
+        .save(mp3Path);
+    });
 
-        const title = data.title || 'audio';
-        const url = data.data.url;
-        const thumbnail = data.thumbnail;
-        const duration = data.fduration || '0:00';
+    await sock.sendMessage(msg.key.remoteJid, {
+      audio: fs.readFileSync(mp3Path),
+      mimetype: 'audio/mpeg',
+      fileName: `${title}.mp3`
+    }, { quoted: msg });
 
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: thumbnail },
-            caption: `🎧 *Título:* ${title}\n🕒 *Duración:* ${duration}\n\n⏳ Descargando y convirtiendo a audio...`
-        }, { quoted: msg });
+    fs.unlinkSync(rawPath);
+    fs.unlinkSync(mp3Path);
 
-        const tmpDir = path.join(__dirname, 'tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const rawPath = path.join(tmpDir, `${Date.now()}_video.mp4`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_audio.mp3`);
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: '✅', key: msg.key }
+    });
 
-        const res = await axios.get(url, {
-            responseType: 'stream',
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-        await streamPipeline(res.data, fs.createWriteStream(rawPath));
+  } catch (err) {
+    console.error(err);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error:* ${err.message}`
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: '❌', key: msg.key }
+    });
+  }
 
-        await new Promise((resolve, reject) => {
-            ffmpeg(rawPath)
-                .audioCodec('libmp3lame')
-                .audioBitrate('128k')
-                .format('mp3')
-                .on('end', resolve)
-                .on('error', reject)
-                .save(finalPath);
-        });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            audio: fs.readFileSync(finalPath),
-            mimetype: 'audio/mpeg',
-            fileName: `${title}.mp3`
-        }, { quoted: msg });
-
-        fs.unlinkSync(rawPath);
-        fs.unlinkSync(finalPath);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}
-        
+  break;
+}        
 
 case 'play2': {
     const axios = require('axios');
