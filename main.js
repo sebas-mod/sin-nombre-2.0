@@ -218,23 +218,22 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-
 case 'f': {
     const axios = require('axios');
-    const FormData = require('form-data');
-    const { fromBuffer } = require('file-type');
-    const { spawn } = require('child_process');
     const fs = require('fs');
     const path = require('path');
-    const tmpPath = path.join(__dirname, 'tmp');
-    if (!fs.existsSync(tmpPath)) fs.mkdirSync(tmpPath);
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const streamPipeline = promisify(pipeline);
+    const { fromBuffer } = require('file-type');
+    const FormData = require('form-data');
 
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     const imageMsg = quoted?.imageMessage;
 
     if (!imageMsg) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Debes responder a una imagen para aplicar el efecto latte.*\n\n📌 Ejemplo: Responde a una foto con *.f*'
+            text: '⚠️ *Debes responder a una imagen para aplicar el efecto latte.*'
         }, { quoted: msg });
         break;
     }
@@ -244,53 +243,46 @@ case 'f': {
     });
 
     try {
+        // Descargar imagen
         const stream = await downloadContentFromMessage(imageMsg, 'image');
         let buffer = Buffer.alloc(0);
         for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
         const type = await fromBuffer(buffer);
-        const tempInput = `${tmpPath}/${Date.now()}.${type.ext}`;
-        const tempOutput = `${tmpPath}/${Date.now()}_output.jpg`;
+        const tmpFile = path.join(__dirname, `tmp_${Date.now()}.${type.ext}`);
+        fs.writeFileSync(tmpFile, buffer);
 
-        fs.writeFileSync(tempInput, buffer);
-
-        // Convertimos a JPG con ffmpeg (opcional pero más estable)
-        await new Promise((resolve, reject) => {
-            spawn('ffmpeg', ['-i', tempInput, tempOutput])
-                .on('exit', resolve)
-                .on('error', reject);
-        });
-
+        // Subir a Telegra.ph
         const form = new FormData();
-        form.append('file', fs.createReadStream(tempOutput), 'image.jpg');
+        form.append('file', fs.createReadStream(tmpFile));
 
-        const upload = await axios.post('https://telegra.ph/upload', form, {
-            headers: form.getHeaders()
+        const telegraphRes = await axios.post('https://telegra.ph/upload', form, {
+            headers: form.getHeaders(),
+            timeout: 15000
         });
 
-        if (!upload.data[0]?.src) throw new Error('No se pudo subir la imagen a Telegra.ph');
+        const telegraphUrl = `https://telegra.ph${telegraphRes.data[0].src}`;
 
-        const imageUrl = `https://telegra.ph${upload.data[0].src}`;
-        const effectApi = `https://api.neoxr.eu/api/effect?style=latte&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
+        // Llamar a la API de efecto
+        const effectApi = `https://api.neoxr.eu/api/effect?style=latte&image=${encodeURIComponent(telegraphUrl)}&apikey=russellxz`;
         const result = await axios.get(effectApi, { responseType: 'arraybuffer' });
 
+        // Enviar imagen modificada
         await sock.sendMessage(msg.key.remoteJid, {
             image: result.data,
             mimetype: 'image/jpeg',
-            caption: '✨ *Aquí está tu imagen con el efecto Latte aplicado.*'
+            caption: `✨ *Aquí tienes tu imagen con efecto latte aplicado.*`
         }, { quoted: msg });
 
-        fs.unlinkSync(tempInput);
-        fs.unlinkSync(tempOutput);
-
+        fs.unlinkSync(tmpFile);
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (err) {
-        console.error(err);
+    } catch (error) {
+        console.error("❌ Error al aplicar efecto:", error.message);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error al aplicar el efecto:* ${err.message}`
+            text: `❌ *Error al aplicar el efecto:* ${error.message}`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -300,6 +292,7 @@ case 'f': {
 
     break;
 }
+
         
 case 'ytmp4': {
     const axios = require('axios');
