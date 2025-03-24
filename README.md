@@ -86,9 +86,8 @@ Si deseas contribuir al desarrollo del bot, reportar errores o sugerir mejoras, 
 ✧ » ◇ « ✧ » ✦ « ✧ » ◇ « ✧  
 ≪━─━─━─━─◈─━─━─━─━≫
 
-╭───────────────────────╮
-⚡ PASOS PARA TERMUX (ANDROID) ⚡
-╰───────────────────────╯
+
+⚡PASOS PARA TERMUX (ANDROID)✨️
 
 # 1️⃣ Actualiza paquetes e instala dependencias necesarias
 pkg update && pkg upgrade -y && pkg install nodejs git -y
