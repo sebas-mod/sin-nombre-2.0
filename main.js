@@ -465,9 +465,9 @@ case 'ytmp50': {
         await streamPipeline(response.data, fs.createWriteStream(filePath));
 
         const caption = `
-╔══════════════════════╗
+╔══════════════════╗
 ║   ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════════╝
+╚══════════════════╝
 
 🎬 *Título:* ${video.title}
 ⏱️ *Duración:* ${video.duration}
@@ -609,79 +609,6 @@ case 'ytmp50': {
         });
     }
     break;
-}
-
-case 'ytmp9': {
-  const axios = require('axios');
-  const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
-
-  if (!text || !isYoutubeUrl) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `✳️ Usa el comando correctamente, mi rey:\n\n📌 Ejemplo: *${global.prefix}ytmp3* https://music.youtube.com/watch?v=abc123`
-    }, { quoted: msg });
-    break;
-  }
-
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
-
-  try {
-    // Paso 1: Obtener datos de la API
-    const apiURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=audio&quality=128kbps&apikey=russellxz`;
-    const res = await axios.get(apiURL);
-    const json = res.data;
-
-    if (!json.status || !json.data?.url) {
-      throw new Error("No se pudo obtener el audio");
-    }
-
-    const { data, title, fduration, thumbnail } = json;
-
-    // Paso 2: Enviar mensaje de barra de carga
-    let barMsg = await sock.sendMessage(msg.key.remoteJid, {
-      text: `📥 *Preparando descarga de audio...*\n[░░░░░░░░░░] 0%`,
-    }, { quoted: msg });
-
-    const steps = [10, 30, 60, 80, 100];
-    for (let i = 0; i < steps.length; i++) {
-      let bar = '█'.repeat(i + 1) + '░'.repeat(9 - i);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Delay
-      await sock.sendMessage(msg.key.remoteJid, {
-        edit: barMsg.key,
-        text: `📥 *Descargando audio...*\n[${bar}] ${steps[i]}%`,
-      });
-    }
-
-    // Paso 3: Enviar imagen informativa
-    await sock.sendMessage(msg.key.remoteJid, {
-      image: { url: thumbnail },
-      caption: `🎧 *Título:* ${title}\n🕒 *Duración:* ${fduration}\n📥 *Tamaño:* ${data.size}\n\n✅ *Audio listo, enviando...*`
-    }, { quoted: msg });
-
-    // Paso 4: Enviar el audio
-    await sock.sendMessage(msg.key.remoteJid, {
-      audio: { url: data.url },
-      mimetype: 'audio/mpeg',
-      fileName: data.filename || `${title}.mp3`
-    }, { quoted: msg });
-
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '✅', key: msg.key }
-    });
-
-  } catch (err) {
-    console.error(err);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${err.message}`
-    }, { quoted: msg });
-
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '❌', key: msg.key }
-    });
-  }
-
-  break;
 }
         
 case 'ytmp3': {
