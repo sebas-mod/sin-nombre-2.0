@@ -85,3 +85,22 @@ Si deseas contribuir al desarrollo del bot, reportar errores o sugerir mejoras, 
 ≪━─━─━─━─◈─━─━─━─━≫  
 ✧ » ◇ « ✧ » ✦ « ✧ » ◇ « ✧  
 ≪━─━─━─━─◈─━─━─━─━≫
+
+╭──────────────────────────────╮
+│  ⚡ PASOS PARA TERMUX (ANDROID) ⚡
+╰──────────────────────────────╯
+
+Paso 1️⃣ – Actualiza e instala dependencias:
+pkg update && pkg upgrade -y && pkg install nodejs git -y
+
+Paso 2️⃣ – Clona el repositorio del bot:
+git clone https://github.com/russellxz/AZURA-ULTRA-2.0-BOT.git
+
+Paso 3️⃣ – Entra al directorio del bot:
+cd AZURA-ULTRA-2.0-BOT
+
+Paso 4️⃣ – Instala las dependencias del proyecto:
+npm install
+
+Paso 5️⃣ – Inicia el bot:
+npm start
