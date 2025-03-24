@@ -731,7 +731,6 @@ case 'ytmp50': {
     break;
 }
         
-
 case 'ytmp3': {
   const axios = require('axios');
   const fs = require('fs');
@@ -741,9 +740,11 @@ case 'ytmp3': {
   const ffmpeg = require('fluent-ffmpeg');
   const streamPipeline = promisify(pipeline);
 
-  if (!text || !text.includes('youtube.com') && !text.includes('youtu.be')) {
+  const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
+
+  if (!text) {
     await sock.sendMessage(msg.key.remoteJid, {
-      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ytmp3* https://youtube.com/watch?v=...`
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ytmp3* La Factoría - Perdoname\n📌 O usa enlace: *${global.prefix}ytmp3* https://music.youtube.com/watch?v=abc123`
     }, { quoted: msg });
     break;
   }
@@ -753,9 +754,19 @@ case 'ytmp3': {
   });
 
   try {
-    const searchUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
-    const searchRes = await axios.get(searchUrl);
-    const videoInfo = searchRes.data;
+    let videoInfo;
+
+    if (isYoutubeUrl) {
+      // Si es enlace directo
+      const infoURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&apikey=russellxz`;
+      const res = await axios.get(infoURL);
+      videoInfo = res.data;
+    } else {
+      // Si es un título
+      const searchURL = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
+      const res = await axios.get(searchURL);
+      videoInfo = res.data;
+    }
 
     if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
 
@@ -825,13 +836,15 @@ case 'ytmp3': {
     await sock.sendMessage(msg.key.remoteJid, {
       text: `❌ *Error:* ${err.message}`
     }, { quoted: msg });
+
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: '❌', key: msg.key }
     });
   }
 
   break;
-}        
+}
+
 
 case 'play2': {
     const axios = require('axios');
