@@ -218,6 +218,64 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'whatmusic2': {
+    const fetch = require('node-fetch');
+    const FormData = require('form-data');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+
+    try {
+        let quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        if (!quoted || !quoted.audioMessage) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "⚠️ *Responde a un audio con el comando `.whatmusic` para detectar la música.*"
+            }, { quoted: msg });
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "🛠️", key: msg.key }
+        });
+
+        let mediaStream = await downloadContentFromMessage(quoted.audioMessage, "audio");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        if (!buffer.length) throw new Error("❌ No se pudo descargar el archivo.");
+
+        const formData = new FormData();
+        formData.append("file", buffer, "audio.mp3");
+
+        const response = await fetch("https://api.neoxr.eu/api/whatmusic", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "apikey": "russellxz"
+            }
+        });
+
+        const data = await response.json();
+        if (!data.status || !data.data) {
+            throw new Error("❌ No se pudo detectar la música.");
+        }
+
+        const { title, artist, album, release } = data.data;
+
+        const info = `🎵 *Título:* ${title}\n🎤 *Artista:* ${artist}\n💿 *Álbum:* ${album}\n📅 *Lanzamiento:* ${release}`;
+
+        await sock.sendMessage(msg.key.remoteJid, { text: info }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
+
+    } catch (error) {
+        console.error("❌ Error en .whatmusic:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ *Hubo un error al detectar la música. Inténtalo nuevamente más tarde.*"
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key } });
+    }
+    break;
+}
+      
 case 'whatmusic': {
   const fetch = require('node-fetch');
   const FormData = require('form-data');
