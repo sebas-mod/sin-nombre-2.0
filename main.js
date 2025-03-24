@@ -218,7 +218,74 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
-       
+
+case 'f': {
+    const axios = require('axios');
+    const FormData = require('form-data');
+    const { fromBuffer } = require('file-type');
+
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const imageMsg = quoted?.imageMessage;
+
+    if (!imageMsg) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '⚠️ *Debes responder a una imagen para aplicar el efecto latte.*\n\n📌 Ejemplo: Responde a una foto con *.f*'
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '🎨', key: msg.key }
+    });
+
+    try {
+        const stream = await downloadContentFromMessage(imageMsg, 'image');
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+
+        // Subimos la imagen a telegraph
+        const upload = await axios({
+            method: 'POST',
+            url: 'https://telegra.ph/upload',
+            headers: { 'Content-Type': 'multipart/form-data' },
+            data: (() => {
+                const data = new FormData();
+                data.append('file', buffer, 'image.jpg');
+                return data;
+            })()
+        });
+
+        if (!upload.data[0]?.src) throw new Error('No se pudo subir la imagen a Telegra.ph');
+
+        const imageUrl = `https://telegra.ph${upload.data[0].src}`;
+        const effectApi = `https://api.neoxr.eu/api/effect?style=latte&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
+
+        const result = await axios.get(effectApi, { responseType: 'arraybuffer' });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: result.data,
+            mimetype: 'image/jpeg',
+            caption: '✨ *Aquí está tu imagen con el efecto Latte aplicado.*'
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error al aplicar el efecto:* ${err.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+        
 case 'ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
