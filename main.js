@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-case 'play11': {
+case 'play': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
