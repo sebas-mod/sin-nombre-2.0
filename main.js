@@ -315,49 +315,112 @@ case 'ytmp4': {
     break;
 }
       
-case 'ytmp40': {
-    const fetch = require('node-fetch');
+case 'ytmp50': {
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const streamPipeline = promisify(pipeline);
 
-    if (!text) {
+    if (!text || !text.includes('youtube.com') && !text.includes('youtu.be')) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *' + global.prefix + 'ytmp40* enlace de YouTube'
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ytmp4* https://youtube.com/watch?v=...`
         }, { quoted: msg });
         break;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏱️', key: msg.key }
+        react: { text: '⏳', key: msg.key }
     });
 
-    if (!text.includes("youtube.com") && !text.includes("youtu.be")) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: '❌ *Por favor, proporciona un enlace válido de YouTube.*'
-        }, { quoted: msg });
-        break;
-    }
-
     try {
-        const apiUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
-        const response = await fetch(apiUrl);
-        const data = await response.json();
+        let selectedQualities = ['720p', '480p', '360p']; // orden por defecto
+        let video = null;
 
-        if (!data.status || !data.data || !data.data.url) {
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: '❌ *No se pudo obtener el video. Verifica el enlace e intenta de nuevo.*'
-            }, { quoted: msg });
-            break;
+        // Paso 1: obtener duración para decidir calidad
+        const tempRes = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=360p&apikey=russellxz`);
+        const tempData = tempRes.data;
+        if (!tempData.status || !tempData.fduration) throw new Error('No se pudo obtener la duración del video');
+
+        // Convertir duración "mm:ss" o "hh:mm:ss" a minutos
+        const durParts = tempData.fduration.split(':').map(Number);
+        const minutes = durParts.length === 3
+            ? durParts[0] * 60 + durParts[1]
+            : durParts[0];
+
+        if (minutes <= 5) selectedQualities = ['720p', '480p', '360p'];
+        else if (minutes <= 10) selectedQualities = ['480p', '360p'];
+        else selectedQualities = ['360p'];
+
+        // Paso 2: intentar descarga por calidad
+        for (let quality of selectedQualities) {
+            try {
+                const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
+                const response = await axios.get(apiUrl);
+                if (response.data?.status && response.data?.data?.url) {
+                    video = {
+                        url: response.data.data.url,
+                        title: response.data.title || 'video',
+                        thumbnail: response.data.thumbnail,
+                        duration: response.data.fduration,
+                        views: response.data.views,
+                        channel: response.data.channel,
+                        quality: response.data.data.quality || quality
+                    };
+                    break;
+                }
+            } catch { continue; }
         }
 
+        if (!video) throw new Error('No se pudo obtener el video en ninguna calidad');
+
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const filename = `${Date.now()}_video.mp4`;
+        const filePath = path.join(tmpDir, filename);
+
+        // Descarga directa sin compresión
+        const response = await axios.get(video.url, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        await streamPipeline(response.data, fs.createWriteStream(filePath));
+
+        const caption = `
+╔══════════════════════╗
+║   ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════════╝
+
+🎬 *Título:* ${video.title}
+⏱️ *Duración:* ${video.duration}
+👁️ *Vistas:* ${video.views}
+👤 *Canal:* ${video.channel}
+📥 *Calidad:* ${video.quality}
+
+© Azura Ultra 2.0 Bot`;
+
         await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: data.data.url },
-            caption: `🎥 *${data.title}*\n\n📅 Publicado: ${data.publish}\n⏳ Duración: ${data.fduration}\n👀 Vistas: ${data.views}\n\n✅ *Video descargado correctamente.*`
+            video: fs.readFileSync(filePath),
+            mimetype: 'video/mp4',
+            fileName: `${video.title}.mp4`,
+            caption
         }, { quoted: msg });
 
-    } catch (error) {
-        console.error("Error al descargar el video:", error);
+        fs.unlinkSync(filePath);
+
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '❌ *Ocurrió un error al procesar tu solicitud. Intenta de nuevo más tarde.*'
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
     }
 
     break;
