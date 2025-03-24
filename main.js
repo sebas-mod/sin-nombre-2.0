@@ -218,6 +218,55 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {
+case 'chatgptfoto':
+case 'iafoto': {
+    const fetch = require('node-fetch');
+
+    if (!args.length) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `⚠️ *Uso incorrecto.*\n📌 Ejemplo: *${global.prefix}chatgptfoto* un atardecer futurista en la ciudad`
+        }, { quoted: msg });
+        return;
+    }
+
+    const prompt = args.join(" ");
+    const apiUrl = `https://api.neoxr.eu/api/dalle?q=${encodeURIComponent(prompt)}&apikey=russellxz`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: '🎨', key: msg.key }
+    });
+
+    try {
+        const res = await fetch(apiUrl);
+        const json = await res.json();
+
+        if (!json.status || !json.data?.url) {
+            throw new Error('No se pudo generar la imagen.');
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: json.data.url },
+            caption: `🧠 *IA Generó esta imagen para:*\n\n${prompt}\n\n✨ *Azura Ultra 2.0 Bot*`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (e) {
+        console.error('Error al generar imagen:', e.message);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${e.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+      
 case 'ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
