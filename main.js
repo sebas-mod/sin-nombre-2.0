@@ -13,25 +13,6 @@ const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`
 //modos
-// Función para subir imágenes a Telegra.ph
-async function uploadImage(buffer) {
-    const fileType = await fromBuffer(buffer);
-    const form = new FormData();
-    form.append('file', buffer, {
-        filename: `upload.${fileType.ext}`,
-        contentType: fileType.mime
-    });
-
-    const res = await axios.post('https://telegra.ph/upload', form, {
-        headers: form.getHeaders()
-    });
-
-    if (!res.data[0]?.src) {
-        throw new Error('No se pudo subir la imagen a Telegra.ph');
-    }
-
-    return 'https://telegra.ph' + res.data[0].src;
-}
 //ookkkkk
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options);
@@ -237,63 +218,7 @@ sock.ev.on('messages.delete', (messages) => {
         await handleDeletedMessage(sock, msg);
     });
 });
-    switch (lowerCommand) {
-
-case 'video2': {
-    const axios = require('axios');
-    const FormData = require('form-data');
-    const { fromBuffer } = require('file-type');
-
-    const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-    const sticker = quoted?.stickerMessage;
-
-    if (!sticker || !sticker.isAnimated) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: '✳️ *Usa este comando respondiendo a un sticker animado.*\n\n📌 Ejemplo: responde al sticker animado con _.video2_ para convertirlo a video.'
-        }, { quoted: msg });
-        break;
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    try {
-        const stream = await downloadContentFromMessage(sticker, 'sticker');
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-
-        const imageUrl = await uploadImage(buffer); // Subimos la imagen
-        const apiUrl = `https://api.neoxr.eu/api/webp2mp4?url=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
-        const response = await axios.get(apiUrl);
-
-        if (!response.data.status || !response.data.result) {
-            throw new Error('No se pudo convertir el sticker a video.');
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: response.data.result },
-            caption: `🎥 *Aquí tienes tu sticker animado convertido en video.*\n\n© Azura Ultra 2.0 Bot`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (error) {
-        console.error('Error en .video2:', error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error al convertir el sticker a video:*\n_${error.message}_`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}
-        
+    switch (lowerCommand) {        
 case 'ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
