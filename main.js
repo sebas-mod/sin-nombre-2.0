@@ -219,62 +219,104 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-case "git": {
-    try {
-        // Verificar que el comando solo lo use el owner
-        if (!isOwner(sender)) {
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Solo el propietario puede usar este comando.*"
-            }, { quoted: msg });
-            return;
-        }
+case 'play10': {
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const streamPipeline = promisify(pipeline);
 
-        // Verificar si se proporcionó un comando
-        if (!args[0]) {
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Debes especificar el nombre de un comando.*\nEjemplo: `.git rest`"
-            }, { quoted: msg });
-            return;
-        }
-
-        // Leer el archivo main.js
-        const mainFilePath = "./main.js";
-        if (!fs.existsSync(mainFilePath)) {
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: "❌ *Error:* No se encontró el archivo de comandos."
-            }, { quoted: msg });
-            return;
-        }
-
-        // Leer el contenido del archivo main.js
-        const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
-
-        // Buscar el comando solicitado
-        const commandName = args[0].toLowerCase();
-        const commandRegex = new RegExp(`case\\s+['"]${commandName}['"]:\\s*([\\s\\S]*?)\\s*break;`, "g");
-        const match = commandRegex.exec(mainFileContent);
-
-        if (!match) {
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: `❌ *Error:* No se encontró el comando *${commandName}* en el archivo main.js.`
-            }, { quoted: msg });
-            return;
-        }
-
-        // Extraer el código del comando
-        const commandCode = `📜 *Código del comando ${commandName}:*\n\n\`\`\`${match[0]}\`\`\``;
-
-        // Enviar el código como mensaje
+    if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: commandCode
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* bad bunny diles`
         }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error en el comando git:", error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Error al obtener el código del comando.*"
-        }, { quoted: msg });
+        break;
     }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const searchUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
+        const searchRes = await axios.get(searchUrl);
+        const videoInfo = searchRes.data;
+
+        if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
+
+        const title = videoInfo.title || 'audio';
+        const videoUrl = `https://www.youtube.com/watch?v=${videoInfo.id}`;
+        const thumbnail = videoInfo.thumbnail;
+        const fduration = videoInfo.fduration || 'N/A';
+        const views = videoInfo.views || 'N/A';
+        const channel = videoInfo.channel || 'Desconocido';
+
+        // Enviamos la info primero
+        const infoMessage = `
+╔══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
+
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${fduration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Autor:* ${channel}
+└ 🔗 *Enlace:* ${videoUrl}
+╰───────────────╯
+
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* *${global.prefix}play1 ${text}*
+┣ 🎵 *Audio:* *${global.prefix}play5 ${text}*
+┣ 🎥 *video:* *${global.prefix}play2 ${text}*
+┗ 🎥 *Video:* *${global.prefix}play6 ${text}*
+
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu música...*
+
+═══════════════════  
+     𖥔 Azura Ultra 2.0 Bot 𖥔
+═══════════════════`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption: infoMessage
+        }, { quoted: msg });
+
+        // Descargamos el audio
+        const apiURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
+        const res = await axios.get(apiURL);
+        const json = res.data;
+
+        if (!json.status || !json.data?.url) {
+            throw new Error("No se pudo obtener el audio");
+        }
+
+        const { data } = json;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: { url: data.url },
+            mimetype: 'audio/mpeg',
+            fileName: data.filename || `${title}.mp3`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
     break;
 }
 
