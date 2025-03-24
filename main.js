@@ -732,119 +732,105 @@ case 'ytmp50': {
 }
         
 case 'ytmp3': {
-  const axios = require('axios');
-  const fs = require('fs');
-  const path = require('path');
-  const { pipeline } = require('stream');
-  const { promisify } = require('util');
-  const ffmpeg = require('fluent-ffmpeg');
-  const streamPipeline = promisify(pipeline);
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+    const streamPipeline = promisify(pipeline);
 
-  const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
+    const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
 
-  if (!text) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ytmp3* La Factoría - Perdoname\n📌 O usa enlace: *${global.prefix}ytmp3* https://music.youtube.com/watch?v=abc123`
-    }, { quoted: msg });
-    break;
-  }
-
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
-
-  try {
-    let videoInfo;
-
-    if (isYoutubeUrl) {
-      // Si es enlace directo
-      const infoURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&apikey=russellxz`;
-      const res = await axios.get(infoURL);
-      videoInfo = res.data;
-    } else {
-      // Si es un título
-      const searchURL = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
-      const res = await axios.get(searchURL);
-      videoInfo = res.data;
+    if (!text || !isYoutubeUrl) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ytmp3* https://music.youtube.com/watch?v=abc123`
+        }, { quoted: msg });
+        break;
     }
 
-    if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
-
-    const title = videoInfo.title || 'audio';
-    const url = videoInfo.data.url;
-    const thumbnail = videoInfo.thumbnail;
-    const duration = videoInfo.fduration || '0:00';
-    const views = videoInfo.views || 'N/A';
-    const author = videoInfo.channel || 'Desconocido';
-
-    const captionPreview = `
-╔══════════════════╗
-║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════╝
-
-🎵 *Título:* ${title}
-⏱️ *Duración:* ${duration}
-👁️ *Vistas:* ${views}
-👤 *Canal:* ${author}
-📥 *Formato:* MP3
-
-⏳ *Procesando tu música...*
-═════════════════════`;
-
     await sock.sendMessage(msg.key.remoteJid, {
-      image: { url: thumbnail },
-      caption: captionPreview
-    }, { quoted: msg });
-
-    const tmpDir = path.join(__dirname, 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-    const rawPath = path.join(tmpDir, `${Date.now()}_ytvideo.mp4`);
-    const mp3Path = path.join(tmpDir, `${Date.now()}_final.mp3`);
-
-    const res = await axios.get(url, {
-      responseType: 'stream',
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+        react: { text: '⏳', key: msg.key }
     });
 
-    await streamPipeline(res.data, fs.createWriteStream(rawPath));
+    try {
+        const qualities = ['720p', '480p', '360p'];
+        let video = null;
 
-    await new Promise((resolve, reject) => {
-      ffmpeg(rawPath)
-        .audioCodec('libmp3lame')
-        .format('mp3')
-        .audioBitrate(128)
-        .on('end', resolve)
-        .on('error', reject)
-        .save(mp3Path);
-    });
+        for (let quality of qualities) {
+            try {
+                const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
+                const response = await axios.get(apiUrl);
+                if (response.data?.status && response.data?.data?.url) {
+                    video = {
+                        url: response.data.data.url,
+                        title: response.data.title || 'audio',
+                        thumbnail: response.data.thumbnail,
+                        duration: response.data.fduration,
+                        views: response.data.views,
+                        channel: response.data.channel
+                    };
+                    break;
+                }
+            } catch { continue; }
+        }
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      audio: fs.readFileSync(mp3Path),
-      mimetype: 'audio/mpeg',
-      fileName: `${title}.mp3`
-    }, { quoted: msg });
+        if (!video) throw new Error('No se pudo obtener el video');
 
-    fs.unlinkSync(rawPath);
-    fs.unlinkSync(mp3Path);
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '✅', key: msg.key }
-    });
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
+        const audioPath = path.join(tmpDir, `${Date.now()}_final.mp3`);
 
-  } catch (err) {
-    console.error(err);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${err.message}`
-    }, { quoted: msg });
+        const res = await axios.get(video.url, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '❌', key: msg.key }
-    });
-  }
+        await streamPipeline(res.data, fs.createWriteStream(rawPath));
 
-  break;
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioCodec('libmp3lame')
+                .format('mp3')
+                .outputOptions(['-b:a 128k'])
+                .on('end', resolve)
+                .on('error', reject)
+                .save(audioPath);
+        });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: video.thumbnail },
+            caption: `🎧 *Título:* ${video.title}\n🕒 *Duración:* ${video.duration}\n👁️ *Vistas:* ${video.views}\n👤 *Canal:* ${video.channel}\n\n📥 *Audio listo, descargando...*`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: fs.readFileSync(audioPath),
+            mimetype: 'audio/mpeg',
+            fileName: `${video.title}.mp3`
+        }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(audioPath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
 }
-
 
 case 'play2': {
     const axios = require('axios');
