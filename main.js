@@ -3161,6 +3161,9 @@ case 'menu': {
 ⎔ ${global.prefix}ig → link  
 ⎔ ${global.prefix}spotify → link
 ⎔ ${global.prefix}mediafire → link
+⎔ ${global.prefix}Tiktoksearch → título
+⎔ ${global.prefix}Yts → título
+⎔ ${global.prefix}apk → título
 
 ╭──────────────╮  
 │ ✦ 𝙊𝙏𝙍𝙊𝙎 𝘾𝙊𝙈𝘼𝙉𝘿𝙊𝙎 ✦ │  
@@ -3190,6 +3193,9 @@ case 'menu': {
 ⎔ ${global.prefix}listpacks
 ⎔ ${global.prefix}sendpack
 ⎔ ${global.prefix}tiktokstalk
+⎔ ${global.prefix}dalle
+⎔ ${global.prefix}visión2
+⎔ ${global.prefix}chatgpt o IA
 
 ╭─────────────────╮  
  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟚.𝟘 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. 
