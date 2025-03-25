@@ -232,16 +232,23 @@ case 'whatmusic': {
 
     const m = msg;
     const q = m.quoted ? m.quoted : m;
-    const mime = (q.msg || q).mimetype || '';
+
+    const mime = q?.message?.audioMessage
+        ? 'audio/ogg'
+        : q?.message?.videoMessage
+        ? 'video/mp4'
+        : (q.msg || q).mimetype || '';
 
     if (!/audio|video/.test(mime)) {
         await sock.sendMessage(m.key.remoteJid, {
-            text: '⚠️ *Responde a un audio o video para identificar la música.*'
+            text: '⚠️ *Responde a un audio, nota de voz o video para identificar la música.*'
         }, { quoted: m });
         break;
     }
 
-    if ((q.msg || q).seconds > 20) {
+    // Manejo seguro de duración
+    const duration = q.msg?.seconds || q.message?.audioMessage?.seconds || q.message?.videoMessage?.seconds || 0;
+    if (duration > 20) {
         await sock.sendMessage(m.key.remoteJid, {
             text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*'
         }, { quoted: m });
@@ -253,7 +260,9 @@ case 'whatmusic': {
     });
 
     const media = await q.download();
-    const ext = mime.split('/')[1];
+    const ext = mime.split('/')[1] || 'mp3';
+
+    if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
     const tempFilePath = `./tmp/${m.sender}.${ext}`;
     fs.writeFileSync(tempFilePath, media);
 
@@ -281,8 +290,7 @@ case 'whatmusic': {
 ├ 🌍 *Género:* ${genres ? genres.map(v => v.name).join(', ') : 'Desconocido'}
 ├ 📅 *Lanzamiento:* ${release_date || 'Desconocido'}
 └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
-╰───────────────╯
-        `.trim();
+╰───────────────╯`.trim();
 
         if (!video) {
             await sock.sendMessage(m.key.remoteJid, {
@@ -291,11 +299,7 @@ case 'whatmusic': {
         } else {
             await sock.sendMessage(m.key.remoteJid, {
                 image: { url: video.thumbnail },
-                caption: infoMessage,
-                footer: "EliasarYT",
-                viewOnce: false,
-                headerType: 4,
-                mentions: [m.sender]
+                caption: infoMessage
             }, { quoted: m });
         }
     } catch (error) {
@@ -303,8 +307,9 @@ case 'whatmusic': {
             text: `*⚠️ Error al identificar la música:* ${error.message}`
         }, { quoted: m });
     } finally {
-        fs.unlinkSync(tempFilePath);
+        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
     }
+
     break;
 }
         
