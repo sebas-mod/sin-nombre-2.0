@@ -222,10 +222,10 @@ sock.ev.on('messages.delete', (messages) => {
 case 'whatmusic': {
   const acrcloud = require('acrcloud');
   const fs = require('fs');
-  const yts = require('yt-search');
   const path = require('path');
   const { promisify } = require('util');
   const { pipeline } = require('stream');
+  const yts = require('yt-search');
   const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
   const streamPipeline = promisify(pipeline);
@@ -238,21 +238,15 @@ case 'whatmusic': {
 
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   if (!quoted) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: '⚠️ *Responde a un audio o video para identificar la música.*'
-    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *Responde a un audio o video para identificar la música.*' }, { quoted: msg });
     break;
   }
 
   let mediaType;
-  if (quoted.audioMessage) {
-    mediaType = 'audio';
-  } else if (quoted.videoMessage) {
-    mediaType = 'video';
-  } else {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: '⚠️ *Responde a un audio o video para identificar la música.*'
-    }, { quoted: msg });
+  if (quoted.audioMessage) mediaType = 'audio';
+  else if (quoted.videoMessage) mediaType = 'video';
+  else {
+    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *Responde a un audio o video para identificar la música.*' }, { quoted: msg });
     break;
   }
 
@@ -260,19 +254,14 @@ case 'whatmusic': {
   const mime = mediaMsg.mimetype || '';
   const seconds = mediaMsg.seconds || 0;
   if (seconds > 20) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*'
-    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*' }, { quoted: msg });
     break;
   }
 
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
+  await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
 
   const tmpDir = path.join(__dirname, 'tmp');
   if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
   const ext = mime.split('/')[1] || (mediaType === 'audio' ? 'mp3' : 'mp4');
   const tempFilePath = path.join(tmpDir, `${msg.sender}.${ext}`);
 
@@ -280,17 +269,15 @@ case 'whatmusic': {
     const stream = await downloadContentFromMessage(mediaMsg, mediaType);
     const fileStream = fs.createWriteStream(tempFilePath);
     await streamPipeline(stream, fileStream);
-
-    const res = await acr.identify(fs.readFileSync(tempFilePath));
+    const fileBuffer = fs.readFileSync(tempFilePath);
+    if (!fileBuffer || fileBuffer.length === 0) throw new Error('El archivo descargado está vacío.');
+    const res = await acr.identify(fileBuffer);
     const { code, msg: statusMsg } = res.status;
     if (code !== 0) throw new Error(statusMsg);
-
     const musicData = res.metadata.music[0];
     const { title, artists, album, genres, release_date } = musicData;
-
     const search = await yts(title);
     const video = search.videos.length > 0 ? search.videos[0] : null;
-
     const infoMessage = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
@@ -299,18 +286,15 @@ case 'whatmusic': {
 🎶 *Música Identificada:*  
 ╭───────────────╮  
 ├ 📌 *Título:* ${title}
-├ 👨‍🎤 *Artista:* ${artists?.map(v => v.name).join(', ') || 'Desconocido'}
+├ 👨‍🎤 *Artista:* ${artists && artists.length ? artists.map(v => v.name).join(', ') : 'Desconocido'}
 ├ 💿 *Álbum:* ${album?.name || 'Desconocido'}
-├ 🌍 *Género:* ${genres?.map(v => v.name).join(', ') || 'Desconocido'}
+├ 🌍 *Género:* ${genres && genres.length ? genres.map(v => v.name).join(', ') : 'Desconocido'}
 ├ 📅 *Lanzamiento:* ${release_date || 'Desconocido'}
 └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
 ╰───────────────╯
     `.trim();
-
     if (!video) {
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: '⚠️ *No se encontró ningún video relacionado en YouTube.*'
-      }, { quoted: msg });
+      await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *No se encontró ningún video relacionado en YouTube.*' }, { quoted: msg });
     } else {
       await sock.sendMessage(msg.key.remoteJid, {
         image: { url: video.thumbnail },
@@ -322,15 +306,12 @@ case 'whatmusic': {
       }, { quoted: msg });
     }
   } catch (error) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `*⚠️ Error al identificar la música:* ${error.message}`
-    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, { text: `*⚠️ Error al identificar la música:* ${error.message}` }, { quoted: msg });
   } finally {
     if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
   break;
-      }
-        
+}       
 case 'linia': {
     const fs = require('fs');
     const path = require('path');
