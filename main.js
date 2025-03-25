@@ -219,7 +219,96 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
+case 'quemusic': {
+    const acrcloud = require('acrcloud');
+    const fs = require('fs');
+    const yts = require('yt-search');
 
+    const acr = new acrcloud({
+        host: 'identify-eu-west-1.acrcloud.com',
+        access_key: 'c33c767d683f78bd17d4bd4991955d81',
+        access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
+    });
+
+    const m = msg;
+    const q = m.quoted ? m.quoted : m;
+    const mime = (q.msg || q).mimetype || '';
+
+    if (!/audio|video/.test(mime)) {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: '⚠️ *Responde a un audio o video para identificar la música.*'
+        }, { quoted: m });
+        break;
+    }
+
+    if ((q.msg || q).seconds > 20) {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*'
+        }, { quoted: m });
+        break;
+    }
+
+    await sock.sendMessage(m.key.remoteJid, {
+        react: { text: '⏳', key: m.key }
+    });
+
+    const media = await q.download();
+    const ext = mime.split('/')[1];
+    const tempFilePath = `./tmp/${m.sender}.${ext}`;
+    fs.writeFileSync(tempFilePath, media);
+
+    try {
+        const res = await acr.identify(fs.readFileSync(tempFilePath));
+        const { code, msg: statusMsg } = res.status;
+        if (code !== 0) throw new Error(statusMsg);
+
+        const musicData = res.metadata.music[0];
+        const { title, artists, album, genres, release_date } = musicData;
+
+        const search = await yts(title);
+        const video = search.videos.length > 0 ? search.videos[0] : null;
+
+        const infoMessage = `
+╔══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
+
+🎶 *Música Identificada:*  
+╭───────────────╮  
+├ 📌 *Título:* ${title}
+├ 👨‍🎤 *Artista:* ${artists ? artists.map(v => v.name).join(', ') : 'Desconocido'}
+├ 💿 *Álbum:* ${album?.name || 'Desconocido'}
+├ 🌍 *Género:* ${genres ? genres.map(v => v.name).join(', ') : 'Desconocido'}
+├ 📅 *Lanzamiento:* ${release_date || 'Desconocido'}
+└ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
+╰───────────────╯
+        `.trim();
+
+        if (!video) {
+            await sock.sendMessage(m.key.remoteJid, {
+                text: '⚠️ *No se encontró ningún video relacionado en YouTube.*'
+            }, { quoted: m });
+        } else {
+            await sock.sendMessage(m.key.remoteJid, {
+                image: { url: video.thumbnail },
+                caption: infoMessage,
+                footer: "EliasarYT",
+                viewOnce: false,
+                headerType: 4,
+                mentions: [m.sender]
+            }, { quoted: m });
+        }
+    } catch (error) {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: `*⚠️ Error al identificar la música:* ${error.message}`
+        }, { quoted: m });
+    } finally {
+        fs.unlinkSync(tempFilePath);
+    }
+    break;
+}
+
+        
 case 'linia': {
     const fs = require('fs');
     const path = require('path');
