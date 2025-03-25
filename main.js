@@ -13,7 +13,6 @@ const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`
 //modos
-const acrcloud = require('acrcloud');
 //ookkkkk
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options);
