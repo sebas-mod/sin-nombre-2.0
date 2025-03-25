@@ -517,7 +517,11 @@ case 'ytmp4': {
     const path = require('path');
     const { pipeline } = require('stream');
     const { promisify } = require('util');
+    const ffmpeg = require('fluent-ffmpeg');
+    const ffmpegPath = require('ffmpeg-static');
     const streamPipeline = promisify(pipeline);
+
+    ffmpeg.setFfmpegPath(ffmpegPath);
 
     if (!text || (!text.includes('youtube.com') && !text.includes('youtu.be'))) {
         await sock.sendMessage(msg.key.remoteJid, {
@@ -532,65 +536,90 @@ case 'ytmp4': {
 
     try {
         const qualities = ['720p', '480p', '360p'];
-        let video = null;
+        let videoData = null;
 
-        // Intentamos con cada calidad
         for (let quality of qualities) {
             try {
                 const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
                 const response = await axios.get(apiUrl);
                 if (response.data?.status && response.data?.data?.url) {
-                    video = {
+                    videoData = {
                         url: response.data.data.url,
                         title: response.data.title || 'video',
                         thumbnail: response.data.thumbnail,
                         duration: response.data.fduration,
                         views: response.data.views,
                         channel: response.data.channel,
-                        quality: response.data.data.quality || quality
+                        quality: response.data.data.quality || quality,
+                        size: response.data.data.size || 'Desconocido',
+                        publish: response.data.publish || 'Desconocido',
+                        id: response.data.id || ''
                     };
                     break;
                 }
             } catch { continue; }
         }
 
-        if (!video) throw new Error('No se pudo obtener el video en ninguna calidad');
+        if (!videoData) throw new Error('No se pudo obtener el video en ninguna calidad');
 
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const filename = `${Date.now()}_video.mp4`;
-        const filePath = path.join(tmpDir, filename);
 
-        // Descarga directa sin compresión
-        const response = await axios.get(video.url, {
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_final.mp4`);
+
+        // Descargar video original
+        const response = await axios.get(videoData.url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        await streamPipeline(response.data, fs.createWriteStream(filePath));
+        await streamPipeline(response.data, fs.createWriteStream(rawPath));
 
-        // Caption bonito
+        // Convertir con ffmpeg para asegurar compatibilidad con WhatsApp
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .outputOptions([
+                    '-c:v libx264',
+                    '-preset fast',
+                    '-crf 28',
+                    '-c:a aac',
+                    '-b:a 128k',
+                    '-movflags +faststart'
+                ])
+                .save(finalPath)
+                .on('end', resolve)
+                .on('error', reject);
+        });
+
         const caption = `
-╭───⊷ *AZURA ULTRA 2.0 BOT* ⊶───╮
+╔═════════════════╗
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚═════════════════╝
 
-🎬 *Título:* ${video.title}
-⏱️ *Duración:* ${video.duration}
-👁️ *Vistas:* ${video.views}
-📺 *Canal:* ${video.channel}
-📥 *Calidad:* ${video.quality}
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${videoData.title}
+├ ⏱️ *Duración:* ${videoData.duration}
+├ 👁️ *Vistas:* ${videoData.views}
+├ 👤 *Canal:* ${videoData.channel}
+├ 🗓️ *Publicado:* ${videoData.publish}
+├ 📦 *Tamaño:* ${videoData.size}
+├ 📹 *Calidad:* ${videoData.quality}
+└ 🔗 *Link:* https://youtu.be/${videoData.id}
+╰───────────────╯
 
-╰───────────✦─────────╯
+⏳ *Procesado por Azura Ultra 2.0*`;
 
-© Azura Ultra 2.0 Bot`;
-
-        // Envío como documento de video para evitar errores de reproducción
         await sock.sendMessage(msg.key.remoteJid, {
-            video: fs.readFileSync(filePath),
+            video: fs.readFileSync(finalPath),
             mimetype: 'video/mp4',
-            fileName: `${video.title}.mp4`,
+            fileName: `${videoData.title}.mp4`,
             caption
         }, { quoted: msg });
 
-        fs.unlinkSync(filePath);
+        // Limpieza
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
