@@ -219,17 +219,18 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-case 'quemusic': {
+case 'whatmusic': {
     const acrcloud = require('acrcloud');
     const fs = require('fs');
     const yts = require('yt-search');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
     const acr = new acrcloud({
         host: 'identify-eu-west-1.acrcloud.com',
         access_key: 'c33c767d683f78bd17d4bd4991955d81',
         access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
     });
 
-    // Usar la lógica de stickerz para obtener el mensaje citado
+    // Usar la lógica de stickers para obtener el mensaje citado
     let quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     if (!quoted) {
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -239,31 +240,41 @@ case 'quemusic': {
     }
 
     // Determinar el tipo de contenido y extraer mimetype y duración
-    let mediaObj;
+    let mtype;
     if (quoted.audioMessage) {
-        mediaObj = quoted.audioMessage;
+        mtype = "audio";
     } else if (quoted.videoMessage) {
-        mediaObj = quoted.videoMessage;
-    } else if (quoted.documentMessage && quoted.documentMessage.mimetype && quoted.documentMessage.mimetype.startsWith('audio')) {
-        mediaObj = quoted.documentMessage;
+        mtype = "video";
+    } else if (quoted.documentMessage && quoted.documentMessage.mimetype && quoted.documentMessage.mimetype.startsWith("audio")) {
+        mtype = "document";
     } else {
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "⚠️ *Responde a un audio, nota de voz o video para identificar la música.*" 
         }, { quoted: msg });
         return;
     }
-
+    const mediaObj = quoted[`${mtype}Message`];
     const mime = mediaObj.mimetype || '';
     const seconds = mediaObj.seconds || 0;
     if (seconds > 20) {
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ El archivo que cargas es demasiado largo. Te sugerimos recortarlo a 10-20 segundos para identificarlo correctamente." 
+            text: "⚠️ El archivo que cargas es demasiado largo. Te sugerimos recortarlo a 10-20 segundos." 
         }, { quoted: msg });
         return;
     }
 
-    // Descargar el multimedia usando el mensaje citado
-    const buffer = await sock.downloadMediaMessage({ message: quoted });
+    // Reacción mientras se procesa
+    await sock.sendMessage(msg.key.remoteJid, { 
+        react: { text: "⏳", key: msg.key } 
+    });
+
+    // Descargar el contenido usando downloadContentFromMessage
+    let mediaStream = await downloadContentFromMessage(quoted[`${mtype}Message`], mtype);
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of mediaStream) {
+        buffer = Buffer.concat([buffer, chunk]);
+    }
+
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
     const ext = mime.split('/')[1] || (mime.startsWith('audio') ? 'mp3' : 'mp4');
     const tempFilePath = `./tmp/${msg.sender}.${ext}`;
@@ -309,7 +320,6 @@ case 'quemusic': {
             headerType: 4,
             mentions: [msg.sender]
         }, { quoted: msg });
-
     } catch (error) {
         await sock.sendMessage(msg.key.remoteJid, { 
             text: `*⚠️ Error al identificar la música:* ${error.message}` 
