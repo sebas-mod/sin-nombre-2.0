@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-case 'quemusic': {
+case 'whatmusic': {
     const acrcloud = require('acrcloud');
     const fs = require('fs');
     const yts = require('yt-search');
@@ -230,33 +230,61 @@ case 'quemusic': {
     });
 
     const m = msg;
-    // Si se responde o cita, usamos msg.quoted; si no, el mensaje original
-    const q = m.quoted ? m.quoted : m;
-    const mime = (q.msg || q).mimetype || '';
+    // Usamos el mensaje citado si existe; de lo contrario, el mensaje actual
+    const quoted = m.quoted ? m.quoted : m;
 
-    if (/audio|video/.test(mime)) {
-        if ((q.msg || q).seconds > 20) {
-            await sock.sendMessage(m.key.remoteJid, {
-                text: '⚠️ El archivo que cargas es demasiado grande. Te sugerimos que lo recortes a 10-20 segundos para identificarlo correctamente.'
-            }, { quoted: m });
-            break;
+    // Extraer mimetype y duración según el tipo de mensaje
+    let mime = '';
+    let seconds = 0;
+    if (quoted.message?.audioMessage) {
+        mime = quoted.message.audioMessage.mimetype;
+        seconds = quoted.message.audioMessage.seconds || 0;
+    } else if (quoted.message?.videoMessage) {
+        mime = quoted.message.videoMessage.mimetype;
+        seconds = quoted.message.videoMessage.seconds || 0;
+    } else if (quoted.message?.documentMessage) {
+        // Si es documento y es de audio
+        if (quoted.message.documentMessage.mimetype.startsWith('audio')) {
+            mime = quoted.message.documentMessage.mimetype;
+            seconds = quoted.message.documentMessage.seconds || 0;
         }
+    }
 
-        const media = await q.download();
-        const ext = mime.split('/')[1];
-        const tempFilePath = `./tmp/${m.sender}.${ext}`;
-        fs.writeFileSync(tempFilePath, media);
+    if (!mime) {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: '*⚠️ Responde a un audio, nota de voz o video para identificar la música.*'
+        }, { quoted: m });
+        break;
+    }
 
-        try {
-            const res = await acr.identify(fs.readFileSync(tempFilePath));
-            const { code, msg: statusMsg } = res.status;
-            if (code !== 0) throw statusMsg;
+    if (seconds > 20) {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: '⚠️ El archivo es demasiado largo. Te sugerimos que lo recortes a 10-20 segundos para identificarlo correctamente.'
+        }, { quoted: m });
+        break;
+    }
 
-            const { title, artists, album, genres, release_date } = res.metadata.music[0];
-            const search = await yts(title);
-            const video = search.videos.length > 0 ? search.videos[0] : null;
+    await sock.sendMessage(m.key.remoteJid, {
+        react: { text: '⏳', key: m.key }
+    });
 
-            const txt = `
+    // Descargar el multimedia usando el mensaje (citado o directo)
+    const buffer = await sock.downloadMediaMessage(quoted);
+    if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
+    const ext = mime.split('/')[1] || (mime.startsWith('audio') ? 'mp3' : 'mp4');
+    const tempFilePath = `./tmp/${m.sender}.${ext}`;
+    fs.writeFileSync(tempFilePath, buffer);
+
+    try {
+        const res = await acr.identify(fs.readFileSync(tempFilePath));
+        const { code, msg: statusMsg } = res.status;
+        if (code !== 0) throw new Error(statusMsg);
+
+        const { title, artists, album, genres, release_date } = res.metadata.music[0];
+        const search = await yts(title);
+        const video = search.videos.length > 0 ? search.videos[0] : null;
+
+        const txt = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
 ╚══════════════════╝
@@ -264,41 +292,35 @@ case 'quemusic': {
 🎶 *Música Identificada:*
 ╭───────────────╮
 ├ 📌 *Título:* ${title}
-├ 👨‍🎤 *Artista:* ${artists !== undefined ? artists.map(v => v.name).join(', ') : 'No encontrado'}
-├ 💾 *Álbum:* ${album.name || 'No encontrado'}
-├ 🌐 *Género:* ${genres !== undefined ? genres.map(v => v.name).join(', ') : 'No encontrado'}
+├ 👨‍🎤 *Artista:* ${artists && artists.length ? artists.map(v => v.name).join(', ') : 'No encontrado'}
+├ 💾 *Álbum:* ${album?.name || 'No encontrado'}
+├ 🌐 *Género:* ${genres && genres.length ? genres.map(v => v.name).join(', ') : 'No encontrado'}
 ├ 📆 *Fecha de lanzamiento:* ${release_date || 'No encontrado'}
-├ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
+└ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
 ╰───────────────╯
-            `.trim();
+        `.trim();
 
-            if (!video) {
-                await sock.sendMessage(m.key.remoteJid, {
-                    text: '⚠️ No se encontró ningún video relacionado en YouTube.'
-                }, { quoted: m });
-                break;
-            }
-
+        if (!video) {
             await sock.sendMessage(m.key.remoteJid, {
-                image: { url: video.thumbnail },
-                caption: txt,
-                footer: "EliasarYT",
-                viewOnce: false,
-                headerType: 4,
-                mentions: [m.sender]
+                text: '⚠️ No se encontró ningún video relacionado en YouTube.'
             }, { quoted: m });
-
-        } catch (error) {
-            await sock.sendMessage(m.key.remoteJid, {
-                text: `*⚠️ Error al identificar la música:* ${error}`
-            }, { quoted: m });
-        } finally {
-            fs.unlinkSync(tempFilePath);
+            break;
         }
-    } else {
+
         await sock.sendMessage(m.key.remoteJid, {
-            text: '*⚠️ Responde a un audio o video para identificar la música.*'
+            image: { url: video.thumbnail },
+            caption: txt,
+            footer: "EliasarYT",
+            viewOnce: false,
+            headerType: 4,
+            mentions: [m.sender]
         }, { quoted: m });
+    } catch (error) {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: `*⚠️ Error al identificar la música:* ${error.message}`
+        }, { quoted: m });
+    } finally {
+        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
     }
     break;
 }
