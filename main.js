@@ -327,7 +327,7 @@ case 'whatmusic': {
   const streamPipeline = promisify(pipeline);
 
   const acr = new acrcloud({
-    host: 'identify-eu-west-1.acrcloud.com',
+    host: 'https://identify-eu-west-1.acrcloud.com/v1/identify',
     access_key: 'SBYqzwMf5Ei31gO6',
     access_secret: 'GYF0mQlQkm628LPzZHW7DyOfYXNfprC7',
   });
