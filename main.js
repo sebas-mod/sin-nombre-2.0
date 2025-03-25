@@ -511,7 +511,6 @@ case 'whatmusic': {
     break;
 }
 
-
 case 'ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
@@ -532,36 +531,44 @@ case 'ytmp4': {
     });
 
     try {
-        const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&apikey=russellxz`;
-        const { data } = await axios.get(apiUrl);
+        const qualities = ['720p', '480p', '360p'];
+        let video = null;
 
-        if (!data?.status || !data?.data?.url) {
-            throw new Error('No se pudo obtener el video');
+        // Intentamos con cada calidad
+        for (let quality of qualities) {
+            try {
+                const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
+                const response = await axios.get(apiUrl);
+                if (response.data?.status && response.data?.data?.url) {
+                    video = {
+                        url: response.data.data.url,
+                        title: response.data.title || 'video',
+                        thumbnail: response.data.thumbnail,
+                        duration: response.data.fduration,
+                        views: response.data.views,
+                        channel: response.data.channel,
+                        quality: response.data.data.quality || quality
+                    };
+                    break;
+                }
+            } catch { continue; }
         }
 
-        const video = {
-            url: data.data.url,
-            title: data.title || 'video',
-            thumbnail: data.thumbnail,
-            duration: data.fduration,
-            views: data.views,
-            channel: data.channel,
-            quality: data.data.quality || 'Desconocida'
-        };
+        if (!video) throw new Error('No se pudo obtener el video en ninguna calidad');
 
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const filename = `${Date.now()}_azura_video.mp4`;
+        const filename = `${Date.now()}_video.mp4`;
         const filePath = path.join(tmpDir, filename);
 
-        // Descarga del video sin compresión
+        // Descarga directa sin compresión
         const response = await axios.get(video.url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
         await streamPipeline(response.data, fs.createWriteStream(filePath));
 
-        // Estética pro
+        // Caption bonito
         const caption = `
 ╭───⊷ *AZURA ULTRA 2.0 BOT* ⊶───╮
 
@@ -571,16 +578,16 @@ case 'ytmp4': {
 📺 *Canal:* ${video.channel}
 📥 *Calidad:* ${video.quality}
 
-╰─────────────✦────────────╯
+╰───────────✦─────────╯
 
 © Azura Ultra 2.0 Bot`;
 
-        // Envío como documento de tipo video, para garantizar reproducción en WhatsApp
+        // Envío como documento de video para evitar errores de reproducción
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
             fileName: `${video.title}.mp4`,
-            caption: caption,
+            caption
         }, { quoted: msg });
 
         fs.unlinkSync(filePath);
@@ -600,7 +607,8 @@ case 'ytmp4': {
     }
 
     break;
-}      
+}
+
       
       case 'tiktoksearch': {
     const axios = require('axios');
