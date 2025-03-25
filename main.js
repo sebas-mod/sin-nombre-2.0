@@ -231,53 +231,63 @@ case 'whatmusic': {
     });
 
     const m = msg;
-    // Si se responde/cita, usa msg.quoted; si no, usa msg directamente
-    const quotedMsg = m.quoted ? m.quoted : m;
-    
-    // Extraer información del mensaje multimedia
-    let mime, duration;
-    if (quotedMsg.message?.audioMessage) {
-        mime = quotedMsg.message.audioMessage.mimetype || 'audio/ogg';
-        duration = quotedMsg.message.audioMessage.seconds || 0;
-    } else if (quotedMsg.message?.videoMessage) {
-        mime = quotedMsg.message.videoMessage.mimetype || 'video/mp4';
-        duration = quotedMsg.message.videoMessage.seconds || 0;
-    } else {
+    // Si se responde, usamos el mensaje citado; de lo contrario, el propio.
+    const quoted = m.quoted ? m.quoted : m;
+    const messageContent = quoted.message;
+
+    // Buscar la propiedad correcta: audioMessage, videoMessage o documentMessage con audio
+    let mediaObj = null;
+    if (messageContent.audioMessage) {
+        mediaObj = messageContent.audioMessage;
+    } else if (messageContent.videoMessage) {
+        mediaObj = messageContent.videoMessage;
+    } else if (
+        messageContent.documentMessage &&
+        messageContent.documentMessage.mimetype &&
+        messageContent.documentMessage.mimetype.startsWith('audio')
+    ) {
+        mediaObj = messageContent.documentMessage;
+    }
+
+    if (!mediaObj) {
         await sock.sendMessage(m.key.remoteJid, {
             text: '⚠️ *Responde a un audio, nota de voz o video para identificar la música.*'
         }, { quoted: m });
         break;
     }
-    
+
+    const mime = mediaObj.mimetype;
+    const duration = mediaObj.seconds || 0;
+
     if (duration > 20) {
         await sock.sendMessage(m.key.remoteJid, {
-            text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*'
+            text: '⚠️ *El archivo es demasiado largo. Usa uno de máximo 20 segundos.*'
         }, { quoted: m });
         break;
     }
-    
+
     await sock.sendMessage(m.key.remoteJid, {
         react: { text: '⏳', key: m.key }
     });
-    
-    // Descargar el mensaje multimedia
-    const buffer = await sock.downloadMediaMessage(quotedMsg);
+
+    // Descarga el multimedia usando el mensaje citado
+    const buffer = await sock.downloadMediaMessage(quoted);
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
     const ext = mime.split('/')[1] || (mime.startsWith('audio') ? 'mp3' : 'mp4');
     const tempFilePath = `./tmp/${m.sender}.${ext}`;
     fs.writeFileSync(tempFilePath, buffer);
-    
+
     try {
         const res = await acr.identify(fs.readFileSync(tempFilePath));
         const { code, msg: statusMsg } = res.status;
         if (code !== 0) throw new Error(statusMsg);
-    
+
         const musicData = res.metadata.music[0];
         const { title, artists, album, genres, release_date } = musicData;
-    
+
         const search = await yts(title);
         const video = search.videos.length > 0 ? search.videos[0] : null;
-    
+
         const infoMessage = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
@@ -293,7 +303,7 @@ case 'whatmusic': {
 └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
 ╰───────────────╯
         `.trim();
-    
+
         if (!video) {
             await sock.sendMessage(m.key.remoteJid, {
                 text: '⚠️ *No se encontró ningún video relacionado en YouTube.*'
