@@ -385,7 +385,7 @@ case 'play10': {
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* La Factoría - Perdoname`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play10* La Factoría - Perdoname`
         }, { quoted: msg });
         break;
     }
@@ -577,10 +577,7 @@ case 'ytmp4': {
     const { pipeline } = require('stream');
     const { promisify } = require('util');
     const ffmpeg = require('fluent-ffmpeg');
-    const ffmpegPath = require('ffmpeg-static');
     const streamPipeline = promisify(pipeline);
-
-    ffmpeg.setFfmpegPath(ffmpegPath);
 
     if (!text || (!text.includes('youtube.com') && !text.includes('youtu.be'))) {
         await sock.sendMessage(msg.key.remoteJid, {
@@ -627,14 +624,12 @@ case 'ytmp4': {
         const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
         const finalPath = path.join(tmpDir, `${Date.now()}_final.mp4`);
 
-        // Descargar video original
-        const response = await axios.get(videoData.url, {
+        const res = await axios.get(videoData.url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        await streamPipeline(response.data, fs.createWriteStream(rawPath));
+        await streamPipeline(res.data, fs.createWriteStream(rawPath));
 
-        // Convertir con ffmpeg para asegurar compatibilidad con WhatsApp
         await new Promise((resolve, reject) => {
             ffmpeg(rawPath)
                 .outputOptions([
@@ -645,9 +640,10 @@ case 'ytmp4': {
                     '-b:a 128k',
                     '-movflags +faststart'
                 ])
-                .save(finalPath)
+                .format('mp4')
                 .on('end', resolve)
-                .on('error', reject);
+                .on('error', reject)
+                .save(finalPath);
         });
 
         const caption = `
@@ -676,7 +672,6 @@ case 'ytmp4': {
             caption
         }, { quoted: msg });
 
-        // Limpieza
         fs.unlinkSync(rawPath);
         fs.unlinkSync(finalPath);
 
@@ -696,7 +691,6 @@ case 'ytmp4': {
 
     break;
 }
-
       
       case 'tiktoksearch': {
     const axios = require('axios');
