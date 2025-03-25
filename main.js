@@ -238,7 +238,7 @@ case 'linia': {
         break;
     }
 
-    const filePath = path.join(__dirname, 'index.js'); // Cambia esto si usas otro archivo de comandos
+    const filePath = path.join(__dirname, 'main.js'); // Aquí ahora apunta a main.js
 
     try {
         const lines = fs.readFileSync(filePath, 'utf-8').split('\n');
@@ -247,7 +247,7 @@ case 'linia': {
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].includes(`case '${text}'`)) {
                 await sock.sendMessage(msg.key.remoteJid, {
-                    text: `✅ El comando *${text}* está en la línea *${i + 1}* del archivo *${path.basename(filePath)}*.`
+                    text: `✅ El comando *${text}* está en la línea *${i + 1}* del archivo *main.js*.`
                 }, { quoted: msg });
                 found = true;
                 break;
@@ -256,7 +256,7 @@ case 'linia': {
 
         if (!found) {
             await sock.sendMessage(msg.key.remoteJid, {
-                text: `❌ No se encontró el comando *${text}* en el archivo *${path.basename(filePath)}*.`
+                text: `❌ No se encontró el comando *${text}* en el archivo *main.js*.`
             }, { quoted: msg });
         }
 
