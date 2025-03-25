@@ -222,15 +222,17 @@ sock.ev.on('messages.delete', (messages) => {
 case 'ff': {
     const fs = require('fs');
     const path = require('path');
-    const axios = require('axios');
     const ffmpeg = require('fluent-ffmpeg');
-    const { pipeline } = require('stream');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
     const { promisify } = require('util');
+    const { pipeline } = require('stream');
     const streamPipeline = promisify(pipeline);
 
-    if (!msg.quoted || !msg.quoted.message?.videoMessage) {
+    // Validación: el usuario debe citar un video
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quotedMsg || !quotedMsg.videoMessage) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Responde a un video para optimizarlo para WhatsApp.`
+            text: `✳️ Responde a un *video* para optimizarlo para WhatsApp.`
         }, { quoted: msg });
         break;
     }
@@ -247,13 +249,16 @@ case 'ff': {
         const finalPath = path.join(tmpDir, `${Date.now()}_fixed.mp4`);
 
         // Descargar el video citado
-        const quoted = msg.quoted;
-        const videoUrl = await sock.downloadMediaMessage(quoted, 'buffer');
-        fs.writeFileSync(rawPath, videoUrl);
+        const stream = await downloadContentFromMessage(quotedMsg.videoMessage, 'video');
+        const writable = fs.createWriteStream(rawPath);
+        for await (const chunk of stream) {
+            writable.write(chunk);
+        }
+        writable.end();
 
         const startTime = Date.now();
 
-        // Convertir con ffmpeg
+        // Conversión con ffmpeg para compatibilidad
         await new Promise((resolve, reject) => {
             ffmpeg(rawPath)
                 .outputOptions([
@@ -274,8 +279,8 @@ case 'ff': {
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(finalPath),
             mimetype: 'video/mp4',
-            fileName: `azura_fixed.mp4`,
-            caption: `✅ Video optimizado para WhatsApp\n⏱️ Tiempo de conversión: *${endTime}s*\n\n© Azura Ultra 2.0 Bot`
+            fileName: `video_optimo.mp4`,
+            caption: `✅ *Video optimizado para WhatsApp*\n⏱️ *Conversión:* ${endTime}s\n\n© Azura Ultra 2.0`
         }, { quoted: msg });
 
         fs.unlinkSync(rawPath);
@@ -288,8 +293,9 @@ case 'ff': {
     } catch (err) {
         console.error(err);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ Error al convertir el video: ${err.message}`
+            text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
+
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
