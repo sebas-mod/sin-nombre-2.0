@@ -315,6 +315,7 @@ sock.ev.on('messages.delete', (messages) => {
   }
   break;
 }     
+
 case 'whatmusic': {
   const acrcloud = require('acrcloud');
   const fs = require('fs');
@@ -327,9 +328,9 @@ case 'whatmusic': {
   const streamPipeline = promisify(pipeline);
 
   const acr = new acrcloud({
-    host: 'https://identify-eu-west-1.acrcloud.com/v1/identify',
-    access_key: 'SBYqzwMf5Ei31gO6',
-    access_secret: 'GYF0mQlQkm628LPzZHW7DyOfYXNfprC7',
+    host: 'identify-eu-west-1.acrcloud.com',
+    access_key: 'c33c767d683f78bd17d4bd4991955d81',
+    access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
   });
 
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -407,7 +408,8 @@ case 'whatmusic': {
     if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
   break;
-}       
+}
+        
 case 'linia': {
     const fs = require('fs');
     const path = require('path');
