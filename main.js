@@ -629,6 +629,13 @@ case 'ytmp4': {
         });
         await streamPipeline(response.data, fs.createWriteStream(filePath));
 
+        // Verificar si el archivo tiene buen tamaño
+        const stats = fs.statSync(filePath);
+        if (!stats || stats.size < 100000) {
+            fs.unlinkSync(filePath);
+            throw new Error('El video descargado está vacío o incompleto');
+        }
+
         const caption = `
 ╔═════════════════╗
 ║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
@@ -652,7 +659,8 @@ case 'ytmp4': {
             video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
             fileName: `${videoData.title}.mp4`,
-            caption
+            caption,
+            gifPlayback: false
         }, { quoted: msg });
 
         fs.unlinkSync(filePath);
