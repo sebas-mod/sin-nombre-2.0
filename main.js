@@ -223,7 +223,12 @@ case 'whatmusic': {
   const acrcloud = require('acrcloud');
   const fs = require('fs');
   const yts = require('yt-search');
+  const path = require('path');
+  const { promisify } = require('util');
+  const { pipeline } = require('stream');
   const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+
+  const streamPipeline = promisify(pipeline);
 
   const acr = new acrcloud({
     host: 'identify-eu-west-1.acrcloud.com',
@@ -265,21 +270,17 @@ case 'whatmusic': {
     react: { text: '⏳', key: msg.key }
   });
 
-  let mediaBuffer = Buffer.alloc(0);
-  if (typeof quoted.download === 'function') {
-    mediaBuffer = await quoted.download();
-  } else {
-    const stream = await downloadContentFromMessage(mediaMsg, mediaType);
-    for await (const chunk of stream) {
-      mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
-    }
-  }
+  const tmpDir = path.join(__dirname, 'tmp');
+  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-  const ext = mime.split('/')[1];
-  const tempFilePath = `./tmp/${msg.sender}.${ext}`;
-  fs.writeFileSync(tempFilePath, mediaBuffer);
+  const ext = mime.split('/')[1] || (mediaType === 'audio' ? 'mp3' : 'mp4');
+  const tempFilePath = path.join(tmpDir, `${msg.sender}.${ext}`);
 
   try {
+    const stream = await downloadContentFromMessage(mediaMsg, mediaType);
+    const fileStream = fs.createWriteStream(tempFilePath);
+    await streamPipeline(stream, fileStream);
+
     const res = await acr.identify(fs.readFileSync(tempFilePath));
     const { code, msg: statusMsg } = res.status;
     if (code !== 0) throw new Error(statusMsg);
@@ -298,9 +299,9 @@ case 'whatmusic': {
 🎶 *Música Identificada:*  
 ╭───────────────╮  
 ├ 📌 *Título:* ${title}
-├ 👨‍🎤 *Artista:* ${artists && artists.length ? artists.map(v => v.name).join(', ') : 'Desconocido'}
+├ 👨‍🎤 *Artista:* ${artists?.map(v => v.name).join(', ') || 'Desconocido'}
 ├ 💿 *Álbum:* ${album?.name || 'Desconocido'}
-├ 🌍 *Género:* ${genres && genres.length ? genres.map(v => v.name).join(', ') : 'Desconocido'}
+├ 🌍 *Género:* ${genres?.map(v => v.name).join(', ') || 'Desconocido'}
 ├ 📅 *Lanzamiento:* ${release_date || 'Desconocido'}
 └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
 ╰───────────────╯
@@ -325,7 +326,7 @@ case 'whatmusic': {
       text: `*⚠️ Error al identificar la música:* ${error.message}`
     }, { quoted: msg });
   } finally {
-    fs.unlinkSync(tempFilePath);
+    if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
   break;
       }
