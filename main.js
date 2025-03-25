@@ -231,27 +231,19 @@ case 'whatmusic': {
     });
 
     const q = msg.quoted || msg;
+    const type = Object.keys(q.message || {})[0];
 
-    // Detectar tipo de mensaje y duración
-    const mediaType = q.message?.audioMessage
-        ? 'audioMessage'
-        : q.message?.videoMessage
-        ? 'videoMessage'
-        : null;
-
-    if (!mediaType) {
+    if (!['audioMessage', 'videoMessage'].includes(type)) {
         await sock.sendMessage(msg.key.remoteJid, {
             text: '⚠️ *Responde o envía un audio, nota de voz o video para identificar la música.*'
         }, { quoted: msg });
         break;
     }
 
-    const duration =
-        q.message[mediaType]?.seconds || 0;
-
+    const duration = q.message[type]?.seconds || 0;
     if (duration > 20) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *El archivo es demasiado largo. Intenta con un fragmento de máximo 20 segundos.*'
+            text: '⚠️ *El archivo es demasiado largo. Usa uno de máximo 20 segundos.*'
         }, { quoted: msg });
         break;
     }
@@ -260,14 +252,15 @@ case 'whatmusic': {
         react: { text: '⏳', key: msg.key }
     });
 
-    // Descargar el archivo correctamente
     const buffer = await sock.downloadMediaMessage(q);
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
-    const filePath = `./tmp/${msg.sender}.mp3`;
-    fs.writeFileSync(filePath, buffer);
+
+    const extension = type === 'audioMessage' ? 'mp3' : 'mp4';
+    const tempPath = `./tmp/${msg.sender}.${extension}`;
+    fs.writeFileSync(tempPath, buffer);
 
     try {
-        const res = await acr.identify(fs.readFileSync(filePath));
+        const res = await acr.identify(fs.readFileSync(tempPath));
         const { code, msg: statusMsg } = res.status;
         if (code !== 0) throw new Error(statusMsg);
 
@@ -302,7 +295,7 @@ case 'whatmusic': {
             text: `❌ *No se pudo identificar la canción:* ${err.message}`
         }, { quoted: msg });
     } finally {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     }
 
     break;
