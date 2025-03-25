@@ -220,20 +220,9 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) {        
 case 'whatmusic': {
+    const acrcloud = require('acrcloud');
     const fs = require('fs');
     const yts = require('yt-search');
-
-    // Verifica si el módulo acrcloud está instalado
-    try {
-        require.resolve('acrcloud');
-    } catch (e) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ El módulo *acrcloud* no está instalado.\n\nUsa este comando en tu terminal para instalarlo:\n\n```npm install acrcloud```'
-        }, { quoted: msg });
-        break;
-    }
-
-    const acrcloud = require('acrcloud');
 
     const acr = new acrcloud({
         host: 'identify-eu-west-1.acrcloud.com',
@@ -265,8 +254,6 @@ case 'whatmusic': {
 
     const media = await q.download();
     const ext = mime.split('/')[1];
-
-    if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
     const tempFilePath = `./tmp/${m.sender}.${ext}`;
     fs.writeFileSync(tempFilePath, media);
 
@@ -304,7 +291,11 @@ case 'whatmusic': {
         } else {
             await sock.sendMessage(m.key.remoteJid, {
                 image: { url: video.thumbnail },
-                caption: infoMessage
+                caption: infoMessage,
+                footer: "EliasarYT",
+                viewOnce: false,
+                headerType: 4,
+                mentions: [m.sender]
             }, { quoted: m });
         }
     } catch (error) {
@@ -312,11 +303,8 @@ case 'whatmusic': {
             text: `*⚠️ Error al identificar la música:* ${error.message}`
         }, { quoted: m });
     } finally {
-        if (fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
-        }
+        fs.unlinkSync(tempFilePath);
     }
-
     break;
 }
         
