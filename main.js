@@ -13,6 +13,7 @@ const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`
 //modos
+const acrcloud = require('acrcloud');
 //ookkkkk
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options);
@@ -219,10 +220,21 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-case 'quemusic': {
-    const acrcloud = require('acrcloud');
+case 'whatmusic': {
     const fs = require('fs');
     const yts = require('yt-search');
+
+    // Verifica si el módulo acrcloud está instalado
+    try {
+        require.resolve('acrcloud');
+    } catch (e) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '⚠️ El módulo *acrcloud* no está instalado.\n\nUsa este comando en tu terminal para instalarlo:\n\n```npm install acrcloud```'
+        }, { quoted: msg });
+        break;
+    }
+
+    const acrcloud = require('acrcloud');
 
     const acr = new acrcloud({
         host: 'identify-eu-west-1.acrcloud.com',
@@ -254,6 +266,8 @@ case 'quemusic': {
 
     const media = await q.download();
     const ext = mime.split('/')[1];
+
+    if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
     const tempFilePath = `./tmp/${m.sender}.${ext}`;
     fs.writeFileSync(tempFilePath, media);
 
@@ -291,11 +305,7 @@ case 'quemusic': {
         } else {
             await sock.sendMessage(m.key.remoteJid, {
                 image: { url: video.thumbnail },
-                caption: infoMessage,
-                footer: "EliasarYT",
-                viewOnce: false,
-                headerType: 4,
-                mentions: [m.sender]
+                caption: infoMessage
             }, { quoted: m });
         }
     } catch (error) {
@@ -303,11 +313,13 @@ case 'quemusic': {
             text: `*⚠️ Error al identificar la música:* ${error.message}`
         }, { quoted: m });
     } finally {
-        fs.unlinkSync(tempFilePath);
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
     }
+
     break;
 }
-
         
 case 'linia': {
     const fs = require('fs');
