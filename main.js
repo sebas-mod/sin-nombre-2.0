@@ -230,46 +230,54 @@ case 'whatmusic': {
         access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
     });
 
-    const q = msg.quoted || msg;
-    const type = Object.keys(q.message || {})[0];
-
-    if (!['audioMessage', 'videoMessage'].includes(type)) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Responde o envía un audio, nota de voz o video para identificar la música.*'
-        }, { quoted: msg });
+    const m = msg;
+    // Si se responde/cita, usa msg.quoted; si no, usa msg directamente
+    const quotedMsg = m.quoted ? m.quoted : m;
+    
+    // Extraer información del mensaje multimedia
+    let mime, duration;
+    if (quotedMsg.message?.audioMessage) {
+        mime = quotedMsg.message.audioMessage.mimetype || 'audio/ogg';
+        duration = quotedMsg.message.audioMessage.seconds || 0;
+    } else if (quotedMsg.message?.videoMessage) {
+        mime = quotedMsg.message.videoMessage.mimetype || 'video/mp4';
+        duration = quotedMsg.message.videoMessage.seconds || 0;
+    } else {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: '⚠️ *Responde a un audio, nota de voz o video para identificar la música.*'
+        }, { quoted: m });
         break;
     }
-
-    const duration = q.message[type]?.seconds || 0;
+    
     if (duration > 20) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *El archivo es demasiado largo. Usa uno de máximo 20 segundos.*'
-        }, { quoted: msg });
+        await sock.sendMessage(m.key.remoteJid, {
+            text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*'
+        }, { quoted: m });
         break;
     }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
+    
+    await sock.sendMessage(m.key.remoteJid, {
+        react: { text: '⏳', key: m.key }
     });
-
-    const buffer = await sock.downloadMediaMessage(q);
+    
+    // Descargar el mensaje multimedia
+    const buffer = await sock.downloadMediaMessage(quotedMsg);
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
-
-    const extension = type === 'audioMessage' ? 'mp3' : 'mp4';
-    const tempPath = `./tmp/${msg.sender}.${extension}`;
-    fs.writeFileSync(tempPath, buffer);
-
+    const ext = mime.split('/')[1] || (mime.startsWith('audio') ? 'mp3' : 'mp4');
+    const tempFilePath = `./tmp/${m.sender}.${ext}`;
+    fs.writeFileSync(tempFilePath, buffer);
+    
     try {
-        const res = await acr.identify(fs.readFileSync(tempPath));
+        const res = await acr.identify(fs.readFileSync(tempFilePath));
         const { code, msg: statusMsg } = res.status;
         if (code !== 0) throw new Error(statusMsg);
-
+    
         const musicData = res.metadata.music[0];
         const { title, artists, album, genres, release_date } = musicData;
-
+    
         const search = await yts(title);
         const video = search.videos.length > 0 ? search.videos[0] : null;
-
+    
         const infoMessage = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
@@ -283,21 +291,30 @@ case 'whatmusic': {
 ├ 🌍 *Género:* ${genres ? genres.map(v => v.name).join(', ') : 'Desconocido'}
 ├ 📅 *Lanzamiento:* ${release_date || 'Desconocido'}
 └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
-╰───────────────╯`.trim();
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: video?.thumbnail || 'https://i.imgur.com/YzDjvRQ.png' },
-            caption: infoMessage
-        }, { quoted: msg });
-
-    } catch (err) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *No se pudo identificar la canción:* ${err.message}`
-        }, { quoted: msg });
+╰───────────────╯
+        `.trim();
+    
+        if (!video) {
+            await sock.sendMessage(m.key.remoteJid, {
+                text: '⚠️ *No se encontró ningún video relacionado en YouTube.*'
+            }, { quoted: m });
+        } else {
+            await sock.sendMessage(m.key.remoteJid, {
+                image: { url: video.thumbnail },
+                caption: infoMessage,
+                footer: "EliasarYT",
+                viewOnce: false,
+                headerType: 4,
+                mentions: [m.sender]
+            }, { quoted: m });
+        }
+    } catch (error) {
+        await sock.sendMessage(m.key.remoteJid, {
+            text: `*⚠️ Error al identificar la música:* ${error.message}`
+        }, { quoted: m });
     } finally {
-        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
     }
-
     break;
 }
         
