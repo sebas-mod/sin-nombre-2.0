@@ -576,7 +576,6 @@ case 'ytmp4': {
     const path = require('path');
     const { pipeline } = require('stream');
     const { promisify } = require('util');
-    const ffmpeg = require('fluent-ffmpeg');
     const streamPipeline = promisify(pipeline);
 
     if (!text || (!text.includes('youtube.com') && !text.includes('youtu.be'))) {
@@ -621,30 +620,14 @@ case 'ytmp4': {
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
-        const rawPath = path.join(tmpDir, `${Date.now()}_raw.mp4`);
-        const finalPath = path.join(tmpDir, `${Date.now()}_final.mp4`);
+        const filePath = path.join(tmpDir, `${Date.now()}_video.mp4`);
 
-        const res = await axios.get(videoData.url, {
+        // Descargar el video directamente
+        const response = await axios.get(videoData.url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        await streamPipeline(res.data, fs.createWriteStream(rawPath));
-
-        await new Promise((resolve, reject) => {
-            ffmpeg(rawPath)
-                .outputOptions([
-                    '-c:v libx264',
-                    '-preset fast',
-                    '-crf 28',
-                    '-c:a aac',
-                    '-b:a 128k',
-                    '-movflags +faststart'
-                ])
-                .format('mp4')
-                .on('end', resolve)
-                .on('error', reject)
-                .save(finalPath);
-        });
+        await streamPipeline(response.data, fs.createWriteStream(filePath));
 
         const caption = `
 ╔═════════════════╗
@@ -666,14 +649,13 @@ case 'ytmp4': {
 ⏳ *Procesado por Azura Ultra 2.0*`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            video: fs.readFileSync(finalPath),
+            video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
             fileName: `${videoData.title}.mp4`,
             caption
         }, { quoted: msg });
 
-        fs.unlinkSync(rawPath);
-        fs.unlinkSync(finalPath);
+        fs.unlinkSync(filePath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
