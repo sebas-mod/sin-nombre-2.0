@@ -511,7 +511,7 @@ case 'whatmusic': {
     break;
 }
       
-case '.ytmp4': {
+case 'ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -572,15 +572,10 @@ case '.ytmp4': {
 ═════════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: thumbnail },
-            caption: caption
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
             fileName: videoData.filename,
-            caption: `🎬 Aquí tienes tu video descargado exitosamente.\n\nDisfrútalo y sigue explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`
+            caption: caption.trim()
         }, { quoted: msg });
 
         fs.unlinkSync(filePath);
