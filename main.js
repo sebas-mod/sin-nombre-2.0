@@ -219,7 +219,57 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-      
+
+case 'linia': {
+    const fs = require('fs');
+    const path = require('path');
+
+    if (!isOwner) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '⛔ Este comando es solo para el *Owner*.'
+        }, { quoted: msg });
+        break;
+    }
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}linia play*`
+        }, { quoted: msg });
+        break;
+    }
+
+    const filePath = path.join(__dirname, 'index.js'); // Cambia esto si usas otro archivo de comandos
+
+    try {
+        const lines = fs.readFileSync(filePath, 'utf-8').split('\n');
+        let found = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes(`case '${text}'`)) {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    text: `✅ El comando *${text}* está en la línea *${i + 1}* del archivo *${path.basename(filePath)}*.`
+                }, { quoted: msg });
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ No se encontró el comando *${text}* en el archivo *${path.basename(filePath)}*.`
+            }, { quoted: msg });
+        }
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ Error al leer el archivo: ${err.message}`
+        }, { quoted: msg });
+    }
+
+    break;
+}
+        
   case 'ff': {
     const fs = require('fs');
     const path = require('path');
