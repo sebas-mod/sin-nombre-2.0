@@ -230,7 +230,7 @@ case 'whatmusic': {
         access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
     });
 
-    // Usar la lógica de stickers para obtener el mensaje citado
+    // Extraer el mensaje citado (igual que en el comando de stickers)
     let quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     if (!quoted) {
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -239,49 +239,59 @@ case 'whatmusic': {
         return;
     }
 
-    // Determinar el tipo de contenido y extraer mimetype y duración
-    let mtype;
+    // Determinar el tipo de contenido: audioMessage, videoMessage o documentMessage (si es audio)
+    let mediaType;
     if (quoted.audioMessage) {
-        mtype = "audio";
+        mediaType = "audio";
     } else if (quoted.videoMessage) {
-        mtype = "video";
+        mediaType = "video";
     } else if (quoted.documentMessage && quoted.documentMessage.mimetype && quoted.documentMessage.mimetype.startsWith("audio")) {
-        mtype = "document";
+        mediaType = "document";
     } else {
         await sock.sendMessage(msg.key.remoteJid, { 
             text: "⚠️ *Responde a un audio, nota de voz o video para identificar la música.*" 
         }, { quoted: msg });
         return;
     }
-    const mediaObj = quoted[`${mtype}Message`];
-    const mime = mediaObj.mimetype || '';
-    const seconds = mediaObj.seconds || 0;
+    let mediaObj = quoted[`${mediaType}Message`];
+    let mime = mediaObj.mimetype || "";
+    let seconds = mediaObj.seconds || 0;
     if (seconds > 20) {
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: "⚠️ El archivo que cargas es demasiado largo. Te sugerimos recortarlo a 10-20 segundos." 
+            text: "⚠️ El archivo es demasiado largo. Te sugerimos recortarlo a 10-20 segundos." 
         }, { quoted: msg });
         return;
     }
 
-    // Reacción mientras se procesa
+    // Reacciona mientras se procesa
     await sock.sendMessage(msg.key.remoteJid, { 
         react: { text: "⏳", key: msg.key } 
     });
 
-    // Descargar el contenido usando downloadContentFromMessage
-    let mediaStream = await downloadContentFromMessage(quoted[`${mtype}Message`], mtype);
-    let buffer = Buffer.alloc(0);
-    for await (const chunk of mediaStream) {
-        buffer = Buffer.concat([buffer, chunk]);
+    // Descargar el contenido: primero intentamos usar el método download() si existe
+    let mediaBuffer;
+    if (msg.quoted && typeof msg.quoted.download === "function") {
+        mediaBuffer = await msg.quoted.download();
+    } else if (quoted && typeof quoted.download === "function") {
+        mediaBuffer = await quoted.download();
+    } else {
+        // Si no existe, usamos downloadContentFromMessage
+        let mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
+        mediaBuffer = Buffer.alloc(0);
+        for await (const chunk of mediaStream) {
+            mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+        }
     }
 
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
     const ext = mime.split('/')[1] || (mime.startsWith('audio') ? 'mp3' : 'mp4');
     const tempFilePath = `./tmp/${msg.sender}.${ext}`;
-    fs.writeFileSync(tempFilePath, buffer);
+    fs.writeFileSync(tempFilePath, mediaBuffer);
 
     try {
-        const res = await acr.identify(fs.readFileSync(tempFilePath));
+        const fileData = fs.readFileSync(tempFilePath);
+        if (!fileData) throw new Error("El archivo no se pudo leer correctamente.");
+        const res = await acr.identify(fileData);
         const { code, msg: statusMsg } = res.status;
         if (code !== 0) throw new Error(statusMsg);
 
