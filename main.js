@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) {        
-case 'whatmusic': {
+case 'quemusic': {
     const acrcloud = require('acrcloud');
     const fs = require('fs');
     const yts = require('yt-search');
@@ -229,50 +229,44 @@ case 'whatmusic': {
         access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
     });
 
-    const m = msg;
-    // Usamos el mensaje citado si existe; de lo contrario, el mensaje actual
-    const quoted = m.quoted ? m.quoted : m;
-
-    // Extraer mimetype y duración según el tipo de mensaje
-    let mime = '';
-    let seconds = 0;
-    if (quoted.message?.audioMessage) {
-        mime = quoted.message.audioMessage.mimetype;
-        seconds = quoted.message.audioMessage.seconds || 0;
-    } else if (quoted.message?.videoMessage) {
-        mime = quoted.message.videoMessage.mimetype;
-        seconds = quoted.message.videoMessage.seconds || 0;
-    } else if (quoted.message?.documentMessage) {
-        // Si es documento y es de audio
-        if (quoted.message.documentMessage.mimetype.startsWith('audio')) {
-            mime = quoted.message.documentMessage.mimetype;
-            seconds = quoted.message.documentMessage.seconds || 0;
-        }
+    // Usar la lógica de stickerz para obtener el mensaje citado
+    let quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quoted) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "⚠️ *Responde a un audio, nota de voz o video para identificar la música.*" 
+        }, { quoted: msg });
+        return;
     }
 
-    if (!mime) {
-        await sock.sendMessage(m.key.remoteJid, {
-            text: '*⚠️ Responde a un audio, nota de voz o video para identificar la música.*'
-        }, { quoted: m });
-        break;
+    // Determinar el tipo de contenido y extraer mimetype y duración
+    let mediaObj;
+    if (quoted.audioMessage) {
+        mediaObj = quoted.audioMessage;
+    } else if (quoted.videoMessage) {
+        mediaObj = quoted.videoMessage;
+    } else if (quoted.documentMessage && quoted.documentMessage.mimetype && quoted.documentMessage.mimetype.startsWith('audio')) {
+        mediaObj = quoted.documentMessage;
+    } else {
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "⚠️ *Responde a un audio, nota de voz o video para identificar la música.*" 
+        }, { quoted: msg });
+        return;
     }
 
+    const mime = mediaObj.mimetype || '';
+    const seconds = mediaObj.seconds || 0;
     if (seconds > 20) {
-        await sock.sendMessage(m.key.remoteJid, {
-            text: '⚠️ El archivo es demasiado largo. Te sugerimos que lo recortes a 10-20 segundos para identificarlo correctamente.'
-        }, { quoted: m });
-        break;
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "⚠️ El archivo que cargas es demasiado largo. Te sugerimos recortarlo a 10-20 segundos para identificarlo correctamente." 
+        }, { quoted: msg });
+        return;
     }
 
-    await sock.sendMessage(m.key.remoteJid, {
-        react: { text: '⏳', key: m.key }
-    });
-
-    // Descargar el multimedia usando el mensaje (citado o directo)
-    const buffer = await sock.downloadMediaMessage(quoted);
+    // Descargar el multimedia usando el mensaje citado
+    const buffer = await sock.downloadMediaMessage({ message: quoted });
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp');
     const ext = mime.split('/')[1] || (mime.startsWith('audio') ? 'mp3' : 'mp4');
-    const tempFilePath = `./tmp/${m.sender}.${ext}`;
+    const tempFilePath = `./tmp/${msg.sender}.${ext}`;
     fs.writeFileSync(tempFilePath, buffer);
 
     try {
@@ -301,24 +295,25 @@ case 'whatmusic': {
         `.trim();
 
         if (!video) {
-            await sock.sendMessage(m.key.remoteJid, {
-                text: '⚠️ No se encontró ningún video relacionado en YouTube.'
-            }, { quoted: m });
-            break;
+            await sock.sendMessage(msg.key.remoteJid, { 
+                text: "⚠️ No se encontró ningún video relacionado en YouTube." 
+            }, { quoted: msg });
+            return;
         }
 
-        await sock.sendMessage(m.key.remoteJid, {
+        await sock.sendMessage(msg.key.remoteJid, {
             image: { url: video.thumbnail },
             caption: txt,
             footer: "EliasarYT",
             viewOnce: false,
             headerType: 4,
-            mentions: [m.sender]
-        }, { quoted: m });
+            mentions: [msg.sender]
+        }, { quoted: msg });
+
     } catch (error) {
-        await sock.sendMessage(m.key.remoteJid, {
-            text: `*⚠️ Error al identificar la música:* ${error.message}`
-        }, { quoted: m });
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: `*⚠️ Error al identificar la música:* ${error.message}` 
+        }, { quoted: msg });
     } finally {
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
     }
