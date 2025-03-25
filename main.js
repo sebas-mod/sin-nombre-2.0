@@ -511,7 +511,7 @@ case 'whatmusic': {
     break;
 }
       
-case 'ytmp4': {
+case '.ytmp4': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -519,9 +519,9 @@ case 'ytmp4': {
     const { promisify } = require('util');
     const streamPipeline = promisify(pipeline);
 
-    if (!text || !text.includes('youtube.com') && !text.includes('youtu.be')) {
+    if (!text || !text.includes('youtube.com') && !text.includes('youtu.be') && !text.includes('music.youtube.com')) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ytmp4* https://youtube.com/watch?v=...`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *.ytmp4* https://www.youtube.com/watch?v=fKRtnMYMW08`
         }, { quoted: msg });
         break;
     }
@@ -531,62 +531,56 @@ case 'ytmp4': {
     });
 
     try {
-        const qualities = ['720p', '480p', '360p'];
-        let video = null;
+        const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=720p&apikey=russellxz`;
+        const { data } = await axios.get(apiUrl);
 
-        // Intentamos con cada calidad
-        for (let quality of qualities) {
-            try {
-                const apiUrl = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(text)}&type=video&quality=${quality}&apikey=russellxz`;
-                const response = await axios.get(apiUrl);
-                if (response.data?.status && response.data?.data?.url) {
-                    video = {
-                        url: response.data.data.url,
-                        title: response.data.title || 'video',
-                        thumbnail: response.data.thumbnail,
-                        duration: response.data.fduration,
-                        views: response.data.views,
-                        channel: response.data.channel,
-                        quality: response.data.data.quality || quality
-                    };
-                    break;
-                }
-            } catch { continue; }
-        }
+        if (!data?.status || !data?.data?.url) throw new Error('No se pudo obtener el video');
 
-        if (!video) throw new Error('No se pudo obtener el video en ninguna calidad');
-
+        const {
+            id, title, thumbnail, fduration, duration, channel, views, publish
+        } = data;
+        const videoData = data.data;
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const filename = `${Date.now()}_video.mp4`;
-        const filePath = path.join(tmpDir, filename);
+        const filePath = path.join(tmpDir, `${Date.now()}_video.mp4`);
 
-        // Descarga directa sin compresión
-        const response = await axios.get(video.url, {
+        // Descargar el video
+        const res = await axios.get(videoData.url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        await streamPipeline(response.data, fs.createWriteStream(filePath));
+        await streamPipeline(res.data, fs.createWriteStream(filePath));
 
-        // Enviamos el video con diseño bonito
         const caption = `
-╔══════════════════╗
-║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════╝
+╔═════════════════╗
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚═════════════════╝
 
-🎬 *Título:* ${video.title}
-⏱️ *Duración:* ${video.duration}
-👁️ *Vistas:* ${video.views}
-👤 *Canal:* ${video.channel}
-📥 *Calidad:* ${video.quality}
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${fduration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Canal:* ${channel}
+├ 🗓️ *Publicado:* ${publish}
+├ 📦 *Tamaño:* ${videoData.size}
+├ 📹 *Calidad:* ${videoData.quality}
+└ 🔗 *Link:* https://youtu.be/${id}
+╰───────────────╯
 
-© Azura Ultra 2.0 Bot`;
+⏳ *Procesado por Azura Ultra 2.0*  
+═════════════════════`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption: caption
+        }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
-            fileName: `${video.title}.mp4`,
-            caption
+            fileName: videoData.filename,
+            caption: `🎬 Aquí tienes tu video descargado exitosamente.\n\nDisfrútalo y sigue explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`
         }, { quoted: msg });
 
         fs.unlinkSync(filePath);
@@ -598,7 +592,7 @@ case 'ytmp4': {
     } catch (err) {
         console.error(err);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
+            text: `❌ *Error:* ${err.message || 'No se pudo procesar el enlace.'}`
         }, { quoted: msg });
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
