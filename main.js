@@ -220,7 +220,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) { 
 
-case 'whatmusic': {
+case 'whatmusic20': {
     const fs = require('fs');
     const path = require('path');
     const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
