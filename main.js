@@ -219,6 +219,66 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
+case 'link': {
+  const fs = require('fs');
+  const path = require('path');
+  const { promisify } = require('util');
+  const { pipeline } = require('stream');
+  const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+  const streamPipeline = promisify(pipeline);
+  const quAx = require('./libs/upload.js');
+
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  if (!quoted) {
+    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *Responde a un audio o video para generar el enlace de descarga.*' }, { quoted: msg });
+    break;
+  }
+
+  let mediaType;
+  if (quoted.audioMessage) mediaType = 'audio';
+  else if (quoted.videoMessage) mediaType = 'video';
+  else {
+    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *El mensaje citado no es un audio ni video.*' }, { quoted: msg });
+    break;
+  }
+
+  const mediaMsg = quoted[`${mediaType}Message`];
+  const mime = mediaMsg.mimetype || '';
+  const ext = mime.split('/')[1] || (mediaType === 'audio' ? 'mp3' : 'mp4');
+  const tmpDir = path.join(__dirname, 'tmp');
+  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+  const tempFilePath = path.join(tmpDir, `${msg.sender}.${ext}`);
+
+  try {
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
+
+    const stream = await downloadContentFromMessage(mediaMsg, mediaType);
+    const fileStream = fs.createWriteStream(tempFilePath);
+    await streamPipeline(stream, fileStream);
+
+    const uploadResponse = await quAx(tempFilePath);
+    if (!uploadResponse || !uploadResponse.status || !uploadResponse.result || !uploadResponse.result.url) {
+      throw new Error('No se pudo subir el archivo o no se recibió el enlace.');
+    }
+
+    const url = uploadResponse.result.url;
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `✅ *Archivo subido exitosamente:*\n\n🔗 ${url}`,
+    }, { quoted: msg });
+
+  } catch (e) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `⚠️ *Error al generar enlace:* ${e.message}`,
+    }, { quoted: msg });
+  } finally {
+    if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+  }
+
+  break;
+}
+      
 case 'whatmusic5': {
   const fs = require('fs');
   const path = require('path');
