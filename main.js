@@ -219,7 +219,127 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-     
+
+case 'whatmusic': {
+    const fs = require('fs');
+    const path = require('path');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+    const { promisify } = require('util');
+    const { pipeline } = require('stream');
+    const axios = require('axios');
+    const quAx = require('./libs/upload.js');
+    const yts = require('yt-search');
+
+    const streamPipeline = promisify(pipeline);
+
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quotedMsg || (!quotedMsg.audioMessage && !quotedMsg.videoMessage)) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "✳️ Responde a un *audio* (MP3) o *video* (MP4) para identificar la canción."
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '🔎', key: msg.key }
+    });
+
+    try {
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+        const fileExtension = quotedMsg.audioMessage ? 'mp3' : 'mp4';
+        const filePath = path.join(tmpDir, `${Date.now()}.${fileExtension}`);
+
+        const stream = await downloadContentFromMessage(
+            quotedMsg.audioMessage || quotedMsg.videoMessage,
+            quotedMsg.audioMessage ? 'audio' : 'video'
+        );
+        const writable = fs.createWriteStream(filePath);
+        for await (const chunk of stream) {
+            writable.write(chunk);
+        }
+        writable.end();
+
+        const uploadResponse = await quAx(filePath);
+        if (!uploadResponse.status || !uploadResponse.result.url) throw new Error("No se pudo subir el archivo.");
+
+        const apiKey = "russellxz";
+        const apiUrl = `https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(uploadResponse.result.url)}&apikey=${apiKey}`;
+        const { data } = await axios.get(apiUrl);
+
+        if (!data.status || !data.data) throw new Error("No se pudo identificar la canción.");
+
+        const { title, artist, album, release } = data.data;
+        const search = await yts(`${title} ${artist}`);
+        const video = search.videos[0];
+        if (!video) throw new Error("No se encontró la canción en YouTube.");
+
+        const videoUrl = video.url;
+        const thumbnail = video.thumbnail;
+        const fduration = video.timestamp;
+        const views = video.views.toLocaleString();
+        const channel = video.author.name || 'Desconocido';
+
+        const infoMessage = `
+╔══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
+
+🎵 *Canción detectada:*  
+╭───────────────╮  
+├ 📌 *Título:* ${title}
+├ 👤 *Artista:* ${artist}
+├ 💿 *Álbum:* ${album}
+├ 📅 *Lanzamiento:* ${release}
+├ 🔎 *Buscando:* ${video.title}
+├ ⏱️ *Duración:* ${fduration}
+├ 👁️ *Vistas:* ${views}
+├ 📺 *Canal:* ${channel}
+├ 🔗 *Link:* ${videoUrl}
+╰───────────────╯
+
+⏳ *Espere un momento, descargando la canción...*
+═════════════════════`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption: infoMessage
+        }, { quoted: msg });
+
+        // Descargar el MP3
+        const apiAudio = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=${apiKey}`;
+        const audioRes = await axios.get(apiAudio);
+        if (!audioRes.data.status || !audioRes.data.data?.url) throw new Error("No se pudo descargar el audio");
+
+        const audioData = audioRes.data.data;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: { url: audioData.url },
+            mimetype: 'audio/mpeg',
+            fileName: audioData.filename || `${title}.mp3`
+        }, { quoted: msg });
+
+        fs.unlinkSync(filePath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+        
 case 'ff2': {
     const fs = require('fs');
     const path = require('path');
