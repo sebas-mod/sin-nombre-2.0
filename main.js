@@ -219,6 +219,90 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
+case 'ff2': {
+    const fs = require('fs');
+    const path = require('path');
+    const ffmpeg = require('fluent-ffmpeg');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+    const { promisify } = require('util');
+    const { pipeline } = require('stream');
+    const streamPipeline = promisify(pipeline);
+
+    // Validación: el usuario debe citar un audio o documento mp3
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const audioMsg = quotedMsg?.audioMessage;
+    const docMsg = quotedMsg?.documentMessage;
+    const isAudioDoc = docMsg?.mimetype?.startsWith("audio");
+
+    if (!audioMsg && !isAudioDoc) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Responde a un *audio* o *mp3 dañado* para repararlo.`
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '🎧', key: msg.key }
+    });
+
+    try {
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+        const inputPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
+        const outputPath = path.join(tmpDir, `${Date.now()}_fixed.mp3`);
+
+        const stream = await downloadContentFromMessage(audioMsg ? audioMsg : docMsg, 'audio');
+        const writable = fs.createWriteStream(inputPath);
+        for await (const chunk of stream) {
+            writable.write(chunk);
+        }
+        writable.end();
+
+        const startTime = Date.now();
+
+        // Reparar el audio con ffmpeg
+        await new Promise((resolve, reject) => {
+            ffmpeg(inputPath)
+                .audioCodec('libmp3lame')
+                .audioBitrate('128k')
+                .format('mp3')
+                .save(outputPath)
+                .on('end', resolve)
+                .on('error', reject);
+        });
+
+        const endTime = ((Date.now() - startTime) / 1000).toFixed(1);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: fs.readFileSync(outputPath),
+            mimetype: 'audio/mpeg',
+            fileName: `audio_reparado.mp3`,
+            ptt: audioMsg?.ptt || false,
+            caption: `✅ *Audio reparado exitosamente*\n⏱️ *Tiempo de reparación:* ${endTime}s\n\n© Azura Ultra 2.0`
+        }, { quoted: msg });
+
+        fs.unlinkSync(inputPath);
+        fs.unlinkSync(outputPath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+      
 case 'tag2': {
   try {
     const chatId = msg.key.remoteJid;
