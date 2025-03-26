@@ -838,6 +838,12 @@ case "git": {
 case 'play': {
     const axios = require('axios');
     const yts = require('yt-search');
+    const fs = require('fs');
+    const path = require('path');
+    const ffmpeg = require('fluent-ffmpeg');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const streamPipeline = promisify(pipeline);
 
     if (!text) {
         await sock.sendMessage(msg.key.remoteJid, {
@@ -862,7 +868,6 @@ case 'play': {
         const views = video.views.toLocaleString();
         const channel = video.author.name || 'Desconocido';
 
-        // Primero mandamos la info del audio
         const infoMessage = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
@@ -885,32 +890,49 @@ case 'play': {
 
 ⏳ *Espera un momento...*  
 ⚙️ *Azura Ultra 2.0 está procesando tu música...*
-
 ═══════════════════  
-     𖥔 Azura Ultra 2.0 Bot 𖥔
-═══════════════════`;
+     𖥔 Azura Ultra 2.0 Bot 𖥔`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
             caption: infoMessage
         }, { quoted: msg });
 
-        // Luego descargamos y enviamos el audio
+        // Descargar el audio desde la API
         const apiURL = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`;
         const res = await axios.get(apiURL);
         const json = res.data;
 
-        if (!json.status || !json.data?.url) {
-            throw new Error("No se pudo obtener el audio");
-        }
+        if (!json.status || !json.data?.url) throw new Error("No se pudo obtener el audio");
 
-        const { data } = json;
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.m4a`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_final.mp3`);
+
+        const audioRes = await axios.get(json.data.url, { responseType: 'stream' });
+        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+
+        // Convertir con FFmpeg
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioCodec('libmp3lame')
+                .audioBitrate('128k')
+                .format('mp3')
+                .save(finalPath)
+                .on('end', resolve)
+                .on('error', reject);
+        });
 
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: data.url },
+            audio: fs.readFileSync(finalPath),
             mimetype: 'audio/mpeg',
-            fileName: data.filename || `${title}.mp3`
+            fileName: `${title}.mp3`
         }, { quoted: msg });
+
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -921,97 +943,14 @@ case 'play': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
 
     break;
-}        
-      
-      
-case 'whatmusic': {
-    const fetch = require('node-fetch');
-    const { fromBuffer } = require('file-type');
-    const FormData = require('form-data');
-    const axios = require('axios');
-
-    try {
-        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-
-        if (!quoted) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Responde a un audio con el comando `.whatmusic` para detectar la música.*"
-            }, { quoted: msg });
-        }
-
-        if (!quoted.audioMessage) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: "⚠️ *Solo puedes detectar música en audios.*"
-            }, { quoted: msg });
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "🛠️", key: msg.key }
-        });
-
-        let mediaStream = await downloadContentFromMessage(quoted.audioMessage, "audio");
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of mediaStream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        if (buffer.length === 0) {
-            throw new Error("❌ Error: No se pudo descargar el archivo.");
-        }
-
-        // Primero subimos el audio a un servidor
-        const form = new FormData();
-        form.append('file', buffer, { filename: 'audio.mp3' });
-
-        const uploadRes = await axios.post('https://file.io', form, {
-            headers: form.getHeaders()
-        });
-
-        if (!uploadRes.data.success) {
-            throw new Error("❌ No se pudo subir el archivo para analizarlo.");
-        }
-
-        const fileUrl = uploadRes.data.link;
-
-        // Usamos GET con el enlace
-        const response = await fetch(`https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(fileUrl)}&apikey=russellxz`);
-        if (!response.ok) {
-            throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        if (!data.status || !data.data) {
-            throw new Error("No se pudo detectar la música.");
-        }
-
-        const musicInfo = data.data;
-        const caption = `🎵 *Título:* ${musicInfo.title}\n` +
-                        `🎤 *Artista:* ${musicInfo.artist}\n` +
-                        `💿 *Álbum:* ${musicInfo.album}\n` +
-                        `📅 *Lanzamiento:* ${musicInfo.release}`;
-
-        await sock.sendMessage(msg.key.remoteJid, { text: caption }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "✅", key: msg.key }
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .whatmusic:", error);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "❌ *Hubo un error al detectar la música. Inténtalo de nuevo.*"
-        }, { quoted: msg });
-    }
-
-    break;
 }
+      
 
 case 'ytmp4': {
     const axios = require('axios');
@@ -1234,6 +1173,13 @@ case 'ytmp4': {
         
 case 'ytmp3': {
   const axios = require('axios');
+  const fs = require('fs');
+  const path = require('path');
+  const ffmpeg = require('fluent-ffmpeg');
+  const { promisify } = require('util');
+  const { pipeline } = require('stream');
+  const streamPipeline = promisify(pipeline);
+
   const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
 
   if (!text || !isYoutubeUrl) {
@@ -1243,7 +1189,6 @@ case 'ytmp3': {
     break;
   }
 
-  // Reacción inicial ⏳
   await sock.sendMessage(msg.key.remoteJid, {
     react: { text: '⏳', key: msg.key }
   });
@@ -1265,11 +1210,33 @@ case 'ytmp3': {
       caption: `🎧 *Título:* ${title}\n🕒 *Duración:* ${fduration}\n📥 *Tamaño:* ${data.size}\n\n⏳ Descargando audio...`
     }, { quoted: msg });
 
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+    const rawPath = path.join(tmpDir, `${Date.now()}_raw.m4a`);
+    const finalPath = path.join(tmpDir, `${Date.now()}_final.mp3`);
+
+    const audioRes = await axios.get(data.url, { responseType: 'stream' });
+    await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+
+    // Convertir con FFmpeg
+    await new Promise((resolve, reject) => {
+      ffmpeg(rawPath)
+        .audioCodec('libmp3lame')
+        .audioBitrate('128k')
+        .save(finalPath)
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
     await sock.sendMessage(msg.key.remoteJid, {
-      audio: { url: data.url },
+      audio: fs.readFileSync(finalPath),
       mimetype: 'audio/mpeg',
       fileName: data.filename || `${title}.mp3`
     }, { quoted: msg });
+
+    fs.unlinkSync(rawPath);
+    fs.unlinkSync(finalPath);
 
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: '✅', key: msg.key }
