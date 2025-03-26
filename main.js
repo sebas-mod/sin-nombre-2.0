@@ -577,103 +577,108 @@ case 'tag': {
   }
   break;
 }     
-      
-  case 'whatmusic2': {
-  const fs = require('fs');
-  const path = require('path');
-  const axios = require('axios');
-  const { promisify } = require('util');
-  const { pipeline } = require('stream');
-  const yts = require('yt-search');
-  const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-  const quAx = require('./libs/upload.js');
+case 'whatmusic2': {
+const fs = require('fs');
+const path = require('path');
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const { promisify } = require('util');
+const { pipeline } = require('stream');
+const yts = require('yt-search');
+const acrcloud = require('acrcloud');
 
-  const streamPipeline = promisify(pipeline);
-  const apiKey = 'russellxz';
+const acr = new acrcloud({
+host: 'identify-eu-west-1.acrcloud.com',
+access_key: 'c33c767d683f78bd17d4bd4991955d81',
+access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
+});
 
-  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-  if (!quoted) {
-    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *Responde a un audio o video para identificar la música.*' }, { quoted: msg });
-    break;
+const streamPipeline = promisify(pipeline);
+
+const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+if (!quotedMsg || (!quotedMsg.audioMessage && !quotedMsg.videoMessage)) {
+await sock.sendMessage(msg.key.remoteJid, {
+text: "✳️ Responde a un *audio* (MP3) o *video* (MP4) para identificar la canción."
+}, { quoted: msg });
+break;
+}
+
+if ((quotedMsg.audioMessage || quotedMsg.videoMessage).seconds > 20) {
+await sock.sendMessage(msg.key.remoteJid, {
+text: "⚠️ El archivo es demasiado grande. Intenta con un clip de 10-20 segundos."
+}, { quoted: msg });
+break;
+}
+
+await sock.sendMessage(msg.key.remoteJid, {
+react: { text: '🔎', key: msg.key }
+});
+
+try {
+const tmpDir = path.join(__dirname, 'tmp');
+if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+const fileExtension = quotedMsg.audioMessage ? 'mp3' : 'mp4';
+const filePath = path.join(tmpDir, `${Date.now()}.${fileExtension}`);
+
+const stream = await downloadContentFromMessage(
+quotedMsg.audioMessage || quotedMsg.videoMessage, 
+quotedMsg.audioMessage ? 'audio' : 'video'
+);
+const writable = fs.createWriteStream(filePath);
+for await (const chunk of stream) {
+writable.write(chunk);
+}
+writable.end();
+
+const res = await acr.identify(fs.readFileSync(filePath));
+const { code, msg } = res.status;
+if (code !== 0) throw new Error(msg);
+
+const { title, artists, album, genres, release_date } = res.metadata.music[0];
+const search = await yts(title);
+const video = search.videos.length > 0 ? search.videos[0] : null;
+
+const resultText = `
+𝐑𝐄𝐒𝐔𝐋𝐓𝐀𝐃𝐎𝐒 𝐃𝐄 𝐋𝐀 𝐁𝐔𝐒𝐐𝐔𝐄𝐃𝐀
+
+• 📌 𝐓𝐢𝐭𝐮𝐥𝐨: ${title}
+• 👨‍🎤 𝐀𝐫𝐭𝐢𝐬𝐭𝐚: ${artists ? artists.map(v => v.name).join(', ') : 'No encontrado'}
+• 💾 𝐀𝐥𝐛𝐮𝐦: ${album.name || 'No encontrado'}
+• 🌐 𝐆𝐞𝐧𝐞𝐫𝐨: ${genres ? genres.map(v => v.name).join(', ') : 'No encontrado'}
+• 📆 𝐅𝐞𝐜𝐡𝐚 𝐝𝐞 𝐥𝐚𝐧𝐳𝐚𝐦𝐢𝐞𝐧𝐭𝐨: ${release_date || 'No encontrado'}
+• 🎬 𝐕𝐞𝐫 𝐞𝐧 𝐘𝐨𝐮𝐓𝐮𝐛𝐞: ${video ? video.url : 'No encontrado'}
+`.trim();
+
+if (!video) {
+await sock.sendMessage(msg.key.remoteJid, {
+text: "⚠️ No se encontró ningún video relacionado en YouTube."
+}, { quoted: msg });
+} else {
+await sock.sendMessage(msg.key.remoteJid, {
+image: { url: video.thumbnail },
+caption: resultText
+}, { quoted: msg });
+}
+
+fs.unlinkSync(filePath);
+
+await sock.sendMessage(msg.key.remoteJid, {
+react: { text: '✅', key: msg.key }
+});
+
+} catch (err) {
+console.error(err);
+await sock.sendMessage(msg.key.remoteJid, {
+text: `❌ *Error:* ${err.message}`
+}, { quoted: msg });
+
+await sock.sendMessage(msg.key.remoteJid, {
+react: { text: '❌', key: msg.key }
+});
+}
+
+break;
   }
-
-  let mediaType;
-  if (quoted.audioMessage) mediaType = 'audio';
-  else if (quoted.videoMessage) mediaType = 'video';
-  else {
-    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *Responde a un audio o video para identificar la música.*' }, { quoted: msg });
-    break;
-  }
-
-  const mediaMsg = quoted[`${mediaType}Message`];
-  const mime = mediaMsg.mimetype || '';
-  const seconds = mediaMsg.seconds || 0;
-  if (seconds > 20) {
-    await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*' }, { quoted: msg });
-    break;
-  }
-
-  await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
-
-  const tmpDir = path.join(__dirname, 'tmp');
-  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-  const ext = mime.split('/')[1] || (mediaType === 'audio' ? 'mp3' : 'mp4');
-  const tempFilePath = path.join(tmpDir, `${msg.sender}.${ext}`);
-
-  try {
-    const stream = await downloadContentFromMessage(mediaMsg, mediaType);
-    const fileStream = fs.createWriteStream(tempFilePath);
-    await streamPipeline(stream, fileStream);
-
-    const uploadResponse = await quAx(tempFilePath);
-    if (!uploadResponse.status) throw new Error('Error al subir el archivo.');
-
-    const fileUrl = uploadResponse.result.url;
-    const apiUrl = `https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(fileUrl)}&apikey=${apiKey}`;
-
-    const { data } = await axios.get(apiUrl);
-    if (!data.status) throw new Error('No se pudo identificar la canción.');
-
-    const { title, artist, album, release } = data.data;
-
-    const search = await yts(title);
-    const video = search.videos.length > 0 ? search.videos[0] : null;
-
-    const infoMessage = `
-╔══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-╚══════════════════╝
-
-🎶 *Música Identificada:*  
-╭───────────────╮  
-├ 📌 *Título:* ${title || 'Desconocido'}
-├ 👨‍🎤 *Artista:* ${artist || 'Desconocido'}
-├ 💿 *Álbum:* ${album || 'Desconocido'}
-├ 📅 *Lanzamiento:* ${release || 'Desconocido'}
-└ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
-╰───────────────╯
-    `.trim();
-
-    if (!video) {
-      await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *No se encontró ningún video relacionado en YouTube.*' }, { quoted: msg });
-    } else {
-      await sock.sendMessage(msg.key.remoteJid, {
-        image: { url: video.thumbnail },
-        caption: infoMessage,
-        footer: "EliasarYT",
-        viewOnce: false,
-        headerType: 4,
-        mentions: [msg.sender]
-      }, { quoted: msg });
-    }
-
-  } catch (error) {
-    await sock.sendMessage(msg.key.remoteJid, { text: `*⚠️ Error al identificar la música:* ${error.message}` }, { quoted: msg });
-  } finally {
-    if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-  }
-  break;
-}     
  case 'whatmusic': {
 const fs = require('fs');
 const path = require('path');
