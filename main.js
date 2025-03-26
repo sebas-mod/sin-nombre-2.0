@@ -4382,7 +4382,6 @@ case 'personalidad': {
   }
   break;
 }
-        
 case 'tag': {
   try {
     const chatId = msg.key.remoteJid;
@@ -4406,7 +4405,20 @@ case 'tag': {
         messageToForward = { text: quoted.conversation };
       } else if (quoted.extendedTextMessage && quoted.extendedTextMessage.text) {
         messageToForward = { text: quoted.extendedTextMessage.text };
-      } else if (quoted.imageMessage) {
+      }
+      // Nuevo: Manejo de audioMessage (nota de voz o audio)
+      else if (quoted.audioMessage) {
+        const stream = await downloadContentFromMessage(quoted.audioMessage, "audio");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk]);
+        }
+        if (!buffer || buffer.length === 0) throw new Error("Audio buffer is empty");
+        const mimetype = quoted.audioMessage.mimetype || "audio/ogg";
+        messageToForward = { audio: buffer, mimetype };
+        hasMedia = true;
+      }
+      else if (quoted.imageMessage) {
         // Descargar imagen
         const stream = await downloadContentFromMessage(quoted.imageMessage, "image");
         let buffer = Buffer.alloc(0);
@@ -4415,7 +4427,6 @@ case 'tag': {
         }
         if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
         const mimetype = quoted.imageMessage.mimetype || "image/jpeg";
-        // Forzar caption como cadena vacía si no existe
         const caption = quoted.imageMessage.caption ? quoted.imageMessage.caption : "";
         messageToForward = { image: buffer, mimetype, caption };
         hasMedia = true;
@@ -4442,17 +4453,30 @@ case 'tag': {
         messageToForward = { sticker: buffer };
         hasMedia = true;
       } else if (quoted.documentMessage) {
-        // Descargar documento
-        const stream = await downloadContentFromMessage(quoted.documentMessage, "document");
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk]);
+        // Si el documento es de audio, reenvíalo como audio
+        if (quoted.documentMessage.mimetype && quoted.documentMessage.mimetype.startsWith("audio")) {
+          const stream = await downloadContentFromMessage(quoted.documentMessage, "document");
+          let buffer = Buffer.alloc(0);
+          for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+          }
+          if (!buffer || buffer.length === 0) throw new Error("Audio document buffer is empty");
+          const mimetype = quoted.documentMessage.mimetype;
+          messageToForward = { audio: buffer, mimetype };
+          hasMedia = true;
+        } else {
+          // Descargar documento normal
+          const stream = await downloadContentFromMessage(quoted.documentMessage, "document");
+          let buffer = Buffer.alloc(0);
+          for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+          }
+          if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
+          const mimetype = quoted.documentMessage.mimetype || "application/pdf";
+          const caption = quoted.documentMessage.caption ? quoted.documentMessage.caption : "";
+          messageToForward = { document: buffer, mimetype, caption };
+          hasMedia = true;
         }
-        if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
-        const mimetype = quoted.documentMessage.mimetype || "application/pdf";
-        const caption = quoted.documentMessage.caption ? quoted.documentMessage.caption : "";
-        messageToForward = { document: buffer, mimetype, caption };
-        hasMedia = true;
       } else {
         messageToForward = { text: "" };
       }
@@ -4476,7 +4500,7 @@ case 'tag': {
     await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al ejecutar el comando tag." }, { quoted: msg });
   }
   break;
-}
+}        
         
 case 'tagall':
 case 'invocar':
