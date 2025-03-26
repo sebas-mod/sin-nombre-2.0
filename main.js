@@ -219,17 +219,23 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-case 'whatmusic6': {
+
+case 'whatmusic10': {
+  const acrcloud = require('acrcloud');
   const fs = require('fs');
   const path = require('path');
-  const axios = require('axios');
-  const FormData = require('form-data');
   const { promisify } = require('util');
   const { pipeline } = require('stream');
   const yts = require('yt-search');
   const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+
   const streamPipeline = promisify(pipeline);
-  const apiKey = 'russellxz';
+
+  const acr = new acrcloud({
+    host: 'identify-eu-west-1.acrcloud.com',
+    access_key: 'c33c767d683f78bd17d4bd4991955d81',
+    access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
+  });
 
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   if (!quoted) {
@@ -248,7 +254,6 @@ case 'whatmusic6': {
   const mediaMsg = quoted[`${mediaType}Message`];
   const mime = mediaMsg.mimetype || '';
   const seconds = mediaMsg.seconds || 0;
-
   if (seconds > 20) {
     await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *El archivo es demasiado largo. Recorta a 10-20 segundos para identificarlo correctamente.*' }, { quoted: msg });
     break;
@@ -258,7 +263,6 @@ case 'whatmusic6': {
 
   const tmpDir = path.join(__dirname, 'tmp');
   if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
   const ext = mime.split('/')[1] || (mediaType === 'audio' ? 'mp3' : 'mp4');
   const tempFilePath = path.join(tmpDir, `${msg.sender}.${ext}`);
 
@@ -267,25 +271,18 @@ case 'whatmusic6': {
     const fileStream = fs.createWriteStream(tempFilePath);
     await streamPipeline(stream, fileStream);
 
-    // Subida a uguu.se
-    const form = new FormData();
-    form.append('files[]', fs.createReadStream(tempFilePath));
+    // Esperar que el archivo esté completamente escrito
+    await new Promise((resolve) => fileStream.on('finish', resolve));
 
-    const response = await axios.post('https://uguu.se/upload.php', form, {
-      headers: form.getHeaders()
-    });
+    const fileBuffer = fs.readFileSync(tempFilePath);
+    if (!Buffer.isBuffer(fileBuffer)) throw new Error('El archivo no es un buffer válido.');
 
-    const result = response.data;
-    const fileUrl = result?.files?.[0]?.url;
+    const res = await acr.identify(fileBuffer);
+    const { code, msg: statusMsg } = res.status;
+    if (code !== 0) throw new Error(statusMsg);
 
-    if (!fileUrl) throw new Error('No se recibió la URL desde uguu.se');
-
-    const apiUrl = `https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(fileUrl)}&apikey=${apiKey}`;
-    const { data } = await axios.get(apiUrl);
-
-    if (!data.status) throw new Error('No se pudo identificar la canción.');
-
-    const { title, artist, album, release } = data.data;
+    const musicData = res.metadata.music[0];
+    const { title, artists, album, genres, release_date } = musicData;
     const search = await yts(title);
     const video = search.videos.length > 0 ? search.videos[0] : null;
 
@@ -293,37 +290,36 @@ case 'whatmusic6': {
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
 ╚══════════════════╝
-🎶 *Música Identificada:*
-╭───────────────╮
-├ 📌 *Título:* ${title || 'Desconocido'}
-├ 👨‍🎤 *Artista:* ${artist || 'Desconocido'}
-├ 💿 *Álbum:* ${album || 'Desconocido'}
-├ 📅 *Lanzamiento:* ${release || 'Desconocido'}
+
+🎶 *Música Identificada:*  
+╭───────────────╮  
+├ 📌 *Título:* ${title}
+├ 👨‍🎤 *Artista:* ${artists?.map(v => v.name).join(', ') || 'Desconocido'}
+├ 💿 *Álbum:* ${album?.name || 'Desconocido'}
+├ 🌍 *Género:* ${genres?.map(v => v.name).join(', ') || 'Desconocido'}
+├ 📅 *Lanzamiento:* ${release_date || 'Desconocido'}
 └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
 ╰───────────────╯`.trim();
 
-    if (!video) {
-      await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *No se encontró ningún video relacionado en YouTube.*' }, { quoted: msg });
-    } else {
-      await sock.sendMessage(msg.key.remoteJid, {
-        image: { url: video.thumbnail },
-        caption: infoMessage,
-        footer: "EliasarYT",
-        viewOnce: false,
-        headerType: 4,
-        mentions: [msg.sender]
-      }, { quoted: msg });
-    }
+    await sock.sendMessage(msg.key.remoteJid, {
+      image: { url: video?.thumbnail || '' },
+      caption: infoMessage,
+      footer: "EliasarYT",
+      viewOnce: false,
+      headerType: 4,
+      mentions: [msg.sender]
+    }, { quoted: msg });
 
   } catch (error) {
-    await sock.sendMessage(msg.key.remoteJid, { text: `*⚠️ Error al identificar la música:* ${error.message}` }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `*⚠️ Error al identificar la música:* ${error.message}`
+    }, { quoted: msg });
   } finally {
     if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
-
   break;
 }
-      
+        
 case 'link4': {
   const fs = require('fs');
   const path = require('path');
