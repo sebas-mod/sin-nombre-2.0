@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-case 'whatmusic4': {
+case 'whatmusic5': {
   const fs = require('fs');
   const path = require('path');
   const axios = require('axios');
@@ -276,13 +276,41 @@ case 'whatmusic4': {
     const apiUrl = `https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(fileUrl)}&apikey=${apiKey}`;
     const { data } = await axios.get(apiUrl);
 
-    if (!data.status) throw new Error('No se pudo identificar la canción.');
+    if (!data.status) {
+      // Fallback: intentar encontrar en YouTube directamente
+      const fallbackMsg = '⚠️ *No se pudo identificar con la API, intentando búsqueda directa en YouTube...*';
+      await sock.sendMessage(msg.key.remoteJid, { text: fallbackMsg }, { quoted: msg });
 
-    const { title, artist, album, release } = data.data;
-    const search = await yts(title);
-    const video = search.videos.length > 0 ? search.videos[0] : null;
+      const search = await yts(fileUrl); // Esto intentará usar la URL como referencia
+      const video = search.videos.length > 0 ? search.videos[0] : null;
 
-    const infoMessage = `
+      if (!video) {
+        throw new Error('Tampoco se encontró ningún resultado en YouTube.');
+      }
+
+      const fallbackResult = `
+🎵 *Resultado sugerido por YouTube:*
+╭───────────────╮
+├ 📌 *Título:* ${video.title}
+├ 🕒 *Duración:* ${video.timestamp}
+├ 👁️ *Vistas:* ${video.views.toLocaleString()}
+└ 🔗 *Link:* ${video.url}
+╰───────────────╯`.trim();
+
+      await sock.sendMessage(msg.key.remoteJid, {
+        image: { url: video.thumbnail },
+        caption: fallbackResult,
+        footer: "EliasarYT",
+        viewOnce: false,
+        mentions: [msg.sender]
+      }, { quoted: msg });
+
+    } else {
+      const { title, artist, album, release } = data.data;
+      const search = await yts(title);
+      const video = search.videos.length > 0 ? search.videos[0] : null;
+
+      const infoMessage = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
 ╚══════════════════╝
@@ -295,11 +323,8 @@ case 'whatmusic4': {
 └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
 ╰───────────────╯`.trim();
 
-    if (!video) {
-      await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *No se encontró ningún video relacionado en YouTube.*' }, { quoted: msg });
-    } else {
       await sock.sendMessage(msg.key.remoteJid, {
-        image: { url: video.thumbnail },
+        image: { url: video?.thumbnail || '' },
         caption: infoMessage,
         footer: "EliasarYT",
         viewOnce: false,
@@ -309,7 +334,9 @@ case 'whatmusic4': {
     }
 
   } catch (error) {
-    await sock.sendMessage(msg.key.remoteJid, { text: `*⚠️ Error al identificar la música:* ${error.message}` }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `*⚠️ Error al identificar la música:* ${error.message}`,
+    }, { quoted: msg });
   } finally {
     if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
