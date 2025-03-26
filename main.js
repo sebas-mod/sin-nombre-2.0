@@ -219,8 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-
-case 'link2': {
+case 'link3': {
   const fs = require('fs');
   const path = require('path');
   const axios = require('axios');
@@ -262,24 +261,25 @@ case 'link2': {
     const form = new FormData();
     form.append('file', fs.createReadStream(tempFilePath));
 
-    const response = await axios.post('https://s.neoxr.eu/upload', form, {
-      headers: form.getHeaders(),
+    const response = await axios.post('https://file.io/?expires=1d', form, {
+      headers: form.getHeaders()
     });
 
     const res = response.data;
-    if (!res.status || !res.url) throw new Error('No se recibió URL del archivo.');
+    if (!res.success || !res.link) throw new Error('No se pudo subir el archivo correctamente.');
 
     const msgLink = `
-✅ *Archivo Subido con Éxito:*
-🔗 *URL:* ${res.url}
-📁 *Nombre:* ${res.filename || 'Desconocido'}
+✅ *Archivo Subido a File.io:*
+📁 *Nombre:* ${res.name || 'Desconocido'}
+🔗 *Enlace:* ${res.link}
+🕒 *Expira:* ${res.expiry || '1 descarga o 1 día'}
 `.trim();
 
     await sock.sendMessage(msg.key.remoteJid, { text: msgLink }, { quoted: msg });
 
-  } catch (e) {
+  } catch (err) {
     await sock.sendMessage(msg.key.remoteJid, {
-      text: `⚠️ *Error al subir archivo:* ${e.message}`,
+      text: `⚠️ *Error al subir archivo:* ${err.message}`
     }, { quoted: msg });
   } finally {
     if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
