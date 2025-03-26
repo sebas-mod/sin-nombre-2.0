@@ -592,26 +592,25 @@ access_key: 'c33c767d683f78bd17d4bd4991955d81',
 access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
 });
 
-const streamPipeline = promisify(pipeline);
+const chatId = msg?.key?.remoteJid;
+if (!chatId) break;
 
 const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 if (!quotedMsg || (!quotedMsg.audioMessage && !quotedMsg.videoMessage)) {
-await sock.sendMessage(msg.key.remoteJid, {
+await sock.sendMessage(chatId, {
 text: "✳️ Responde a un *audio* (MP3) o *video* (MP4) para identificar la canción."
 }, { quoted: msg });
 break;
 }
 
 if ((quotedMsg.audioMessage || quotedMsg.videoMessage).seconds > 20) {
-await sock.sendMessage(msg.key.remoteJid, {
+await sock.sendMessage(chatId, {
 text: "⚠️ El archivo es demasiado grande. Intenta con un clip de 10-20 segundos."
 }, { quoted: msg });
 break;
 }
 
-await sock.sendMessage(msg.key.remoteJid, {
-react: { text: '🔎', key: msg.key }
-});
+await sock.sendMessage(chatId, { react: { text: '🔎', key: msg.key } });
 
 try {
 const tmpDir = path.join(__dirname, 'tmp');
@@ -625,14 +624,11 @@ quotedMsg.audioMessage || quotedMsg.videoMessage,
 quotedMsg.audioMessage ? 'audio' : 'video'
 );
 const writable = fs.createWriteStream(filePath);
-for await (const chunk of stream) {
-writable.write(chunk);
-}
+for await (const chunk of stream) writable.write(chunk);
 writable.end();
 
 const res = await acr.identify(fs.readFileSync(filePath));
-const { code, msg } = res.status;
-if (code !== 0) throw new Error(msg);
+if (!res || !res.status || res.status.code !== 0) throw new Error(res?.status?.msg || "No se pudo identificar la canción.");
 
 const { title, artists, album, genres, release_date } = res.metadata.music[0];
 const search = await yts(title);
@@ -650,11 +646,11 @@ const resultText = `
 `.trim();
 
 if (!video) {
-await sock.sendMessage(msg.key.remoteJid, {
+await sock.sendMessage(chatId, {
 text: "⚠️ No se encontró ningún video relacionado en YouTube."
 }, { quoted: msg });
 } else {
-await sock.sendMessage(msg.key.remoteJid, {
+await sock.sendMessage(chatId, {
 image: { url: video.thumbnail },
 caption: resultText
 }, { quoted: msg });
@@ -662,23 +658,18 @@ caption: resultText
 
 fs.unlinkSync(filePath);
 
-await sock.sendMessage(msg.key.remoteJid, {
-react: { text: '✅', key: msg.key }
-});
+await sock.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
 
 } catch (err) {
-console.error(err);
-await sock.sendMessage(msg.key.remoteJid, {
+await sock.sendMessage(chatId, {
 text: `❌ *Error:* ${err.message}`
 }, { quoted: msg });
 
-await sock.sendMessage(msg.key.remoteJid, {
-react: { text: '❌', key: msg.key }
-});
+await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
 }
 
 break;
-  }
+}
  case 'whatmusic': {
 const fs = require('fs');
 const path = require('path');
