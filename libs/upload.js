@@ -15,8 +15,10 @@ async function quAx(filePath) {
       }
     });
 
-    if (response.data.success) {
-      const fileData = response.data.files[0];
+    const files = response.data?.files;
+    
+    if (response.data.success && Array.isArray(files) && files.length > 0 && files[0]?.url) {
+      const fileData = files[0];
       return {
         status: true,
         creator: 'EliasarYT',
@@ -29,9 +31,11 @@ async function quAx(filePath) {
         }
       };
     } else {
-      return { status: false, message: 'Error al subir el archivo' };
+      console.error('Uploader response inválida:', response.data);
+      return { status: false, message: 'Error al subir el archivo: Respuesta inválida.' };
     }
   } catch (error) {
+    console.error('[Uploader ERROR]', error);
     return { status: false, message: error.message };
   }
 }
