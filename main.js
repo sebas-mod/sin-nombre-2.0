@@ -220,7 +220,7 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) { 
 
-case 'whatmusic10': {
+case 'whatmusic11': {
   const acrcloud = require('acrcloud');
   const fs = require('fs');
   const path = require('path');
@@ -270,8 +270,6 @@ case 'whatmusic10': {
     const stream = await downloadContentFromMessage(mediaMsg, mediaType);
     const fileStream = fs.createWriteStream(tempFilePath);
     await streamPipeline(stream, fileStream);
-
-    // Esperar que el archivo esté completamente escrito
     await new Promise((resolve) => fileStream.on('finish', resolve));
 
     const fileBuffer = fs.readFileSync(tempFilePath);
@@ -281,8 +279,14 @@ case 'whatmusic10': {
     const { code, msg: statusMsg } = res.status;
     if (code !== 0) throw new Error(statusMsg);
 
+    // Validación antes de acceder a los datos
+    if (!res.metadata?.music || !res.metadata.music.length) {
+      throw new Error('No se pudo encontrar coincidencias de música.');
+    }
+
     const musicData = res.metadata.music[0];
     const { title, artists, album, genres, release_date } = musicData;
+
     const search = await yts(title);
     const video = search.videos.length > 0 ? search.videos[0] : null;
 
@@ -317,6 +321,7 @@ case 'whatmusic10': {
   } finally {
     if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
+
   break;
 }
         
