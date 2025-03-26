@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-case 'whatmusic3': {
+case 'whatmusic4': {
   const fs = require('fs');
   const path = require('path');
   const axios = require('axios');
@@ -268,7 +268,6 @@ case 'whatmusic3': {
     await streamPipeline(stream, fileStream);
 
     const uploadResponse = await quAx(tempFilePath);
-
     if (!uploadResponse || !uploadResponse.status || !uploadResponse.result || !uploadResponse.result.url) {
       throw new Error('Error al subir el archivo o no se recibió la URL.');
     }
@@ -284,18 +283,17 @@ case 'whatmusic3': {
     const video = search.videos.length > 0 ? search.videos[0] : null;
 
     const infoMessage = `
-      ╔══════════════════╗
-      ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
-      ╚══════════════════╝
-      🎶 *Música Identificada:*
-      ╭───────────────╮
-      ├ 📌 *Título:* ${title || 'Desconocido'}
-      ├ 👨‍🎤 *Artista:* ${artist || 'Desconocido'}
-      ├ 💿 *Álbum:* ${album || 'Desconocido'}
-      ├ 📅 *Lanzamiento:* ${release || 'Desconocido'}
-      └ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
-      ╰───────────────╯
-    `.trim();
+╔══════════════════╗
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚══════════════════╝
+🎶 *Música Identificada:*
+╭───────────────╮
+├ 📌 *Título:* ${title || 'Desconocido'}
+├ 👨‍🎤 *Artista:* ${artist || 'Desconocido'}
+├ 💿 *Álbum:* ${album || 'Desconocido'}
+├ 📅 *Lanzamiento:* ${release || 'Desconocido'}
+└ 🔗 *YouTube:* ${video ? video.url : 'No encontrado'}
+╰───────────────╯`.trim();
 
     if (!video) {
       await sock.sendMessage(msg.key.remoteJid, { text: '⚠️ *No se encontró ningún video relacionado en YouTube.*' }, { quoted: msg });
@@ -309,11 +307,13 @@ case 'whatmusic3': {
         mentions: [msg.sender]
       }, { quoted: msg });
     }
+
   } catch (error) {
     await sock.sendMessage(msg.key.remoteJid, { text: `*⚠️ Error al identificar la música:* ${error.message}` }, { quoted: msg });
   } finally {
     if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
+
   break;
 }
       
