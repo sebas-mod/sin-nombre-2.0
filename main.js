@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-case 'link3': {
+case 'link4': {
   const fs = require('fs');
   const path = require('path');
   const axios = require('axios');
@@ -259,20 +259,26 @@ case 'link3': {
     await streamPipeline(stream, fileStream);
 
     const form = new FormData();
-    form.append('file', fs.createReadStream(tempFilePath));
+    form.append('files[]', fs.createReadStream(tempFilePath));
 
-    const response = await axios.post('https://file.io/?expires=1d', form, {
+    const response = await axios.post('https://uguu.se/upload.php', form, {
       headers: form.getHeaders()
     });
 
     const res = response.data;
-    if (!res.success || !res.link) throw new Error('No se pudo subir el archivo correctamente.');
+
+    if (!res.files || !res.files[0]?.url) throw new Error('No se pudo subir el archivo correctamente.');
+
+    const url = res.files[0].url;
+    const name = res.files[0].name;
+    const size = res.files[0].size;
 
     const msgLink = `
-✅ *Archivo Subido a File.io:*
-📁 *Nombre:* ${res.name || 'Desconocido'}
-🔗 *Enlace:* ${res.link}
-🕒 *Expira:* ${res.expiry || '1 descarga o 1 día'}
+✅ *Archivo Subido con Éxito (uguu.se):*
+📁 *Nombre:* ${name}
+📦 *Tamaño:* ${size}
+🔗 *Enlace:* ${url}
+🕒 *Disponible por 24 horas*
 `.trim();
 
     await sock.sendMessage(msg.key.remoteJid, { text: msgLink }, { quoted: msg });
