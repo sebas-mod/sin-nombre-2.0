@@ -219,8 +219,113 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-     
-      case 'whatmusic2': {
+case 'tag2': {
+  try {
+    const chatId = msg.key.remoteJid;
+    // Verificar que se use en un grupo
+    if (!chatId.endsWith("@g.us")) {
+      await sock.sendMessage(chatId, { text: "⚠️ Este comando solo se puede usar en grupos." }, { quoted: msg });
+      return;
+    }
+
+    // Obtener metadata del grupo para extraer la lista de participantes (menciones)
+    const groupMetadata = await sock.groupMetadata(chatId);
+    const allMentions = groupMetadata.participants.map(p => p.id);
+
+    let messageToForward = null;
+    let hasMedia = false;
+
+    // Si se responde a un mensaje (reply)
+    if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+
+      // Manejo de diferentes tipos de mensajes
+      if (quoted.conversation) {
+        messageToForward = { text: quoted.conversation };
+      } else if (quoted.extendedTextMessage && quoted.extendedTextMessage.text) {
+        messageToForward = { text: quoted.extendedTextMessage.text };
+      } else if (quoted.imageMessage) {
+        // Descargar imagen
+        const stream = await downloadContentFromMessage(quoted.imageMessage, "image");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk]);
+        }
+        if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
+        const mimetype = quoted.imageMessage.mimetype || "image/jpeg";
+        const caption = quoted.imageMessage.caption || "";
+        messageToForward = { image: buffer, mimetype, caption };
+        hasMedia = true;
+      } else if (quoted.videoMessage) {
+        // Descargar video
+        const stream = await downloadContentFromMessage(quoted.videoMessage, "video");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk]);
+        }
+        if (!buffer || buffer.length === 0) throw new Error("Video buffer is empty");
+        const mimetype = quoted.videoMessage.mimetype || "video/mp4";
+        const caption = quoted.videoMessage.caption || "";
+        messageToForward = { video: buffer, mimetype, caption };
+        hasMedia = true;
+      } else if (quoted.audioMessage) {
+        // Descargar audio
+        const stream = await downloadContentFromMessage(quoted.audioMessage, "audio");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk]);
+        }
+        if (!buffer || buffer.length === 0) throw new Error("Audio buffer is empty");
+        const mimetype = quoted.audioMessage.mimetype || "audio/mp3";
+        messageToForward = { audio: buffer, mimetype };
+        hasMedia = true;
+      } else if (quoted.stickerMessage) {
+        // Descargar sticker
+        const stream = await downloadContentFromMessage(quoted.stickerMessage, "sticker");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk]);
+        }
+        if (!buffer || buffer.length === 0) throw new Error("Sticker buffer is empty");
+        messageToForward = { sticker: buffer };
+        hasMedia = true;
+      } else if (quoted.documentMessage) {
+        // Descargar documento
+        const stream = await downloadContentFromMessage(quoted.documentMessage, "document");
+        let buffer = Buffer.alloc(0);
+        for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk]);
+        }
+        if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
+        const mimetype = quoted.documentMessage.mimetype || "application/pdf";
+        const caption = quoted.documentMessage.caption || "";
+        messageToForward = { document: buffer, mimetype, caption };
+        hasMedia = true;
+      }
+    }
+
+    // Si no se respondió a un mensaje pero hay texto ingresado, se usa ese texto
+    if (!hasMedia && args.join(" ").trim().length > 0) {
+      messageToForward = { text: args.join(" ") };
+    }
+
+    // Si no se detectó ni texto ni multimedia, enviar advertencia
+    if (!messageToForward) {
+      await sock.sendMessage(chatId, { text: "⚠️ Debes responder a un mensaje o proporcionar un texto para reenviar." }, { quoted: msg });
+      return;
+    }
+
+    // Enviar el mensaje con las menciones a todos (menciones "ocultas")
+    await sock.sendMessage(chatId, { ...messageToForward, mentions: allMentions }, { quoted: msg });
+
+  } catch (error) {
+    console.error("❌ Error en el comando tag:", error);
+    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al ejecutar el comando tag." }, { quoted: msg });
+  }
+  break;
+}     
+      
+  case 'whatmusic2': {
   const fs = require('fs');
   const path = require('path');
   const axios = require('axios');
