@@ -219,16 +219,16 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-
-case 'whatmusic20': {
+case 'whatmusic': {
     const fs = require('fs');
     const path = require('path');
     const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
     const { promisify } = require('util');
     const { pipeline } = require('stream');
     const axios = require('axios');
-    const quAx = require('./libs/upload.js');
     const yts = require('yt-search');
+    const ffmpeg = require('fluent-ffmpeg');
+    const quAx = require('./libs/upload.js');
 
     const streamPipeline = promisify(pipeline);
 
@@ -249,19 +249,17 @@ case 'whatmusic20': {
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
         const fileExtension = quotedMsg.audioMessage ? 'mp3' : 'mp4';
-        const filePath = path.join(tmpDir, `${Date.now()}.${fileExtension}`);
+        const inputPath = path.join(tmpDir, `${Date.now()}_input.${fileExtension}`);
 
         const stream = await downloadContentFromMessage(
             quotedMsg.audioMessage || quotedMsg.videoMessage,
             quotedMsg.audioMessage ? 'audio' : 'video'
         );
-        const writable = fs.createWriteStream(filePath);
-        for await (const chunk of stream) {
-            writable.write(chunk);
-        }
+        const writable = fs.createWriteStream(inputPath);
+        for await (const chunk of stream) writable.write(chunk);
         writable.end();
 
-        const uploadResponse = await quAx(filePath);
+        const uploadResponse = await quAx(inputPath);
         if (!uploadResponse.status || !uploadResponse.result.url) throw new Error("No se pudo subir el archivo.");
 
         const apiKey = "russellxz";
@@ -281,7 +279,7 @@ case 'whatmusic20': {
         const views = video.views.toLocaleString();
         const channel = video.author.name || 'Desconocido';
 
-        const infoMessage = `
+        const banner = `
 ╔══════════════════╗
 ║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
 ╚══════════════════╝
@@ -304,23 +302,42 @@ case 'whatmusic20': {
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
-            caption: infoMessage
+            caption: banner
         }, { quoted: msg });
 
-        // Descargar el MP3
-        const apiAudio = `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=${apiKey}`;
-        const audioRes = await axios.get(apiAudio);
-        if (!audioRes.data.status || !audioRes.data.data?.url) throw new Error("No se pudo descargar el audio");
+        // Descargar desde YouTube en MP3
+        const res = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=audio&quality=128kbps&apikey=${apiKey}`);
+        if (!res.data.status || !res.data.data?.url) throw new Error("No se pudo obtener el audio.");
+        const audioUrl = res.data.data.url;
 
-        const audioData = audioRes.data.data;
+        const downloadPath = path.join(tmpDir, `${Date.now()}_raw.mp3`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_fixed.mp3`);
 
+        // Descargar el audio
+        const audioRes = await axios.get(audioUrl, { responseType: 'stream' });
+        const audioStream = fs.createWriteStream(downloadPath);
+        await streamPipeline(audioRes.data, audioStream);
+
+        // Reparar con ffmpeg
+        await new Promise((resolve, reject) => {
+            ffmpeg(downloadPath)
+                .audioCodec('libmp3lame')
+                .audioBitrate('128k')
+                .save(finalPath)
+                .on('end', resolve)
+                .on('error', reject);
+        });
+
+        // Enviar el audio procesado
         await sock.sendMessage(msg.key.remoteJid, {
-            audio: { url: audioData.url },
+            audio: fs.readFileSync(finalPath),
             mimetype: 'audio/mpeg',
-            fileName: audioData.filename || `${title}.mp3`
+            fileName: `${title}.mp3`
         }, { quoted: msg });
 
-        fs.unlinkSync(filePath);
+        fs.unlinkSync(inputPath);
+        fs.unlinkSync(downloadPath);
+        fs.unlinkSync(finalPath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
@@ -622,86 +639,7 @@ await sock.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
 
 break;
 }
- case 'whatmusic': {
-const fs = require('fs');
-const path = require('path');
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-const { promisify } = require('util');
-const { pipeline } = require('stream');
-const axios = require('axios');
-const quAx = require('./libs/upload.js');
 
-const streamPipeline = promisify(pipeline);
-
-const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-if (!quotedMsg || (!quotedMsg.audioMessage && !quotedMsg.videoMessage)) {
-await sock.sendMessage(msg.key.remoteJid, {
-text: "✳️ Responde a un *audio* (MP3) o *video* (MP4) para identificar la canción."
-}, { quoted: msg });
-break;
-}
-
-await sock.sendMessage(msg.key.remoteJid, {
-react: { text: '🔎', key: msg.key }
-});
-
-try {
-const tmpDir = path.join(__dirname, 'tmp');
-if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-const fileExtension = quotedMsg.audioMessage ? 'mp3' : 'mp4';
-const filePath = path.join(tmpDir, `${Date.now()}.${fileExtension}`);
-
-const stream = await downloadContentFromMessage(
-quotedMsg.audioMessage || quotedMsg.videoMessage, 
-quotedMsg.audioMessage ? 'audio' : 'video'
-);
-const writable = fs.createWriteStream(filePath);
-for await (const chunk of stream) {
-writable.write(chunk);
-}
-writable.end();
-
-const uploadResponse = await quAx(filePath);
-if (!uploadResponse.status || !uploadResponse.result.url) throw new Error("No se pudo subir el archivo.");
-
-const apiKey = "russellxz";
-const apiUrl = `https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(uploadResponse.result.url)}&apikey=${apiKey}`;
-const { data } = await axios.get(apiUrl);
-
-if (data.status && data.data) {
-const { title, artist, album, release } = data.data;
-await sock.sendMessage(msg.key.remoteJid, {
-text: `
-🎵 *Canción detectada:*🎶
-*Título:* ${title}
-👤 *Artista:* ${artist}
-📀 *Álbum:* ${album}
-📅 *Lanzamiento:* ${release}`
-}, { quoted: msg });
-} else {
-throw new Error("No se pudo identificar la canción.");
-}
-
-fs.unlinkSync(filePath);
-
-await sock.sendMessage(msg.key.remoteJid, {
-react: { text: '✅', key: msg.key }
-});
-
-} catch (err) {
-console.error(err);
-await sock.sendMessage(msg.key.remoteJid, {
-text: `❌ *Error:* ${err.message}`
-}, { quoted: msg });
-
-await sock.sendMessage(msg.key.remoteJid, {
-react: { text: '❌', key: msg.key }
-});
-}
-
-break;
- }       
 case 'linia': {
     const fs = require('fs');
     const path = require('path');
