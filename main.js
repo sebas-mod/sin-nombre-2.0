@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-  case 'play20': {
+  case 'play30': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -270,19 +270,9 @@ sock.ev.on('messages.delete', (messages) => {
 └ 🔗 *Link:* https://youtu.be/${videoInfo.id}
 ╰───────────────╯
 
-📥 *Opciones de Descarga:*  
-┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
-┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
-┣ 🎥 *video:* _${global.prefix}play2 ${text}_
-┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
+⏳ *Procesado por Azura Ultra 2.0*`;
 
-⏳ *Espera un momento...*  
-⚙️ *Azura Ultra 2.0 está procesando tu video...*
-
-═════════════════════  
-        𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
-═════════════════════`;
-
+        // Enviar la vista previa con la miniatura
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
             caption: captionPreview
@@ -293,14 +283,14 @@ sock.ev.on('messages.delete', (messages) => {
         const filename = `${Date.now()}_video.mp4`;
         const filePath = path.join(tmpDir, filename);
 
+        // Descargar el video (igual que en ytmp4)
         const res = await axios.get(url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-
         await streamPipeline(res.data, fs.createWriteStream(filePath));
 
-        // Verificar si el archivo tiene buen tamaño
+        // Verificar que el archivo tenga un tamaño adecuado
         const stats = fs.statSync(filePath);
         if (!stats || stats.size < 100000) {
             fs.unlinkSync(filePath);
@@ -309,12 +299,13 @@ sock.ev.on('messages.delete', (messages) => {
 
         const finalText = `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
 
-        // Enviar el video como documento para que se reproduzca correctamente
+        // Enviar el video como video (no documento) para que se reproduzca correctamente
         await sock.sendMessage(msg.key.remoteJid, {
-            document: fs.readFileSync(filePath),
+            video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
             fileName: `${title}.mp4`,
-            caption: finalText
+            caption: finalText,
+            gifPlayback: false
         }, { quoted: msg });
 
         fs.unlinkSync(filePath);
