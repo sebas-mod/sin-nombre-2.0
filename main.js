@@ -219,7 +219,7 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-  case 'play30': {
+  case 'play40': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
@@ -227,22 +227,23 @@ sock.ev.on('messages.delete', (messages) => {
     const { promisify } = require('util');
     const streamPipeline = promisify(pipeline);
 
-    if (!text) {
+    if (!text || (!text.includes('youtube.com') && !text.includes('youtu.be'))) {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play2* La Factoría - Perdoname`
         }, { quoted: msg });
         break;
     }
 
+    // Reacciona indicando que el proceso inició
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⏳', key: msg.key }
     });
 
     try {
+        // BUSQUEDA: Se obtiene la info del video a través de la API de Neoxr
         const searchUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
         const searchRes = await axios.get(searchUrl);
         const videoInfo = searchRes.data;
-
         if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
 
         const title = videoInfo.title || 'video';
@@ -253,6 +254,7 @@ sock.ev.on('messages.delete', (messages) => {
         const author = videoInfo.channel || 'Desconocido';
         const videoLink = `https://www.youtube.com/watch?v=${videoInfo.id}`;
 
+        // VISTA PREVIA: Se arma el mensaje de preview con la información y se envía la imagen
         const captionPreview = `
 ╔═════════════════╗
 ║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
@@ -270,27 +272,37 @@ sock.ev.on('messages.delete', (messages) => {
 └ 🔗 *Link:* https://youtu.be/${videoInfo.id}
 ╰───────────────╯
 
-⏳ *Procesado por Azura Ultra 2.0*`;
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
+┣ 🎥 *video:* _${global.prefix}play2 ${text}_
+┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
-        // Enviar la vista previa con la miniatura
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu video...*
+
+═════════════════════  
+        𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+═════════════════════`;
+
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
             caption: captionPreview
         }, { quoted: msg });
 
+        // DESCARGA Y ENVÍO DEL VIDEO: (Lógica del comando ytmp4)
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
         const filename = `${Date.now()}_video.mp4`;
         const filePath = path.join(tmpDir, filename);
 
-        // Descargar el video (igual que en ytmp4)
         const res = await axios.get(url, {
             responseType: 'stream',
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
         await streamPipeline(res.data, fs.createWriteStream(filePath));
 
-        // Verificar que el archivo tenga un tamaño adecuado
+        // Se verifica que el archivo descargado tenga un tamaño adecuado
         const stats = fs.statSync(filePath);
         if (!stats || stats.size < 100000) {
             fs.unlinkSync(filePath);
@@ -299,7 +311,6 @@ sock.ev.on('messages.delete', (messages) => {
 
         const finalText = `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
 
-        // Enviar el video como video (no documento) para que se reproduzca correctamente
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(filePath),
             mimetype: 'video/mp4',
@@ -310,6 +321,7 @@ sock.ev.on('messages.delete', (messages) => {
 
         fs.unlinkSync(filePath);
 
+        // Reacción final de éxito
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
