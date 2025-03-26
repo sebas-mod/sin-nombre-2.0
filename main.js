@@ -219,7 +219,124 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-   case 'whatmusic2': {
+  case 'play20': {
+    const axios = require('axios');
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream');
+    const { promisify } = require('util');
+    const streamPipeline = promisify(pipeline);
+
+    if (!text) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play2* La Factoría - Perdoname`
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const searchUrl = `https://api.neoxr.eu/api/video?q=${encodeURIComponent(text)}&apikey=russellxz`;
+        const searchRes = await axios.get(searchUrl);
+        const videoInfo = searchRes.data;
+
+        if (!videoInfo || !videoInfo.data?.url) throw new Error('No se pudo encontrar el video');
+
+        const title = videoInfo.title || 'video';
+        const url = videoInfo.data.url;
+        const thumbnail = videoInfo.thumbnail;
+        const duration = videoInfo.fduration || '0:00';
+        const views = videoInfo.views || 'N/A';
+        const author = videoInfo.channel || 'Desconocido';
+        const videoLink = `https://www.youtube.com/watch?v=${videoInfo.id}`;
+
+        const captionPreview = `
+╔═════════════════╗
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+╚═════════════════╝
+
+📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${duration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Autor:* ${author}
+├ 🗓️ *Publicado:* ${videoInfo.publish || 'Desconocido'}
+├ 📦 *Tamaño:* ${videoInfo.data.size || 'Desconocido'}
+├ 📹 *Calidad:* ${videoInfo.data.quality || 'Desconocido'}
+└ 🔗 *Link:* https://youtu.be/${videoInfo.id}
+╰───────────────╯
+
+📥 *Opciones de Descarga:*  
+┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
+┣ 🎥 *video:* _${global.prefix}play2 ${text}_
+┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
+
+⏳ *Espera un momento...*  
+⚙️ *Azura Ultra 2.0 está procesando tu video...*
+
+═════════════════════  
+        𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+═════════════════════`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption: captionPreview
+        }, { quoted: msg });
+
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const filename = `${Date.now()}_video.mp4`;
+        const filePath = path.join(tmpDir, filename);
+
+        const res = await axios.get(url, {
+            responseType: 'stream',
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        await streamPipeline(res.data, fs.createWriteStream(filePath));
+
+        // Verificar si el archivo tiene buen tamaño
+        const stats = fs.statSync(filePath);
+        if (!stats || stats.size < 100000) {
+            fs.unlinkSync(filePath);
+            throw new Error('El video descargado está vacío o incompleto');
+        }
+
+        const finalText = `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+
+        // Enviar el video como documento para que se reproduzca correctamente
+        await sock.sendMessage(msg.key.remoteJid, {
+            document: fs.readFileSync(filePath),
+            mimetype: 'video/mp4',
+            fileName: `${title}.mp4`,
+            caption: finalText
+        }, { quoted: msg });
+
+        fs.unlinkSync(filePath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+      
+      case 'whatmusic2': {
   const fs = require('fs');
   const path = require('path');
   const axios = require('axios');
