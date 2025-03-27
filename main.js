@@ -411,7 +411,73 @@ case 'play2': {
 
     break;
 }
-      
+
+case 'ig2': {
+  const axios = require('axios');
+
+  if (!text || !text.includes("instagram.com")) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig2* https://www.instagram.com/p/CK0tLXyAzEI`
+    }, { quoted: msg });
+    break;
+  }
+
+  await sock.sendMessage(msg.key.remoteJid, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    const apiURL = `https://api.neoxr.eu/api/ig?url=${encodeURIComponent(text)}&apikey=russellxz`;
+    const res = await axios.get(apiURL);
+    const json = res.data;
+
+    if (!json.status || !json.data?.length) throw new Error("No se pudo obtener contenido.");
+
+    const info = json.info || {};
+    const captionPreview = `
+╔═════════════════╗
+║ ✦ 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 - Instagram ✦
+╚═════════════════╝
+
+📥 *Descarga desde Instagram:*  
+╭───────────────╮
+├ 👤 *Usuario:* ${info.username || 'Desconocido'}
+├ 📝 *Descripción:* ${info.caption?.substring(0, 120) || 'Sin descripción'}
+├ 📦 *Elementos:* ${json.data.length} archivo(s)
+└ 🔗 *Post:* ${text}
+╰───────────────╯
+
+⏳ *Azura Ultra 2.0 está procesando tu contenido...*`;
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      image: { url: info.thumbnail || json.data[0] },
+      caption: captionPreview
+    }, { quoted: msg });
+
+    for (const mediaUrl of json.data) {
+      const ext = mediaUrl.includes('.mp4') ? 'video' : 'image';
+      await sock.sendMessage(msg.key.remoteJid, {
+        [ext]: { url: mediaUrl }
+      }, { quoted: msg });
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: '✅', key: msg.key }
+    });
+
+  } catch (err) {
+    console.error(err);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error:* ${err.message}`
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: '❌', key: msg.key }
+    });
+  }
+
+  break;
+}
+        
   case 'play111': {
     const axios = require('axios');
     const fs = require('fs');
