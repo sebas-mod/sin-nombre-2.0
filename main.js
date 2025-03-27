@@ -449,16 +449,24 @@ case 'ig2': {
 
 ⏳ *Azura Ultra 2.0 está procesando tu contenido...*`;
 
+    // Enviar vista previa
     await sock.sendMessage(msg.key.remoteJid, {
       image: { url: info.thumbnail || json.data[0] },
       caption: captionPreview
     }, { quoted: msg });
 
+    // Enviar cada archivo multimedia
     for (const mediaUrl of json.data) {
-      const ext = mediaUrl.includes('.mp4') ? 'video' : 'image';
-      await sock.sendMessage(msg.key.remoteJid, {
-        [ext]: { url: mediaUrl }
-      }, { quoted: msg });
+      if (mediaUrl.endsWith(".mp4")) {
+        await sock.sendMessage(msg.key.remoteJid, {
+          video: { url: mediaUrl },
+          mimetype: 'video/mp4'
+        }, { quoted: msg });
+      } else {
+        await sock.sendMessage(msg.key.remoteJid, {
+          image: { url: mediaUrl }
+        }, { quoted: msg });
+      }
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
