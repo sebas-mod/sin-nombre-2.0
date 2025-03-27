@@ -327,6 +327,7 @@ case 'play2': {
 📥 *Opciones de Descarga:*  
 ┣ 🎵 *Audio:* _${global.prefix}play1 ${text}_
 ┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
+┣ 🎥 *Video:* _${global.prefix}play2 ${text}_
 ┣ 🎥 *Video:* _${global.prefix}play6 ${text}_
 ┗ ⚠️ *¿No se reproduce?* Usa _${global.prefix}ff_
 
