@@ -219,67 +219,6 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-case 'ig5': {
-    const axios = require('axios');
-
-    if (!text || !text.includes("instagram.com")) {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig5* https://www.instagram.com/reel/XXXX/`
-        }, { quoted: msg });
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    try {
-        const apiUrl = `https://api.neoxr.eu/api/ig?url=${encodeURIComponent(text)}&apikey=russellxz`;
-        const res = await axios.get(apiUrl);
-        const { data, status } = res.data;
-
-        if (!status || !Array.isArray(data) || data.length === 0) {
-            throw new Error("No se pudo obtener el video del enlace.");
-        }
-
-        // Filtrar solo videos (.mp4)
-        const videos = data.filter(item => {
-            const url = typeof item === 'string' ? item : item?.url;
-            return url && url.includes('.mp4');
-        });
-
-        if (videos.length === 0) {
-            throw new Error("No se encontraron videos en el enlace proporcionado.");
-        }
-
-        const caption = `🎬 *Video de Instagram Descargado*\n\nProcesado por:\n✦ Azura Ultra 2.0 Bot ✦`;
-
-        for (let vid of videos) {
-            const videoUrl = typeof vid === 'string' ? vid : vid?.url;
-
-            await sock.sendMessage(msg.key.remoteJid, {
-                video: { url: videoUrl },
-                mimetype: 'video/mp4',
-                caption
-            }, { quoted: msg });
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error("❌ Error en ig2:", err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message || 'No se pudo procesar el enlace de Instagram.'}`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}
         
 case 'carga': {
   if (!isOwner) {
