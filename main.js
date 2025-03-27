@@ -274,7 +274,7 @@ case 'carga': {
 }
       
     
-case 'play22': {
+case 'play2': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
