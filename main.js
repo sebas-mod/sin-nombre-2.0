@@ -219,12 +219,12 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-case 'ig4': {
+case 'ig5': {
     const axios = require('axios');
 
     if (!text || !text.includes("instagram.com")) {
         return sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig2* https://www.instagram.com/reel/DHq8LHCAGXV/`
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig5* https://www.instagram.com/reel/XXXX/`
         }, { quoted: msg });
     }
 
@@ -238,18 +238,28 @@ case 'ig4': {
         const { data, status } = res.data;
 
         if (!status || !Array.isArray(data) || data.length === 0) {
-            throw new Error("No se pudo obtener el contenido del enlace de Instagram.");
+            throw new Error("No se pudo obtener el video del enlace.");
         }
 
-        for (let item of data) {
-            let url = typeof item === 'string' ? item : item?.url;
-            if (!url || typeof url !== 'string') continue;
+        // Filtrar solo videos (.mp4)
+        const videos = data.filter(item => {
+            const url = typeof item === 'string' ? item : item?.url;
+            return url && url.includes('.mp4');
+        });
 
-            const isVideo = url.endsWith(".mp4");
+        if (videos.length === 0) {
+            throw new Error("No se encontraron videos en el enlace proporcionado.");
+        }
+
+        const caption = `🎬 *Video de Instagram Descargado*\n\nProcesado por:\n✦ Azura Ultra 2.0 Bot ✦`;
+
+        for (let vid of videos) {
+            const videoUrl = typeof vid === 'string' ? vid : vid?.url;
 
             await sock.sendMessage(msg.key.remoteJid, {
-                [isVideo ? 'video' : 'image']: { url },
-                caption: isVideo ? '🎬 *Video de Instagram descargado*' : '🖼️ *Imagen descargada*'
+                video: { url: videoUrl },
+                mimetype: 'video/mp4',
+                caption
             }, { quoted: msg });
         }
 
@@ -463,76 +473,6 @@ case 'play2': {
     break;
 }
 
-case 'ig2': {
-    const axios = require('axios');
-
-    if (!text || !text.includes("instagram.com")) {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig2* https://www.instagram.com/p/CK0tLXyAzEI`
-        }, { quoted: msg });
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
-
-    try {
-        const apiUrl = `https://api.neoxr.eu/api/ig?url=${encodeURIComponent(text)}&apikey=russellxz`;
-        const res = await axios.get(apiUrl);
-        const { data, status, info } = res.data;
-
-        if (!status || !Array.isArray(data) || data.length === 0) {
-            throw new Error("No se pudo obtener el contenido de Instagram.");
-        }
-
-        const captionPreview = `
-╔═════════════════╗
-║ ✦ 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 - Instagram ✦
-╚═════════════════╝
-
-👤 *Usuario:* ${info?.username || 'Desconocido'}
-📝 *Descripción:* ${info?.caption?.substring(0, 120) || 'Sin descripción'}
-📦 *Archivos:* ${data.length}
-🔗 *Link:* ${text}
-
-⏳ *Procesando...*
-        `.trim();
-
-        // Enviar preview con imagen
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: info?.thumbnail || data[0] },
-            caption: captionPreview
-        }, { quoted: msg });
-
-        // Descargar y reenviar cada contenido
-        for (let url of data) {
-            if (typeof url !== 'string') continue;
-
-            const isVideo = url.endsWith(".mp4");
-
-            await sock.sendMessage(msg.key.remoteJid, {
-                [isVideo ? "video" : "image"]: { url },
-                caption: isVideo ? "🎥 Video descargado desde Instagram" : "🖼️ Imagen de Instagram"
-            }, { quoted: msg });
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error("❌ Error en ig2:", err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message || 'No se pudo procesar el enlace.'}`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
-    }
-
-    break;
-}
         
   case 'play111': {
     const axios = require('axios');
