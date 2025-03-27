@@ -219,6 +219,65 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
+case 'ver2': {
+  const fs = require('fs');
+  const path = require('path');
+  const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+
+  // Extraer mensaje citado
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  if (!quoted || !quoted.videoMessage) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "✳️ Responde a una nota de voz (video) para descargarla."
+    }, { quoted: msg });
+    break;
+  }
+
+  // Reacción al iniciar
+  await sock.sendMessage(msg.key.remoteJid, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    // Descargar el contenido del video (nota de voz)
+    const stream = await downloadContentFromMessage(quoted.videoMessage, 'video');
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+
+    // Guardar el archivo temporalmente
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+    const filePath = path.join(tmpDir, `${Date.now()}_voiceNote.mp4`);
+    fs.writeFileSync(filePath, buffer);
+
+    // Enviar el video descargado (nota de voz)
+    await sock.sendMessage(msg.key.remoteJid, {
+      video: fs.readFileSync(filePath),
+      mimetype: 'video/mp4',
+      fileName: 'voiceNote.mp4'
+    }, { quoted: msg });
+
+    fs.unlinkSync(filePath);
+
+    // Reacción de éxito
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: '✅', key: msg.key }
+    });
+  } catch (error) {
+    console.error(error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ Error: ${error.message}`
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: '❌', key: msg.key }
+    });
+  }
+
+  break;
+}
+      
 case 'carga': {
   if (!isOwner) {
     await sock.sendMessage(msg.key.remoteJid, {
