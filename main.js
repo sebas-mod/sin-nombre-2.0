@@ -414,6 +414,11 @@ case 'play2': {
 
 case 'ig2': {
   const axios = require('axios');
+  const fs = require('fs');
+  const path = require('path');
+  const { promisify } = require('util');
+  const { pipeline } = require('stream');
+  const streamPipeline = promisify(pipeline);
 
   if (!text || !text.includes("instagram.com")) {
     await sock.sendMessage(msg.key.remoteJid, {
@@ -449,24 +454,39 @@ case 'ig2': {
 
 ⏳ *Azura Ultra 2.0 está procesando tu contenido...*`;
 
-    // Enviar vista previa
+    // Enviar preview
     await sock.sendMessage(msg.key.remoteJid, {
       image: { url: info.thumbnail || json.data[0] },
       caption: captionPreview
     }, { quoted: msg });
 
-    // Enviar cada archivo multimedia
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
     for (const mediaUrl of json.data) {
+      const filename = `${Date.now()}_${path.basename(mediaUrl.split("?")[0])}`;
+      const filePath = path.join(tmpDir, filename);
+
+      const response = await axios.get(mediaUrl, {
+        responseType: 'stream'
+      });
+
+      await streamPipeline(response.data, fs.createWriteStream(filePath));
+
+      const buffer = fs.readFileSync(filePath);
+
       if (mediaUrl.endsWith(".mp4")) {
         await sock.sendMessage(msg.key.remoteJid, {
-          video: { url: mediaUrl },
+          video: buffer,
           mimetype: 'video/mp4'
         }, { quoted: msg });
       } else {
         await sock.sendMessage(msg.key.remoteJid, {
-          image: { url: mediaUrl }
+          image: buffer
         }, { quoted: msg });
       }
+
+      fs.unlinkSync(filePath); // Eliminar el archivo temporal
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
@@ -474,10 +494,11 @@ case 'ig2': {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Error en ig2:", err);
     await sock.sendMessage(msg.key.remoteJid, {
       text: `❌ *Error:* ${err.message}`
     }, { quoted: msg });
+
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: '❌', key: msg.key }
     });
