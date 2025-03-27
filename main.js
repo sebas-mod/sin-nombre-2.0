@@ -1336,7 +1336,7 @@ case 'play2': {
 
         await streamPipeline(res.data, fs.createWriteStream(filePath));
 
-        const finalText = `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+        const finalText = `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.⚠️ *¿No se reproduce?* Usa el comando: ff\n\n© Azura Ultra 2.0 Bot`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(filePath),
