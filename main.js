@@ -219,7 +219,81 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
-      
+case 'ig3': {
+    const axios = require('axios');
+
+    if (!text || !text.includes("instagram.com")) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig2* https://www.instagram.com/reel/DHq8LHCAGXV/`
+        }, { quoted: msg });
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const apiUrl = `https://api.neoxr.eu/api/ig?url=${encodeURIComponent(text)}&apikey=russellxz`;
+        const res = await axios.get(apiUrl);
+        const { data, status, info } = res.data;
+
+        if (!status || !Array.isArray(data) || data.length === 0) {
+            throw new Error("No se pudo obtener el contenido de Instagram.");
+        }
+
+        const captionPreview = `
+╔═════════════════╗
+║ ✦ 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 - Instagram ✦
+╚═════════════════╝
+
+👤 *Usuario:* ${info?.username || 'Desconocido'}
+📝 *Descripción:* ${info?.caption?.substring(0, 100) || 'Sin descripción'}
+📦 *Archivos:* ${data.length}
+🔗 *Link:* ${text}
+`.trim();
+
+        // Enviar preview
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: info?.thumbnail || (typeof data[0] === 'string' ? data[0] : data[0]?.url) },
+            caption: captionPreview
+        }, { quoted: msg });
+
+        // Descargar y reenviar los archivos
+        for (let item of data) {
+            let url = typeof item === 'string' ? item : item?.url;
+            if (typeof url !== 'string') continue;
+
+            if (url.endsWith(".mp4")) {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    video: { url },
+                    caption: "🎥 *Video descargado desde Instagram*"
+                }, { quoted: msg });
+            } else {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    image: { url },
+                    caption: "🖼️ *Imagen descargada desde Instagram*"
+                }, { quoted: msg });
+            }
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error("❌ Error en ig2:", err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message || 'No se pudo procesar el enlace.'}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+        
 case 'carga': {
   if (!isOwner) {
     await sock.sendMessage(msg.key.remoteJid, {
