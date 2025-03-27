@@ -219,6 +219,47 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
+case 'carga': {
+  if (!isOwner) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "⛔ Este comando es solo para el Owner."
+    }, { quoted: msg });
+    break;
+  }
+
+  const { exec } = require('child_process');
+  exec('git pull', (error, stdout, stderr) => {
+    if (error) {
+      sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ Error al actualizar: ${error.message}`
+      }, { quoted: msg });
+      return;
+    }
+    const output = stdout || stderr;
+    if (output.includes("Already up to date")) {
+      sock.sendMessage(msg.key.remoteJid, {
+        text: `✅ Actualización completada: Ya está al día.`
+      }, { quoted: msg });
+    } else {
+      // Ejecuta comando para listar los archivos modificados en el último pull
+      exec('git diff --name-only HEAD@{1}', (error2, stdout2, stderr2) => {
+        if (error2) {
+          sock.sendMessage(msg.key.remoteJid, {
+            text: `✅ Actualización completada:\n${output}`
+          }, { quoted: msg });
+        } else {
+          const filesUpdated = stdout2.trim() || "No se detectaron cambios en archivos.";
+          sock.sendMessage(msg.key.remoteJid, {
+            text: `✅ Actualización completada:\n\n${output}\n\nArchivos actualizados:\n${filesUpdated}`
+          }, { quoted: msg });
+        }
+      });
+    }
+  });
+  break;
+}
+      
+    
 case 'play2': {
     const axios = require('axios');
     const fs = require('fs');
