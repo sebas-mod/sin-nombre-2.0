@@ -1034,6 +1034,7 @@ case 'ytmp4': {
 ├ 📹 *Calidad:* ${videoData.quality}
 └ 🔗 *Link:* https://youtu.be/${videoData.id}
 ╰───────────────╯
+┗ ⚠️ *¿No se reproduce?* Usa _${global.prefix}ff_
 
 ⏳ *Procesado por Azura Ultra 2.0*`;
 
@@ -1309,6 +1310,7 @@ case 'play2': {
 ┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
 ┣ 🎥 *video:* _${global.prefix}play2 ${text}_
 ┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
+┗ ⚠️ *¿No se reproduce?* Usa _${global.prefix}ff_
 
 ⏳ *Espera un momento...*  
 ⚙️ *Azura Ultra 2.0 está procesando tu video...*
