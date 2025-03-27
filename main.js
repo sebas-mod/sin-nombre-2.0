@@ -413,98 +413,80 @@ case 'play2': {
 }
 
 case 'ig2': {
-  const axios = require('axios');
-  const fs = require('fs');
-  const path = require('path');
-  const { promisify } = require('util');
-  const { pipeline } = require('stream');
-  const streamPipeline = promisify(pipeline);
+    if (!text || !text.includes("instagram.com")) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig2* https://www.instagram.com/p/CK0tLXyAzEI`
+        }, { quoted: msg });
+    }
 
-  if (!text || !text.includes("instagram.com")) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}ig2* https://www.instagram.com/p/CK0tLXyAzEI`
-    }, { quoted: msg });
-    break;
-  }
+    try {
+        // ⏳ Reacción inicial
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '⏳', key: msg.key }
+        });
 
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
+        const axios = require('axios');
+        const apiUrl = `https://api.neoxr.eu/api/ig?url=${encodeURIComponent(text)}&apikey=russellxz`;
+        const response = await axios.get(apiUrl);
+        const { data, status, info } = response.data;
 
-  try {
-    const apiURL = `https://api.neoxr.eu/api/ig?url=${encodeURIComponent(text)}&apikey=russellxz`;
-    const res = await axios.get(apiURL);
-    const json = res.data;
+        if (!status || !data || data.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: "❌ No se pudo obtener el contenido de Instagram."
+            }, { quoted: msg });
+        }
 
-    if (!json.status || !json.data?.length) throw new Error("No se pudo obtener contenido.");
-
-    const info = json.info || {};
-    const captionPreview = `
+        // ✨ Mensaje bonito de preview
+        const caption = `
 ╔═════════════════╗
 ║ ✦ 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 - Instagram ✦
 ╚═════════════════╝
 
-📥 *Descarga desde Instagram:*  
-╭───────────────╮
-├ 👤 *Usuario:* ${info.username || 'Desconocido'}
-├ 📝 *Descripción:* ${info.caption?.substring(0, 120) || 'Sin descripción'}
-├ 📦 *Elementos:* ${json.data.length} archivo(s)
-└ 🔗 *Post:* ${text}
-╰───────────────╯
+👤 *Usuario:* ${info?.username || 'Desconocido'}
+📝 *Descripción:* ${info?.caption?.substring(0, 120) || 'Sin descripción'}
+📦 *Archivos:* ${data.length}
+🔗 *Link:* ${text}
 
-⏳ *Azura Ultra 2.0 está procesando tu contenido...*`;
+⏳ *Procesando...*
+        `.trim();
 
-    // Enviar preview
-    await sock.sendMessage(msg.key.remoteJid, {
-      image: { url: info.thumbnail || json.data[0] },
-      caption: captionPreview
-    }, { quoted: msg });
-
-    const tmpDir = path.join(__dirname, 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-    for (const mediaUrl of json.data) {
-      const filename = `${Date.now()}_${path.basename(mediaUrl.split("?")[0])}`;
-      const filePath = path.join(tmpDir, filename);
-
-      const response = await axios.get(mediaUrl, {
-        responseType: 'stream'
-      });
-
-      await streamPipeline(response.data, fs.createWriteStream(filePath));
-
-      const buffer = fs.readFileSync(filePath);
-
-      if (mediaUrl.endsWith(".mp4")) {
+        // Enviar preview con miniatura (si existe)
         await sock.sendMessage(msg.key.remoteJid, {
-          video: buffer,
-          mimetype: 'video/mp4'
+            image: { url: info?.thumbnail || data[0] },
+            caption
         }, { quoted: msg });
-      } else {
-        await sock.sendMessage(msg.key.remoteJid, {
-          image: buffer
-        }, { quoted: msg });
-      }
 
-      fs.unlinkSync(filePath); // Eliminar el archivo temporal
+        // Enviar archivos (video o imagen)
+        for (let media of data) {
+            if (media.endsWith(".mp4")) {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    video: { url: media },
+                    caption: "📽️ *Video descargado desde Instagram*"
+                }, { quoted: msg });
+            } else {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    image: { url: media },
+                    caption: "🖼️ *Imagen descargada desde Instagram*"
+                }, { quoted: msg });
+            }
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en ig2:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "❌ Ocurrió un error al procesar el enlace de Instagram."
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
     }
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '✅', key: msg.key }
-    });
-
-  } catch (err) {
-    console.error("❌ Error en ig2:", err);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${err.message}`
-    }, { quoted: msg });
-
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '❌', key: msg.key }
-    });
-  }
-
-  break;
+    break;
 }
         
   case 'play111': {
