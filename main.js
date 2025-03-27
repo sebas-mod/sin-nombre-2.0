@@ -222,56 +222,88 @@ sock.ev.on('messages.delete', (messages) => {
 case 'ver2': {
   const fs = require('fs');
   const path = require('path');
+  const ffmpeg = require('fluent-ffmpeg');
   const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+  const { promisify } = require('util');
+  const { pipeline } = require('stream');
+  const streamPipeline = promisify(pipeline);
 
-  // Extraer mensaje citado
+  // Extraer el mensaje citado usando la lógica de "ver"
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   if (!quoted || !quoted.videoMessage) {
     await sock.sendMessage(msg.key.remoteJid, {
-      text: "✳️ Responde a una nota de voz (video) para descargarla."
+      text: "✳️ Responde a una nota de voz (video) para procesarla."
     }, { quoted: msg });
     break;
   }
 
-  // Reacción al iniciar
+  // Enviar reacción de inicio
   await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
+    react: { text: "⏳", key: msg.key }
   });
 
   try {
-    // Descargar el contenido del video (nota de voz)
-    const stream = await downloadContentFromMessage(quoted.videoMessage, 'video');
+    // Descargar el video (nota de voz)
+    const mediaStream = await downloadContentFromMessage(quoted.videoMessage, "video");
     let buffer = Buffer.alloc(0);
-    for await (const chunk of stream) {
+    for await (const chunk of mediaStream) {
       buffer = Buffer.concat([buffer, chunk]);
     }
 
-    // Guardar el archivo temporalmente
+    if (!buffer || buffer.length === 0) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: "❌ Error: No se pudo descargar la nota de voz."
+      }, { quoted: msg });
+      break;
+    }
+
+    // Guardar el archivo descargado temporalmente
     const tmpDir = path.join(__dirname, 'tmp');
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-    const filePath = path.join(tmpDir, `${Date.now()}_voiceNote.mp4`);
-    fs.writeFileSync(filePath, buffer);
+    const inputPath = path.join(tmpDir, `${Date.now()}_input.mp4`);
+    fs.writeFileSync(inputPath, buffer);
 
-    // Enviar el video descargado (nota de voz)
+    // Convertir el video con ffmpeg para mayor compatibilidad
+    const outputPath = path.join(tmpDir, `${Date.now()}_output.mp4`);
+    await new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .outputOptions([
+          '-c:v libx264',
+          '-preset fast',
+          '-crf 28',
+          '-c:a aac',
+          '-b:a 128k',
+          '-movflags +faststart'
+        ])
+        .save(outputPath)
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    // Leer el archivo procesado y enviarlo como video
+    const processedVideo = fs.readFileSync(outputPath);
     await sock.sendMessage(msg.key.remoteJid, {
-      video: fs.readFileSync(filePath),
+      video: processedVideo,
       mimetype: 'video/mp4',
-      fileName: 'voiceNote.mp4'
+      fileName: 'nota_de_voz.mp4'
     }, { quoted: msg });
 
-    fs.unlinkSync(filePath);
+    // Eliminar archivos temporales
+    fs.unlinkSync(inputPath);
+    fs.unlinkSync(outputPath);
 
-    // Reacción de éxito
+    // Enviar reacción de éxito
     await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '✅', key: msg.key }
+      react: { text: "✅", key: msg.key }
     });
+
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error en el comando ver2:", error);
     await sock.sendMessage(msg.key.remoteJid, {
       text: `❌ Error: ${error.message}`
     }, { quoted: msg });
     await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '❌', key: msg.key }
+      react: { text: "❌", key: msg.key }
     });
   }
 
