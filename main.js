@@ -241,18 +241,16 @@ case 'carga': {
         text: `✅ Actualización completada: Ya está al día.`
       }, { quoted: msg });
     } else {
-      // Ejecuta comando para listar los archivos modificados en el último pull
+      // Listar archivos modificados del último pull
       exec('git diff --name-only HEAD@{1}', (error2, stdout2, stderr2) => {
-        if (error2) {
-          sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ Actualización completada:\n${output}`
-          }, { quoted: msg });
-        } else {
-          const filesUpdated = stdout2.trim() || "No se detectaron cambios en archivos.";
-          sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ Actualización completada:\n\n${output}\n\nArchivos actualizados:\n${filesUpdated}`
-          }, { quoted: msg });
-        }
+        let filesUpdated = stdout2.trim() || "No se detectaron cambios en archivos.";
+        sock.sendMessage(msg.key.remoteJid, {
+          text: `✅ Actualización completada:\n\n${output}\n\nArchivos actualizados:\n${filesUpdated}\n\nEl bot se reiniciará para aplicar los cambios...`
+        }, { quoted: msg });
+        // Espera 2 segundos para enviar el mensaje y reinicia el bot
+        setTimeout(() => {
+          process.exit(0);
+        }, 2000);
       });
     }
   });
@@ -260,7 +258,7 @@ case 'carga': {
 }
       
     
-case 'play22': {
+case 'play2': {
     const axios = require('axios');
     const fs = require('fs');
     const path = require('path');
