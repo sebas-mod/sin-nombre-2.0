@@ -227,7 +227,15 @@ case 'carga': {
     break;
   }
 
+  const fs = require('fs');
   const { exec } = require('child_process');
+  const lastRestarterFile = "./lastRestarter.json";
+
+  // Verificar si existe el archivo; si no, crearlo.
+  if (!fs.existsSync(lastRestarterFile)) {
+    fs.writeFileSync(lastRestarterFile, JSON.stringify({ chatId: "" }, null, 2));
+  }
+
   exec('git pull', (error, stdout, stderr) => {
     if (error) {
       sock.sendMessage(msg.key.remoteJid, {
@@ -241,17 +249,25 @@ case 'carga': {
         text: `✅ Actualización completada: Ya está al día.`
       }, { quoted: msg });
     } else {
-      // Listar archivos modificados del último pull
-      exec('git diff --name-only HEAD@{1}', (error2, stdout2, stderr2) => {
-        let filesUpdated = stdout2.trim() || "No se detectaron cambios en archivos.";
-        sock.sendMessage(msg.key.remoteJid, {
-          text: `✅ Actualización completada:\n\n${output}\n\nArchivos actualizados:\n${filesUpdated}\n\nEl bot se reiniciará para aplicar los cambios...`
-        }, { quoted: msg });
-        // Espera 2 segundos para enviar el mensaje y reinicia el bot
-        setTimeout(() => {
-          process.exit(0);
-        }, 2000);
+      const message = `✅ Actualización completada:\n\n${output}\n\n🔄 Reiniciando el servidor...`;
+      
+      // Enviar reacción de reinicio
+      sock.sendMessage(msg.key.remoteJid, {
+        react: { text: "🔄", key: msg.key }
       });
+      
+      // Enviar mensaje de notificación
+      sock.sendMessage(msg.key.remoteJid, {
+        text: message
+      }, { quoted: msg });
+      
+      // Guardar el chat del último restarter
+      fs.writeFileSync(lastRestarterFile, JSON.stringify({ chatId: msg.key.remoteJid }, null, 2));
+      
+      // Reiniciar el bot (asegúrate de usar un gestor de procesos que lo reactive)
+      setTimeout(() => {
+        process.exit(1);
+      }, 3000);
     }
   });
   break;
