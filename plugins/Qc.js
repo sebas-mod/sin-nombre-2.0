@@ -1,55 +1,28 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función disponible
+const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de que esta función esté disponible
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Determinar el JID objetivo:
-    // Si se cita un mensaje, se usa el participant citado; si no, se usa el remitente.
+    // Determinar el usuario objetivo: si se cita un mensaje, se usa el JID citado; de lo contrario, se usa el remitente.
     const quotedJid = msg.message?.extendedTextMessage?.contextInfo?.participant;
     const targetJid = quotedJid || (msg.key.participant || msg.key.remoteJid);
 
-    // Intentar obtener el nombre del usuario objetivo:
+    // Obtener el nombre usando únicamente conn.getName
     let targetName = "";
-    if (quotedJid) {
-      // Si el mensaje es de grupo, intenta obtener el nombre de los participantes del grupo.
-      if (msg.key.remoteJid.endsWith("@g.us")) {
-        try {
-          const groupMetadata = await conn.groupMetadata(msg.key.remoteJid);
-          const participant = groupMetadata.participants.find(p => p.id === quotedJid);
-          if (participant && participant.notify) {
-            targetName = participant.notify;
-          }
-        } catch (err) {
-          // Si falla, lo ignoramos
-        }
-      }
-      // Si no se obtuvo con el grupo, intenta con conn.getName si existe.
-      if (!targetName && typeof conn.getName === 'function') {
-        targetName = await conn.getName(quotedJid);
-      }
-      // Luego, si el bot tiene los contactos, intenta obtenerlo de ahí.
-      if (!targetName && conn.contacts && conn.contacts[quotedJid]) {
-        targetName =
-          conn.contacts[quotedJid].notify ||
-          conn.contacts[quotedJid].vname ||
-          conn.contacts[quotedJid].name ||
-          "";
-      }
-    } else {
-      // Si no se cita, se usa el pushName del remitente.
-      targetName = msg.pushName || "";
+    if (typeof conn.getName === 'function') {
+      targetName = await conn.getName(targetJid);
     }
-    // Si no se obtuvo un nombre válido (o es igual al JID), usar solo la parte numérica.
+    // Si no se obtuvo un nombre válido, se usa solo la parte numérica
     if (!targetName || targetName.trim() === "" || targetName === targetJid) {
       targetName = targetJid.split('@')[0];
     }
 
-    // Obtener el avatar del usuario objetivo, con fallback.
+    // Obtener la foto de perfil (avatar) con fallback
     const pp = await conn.profilePictureUrl(targetJid).catch(
       () => 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
     );
 
-    // Obtener el contenido del texto ya sea mediante args o del mensaje citado.
+    // Obtener el contenido del texto (ya sea mediante argumentos o del mensaje citado)
     let contenido = "";
     if (args.length > 0 && args.join(" ").trim() !== "") {
       contenido = args.join(" ").trim();
@@ -61,7 +34,7 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Remover posibles menciones en el contenido.
+    // Remover menciones (si existieran) del contenido
     const mentionRegex = new RegExp(
       `@${targetJid.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`,
       'g'
@@ -74,7 +47,7 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Construir los parámetros para generar el sticker (quote)
+    // Construir los parámetros para generar el sticker con quote
     const quoteData = {
       type: "quote",
       format: "png",
@@ -97,7 +70,7 @@ const handler = async (msg, { conn, text, args }) => {
       ]
     };
 
-    // Enviar una reacción mientras se genera el sticker
+    // Enviar reacción mientras se genera el sticker
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '🎨', key: msg.key }
     });
@@ -119,7 +92,7 @@ const handler = async (msg, { conn, text, args }) => {
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '✅', key: msg.key }
     });
-
+    
   } catch (err) {
     console.error("❌ Error en el comando qc:", err);
     await conn.sendMessage(msg.key.remoteJid, {
