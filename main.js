@@ -1,4 +1,3 @@
-
 const fs = require("fs");
 const chalk = require("chalk");
 const { isOwner, setPrefix, allowedPrefixes } = require("./config");
@@ -15,7 +14,6 @@ const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`;
 
-// Crear carpetas y archivos iniciales si no existen
 if (!fs.existsSync(stickersDir)) fs.mkdirSync(stickersDir, { recursive: true });
 if (!fs.existsSync(stickersFile)) fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
 
@@ -172,10 +170,9 @@ async function handleCommand(sock, msg, command, args, sender) {
         return buffer;
     };
 
-    // Si existe un plugin para este comando
     const plugin = plugins.find(p => p.command.includes(lowerCommand));
     if (plugin) {
-        return plugin.default(msg, {
+        return plugin(msg, {
             conn: sock,
             text,
             args,
@@ -184,13 +181,10 @@ async function handleCommand(sock, msg, command, args, sender) {
         });
     }
 
-    // Si no existe plugin, usar el sistema case
     switch (lowerCommand) {
         case 'ping':
             await sock.sendMessage(msg.key.remoteJid, { text: 'pong' }, { quoted: msg });
             break;
-        
-        
     }
 }
 
