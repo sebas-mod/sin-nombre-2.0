@@ -58,91 +58,69 @@ const getNombreBonito = async (jid, conn) => {
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Detectar si se está citando un mensaje
-    const quoted = msg.message?.extendedTextMessage?.contextInfo;
-    let targetJid = '';
-    if (quoted && quoted.participant) {
-      // Si se cita, se toma el jid del mensaje citado
-      targetJid = quoted.participant;
+    let textContent;
+    if (args.length >= 1) {
+      textContent = args.slice(0).join(" ");
+    } else if (msg.quoted && msg.quoted.text) {
+      textContent = msg.quoted.text;
     } else {
-      // Si no se cita, se usa el jid del remitente (tuyo)
-      targetJid = msg.sender;
+      return msg.reply(`*⚠️ Y el texto?, Agregue un texto!*`);
     }
+    if (!textContent) return msg.reply(`*⚠️ Y el texto?, agregue un texto!*`);
 
-    // Obtener el nombre (ya sea nick o número bonito)
-    const targetName = await getNombreBonito(targetJid, conn);
+    const who = (msg.mentionedJid && msg.mentionedJid[0])
+      ? msg.mentionedJid[0]
+      : (msg.fromMe ? conn.user.jid : msg.sender);
+    
+    // Se remueve la mención del texto
+    const mentionRegex = new RegExp(`@${who.split('@')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g');
+    const mishi = textContent.replace(mentionRegex, '');
+    if (mishi.length > 35) return msg.reply(`*⚠️ El texto no puede tener mas de 35 caracteres*`);
 
-    // Obtener la foto de perfil real; si falla, se usa la foto por defecto
-    let targetPp;
-    try {
-      targetPp = await conn.profilePictureUrl(targetJid, 'image');
-    } catch {
-      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
-    }
+    const pp = await conn.profilePictureUrl(who).catch((_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
+    const nombre = (conn.contacts && conn.contacts[who] && (conn.contacts[who].pushname || conn.contacts[who].name))
+      || msg.pushName || "Sin nombre";
 
-    // Obtener el texto para el sticker
-    let contenido = args.join(" ").trim();
-    if (!contenido && quoted && quoted.quotedMessage) {
-      const tipo = Object.keys(quoted.quotedMessage)[0];
-      contenido = quoted.quotedMessage[tipo]?.text || quoted.quotedMessage[tipo]?.caption || '';
-    }
-    if (!contenido || contenido.trim() === '') {
-      return await conn.sendMessage(msg.key.remoteJid, { 
-        text: '⚠️ Escribe una palabra o cita un mensaje.' 
-      }, { quoted: msg });
-    }
-    const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
-    if (textoLimpio.length > 35) {
-      return await conn.sendMessage(msg.key.remoteJid, { 
-        text: '⚠️ El texto no puede tener más de 35 caracteres.' 
-      }, { quoted: msg });
-    }
-
-    await conn.sendMessage(msg.key.remoteJid, { 
-      react: { text: '🎨', key: msg.key } 
-    });
-
-    const quoteData = {
-      type: "quote",
-      format: "png",
-      backgroundColor: "#000000",
-      width: 600,
-      height: 900,
-      scale: 3,
-      messages: [
-        {
-          entities: [],
-          avatar: true,
-          from: {
-            id: 1,
-            name: targetName,
-            photo: { url: targetPp }
-          },
-          text: textoLimpio,
-          replyMessage: {}
-        }
-      ]
+    const obj = {
+      "type": "quote",
+      "format": "png",
+      "backgroundColor": "#000000",
+      "width": 512,
+      "height": 768,
+      "scale": 2,
+      "messages": [{
+        "entities": [],
+        "avatar": true,
+        "from": { "id": 1, "name": nombre, "photo": { url: pp } },
+        "text": mishi,
+        "replyMessage": {}
+      }]
     };
 
-    const res = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
+    const json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
       headers: { 'Content-Type': 'application/json' }
     });
-    const buffer = Buffer.from(res.data.result.image, 'base64');
-    const sticker = await writeExifImg(buffer, {
-      packname: "Azura Ultra 2.0 Bot",
-      author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
+    const buffer = Buffer.from(json.data.result.image, 'base64');
+    let sticker = await conn.sendImageAsSticker(msg.chat, buffer, msg, {
+      packname: global.packname,
+      author: global.author,
+      contextInfo: {
+        'forwardingScore': 200,
+        'isForwarded': false,
+        externalAdReply: {
+          showAdAttribution: false,
+          title: global.botname,
+          body: `h`,
+          mediaType: 2,
+          sourceUrl: global.n2,
+          thumbnail: global.imagen1
+        }
+      }
     });
-    await conn.sendMessage(msg.key.remoteJid, { 
-      sticker: { url: sticker } 
-    }, { quoted: msg });
-    await conn.sendMessage(msg.key.remoteJid, { 
-      react: { text: '✅', key: msg.key } 
-    });
-    
   } catch (e) {
     console.error("❌ Error en el comando qc:", e);
-    await conn.sendMessage(msg.key.remoteJid, { 
-      text: '❌ Ocurrió un error al generar el sticker.' 
+    await conn.sendMessage(msg.key.remoteJid, {
+      text: '❌ Ocurrió un error al generar el sticker.'
     }, { quoted: msg });
   }
 };
