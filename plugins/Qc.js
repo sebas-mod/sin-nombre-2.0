@@ -1,7 +1,9 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');
 
-// Bandera según prefijo
+/*==================================================
+  FUNCIONES DE APOYO
+==================================================*/
 const banderaPorPrefijo = (numero) => {
   const prefijos = {
     '507': '🇵🇦',
@@ -23,11 +25,12 @@ const banderaPorPrefijo = (numero) => {
   };
   const numeroSinArroba = numero.split('@')[0];
   let bandera = '';
-  Object.keys(prefijos).forEach(pref => {
+  for (const pref of Object.keys(prefijos)) {
     if (numeroSinArroba.startsWith(pref)) {
       bandera = prefijos[pref];
+      break;
     }
-  });
+  }
   return bandera || '🌎';
 };
 
@@ -44,33 +47,21 @@ const formatPhoneNumber = (jid) => {
   }
 };
 
-/**
- * Intenta obtener un nombre “bonito” (preferencia):
- * 1) conn.getName
- * 2) msg.pushName (nombre que trae el mensaje)
- * 3) conn.contacts
- * 4) Número formateado
- */
 const getNombreBonito = async (jid, conn, fallbackPushName = '') => {
-  // Si no tenemos JID, retornamos algo genérico
   if (!jid) return '???';
-
   try {
     let name = '';
-
-    // (1) Intentar usar siempre conn.getName
+    // 1) conn.getName primero
     if (typeof conn.getName === 'function') {
       name = await conn.getName(jid);
     }
-
-    // (2) Si sigue vacío, usar pushName
+    // 2) Si sigue vacío, intentamos con pushName
     if (!name || !name.trim() || name.includes('@')) {
       if (fallbackPushName && fallbackPushName.trim()) {
         name = fallbackPushName;
       }
     }
-
-    // (3) Si aún está vacío, revisar contactos
+    // 3) Revisamos contactos de Baileys
     if (!name || !name.trim() || name.includes('@')) {
       const c = conn.contacts?.[jid] || {};
       const cName = c.name || c.notify || c.vname || '';
@@ -78,12 +69,10 @@ const getNombreBonito = async (jid, conn, fallbackPushName = '') => {
         name = cName;
       }
     }
-
-    // (4) Si no hay nada, usar el número
+    // 4) Si nada funcionó, usamos número formateado
     if (!name || !name.trim() || name.includes('@')) {
       name = formatPhoneNumber(jid);
     }
-
     return name;
   } catch (err) {
     console.log("Error en getNombreBonito:", err);
@@ -91,62 +80,97 @@ const getNombreBonito = async (jid, conn, fallbackPushName = '') => {
   }
 };
 
+/*==================================================
+  HANDLER PRINCIPAL
+==================================================*/
 const handler = async (msg, { conn, args }) => {
   try {
-    // Info del mensaje citado
-    const quoted = msg.message?.extendedTextMessage?.contextInfo;
-    const quotedMsg = quoted?.quotedMessage;
-    const quotedJid = quoted?.participant;
-
-    // En Baileys, si fromMe es true, significa que lo envió el bot
+    // Para saber si lo envió el bot (fromMe = true)
     const isFromBot = !!msg.key.fromMe;
-
-    // Sacar pushName del mensaje
-    // (En Baileys MD a veces viene en msg.pushName o msg.pushName)
+    // Este es el "pushName" que a veces Baileys adjunta
     const fallbackPushName = msg.pushName || '';
 
-    // Determinar JID objetivo
+    // Contexto de mensaje citado
+    const context = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = context?.quotedMessage || null;
+
+    //===============================================
+    // OBTENER JID DEL USUARIO CITADO O EMISOR
+    //===============================================
     let targetJid;
-    if (quotedJid) {
-      // Si hay mensaje citado, se usa el que se citó
-      targetJid = quotedJid;
+    
+    if (quotedMsg) {
+      // Si hay mensaje citado
+      // 1. Tratamos de usar participant
+      const qParticipant = context.participant; 
+      // 2. Como segunda opción, remoteJid
+      const qRemote = context.remoteJid;
+
+      // A veces, participant = quien cita en vez del citado.  
+      // Vamos a imprimir para debug (si quieres, coméntalo en producción):
+      console.log('[DEBUG QUOTED]', {
+        qParticipant,
+        qRemote,
+        messageSender: msg.key.participant
+      });
+
+      // Escogemos en orden:
+      // - Preferimos qParticipant si existe y es distinto a msg.key.participant
+      //   (porque en grupos, qParticipant normalmente es quien escribió el msg)
+      // - Si no, probamos qRemote
+      // - Si aún así no hay nada, fallback a msg.key.participant
+      if (qParticipant && qParticipant !== msg.key.participant) {
+        targetJid = qParticipant;
+      } else if (qRemote && qRemote !== msg.key.participant) {
+        targetJid = qRemote;
+      } else {
+        // De último, si no hay nada diferente, fallback
+        targetJid = qParticipant || qRemote || msg.key.participant || msg.key.remoteJid;
+      }
     } else {
-      // Sino, sacamos del participant (en grupos) o remoteJid (en privado)
+      // SIN mensaje citado
+      // En grupos: msg.key.participant = JID de quien lo mandó
+      // En privado: msg.key.remoteJid = chat con la otra persona
       targetJid = msg.key.participant || msg.key.remoteJid;
 
-      // Si en privado es el mismo bot (fromMe = true), a veces el remoteJid es nuestro propio JID.
-      // Tú decides si quieres forzar que aparezca tu "nombre de usuario" o algo:
+      // Si es el bot mismo, en privado (fromMe = true), podríamos forzar algo distinto
       if (msg.key.remoteJid.endsWith('@s.whatsapp.net') && isFromBot) {
-        // Por ejemplo, forzamos a que lo identifique con pushName o un alias:
+        // Por ejemplo, se asume que en un privado "bot" = "usuario"
+        // O le pones un alias "Mi Bot"
+        console.log("-> Comando desde bot en privado (fromMe)");
+        // Forzar a usar el JID del bot
+        // (depende de tu lógica; si lo dejas así, ‘targetJid’ = JID del bot)
         targetJid = conn.user?.jid || targetJid;
       }
     }
 
-    // Obtener el nombre con la función priorizando getName
+    //===============================================
+    // OBTENER NOMBRE Y FOTO
+    //===============================================
     const targetName = await getNombreBonito(targetJid, conn, fallbackPushName);
 
-    // Obtener foto de perfil
     let targetPp;
     try {
-      // Usa "image" o "preview", según tu versión de Baileys
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
       targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     }
 
-    // Texto que irá en el sticker
-    let contenido = args.join(' ').trim();
+    //===============================================
+    // OBTENER TEXTO FINAL
+    //===============================================
+    let contenido = args.join(" ").trim();
 
-    // Si no hay args, tomamos el texto del mensaje citado (si existe)
+    // Si no se mandó texto en el comando, usar el texto del citado
     if (!contenido && quotedMsg) {
       const tipo = Object.keys(quotedMsg)[0];
-      contenido = quotedMsg[tipo]?.text
-               || quotedMsg[tipo]?.caption
-               || quotedMsg[tipo]
+      contenido = quotedMsg[tipo]?.text 
+               || quotedMsg[tipo]?.caption 
+               || quotedMsg[tipo] 
                || '';
     }
 
-    // Validar que haya texto
+    // Validar si quedó vacío
     if (!contenido.trim()) {
       return await conn.sendMessage(
         msg.key.remoteJid,
@@ -165,12 +189,14 @@ const handler = async (msg, { conn, args }) => {
       );
     }
 
-    // Reacción de procesando
+    // Reacción de “procesando”
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '🎨', key: msg.key }
     });
 
-    // Datos para la API quote
+    //===============================================
+    // GENERAR LA IMAGEN TIPO "QUOTE"
+    //===============================================
     const quoteData = {
       type: "quote",
       format: "png",
@@ -193,37 +219,36 @@ const handler = async (msg, { conn, args }) => {
       ]
     };
 
-    // Llamada al servicio
+    // Llamada a la API
     const res = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    // Base64 -> Buffer
     const buffer = Buffer.from(res.data.result.image, 'base64');
 
-    // Sticker con metadatos
+    // Crear sticker con exif (packname/author)
     const sticker = await writeExifImg(buffer, {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
     });
 
-    // Enviar sticker
+    // Enviar como sticker
     await conn.sendMessage(
       msg.key.remoteJid,
       { sticker: { url: sticker } },
       { quoted: msg }
     );
 
-    // Reacción final
+    // Reacción de finalizado
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '✅', key: msg.key }
     });
 
-  } catch (err) {
-    console.error("❌ Error en qc:", err);
+  } catch (e) {
+    console.error("❌ Error en qc:", e);
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: '❌ Error al generar el sticker.' },
+      { text: '❌ Ocurrió un error al generar el sticker.' },
       { quoted: msg }
     );
   }
