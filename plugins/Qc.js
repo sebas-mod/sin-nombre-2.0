@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función
+const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función disponible
 
 const handler = async (msg, { conn, text, args }) => {
   try {
@@ -7,7 +7,6 @@ const handler = async (msg, { conn, text, args }) => {
     const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     const quotedJid = msg.message?.extendedTextMessage?.contextInfo?.participant;
     const senderJid = msg.key.participant || msg.key.remoteJid;
-    // Si se cita a alguien, ese será el objetivo; de lo contrario, el remitente
     const targetJid = quotedJid || senderJid;
 
     // Obtener el nombre del usuario objetivo
@@ -16,26 +15,23 @@ const handler = async (msg, { conn, text, args }) => {
       if (typeof conn.getName === 'function') {
         targetName = await conn.getName(quotedJid);
       } else if (conn.contacts && conn.contacts[quotedJid]) {
-        targetName =
-          conn.contacts[quotedJid].notify ||
-          conn.contacts[quotedJid].vname ||
-          conn.contacts[quotedJid].name ||
-          quotedJid;
+        targetName = conn.contacts[quotedJid].notify ||
+                     conn.contacts[quotedJid].vname ||
+                     conn.contacts[quotedJid].name ||
+                     quotedJid;
       } else {
         targetName = quotedJid;
       }
     } else {
       targetName = msg.pushName || "";
     }
-    // Si no se obtuvo un nombre válido (por ejemplo, si es igual al JID), usar solo el número
-    if (!targetName || targetName.trim() === "" || targetName === "Sin nombre" || targetName === targetJid) {
+    // Si no hay nombre o si contiene "@" (por ejemplo, "12345@s.whatsapp.net"), usar solo el número
+    if (!targetName || targetName.trim() === "" || targetName === "Sin nombre" || targetName.includes('@')) {
       targetName = targetJid.split('@')[0];
     }
 
-    // Obtener la foto de perfil del usuario objetivo, con fallback por defecto
-    const pp = await conn.profilePictureUrl(targetJid).catch(
-      () => 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
-    );
+    // Obtener avatar con fallback por defecto
+    const pp = await conn.profilePictureUrl(targetJid).catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
 
     // Obtener el contenido del texto (ya sea en args o del mensaje citado)
     let contenido = "";
@@ -49,11 +45,8 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Remover menciones en el contenido
-    const mentionRegex = new RegExp(
-      `@${targetJid.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`,
-      'g'
-    );
+    // Remover menciones del contenido (si existen)
+    const mentionRegex = new RegExp(`@${targetJid.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`, 'g');
     const textoLimpio = contenido.replace(mentionRegex, "").trim();
 
     if (textoLimpio.length > 35) {
@@ -85,7 +78,7 @@ const handler = async (msg, { conn, text, args }) => {
       ]
     };
 
-    // Enviar reacción mientras se genera el sticker
+    // Reacción mientras se genera el sticker
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '🎨', key: msg.key }
     });
