@@ -1,48 +1,65 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');
 
-// Sistema de banderas mejorado
+// Sistema de banderas por prefijo
 const banderaPorPrefijo = (numero) => {
   const prefijos = {
-    '507': '🇵🇦', '503': '🇸🇻', '502': '🇬🇹', '504': '🇭🇳',
-    '505': '🇳🇮', '506': '🇨🇷', '509': '🇭🇹', '51': '🇵🇪',
-    '52': '🇲🇽', '53': '🇨🇺', '54': '🇦🇷', '55': '🇧🇷',
-    '56': '🇨🇱', '57': '🇨🇴', '58': '🇻🇪', '1': '🇺🇸'
+    '507': '🇵🇦',
+    '503': '🇸🇻',
+    '502': '🇬🇹',
+    '504': '🇭🇳',
+    '505': '🇳🇮',
+    '506': '🇨🇷',
+    '509': '🇭🇹',
+    '51': '🇵🇪',
+    '52': '🇲🇽',
+    '53': '🇨🇺',
+    '54': '🇦🇷',
+    '55': '🇧🇷',
+    '56': '🇨🇱',
+    '57': '🇨🇴',
+    '58': '🇻🇪',
+    '1': '🇺🇸'
   };
   const num = numero.split('@')[0];
-  return prefijos[Object.keys(prefijos).sort((a,b) => b.length - a.length)
-    .find(p => num.startsWith(p))] || '🌎';
+  return prefijos[Object.keys(prefijos).find(p => num.startsWith(p))] || '🌎';
 };
 
 // Formateo de número con bandera
 const formatPhoneNumber = (jid) => {
-  const number = jid.replace(/[^0-9]/g, '');
-  const bandera = banderaPorPrefijo(number);
-  
-  const formatear = (start, ...cuts) => {
-    let resultado = `${bandera} +${number.slice(0, start)}`;
-    let prev = start;
-    cuts.forEach(cut => {
-      resultado += ` ${number.slice(prev, prev + cut)}`;
-      prev += cut;
-    });
-    return resultado;
+  const number = jid.split('@')[0];
+  const bandera = banderaPorPrefijo(jid);
+  const format = (digits, splits) => {
+    const parts = [];
+    splits.forEach((split, i) => parts.push(number.slice(digits[i], digits[i] + split)));
+    return parts.join('-');
   };
 
-  if (number.length === 12) return formatear(3, 4, 4); // +507 6123 4567
-  if (number.length === 11) return formatear(2, 4, 5); // +1 2345 67890
+  if (number.length === 12) return `${bandera} +${format([0,3,7], [3,4,4])}`;
+  if (number.length === 11) return `${bandera} +${format([0,2,6], [2,4,5])}`;
   return `${bandera} +${number}`;
 };
 
-// Sistema de nombres optimizado
-const getNombreBonito = async (jid, conn) => {
+// Sistema inteligente de nombres
+const getNombreBonito = async (jid, conn, pushName = '') => {
   try {
-    let nombre = await conn.getName(jid).catch(() => '');
-    if (nombre?.trim() && !nombre.includes('@')) return nombre;
+    let name = '';
+    // 1. Prioridad: Nombre público
+    if (typeof conn.getName === 'function') {
+      name = await conn.getName(jid).catch(() => '');
+      if (name?.trim() && !name.includes('@')) return name;
+    }
 
+    // 2. Contactos del bot
     const contacto = conn.contacts?.[jid] || {};
-    nombre = contacto.name || contacto.notify || contacto.vname || '';
-    return nombre.trim() || formatPhoneNumber(jid);
+    name = contacto.name || contacto.notify || contacto.vname || '';
+    if (name?.trim() && !name.includes('@')) return name;
+
+    // 3. PushName del mensaje
+    if (pushName?.trim() && !pushName.includes('@')) return pushName;
+
+    // 4. Número formateado
+    return formatPhoneNumber(jid);
   } catch {
     return formatPhoneNumber(jid);
   }
@@ -50,47 +67,57 @@ const getNombreBonito = async (jid, conn) => {
 
 const handler = async (msg, { conn, args }) => {
   try {
-    const ctx = msg.message?.extendedTextMessage?.contextInfo;
-    const esGrupo = msg.key.remoteJid.endsWith('@g.us');
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const isGroup = msg.key.remoteJid.endsWith('@g.us');
 
-    // Lógica de citas corregida
-    let jidObjetivo, contenido;
-    if (ctx?.quotedMessage) {
-      jidObjetivo = ctx.participant 
-        ? ctx.participant.split('@')[0]  // Grupos: participante original
-        : ctx.remoteJid.split('@')[0];  // Privados: remitente
-      
+    // Identificar usuario objetivo
+    let targetJid, targetPushName, contenido;
+    if (quoted) { // Modo cita
+      targetJid = quoted.participant
+        ? quoted.participant.split(':')[0]  // Grupos: conserva el dominio
+        : quoted.remoteJid;               // Privados: conserva el JID completo
+      targetPushName = quoted.pushName || '';
+
       // Obtener texto citado
-      const tipoMensaje = Object.keys(ctx.quotedMessage)[0];
-      contenido = ctx.quotedMessage[tipoMensaje]?.text 
-                || ctx.quotedMessage[tipoMensaje]?.caption 
-                || '';
-    } else {
-      jidObjetivo = msg.key.fromMe 
-        ? conn.user.id 
-        : esGrupo
-          ? msg.key.participant.split('@')[0]
-          : msg.key.remoteJid.split('@')[0];
+      const quotedMsg = quoted.quotedMessage;
+      if (quotedMsg) {
+        const tipo = Object.keys(quotedMsg)[0];
+        contenido = quotedMsg[tipo]?.text || quotedMsg[tipo]?.caption || '';
+      }
+    } else { // Mensaje directo
+      targetJid = msg.key.fromMe
+        ? conn.user.id
+        : isGroup
+          ? msg.key.participant.split(':')[0]
+          : msg.key.remoteJid;
+      targetPushName = msg.pushName;
       contenido = args.join(" ").trim();
     }
 
-    // Validaciones
-    if (!contenido.trim()) {
+    // Validar contenido
+    if (!contenido?.trim()) {
       return conn.sendMessage(msg.key.remoteJid, {
         text: '⚠️ Escribe un texto o cita un mensaje',
         quoted: msg
       });
     }
 
-    // Limpieza de texto
-    const textoFinal = contenido.replace(/@\d+/g, '').trim().slice(0, 35);
-
     // Obtener metadatos
-    const nombre = await getNombreBonito(jidObjetivo, conn);
-    const foto = await conn.profilePictureUrl(jidObjetivo, 'image')
-      .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
-
+    const targetName = await getNombreBonito(targetJid, conn, targetPushName);
+    const targetPp = await conn.profilePictureUrl(targetJid, 'image').catch(() =>
+      'https://telegra.ph/file/24fa902ead26340f3df2c.png'
+    );
+    // Limitar texto
+    const textoLimpio = contenido.replace(/@\d+/g, '').trim();
+    if (textoLimpio.length > 35) {
+      return conn.sendMessage(msg.key.remoteJid, {
+        text: '⚠️ Máximo 35 caracteres',
+        quoted: msg
+      });
+    }
     // Generar sticker
+    await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
+
     const { data } = await axios.post('https://bot.lyo.su/quote/generate', {
       type: "quote",
       format: "png",
@@ -103,24 +130,22 @@ const handler = async (msg, { conn, args }) => {
         avatar: true,
         from: {
           id: 1,
-          name: nombre,
-          photo: { url: foto }
+          name: targetName,
+          photo: { url: targetPp }
         },
-        text: textoFinal,
+        text: textoLimpio,
         replyMessage: {}
       }]
-    });
-
+    }, { headers: { 'Content-Type': 'application/json' } });
     const sticker = await writeExifImg(Buffer.from(data.result.image, 'base64'), {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
     });
-
-    await conn.sendMessage(msg.key.remoteJid, 
-      { sticker: { url: sticker } }, 
+    await conn.sendMessage(msg.key.remoteJid,
+      { sticker: { url: sticker } },
       { quoted: msg }
     );
-
+    await conn.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
   } catch (e) {
     console.error("Error en qc:", e);
     await conn.sendMessage(msg.key.remoteJid, {
