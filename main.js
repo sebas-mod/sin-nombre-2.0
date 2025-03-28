@@ -224,13 +224,14 @@ case 'tourl': {
     const path = require('path');
     const FormData = require('form-data');
     const axios = require('axios');
+    const ffmpeg = require('fluent-ffmpeg');
     const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
     const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
     if (!quotedMsg) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Responde a una imagen, video, sticker, nota de voz o audio para subirlo a la nube.*'
+            text: '⚠️ *Responde a una imagen, video, sticker, nota de voz o audio para subirlo.*'
         }, { quoted: msg });
         break;
     }
@@ -262,38 +263,56 @@ case 'tourl': {
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
-        const ext = typeDetected === 'sticker' ? 'webp' :
-                    mediaMessage.mimetype ? mediaMessage.mimetype.split('/')[1] : 'bin';
+        const rawExt = typeDetected === 'sticker' ? 'webp' :
+            mediaMessage.mimetype ? mediaMessage.mimetype.split('/')[1].split(';')[0] : 'bin';
 
-        const filePath = path.join(tmpDir, `${Date.now()}.${ext}`);
-
+        const rawPath = path.join(tmpDir, `${Date.now()}_input.${rawExt}`);
         const stream = await downloadContentFromMessage(mediaMessage, typeDetected === 'sticker' ? 'sticker' : typeDetected);
-        const writeStream = fs.createWriteStream(filePath);
-
+        const writeStream = fs.createWriteStream(rawPath);
         for await (const chunk of stream) {
             writeStream.write(chunk);
         }
         writeStream.end();
 
-        // Validar tamaño del archivo
-        const stats = fs.statSync(filePath);
-        const maxSize = 200 * 1024 * 1024; // 200 MB
+        await new Promise(resolve => writeStream.on('finish', resolve));
+
+        // Verificar tamaño
+        const stats = fs.statSync(rawPath);
+        const maxSize = 200 * 1024 * 1024; // 200MB
         if (stats.size > maxSize) {
-            fs.unlinkSync(filePath);
-            throw new Error('⚠️ El archivo excede el límite de 200MB permitido.');
+            fs.unlinkSync(rawPath);
+            throw new Error('⚠️ El archivo excede el límite de 200MB.');
         }
 
+        let finalPath = rawPath;
+
+        // Convertir a MP3 si es nota de voz o audio
+        const isAudioToConvert = typeDetected === 'audio' && (rawExt === 'ogg' || rawExt === 'm4a' || rawExt === 'mpeg');
+        if (isAudioToConvert) {
+            finalPath = path.join(tmpDir, `${Date.now()}_converted.mp3`);
+            await new Promise((resolve, reject) => {
+                ffmpeg(rawPath)
+                    .audioCodec('libmp3lame')
+                    .toFormat('mp3')
+                    .on('end', resolve)
+                    .on('error', reject)
+                    .save(finalPath);
+            });
+            fs.unlinkSync(rawPath); // eliminar el archivo original
+        }
+
+        // Subir el archivo
         const form = new FormData();
-        form.append('file', fs.createReadStream(filePath));
-        form.append('expiry', 3600); // 1 hora
+        form.append('file', fs.createReadStream(finalPath));
+        form.append('expiry', 3600);
 
         const res = await axios.post('https://cdn.russellxz.click/upload.php', form, {
             headers: form.getHeaders()
         });
 
-        fs.unlinkSync(filePath);
+        fs.unlinkSync(finalPath);
 
-        if (!res.data || !res.data.url) throw new Error('No se pudo obtener el enlace del archivo.');
+        if (!res.data || !res.data.url) throw new Error('❌ No se pudo subir el archivo.');
 
         await sock.sendMessage(msg.key.remoteJid, {
             text: `✅ *Archivo subido exitosamente:*\n${res.data.url}`
@@ -306,7 +325,7 @@ case 'tourl': {
     } catch (err) {
         console.error("❌ Error en tourl:", err);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message || 'No se pudo subir el archivo.'}`
+            text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
