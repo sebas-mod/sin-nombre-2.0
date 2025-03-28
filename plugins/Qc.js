@@ -33,23 +33,16 @@ const formatPhoneNumber = (jid) => {
   }
 };
 
-// Obtener nombre real o número si está oculto
+// Obtener nombre real usando conn.getName primero; si falla, retorna el número formateado.
 const getNombreBonito = async (jid, conn) => {
   try {
     let name = '';
-
-    // Intentar con getName
+    // Opción principal: intentar con conn.getName
     if (typeof conn.getName === 'function') {
       name = await conn.getName(jid);
     }
 
-    // Revisar contactos si getName falla
-    if (!name || name.trim() === '' || name.includes('@')) {
-      const contacto = conn.contacts?.[jid] || {};
-      name = contacto.name || contacto.notify || contacto.vname || '';
-    }
-
-    // Si no hay nombre, mostrar número bonito
+    // Si no se obtuvo un nombre válido, se retorna el número formateado
     if (!name || name.trim() === '' || name.includes('@')) {
       return formatPhoneNumber(jid);
     }
@@ -69,9 +62,7 @@ const handler = async (msg, { conn, text, args }) => {
 
     let targetJid, targetName, targetPp;
 
-    // Si se está citando un mensaje, se toma el jid del mensaje citado.
-    // De lo contrario, si el mensaje es enviado por mí, se usa mi propio id.
-    // En grupos, si no es de mi autoría, se usa el participante del mensaje.
+    // Si se cita un mensaje, se usa el jid del mensaje citado; de lo contrario, se determina según el remitente
     if (quotedJid) {
       targetJid = quotedJid;
     } else if (msg.key.fromMe) {
@@ -80,7 +71,7 @@ const handler = async (msg, { conn, text, args }) => {
       targetJid = msg.key.participant || msg.key.remoteJid;
     }
 
-    // Obtener nombre "bonito"
+    // Obtener el nombre "bonito" o nick usando conn.getName como primera opción
     targetName = await getNombreBonito(targetJid, conn);
 
     // Obtener foto de perfil
