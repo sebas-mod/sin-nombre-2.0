@@ -220,23 +220,16 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) { 
 
-case 'alien': {
+case 'alien2': {
     const fs = require('fs');
     const path = require('path');
     const axios = require('axios');
     const FormData = require('form-data');
-    const ffmpeg = require('fluent-ffmpeg');
     const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-    const { promisify } = require('util');
-    const { pipeline } = require('stream');
-    const streamPipeline = promisify(pipeline);
 
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    const image = quoted?.imageMessage;
-    
-    if (!image) {
+    if (!msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Responde a una imagen para aplicarle el efecto alienígena.*'
+            text: "✳️ Responde a una *imagen* para aplicar el efecto alienígena."
         }, { quoted: msg });
         break;
     }
@@ -246,71 +239,55 @@ case 'alien': {
     });
 
     try {
+        const quotedMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+        if (!quotedMsg.imageMessage) {
+            throw new Error("Solo se puede usar con imágenes.");
+        }
+
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const inputPath = path.join(tmpDir, `${Date.now()}_alien.jpg`);
 
-        // Descargar imagen
-        const stream = await downloadContentFromMessage(image, 'image');
+        const inputPath = path.join(tmpDir, `${Date.now()}.jpg`);
+        const stream = await downloadContentFromMessage(quotedMsg.imageMessage, 'image');
         const writeStream = fs.createWriteStream(inputPath);
-        await streamPipeline(stream, writeStream);
+        for await (const chunk of stream) writeStream.write(chunk);
+        writeStream.end();
+
+        const form = new FormData();
+        form.append("file", fs.createReadStream(inputPath));
 
         // Subir imagen a russell.click
-        const form = new FormData();
-        form.append('file', fs.createReadStream(inputPath));
-        const uploadRes = await axios.post('https://cdn.russellxz.click/upload.php', form, {
+        const uploadRes = await axios.post("https://cdn.russellxz.click/upload.php", form, {
             headers: form.getHeaders()
         });
 
-        const imageUrl = uploadRes?.data?.url;
-        if (!imageUrl || !imageUrl.startsWith('http')) {
-            throw new Error('Error al subir la imagen. Intenta de nuevo.');
-        }
+        const imageUrl = uploadRes.data?.result?.url;
+        if (!imageUrl) throw new Error("No se pudo subir la imagen.");
 
-        // Aplicar efecto alien
-        const effectURL = `https://api.neoxr.eu/api/effect?style=alien&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
-        const effectRes = await axios.get(effectURL, { responseType: 'arraybuffer' });
+        // Enviar a la API de efecto
+        const apiUrl = `https://api.neoxr.eu/api/effect?style=alien&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
+        const { data } = await axios.get(apiUrl);
 
-        const contentType = effectRes.headers['content-type'];
-        if (!contentType || !contentType.startsWith('image')) {
-            throw new Error('La API no devolvió una imagen válida.');
-        }
+        if (!data?.data?.url) throw new Error("La API devolvió una respuesta inválida.");
 
-        const rawImagePath = path.join(tmpDir, `${Date.now()}_raw`);
-        const finalImagePath = path.join(tmpDir, `${Date.now()}_converted.jpg`);
-
-        fs.writeFileSync(rawImagePath, effectRes.data);
-
-        if (contentType === 'image/webp') {
-            // Convertir de webp a jpg
-            await new Promise((resolve, reject) => {
-                ffmpeg(rawImagePath)
-                    .toFormat('jpeg')
-                    .save(finalImagePath)
-                    .on('end', resolve)
-                    .on('error', reject);
-            });
-        } else {
-            // Guardar tal cual si ya es jpg o png
-            fs.renameSync(rawImagePath, finalImagePath);
-        }
+        // Descargar imagen procesada
+        const finalImg = await axios.get(data.data.url, { responseType: 'arraybuffer' });
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: fs.readFileSync(finalImagePath),
-            caption: '👽 *Efecto alien aplicado exitosamente*'
+            image: Buffer.from(finalImg.data),
+            mimetype: 'image/jpeg',
+            caption: `👽 *Efecto alien aplicado con éxito.*\n🧠 *Azura Ultra 2.0*`
         }, { quoted: msg });
 
         fs.unlinkSync(inputPath);
-        fs.unlinkSync(finalImagePath);
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
 
-    } catch (err) {
-        console.error("❌ Error en comando alien:", err.message);
+    } catch (e) {
+        console.error(e);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
+            text: `❌ *Error:* ${e.message}`
         }, { quoted: msg });
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
