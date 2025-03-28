@@ -190,7 +190,7 @@ async function handleCommand(sock, msg, command, args, sender) {
             await sock.sendMessage(msg.key.remoteJid, { text: 'pong' }, { quoted: msg });
             break;
         
-            break;
+        
     }
 }
 
