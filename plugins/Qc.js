@@ -71,15 +71,14 @@ const handler = async (msg, { conn, args }) => {
     const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
     const quoted = contextInfo?.quotedMessage;
 
-    // Identificar usuario objetivo y contenido
+    // Identificar usuario objetivo y extraer contenido
     let targetJid, targetPushName, contenido;
-    if (quoted) { // Modo cita usando lógica similar al comando "s"
+    if (quoted) { // Modo cita: cuando respondes a otro mensaje
       targetJid = contextInfo.participant || msg.key.remoteJid;
-      // Usamos el pushName del que cita, ya que en el objeto citado no se incluye
-      targetPushName = msg.pushName;
-      // Obtener texto citado
+      targetPushName = ""; // Se deja vacío para que getNombreBonito lo resuelva
       const tipo = Object.keys(quoted)[0];
-      contenido = quoted[tipo]?.text || quoted[tipo]?.caption || '';
+      // Se comprueba 'text', 'caption' y 'conversation'
+      contenido = quoted[tipo]?.text || quoted[tipo]?.caption || quoted[tipo]?.conversation || '';
     } else { // Mensaje directo
       targetJid = msg.key.fromMe
         ? conn.user.id
@@ -90,7 +89,7 @@ const handler = async (msg, { conn, args }) => {
       contenido = args.join(" ").trim();
     }
 
-    // Validar contenido
+    // Validar que se haya obtenido contenido
     if (!contenido?.trim()) {
       return conn.sendMessage(msg.key.remoteJid, {
         text: '⚠️ Escribe un texto o cita un mensaje',
@@ -103,7 +102,7 @@ const handler = async (msg, { conn, args }) => {
     const targetPp = await conn.profilePictureUrl(targetJid, 'image').catch(() =>
       'https://telegra.ph/file/24fa902ead26340f3df2c.png'
     );
-    // Limitar texto
+    // Limitar texto a 35 caracteres
     const textoLimpio = contenido.replace(/@\d+/g, '').trim();
     if (textoLimpio.length > 35) {
       return conn.sendMessage(msg.key.remoteJid, {
@@ -111,7 +110,7 @@ const handler = async (msg, { conn, args }) => {
         quoted: msg
       });
     }
-    // Generar stickerz
+    // Enviar reacción mientras se genera el sticker
     await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
 
     const { data } = await axios.post('https://bot.lyo.su/quote/generate', {
@@ -133,6 +132,7 @@ const handler = async (msg, { conn, args }) => {
         replyMessage: {}
       }]
     }, { headers: { 'Content-Type': 'application/json' } });
+    
     const sticker = await writeExifImg(Buffer.from(data.result.image, 'base64'), {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
