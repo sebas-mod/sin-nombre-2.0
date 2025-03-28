@@ -21,7 +21,6 @@ const banderaPorPrefijo = (numero) => {
     '58': '🇻🇪',
     '1': '🇺🇸'
   };
-
   const numeroSinArroba = numero.split('@')[0];
   let bandera = '';
   Object.keys(prefijos).forEach(pref => {
@@ -46,50 +45,67 @@ const formatPhoneNumber = (jid) => {
   }
 };
 
-// Obtener nombre real o número si está oculto
+// Obtener nombre real con preferencia a conn.getName
+// Si no existe nombre público, se usa el número.
 const getNombreBonito = async (jid, conn) => {
   try {
     let name = '';
-    // Intentar con getName (función interna de Baileys)
+
+    // 1) Intentar usar siempre conn.getName (Baileys)
     if (typeof conn.getName === 'function') {
       name = await conn.getName(jid);
     }
-    // Revisar contactos si getName falla
+
+    // 2) Si sigue vacío, revisamos contactos
     if (!name || name.trim() === '' || name.includes('@')) {
       const contacto = conn.contacts?.[jid] || {};
       name = contacto.name || contacto.notify || contacto.vname || '';
     }
-    // Si sigue vacío, usar número con formato
+
+    // 3) Si de plano no hay nada, o está oculto, formateamos el número
     if (!name || name.trim() === '' || name.includes('@')) {
-      return formatPhoneNumber(jid);
+      name = formatPhoneNumber(jid);
     }
+
     return name;
   } catch (e) {
     console.log("Error obteniendo nombre:", e);
+    // Fallback: número formateado
     return formatPhoneNumber(jid);
   }
 };
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Obtenemos info de mensaje citado si existe
+    // Info de mensaje citado
     const quoted = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = quoted?.quotedMessage;
     const quotedJid = quoted?.participant;
 
-    // Determinar a quién se le va a generar el sticker
+    // Determinar el JID de quien generará el sticker
     let targetJid;
+
     if (quotedJid) {
-      // Si estamos respondiendo un mensaje citado, usamos el JID de esa persona
+      // Si se está citando a alguien
       targetJid = quotedJid;
     } else {
-      // Si NO hay mensaje citado, usamos el remitente (quien mandó el comando)
-      // En grupos: msg.key.participant es el remitente
-      // En privado: msg.key.participant puede ser undefined, entonces usamos remoteJid
+      // Sin cita: en grupos tomamos participant, en privado tomamos remoteJid
       targetJid = msg.key.participant || msg.key.remoteJid;
     }
 
-    // Obtener nombre
+    // Verificación extra para evitar confusiones si el bot y el usuario son el mismo.
+    // (Esto depende de tu lógica, ajusta según necesidades)
+    // Ejemplo: si en privado el remoteJid es el mismo que conn.user.id,
+    // usaremos mejor msg.key.id o algo que no confunda. Pero normalmente no haría falta.
+    if (targetJid === conn.user.jid) {
+      // Si el comando viene de 'sí mismo' en privado, por ejemplo,
+      // podrías forzar el sticker con el remitente original (msg.key.id, etc.)
+      console.log("-> Es el mismo bot, ajustando target...");
+      // Ajusta esta línea según tu preferencia. 
+      // A veces se deja tal cual si no te afecta.
+    }
+
+    // Obtener el nombre con preferencia a getName
     const targetName = await getNombreBonito(targetJid, conn);
 
     // Obtener foto de perfil
@@ -97,14 +113,11 @@ const handler = async (msg, { conn, text, args }) => {
     try {
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
-      // Si falla (no tiene foto), usar una por defecto
       targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     }
 
-    // Obtener el texto final
+    // Obtener el texto: si no hay args, lo tomamos del mensaje citado
     let contenido = args.join(" ").trim();
-
-    // Si no se mandó texto pero sí hay un mensaje citado, tomamos el texto del citado
     if (!contenido && quotedMsg) {
       const tipo = Object.keys(quotedMsg)[0];
       contenido = quotedMsg[tipo]?.text 
@@ -113,7 +126,6 @@ const handler = async (msg, { conn, text, args }) => {
                || '';
     }
 
-    // Si sigue sin haber contenido, advertimos
     if (!contenido || contenido.trim() === '') {
       return await conn.sendMessage(
         msg.key.remoteJid,
@@ -132,10 +144,10 @@ const handler = async (msg, { conn, text, args }) => {
       );
     }
 
-    // Reacción de "estoy procesando"
+    // Reacción de "procesando"
     await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
 
-    // Estructura para la API de quote
+    // Datos para la API de quote
     const quoteData = {
       type: "quote",
       format: "png",
@@ -150,9 +162,7 @@ const handler = async (msg, { conn, text, args }) => {
           from: {
             id: 1,
             name: targetName,
-            photo: {
-              url: targetPp
-            }
+            photo: { url: targetPp }
           },
           text: textoLimpio,
           replyMessage: {}
@@ -160,21 +170,21 @@ const handler = async (msg, { conn, text, args }) => {
       ]
     };
 
-    // Generamos la imagen con la API
+    // Petición a la API
     const res = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    // Convertimos Base64 a buffer
+    // Pasar el base64 a buffer
     const buffer = Buffer.from(res.data.result.image, 'base64');
 
-    // Agregamos metadatos para sticker (packname/author)
+    // Agregar metadata para sticker
     const sticker = await writeExifImg(buffer, {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
     });
 
-    // Enviamos el sticker
+    // Enviar sticker
     await conn.sendMessage(
       msg.key.remoteJid,
       { sticker: { url: sticker } },
