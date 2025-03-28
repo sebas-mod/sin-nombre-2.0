@@ -220,6 +220,79 @@ sock.ev.on('messages.delete', (messages) => {
 });
     switch (lowerCommand) { 
 
+case 'alien': {
+    const fs = require('fs');
+    const path = require('path');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+    const axios = require('axios');
+    const FormData = require('form-data');
+    const { promisify } = require('util');
+    const { pipeline } = require('stream');
+    const streamPipeline = promisify(pipeline);
+
+    // Verificar que el usuario respondió a una imagen
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const image = quoted?.imageMessage;
+    if (!image) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '⚠️ *Responde a una imagen para aplicarle el efecto alienígena.*'
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '👽', key: msg.key }
+    });
+
+    try {
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const inputPath = path.join(tmpDir, `${Date.now()}_input.jpg`);
+
+        const stream = await downloadContentFromMessage(image, 'image');
+        const write = fs.createWriteStream(inputPath);
+        for await (const chunk of stream) write.write(chunk);
+        write.end();
+
+        // Subir imagen a russell.click
+        const form = new FormData();
+        form.append('file', fs.createReadStream(inputPath));
+        const upload = await axios.post('https://cdn.russellxz.click/upload.php', form, {
+            headers: form.getHeaders()
+        });
+
+        const imageUrl = upload.data.url;
+        if (!imageUrl) throw new Error('No se pudo subir la imagen');
+
+        // Enviar a la API de efecto alien
+        const effectUrl = `https://api.neoxr.eu/api/effect?style=alien&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
+        const result = await axios.get(effectUrl, { responseType: 'arraybuffer' });
+
+        // Enviar imagen modificada
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: Buffer.from(result.data),
+            caption: '👽 *Efecto alien aplicado exitosamente*'
+        }, { quoted: msg });
+
+        fs.unlinkSync(inputPath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+        
 case 'tovideo': {
   const fs = require('fs');
   const path = require('path');
