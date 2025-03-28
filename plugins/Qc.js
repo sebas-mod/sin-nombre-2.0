@@ -1,6 +1,57 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');
 
+// Obtener la bandera según el prefijo del número
+const banderaPorPrefijo = (numero) => {
+  const prefijos = {
+    '507': '🇵🇦', '503': '🇸🇻', '502': '🇬🇹', '504': '🇭🇳',
+    '505': '🇳🇮', '506': '🇨🇷', '509': '🇭🇹', '51': '🇵🇪',
+    '52': '🇲🇽', '53': '🇨🇺', '54': '🇦🇷', '55': '🇧🇷',
+    '56': '🇨🇱', '57': '🇨🇴', '58': '🇻🇪', '1': '🇺🇸'
+  };
+  const numeroSinArroba = numero.split('@')[0];
+  let bandera = '';
+  Object.keys(prefijos).forEach(pref => {
+    if (numeroSinArroba.startsWith(pref)) {
+      bandera = prefijos[pref];
+    }
+  });
+  return bandera || '🌎';
+};
+
+// Formatear número en modo bonito con bandera
+const formatPhoneNumber = (jid) => {
+  const number = jid.split('@')[0];
+  const bandera = banderaPorPrefijo(jid);
+
+  if (number.length === 12) {
+    return `${bandera} +${number.slice(0, 3)} ${number.slice(3, 7)}-${number.slice(7)}`;
+  } else if (number.length === 11) {
+    return `${bandera} +${number.slice(0, 2)} ${number.slice(2, 6)}-${number.slice(6)}`;
+  } else {
+    return `${bandera} +${number}`;
+  }
+};
+
+// Obtener el nombre del usuario o su número bonito si está en privado
+const getNombreBonito = async (jid, conn) => {
+  try {
+    let name = '';
+
+    if (typeof conn.getName === 'function') {
+      name = await conn.getName(jid);
+    }
+
+    if (!name || name.trim() === '' || name.includes('@')) {
+      return formatPhoneNumber(jid);
+    }
+
+    return name;
+  } catch {
+    return formatPhoneNumber(jid);
+  }
+};
+
 const handler = async (msg, { conn, text, args }) => {
   try {
     const quoted = msg.message?.extendedTextMessage?.contextInfo;
@@ -10,25 +61,17 @@ const handler = async (msg, { conn, text, args }) => {
     let targetJid, targetName, targetPp;
 
     if (quotedJid) {
-      // Si hay mensaje citado, usar datos del citado
       targetJid = quotedJid;
     } else {
-      // Si NO hay mensaje citado:
       if (msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
-        // Es chat privado → usar JID del propio bot
         targetJid = conn.user.id;
       } else {
-        // Es grupo → usar quien envió el mensaje
         targetJid = msg.key.participant || msg.key.remoteJid;
       }
     }
 
-    // Obtener nombre
-    try {
-      targetName = await conn.getName(targetJid);
-    } catch {
-      targetName = targetJid.split('@')[0];
-    }
+    // Obtener nombre bonito
+    targetName = await getNombreBonito(targetJid, conn);
 
     // Obtener foto
     try {
@@ -58,12 +101,10 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Reacción
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '🎨', key: msg.key }
     });
 
-    // Construir sticker
     const quoteData = {
       type: "quote",
       format: "png",
