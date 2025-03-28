@@ -1,6 +1,6 @@
 const handler = async (m, { conn }) => {
   await conn.sendMessage(m.chat, {
-    text: "✅ El sistema de plugins está funcionando correctamente, mi rey."
+    text: "✅ El sistema de plugins está funcionando correctamente, Bolibot activo mi rey."
   }, { quoted: m });
 };
 
