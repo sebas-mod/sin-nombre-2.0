@@ -10,24 +10,25 @@ const handler = async (msg, { conn, args }) => {
     const targetJid = quotedJid || senderJid;
 
     // Obtener el nombre del usuario objetivo
-    let targetName;
+    let targetName = "";
     if (quotedJid) {
       if (typeof conn.getName === 'function') {
         targetName = await conn.getName(quotedJid);
-      } else if (conn.contacts && conn.contacts[quotedJid]) {
+      }
+      if (!targetName && conn.contacts && conn.contacts[quotedJid]) {
         targetName = conn.contacts[quotedJid].notify ||
                      conn.contacts[quotedJid].vname ||
                      conn.contacts[quotedJid].name ||
-                     quotedJid;
-      } else {
-        targetName = quotedJid;
+                     "";
+      }
+      if (!targetName || targetName.trim() === "" || targetName === "Sin nombre") {
+        targetName = quotedJid.split('@')[0];
       }
     } else {
       targetName = msg.pushName || "";
-    }
-    // Si no hay nombre o contiene "@" (por ejemplo, "12345@s.whatsapp.net"), usar solo el número
-    if (!targetName || targetName.trim() === "" || targetName === "Sin nombre" || targetName.includes('@')) {
-      targetName = targetJid.split('@')[0];
+      if (!targetName || targetName.trim() === "" || targetName === "Sin nombre") {
+        targetName = senderJid.split('@')[0];
+      }
     }
 
     // Obtener avatar con fallback por defecto
@@ -57,7 +58,7 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg });
     }
 
-    // Reacción mientras se genera el sticker
+    // Enviar reacción mientras se genera el sticker
     await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
 
     // Construir la data para el quote
