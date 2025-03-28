@@ -1,62 +1,57 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función disponible
+const { writeExifImg } = require('../libs/fuctions');
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Verificar si el mensaje está citando otro
     const quoted = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = quoted?.quotedMessage;
     const quotedJid = quoted?.participant;
 
-    // Si se cita un mensaje, usar datos del citado
-    let targetJid, targetName, targetPp;
+    // Detectar si es un mensaje citado o no
+    const isQuoted = !!quotedMsg;
+    const authorJid = isQuoted ? quotedJid : msg.key.participant || msg.key.remoteJid;
 
-    if (quotedJid) {
-      targetJid = quotedJid;
-      try {
-        targetName = await conn.getName(quotedJid);
-        targetPp = await conn.profilePictureUrl(quotedJid);
-      } catch {
-        targetName = targetJid.split('@')[0];
-        targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
-      }
-    } else {
-      // Si no se cita, usar datos del propio bot (remitente)
-      targetJid = msg.key.remoteJid;
-      const botNumber = conn.user?.id || conn.user?.jid || msg.key.participant || msg.key.remoteJid;
-      try {
-        targetName = await conn.getName(botNumber);
-        targetPp = await conn.profilePictureUrl(botNumber);
-      } catch {
-        targetName = botNumber.split('@')[0];
-        targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
-      }
+    // Nombre del usuario
+    let targetName;
+    try {
+      targetName = await conn.getName(authorJid);
+    } catch {
+      targetName = authorJid.split('@')[0];
     }
 
-    // Texto: ya sea de los args o del mensaje citado
-    let contenido = args.join(" ").trim() || quotedMsg?.conversation?.trim();
-    if (!contenido) {
+    // Foto de perfil
+    let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
+    try {
+      avatar = await conn.profilePictureUrl(authorJid, 'image');
+    } catch {}
+
+    // Obtener el contenido
+    let contenido = args.join(" ").trim();
+    if (!contenido && quotedMsg) {
+      const tipo = Object.keys(quotedMsg)[0];
+      contenido = quotedMsg[tipo]?.text || quotedMsg[tipo]?.caption || quotedMsg[tipo] || '';
+    }
+
+    if (!contenido || contenido.trim() === '') {
       return await conn.sendMessage(msg.key.remoteJid, {
-        text: "⚠️ Escribe una palabra o cita un mensaje."
+        text: '⚠️ Escribe una palabra o cita un mensaje.'
       }, { quoted: msg });
     }
 
     // Limpiar menciones
-    const mentionRegex = new RegExp(`@${targetJid.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`, 'g');
-    const textoLimpio = contenido.replace(mentionRegex, "").trim();
-
+    const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
     if (textoLimpio.length > 35) {
       return await conn.sendMessage(msg.key.remoteJid, {
-        text: "⚠️ El texto no puede tener más de 35 caracteres."
+        text: '⚠️ El texto no puede tener más de 35 caracteres.'
       }, { quoted: msg });
     }
 
-    // Enviar reacción mientras se genera el sticker
+    // Reacción
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '🎨', key: msg.key }
     });
 
-    // Datos para generar el quote
+    // Crear quote
     const quoteData = {
       type: "quote",
       format: "png",
@@ -71,7 +66,7 @@ const handler = async (msg, { conn, text, args }) => {
           from: {
             id: 1,
             name: targetName,
-            photo: { url: targetPp }
+            photo: { url: avatar }
           },
           text: textoLimpio,
           replyMessage: {}
@@ -79,11 +74,11 @@ const handler = async (msg, { conn, text, args }) => {
       ]
     };
 
-    const json = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
+    const res = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    const buffer = Buffer.from(json.data.result.image, 'base64');
+    const buffer = Buffer.from(res.data.result.image, 'base64');
     const sticker = await writeExifImg(buffer, {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
@@ -97,10 +92,10 @@ const handler = async (msg, { conn, text, args }) => {
       react: { text: '✅', key: msg.key }
     });
 
-  } catch (err) {
-    console.error("❌ Error en el comando qc:", err);
+  } catch (e) {
+    console.error("❌ Error en el comando qc:", e);
     await conn.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al generar el sticker."
+      text: '❌ Ocurrió un error al generar el sticker.'
     }, { quoted: msg });
   }
 };
