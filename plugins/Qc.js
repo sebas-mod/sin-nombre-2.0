@@ -3,7 +3,7 @@ const { writeExifImg } = require('../libs/fuctions');
 
 const defaultPhoto = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
 
-// Función para obtener la bandera según el prefijo del número
+// Función para obtener la bandera según el prefijo
 const banderaPorPrefijo = (numero) => {
   const prefijos = {
     '507': '🇵🇦', '503': '🇸🇻', '502': '🇬🇹', '504': '🇭🇳',
@@ -21,7 +21,6 @@ const banderaPorPrefijo = (numero) => {
   return bandera || '🌎';
 };
 
-// Formatear número para mostrarlo bonito
 const formatPhoneNumber = (jid) => {
   const number = jid.split('@')[0];
   const bandera = banderaPorPrefijo(jid);
@@ -34,18 +33,17 @@ const formatPhoneNumber = (jid) => {
   }
 };
 
-// Función para obtener los datos de contacto (nombre y foto) usando la misma lógica
-// que se usa en otros comandos (por ejemplo, en qc hola)
+// Función para obtener el nombre y la foto del contacto
 const getContactData = async (jid, conn, msg) => {
   let name = '';
   let photo = defaultPhoto;
-
-  // Primero, si existe en los contactos, se obtiene el pushname o name
+  
+  // Primero intenta obtener datos del contacto en la lista
   if (conn.contacts && conn.contacts[jid]) {
     const contact = conn.contacts[jid];
     name = contact.pushname || contact.name || '';
   }
-  // Si no se obtuvo un nombre válido, se intenta con conn.getName
+  // Si no se obtuvo nombre, intenta con conn.getName
   if (!name || name.trim() === '' || name.includes('@')) {
     if (typeof conn.getName === 'function') {
       try {
@@ -55,7 +53,7 @@ const getContactData = async (jid, conn, msg) => {
       }
     }
   }
-  // Si sigue sin haber un nombre correcto, se utiliza el nombre del remitente (si es el bot) o se formatea el número
+  // Si sigue sin nombre, utiliza msg.pushName (si es el bot) o el número formateado
   if (!name || name.trim() === '' || name.includes('@')) {
     if (jid === msg.sender || jid === conn.user.id) {
       name = msg.pushName || "Sin nombre";
@@ -63,8 +61,8 @@ const getContactData = async (jid, conn, msg) => {
       name = formatPhoneNumber(jid);
     }
   }
-
-  // Obtener foto de perfil
+  
+  // Intenta obtener la foto real
   try {
     photo = await conn.profilePictureUrl(jid, 'image');
   } catch (e) {
@@ -75,14 +73,18 @@ const getContactData = async (jid, conn, msg) => {
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Determinar a quién se le debe obtener la información:
-    // Si se cita un mensaje, se toma el participante citado.
-    // Si hay menciones, se toma la primera.
-    // Sino, se usa el bot si el mensaje es de él o el remitente.
     let targetJid = '';
-    const quoted = msg.message?.extendedTextMessage?.contextInfo;
-    if (quoted && quoted.participant) {
-      targetJid = quoted.participant;
+    let quotedMessage = null;
+    
+    // Detecta si hay mensaje citado
+    if (msg.quoted && msg.quoted.sender) {
+      // Si existe msg.quoted (estructura similar a otros comandos)
+      targetJid = msg.quoted.sender;
+      quotedMessage = msg.quoted;
+    } else if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      // Alternativamente, usa contextInfo
+      targetJid = msg.message.extendedTextMessage.contextInfo.participant;
+      quotedMessage = msg.message.extendedTextMessage.contextInfo.quotedMessage;
     } else if (msg.mentionedJid && msg.mentionedJid.length > 0) {
       targetJid = msg.mentionedJid[0];
     } else if (msg.key && msg.key.fromMe) {
@@ -90,32 +92,35 @@ const handler = async (msg, { conn, text, args }) => {
     } else {
       targetJid = msg.sender;
     }
-
-    // Obtener nombre y foto del contacto
+    
+    // Obtén el nombre y la foto usando la misma lógica de otros comandos
     const { name: targetName, photo: targetPp } = await getContactData(targetJid, conn, msg);
-
-    // Obtener el texto a mostrar en el sticker
+    
+    // Obtener el texto para el sticker: si hay argumentos, se usan; sino, se extrae del mensaje citado
     let contenido = args.join(" ").trim();
-    if (!contenido && quoted && quoted.quotedMessage) {
-      const tipo = Object.keys(quoted.quotedMessage)[0];
-      contenido = quoted.quotedMessage[tipo]?.text || quoted.quotedMessage[tipo]?.caption || '';
+    if (!contenido) {
+      if (msg.quoted && msg.quoted.text) {
+        contenido = msg.quoted.text;
+      } else if (quotedMessage) {
+        const keys = Object.keys(quotedMessage);
+        if (keys.length > 0) {
+          const key = keys[0];
+          contenido = quotedMessage[key]?.text || quotedMessage[key]?.caption || '';
+        }
+      }
     }
+    
     if (!contenido || contenido.trim() === '') {
-      return await conn.sendMessage(msg.key.remoteJid, {
-        text: '⚠️ Escribe una palabra o cita un mensaje.'
-      }, { quoted: msg });
+      return await conn.sendMessage(msg.key.remoteJid, { text: '⚠️ Escribe una palabra o cita un mensaje.' }, { quoted: msg });
     }
+    
     const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
     if (textoLimpio.length > 35) {
-      return await conn.sendMessage(msg.key.remoteJid, {
-        text: '⚠️ El texto no puede tener más de 35 caracteres.'
-      }, { quoted: msg });
+      return await conn.sendMessage(msg.key.remoteJid, { text: '⚠️ El texto no puede tener más de 35 caracteres.' }, { quoted: msg });
     }
-
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: '🎨', key: msg.key }
-    });
-
+    
+    await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
+    
     const quoteData = {
       type: "quote",
       format: "png",
@@ -123,31 +128,25 @@ const handler = async (msg, { conn, text, args }) => {
       width: 512,
       height: 768,
       scale: 2,
-      messages: [
-        {
-          entities: [],
-          avatar: true,
-          from: {
-            id: 1,
-            name: targetName,
-            photo: { url: targetPp }
-          },
-          text: textoLimpio,
-          replyMessage: {}
-        }
-      ]
+      messages: [{
+        entities: [],
+        avatar: true,
+        from: {
+          id: 1,
+          name: targetName,
+          photo: { url: targetPp }
+        },
+        text: textoLimpio,
+        replyMessage: {}
+      }]
     };
-
-    const json = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    
+    const json = await axios.post('https://bot.lyo.su/quote/generate', quoteData, { headers: { 'Content-Type': 'application/json' } });
     const buffer = Buffer.from(json.data.result.image, 'base64');
-    const sticker = await writeExifImg(buffer, {
-      packname: "Azura Ultra 2.0 Bot",
-      author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
-    });
+    const sticker = await writeExifImg(buffer, { packname: "Azura Ultra 2.0 Bot", author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻" });
     await conn.sendMessage(msg.key.remoteJid, { sticker: { url: sticker } }, { quoted: msg });
     await conn.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
+    
   } catch (e) {
     console.error("❌ Error en el comando qc:", e);
     await conn.sendMessage(msg.key.remoteJid, { text: '❌ Ocurrió un error al generar el sticker.' }, { quoted: msg });
