@@ -1,78 +1,114 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');
 
-// Bandera según prefijo (sin cambios)
-const banderaPorPrefijo = (numero) => {/* ... */};
+// Sistema de banderas por prefijo
+const banderaPorPrefijo = (numero) => {
+  const prefijos = {
+    '507': '🇵🇦', '503': '🇸🇻', '502': '🇬🇹', '504': '🇭🇳',
+    '505': '🇳🇮', '506': '🇨🇷', '509': '🇭🇹', '51': '🇵🇪',
+    '52': '🇲🇽', '53': '🇨🇺', '54': '🇦🇷', '55': '🇧🇷',
+    '56': '🇨🇱', '57': '🇨🇴', '58': '🇻🇪', '1': '🇺🇸'
+  };
+  const num = numero.split('@')[0];
+  return prefijos[Object.keys(prefijos).find(p => num.startsWith(p))] || '🌎';
+};
 
-// Formato de número (sin cambios)
-const formatPhoneNumber = (jid) => {/* ... */};
+// Formateo de número con bandera
+const formatPhoneNumber = (jid) => {
+  const number = jid.split('@')[0];
+  const bandera = banderaPorPrefijo(jid);
+  const format = (digits, splits) => {
+    const parts = [];
+    splits.forEach((split, i) => parts.push(number.slice(digits[i], digits[i] + split)));
+    return parts.join('-');
+  };
+  
+  if (number.length === 12) return `${bandera} +${format([0,3,7], [3,4,4])}`;
+  if (number.length === 11) return `${bandera} +${format([0,2,6], [2,4,5])}`;
+  return `${bandera} +${number}`;
+};
 
-// Función para obtener nombres (optimizada)
-const getNombreBonito = async (jid, conn, pushName = '') => {/* ... */};
+// Sistema inteligente de nombres
+const getNombreBonito = async (jid, conn, pushName = '') => {
+  try {
+    let name = '';
+    // 1. Prioridad: Nombre público
+    if (typeof conn.getName === 'function') {
+      name = await conn.getName(jid).catch(() => '');
+      if (name?.trim() && !name.includes('@')) return name;
+    }
+    
+    // 2. Contactos del bot
+    const contacto = conn.contacts?.[jid] || {};
+    name = contacto.name || contacto.notify || contacto.vname || '';
+    if (name?.trim() && !name.includes('@')) return name;
+    
+    // 3. PushName del mensaje
+    if (pushName?.trim() && !pushName.includes('@')) return pushName;
+    
+    // 4. Número formateado
+    return formatPhoneNumber(jid);
+  } catch {
+    return formatPhoneNumber(jid);
+  }
+};
 
-const handler = async (msg, { conn, text, args }) => {
+const handler = async (msg, { conn, args }) => {
   try {
     const quoted = msg.message?.extendedTextMessage?.contextInfo;
-    const quotedMsg = quoted?.quotedMessage;
+    const isGroup = msg.key.remoteJid.endsWith('@g.us');
     
-    // Lógica mejorada para citas
+    // Identificar usuario objetivo
     let targetJid, targetPushName, contenido;
-    if (quoted) {
-      // Obtener JID del mensaje citado
+    if (quoted) { // Modo cita
       targetJid = quoted.participant 
-        ? quoted.participant.split('@')[0].split(':')[0] // Fix grupos
-        : quoted.remoteJid; // Para privados
-      
-      // Obtener pushName del mensaje original
+        ? quoted.participant.split(':')[0].split('@')[0] // Grupos
+        : quoted.remoteJid.split('@')[0]; // Privados
       targetPushName = quoted.pushName || '';
       
-      // Obtener contenido del mensaje citado
-      const tipo = Object.keys(quotedMsg)[0];
-      contenido = quotedMsg[tipo]?.text || quotedMsg[tipo]?.caption || '';
-    } else {
-      // Lógica para mensajes no citados
+      // Obtener texto citado
+      const quotedMsg = quoted.quotedMessage;
+      if (quotedMsg) {
+        const tipo = Object.keys(quotedMsg)[0];
+        contenido = quotedMsg[tipo]?.text || quotedMsg[tipo]?.caption || '';
+      }
+    } else { // Mensaje directo
       targetJid = msg.key.fromMe 
         ? conn.user.id 
-        : msg.key.remoteJid.includes('@g.us')
+        : isGroup
           ? msg.key.participant.split(':')[0]
           : msg.key.remoteJid;
-      
       targetPushName = msg.pushName;
       contenido = args.join(" ").trim();
     }
 
-    // Validación de contenido
-    if (!contenido.trim()) {
-      return await conn.sendMessage(msg.key.remoteJid, 
-        { text: '⚠️ Escribe una palabra o cita un mensaje.' }, 
-        { quoted: msg }
-      );
+    // Validar contenido
+    if (!contenido?.trim()) {
+      return conn.sendMessage(msg.key.remoteJid, {
+        text: '⚠️ Escribe un texto o cita un mensaje',
+        quoted: msg
+      });
     }
 
-    // Obtener nombre y foto (lógica mejorada)
+    // Obtener metadatos
     const targetName = await getNombreBonito(targetJid, conn, targetPushName);
-    
-    let targetPp;
-    try {
-      targetPp = await conn.profilePictureUrl(targetJid, 'image');
-      if (!targetPp.startsWith('http')) throw new Error();
-    } catch {
-      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
-    }
+    const targetPp = await conn.profilePictureUrl(targetJid, 'image').catch(() => 
+      'https://telegra.ph/file/24fa902ead26340f3df2c.png'
+    );
 
-    // Limpieza de texto
-    const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
+    // Limitar texto
+    const textoLimpio = contenido.replace(/@\d+/g, '').trim();
     if (textoLimpio.length > 35) {
-      return await conn.sendMessage(msg.key.remoteJid, 
-        { text: '⚠️ El texto no puede tener más de 35 caracteres.' }, 
-        { quoted: msg }
-      );
+      return conn.sendMessage(msg.key.remoteJid, {
+        text: '⚠️ Máximo 35 caracteres',
+        quoted: msg
+      });
     }
 
     // Generar sticker
     await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
     
-    const quoteData = {
+    const { data } = await axios.post('https://bot.lyo.su/quote/generate', {
       type: "quote",
       format: "png",
       backgroundColor: "#000000",
@@ -90,14 +126,9 @@ const handler = async (msg, { conn, text, args }) => {
         text: textoLimpio,
         replyMessage: {}
       }]
-    };
+    }, { headers: { 'Content-Type': 'application/json' } });
 
-    const res = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    const buffer = Buffer.from(res.data.result.image, 'base64');
-    const sticker = await writeExifImg(buffer, {
+    const sticker = await writeExifImg(Buffer.from(data.result.image, 'base64'), {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
     });
@@ -106,15 +137,14 @@ const handler = async (msg, { conn, text, args }) => {
       { sticker: { url: sticker } }, 
       { quoted: msg }
     );
-    await conn.sendMessage(msg.key.remoteJid, 
-      { react: { text: '✅', key: msg.key } }
-    );
+    await conn.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
 
   } catch (e) {
-    console.error("❌ Error en qc:", e);
+    console.error("Error en qc:", e);
     await conn.sendMessage(msg.key.remoteJid, {
-      text: '❌ Error al generar sticker'
-    }, { quoted: msg });
+      text: '❌ Error generando sticker',
+      quoted: msg
+    });
   }
 };
 
