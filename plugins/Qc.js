@@ -67,23 +67,19 @@ const getNombreBonito = async (jid, conn, pushName = '') => {
 
 const handler = async (msg, { conn, args }) => {
   try {
-    const quoted = msg.message?.extendedTextMessage?.contextInfo;
     const isGroup = msg.key.remoteJid.endsWith('@g.us');
+    const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+    const quoted = contextInfo?.quotedMessage;
 
-    // Identificar usuario objetivo
+    // Identificar usuario objetivo y contenido
     let targetJid, targetPushName, contenido;
-    if (quoted) { // Modo cita
-      targetJid = quoted.participant
-        ? quoted.participant.split(':')[0]  // Grupos: conserva el dominio
-        : quoted.remoteJid;               // Privados: conserva el JID completo
-      targetPushName = quoted.pushName || '';
-
+    if (quoted) { // Modo cita usando lógica similar al comando "s"
+      targetJid = contextInfo.participant || msg.key.remoteJid;
+      // Usamos el pushName del que cita, ya que en el objeto citado no se incluye
+      targetPushName = msg.pushName;
       // Obtener texto citado
-      const quotedMsg = quoted.quotedMessage;
-      if (quotedMsg) {
-        const tipo = Object.keys(quotedMsg)[0];
-        contenido = quotedMsg[tipo]?.text || quotedMsg[tipo]?.caption || '';
-      }
+      const tipo = Object.keys(quoted)[0];
+      contenido = quoted[tipo]?.text || quoted[tipo]?.caption || '';
     } else { // Mensaje directo
       targetJid = msg.key.fromMe
         ? conn.user.id
@@ -115,7 +111,7 @@ const handler = async (msg, { conn, args }) => {
         quoted: msg
       });
     }
-    // Generar sticker
+    // Generar stickerz
     await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
 
     const { data } = await axios.post('https://bot.lyo.su/quote/generate', {
