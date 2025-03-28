@@ -32,20 +32,34 @@ const formatPhoneNumber = (jid) => {
   }
 };
 
-// Obtener nombre real o número si está oculto
-const getNombreBonito = async (jid, conn) => {
+// Función mejorada para obtener nombres
+const getNombreBonito = async (jid, conn, pushName = '') => {
   try {
-    let name = '';
-    if (typeof conn.getName === 'function') { 
-      name = await conn.getName(jid); 
+    // 1. Obtener nombre público con conn.getName
+    let publicName = '';
+    if (typeof conn.getName === 'function') {
+      publicName = await conn.getName(jid).catch(() => '');
     }
-    if (!name?.trim() || name.includes('@')) {
-      const contacto = conn.contacts?.[jid] || {}; 
-      name = contacto.name || contacto.notify || contacto.vname || ''; 
+    
+    // 2. Si existe nombre público válido
+    if (publicName?.trim() && !publicName.includes('@')) {
+      return publicName;
     }
-    return name?.trim() ? name : formatPhoneNumber(jid);
+    
+    // 3. Verificar en contactos del bot
+    const contacto = conn.contacts?.[jid] || {};
+    const contactName = contacto.name || contacto.notify || contacto.vname || '';
+    
+    // 4. Usar pushName si no hay nombres anteriores
+    if (contactName?.trim() && !contactName.includes('@')) {
+      return contactName;
+    } else if (pushName?.trim() && !pushName.includes('@')) {
+      return pushName;
+    }
+    
+    // 5. Último recurso: número formateado
+    return formatPhoneNumber(jid);
   } catch (e) {
-    console.log("Error obteniendo nombre:", e);
     return formatPhoneNumber(jid);
   }
 };
@@ -54,29 +68,34 @@ const handler = async (msg, { conn, text, args }) => {
   try {
     const quoted = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = quoted?.quotedMessage;
-    const quotedJid = quoted?.participant;
     
-    // Determinar targetJid
-    let targetJid;
-    if (quotedJid) {
-      targetJid = quotedJid;
+    // Determinar JID objetivo y pushName
+    let targetJid, targetPushName;
+    if (quoted) {
+      targetJid = (quoted.participant || quoted.remoteJid).split('@')[0].split(':')[0];
+      targetPushName = quoted.pushName || msg.pushName;
+    } else if (msg.key.fromMe) {
+      targetJid = conn.user.id;
+      targetPushName = conn.user.name;
     } else {
-      targetJid = msg.key.fromMe ? conn.user.id : 
-        msg.key.remoteJid.endsWith('@s.whatsapp.net') ? 
-        msg.key.remoteJid : 
-        msg.key.participant;
+      targetJid = msg.key.remoteJid.includes('@g.us') 
+        ? (msg.key.participant || msg.key.remoteJid).split(':')[0]
+        : msg.key.remoteJid;
+      targetPushName = msg.pushName;
     }
 
     // Obtener nombre y foto
-    const targetName = await getNombreBonito(targetJid, conn);
+    const targetName = await getNombreBonito(targetJid, conn, targetPushName);
+    
     let targetPp;
     try {
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
+      if (!targetPp.startsWith('http')) throw new Error('URL inválida');
     } catch {
       targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     }
 
-    // Obtener contenido
+    // Obtener contenido del mensaje
     let contenido = args.join(" ").trim();
     if (!contenido && quotedMsg) {
       const tipo = Object.keys(quotedMsg)[0];
