@@ -797,86 +797,73 @@ case 'whatmusic': {
     break;
 }
 
-case 'whatmusic5': {
-  const fs = require('fs');
-  const path = require('path');
-  const axios = require('axios');
-  const yts = require('yt-search');
-  const ffmpeg = require('fluent-ffmpeg');
-  const FormData = require('form-data');
-  const { promisify } = require('util');
-  const { pipeline } = require('stream');
-  const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-  const streamPipeline = promisify(pipeline);
+case 'whatmusic6': {
+    const fs = require('fs');
+    const path = require('path');
+    const axios = require('axios');
+    const ffmpeg = require('fluent-ffmpeg');
+    const FormData = require('form-data');
+    const { promisify } = require('util');
+    const { pipeline } = require('stream');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+    const yts = require('yt-search');
 
-  const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-  if (!quotedMsg || (!quotedMsg.audioMessage && !quotedMsg.videoMessage)) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "✳️ Responde a un *audio* (MP3/nota de voz) o *video* (MP4) para identificar la canción."
-    }, { quoted: msg });
-    break;
-  }
+    const streamPipeline = promisify(pipeline);
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '🔎', key: msg.key }
-  });
-
-  try {
-    const tmpDir = '/mnt/data/tmp';
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-    const extension = quotedMsg.audioMessage ? 'ogg' : 'mp4';
-    const inputPath = path.join(tmpDir, `${Date.now()}_input.${extension}`);
-    const finalPath = path.join(tmpDir, `${Date.now()}_final.mp3`);
-
-    const mediaStream = await downloadContentFromMessage(
-      quotedMsg.audioMessage || quotedMsg.videoMessage,
-      quotedMsg.audioMessage ? 'audio' : 'video'
-    );
-
-    const writer = fs.createWriteStream(inputPath);
-    for await (const chunk of mediaStream) {
-      writer.write(chunk);
+    if (!quotedMsg || (!quotedMsg.audioMessage && !quotedMsg.videoMessage)) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: "✳️ Responde a una nota de voz, audio o video para identificar la canción."
+        }, { quoted: msg });
+        break;
     }
-    writer.end();
 
-    // Convertir a MP3 para asegurar compatibilidad
-    await new Promise((resolve, reject) => {
-      ffmpeg(inputPath)
-        .audioCodec('libmp3lame')
-        .save(finalPath)
-        .on('end', resolve)
-        .on('error', reject);
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '🔍', key: msg.key }
     });
 
-    // Subir el archivo convertido directamente a tu servidor
-    const form = new FormData();
-    form.append('file', fs.createReadStream(finalPath));
-    form.append('expiry', '3600');
+    try {
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+        const fileExt = quotedMsg.audioMessage ? 'mp3' : 'mp4';
+        const inputPath = path.join(tmpDir, `${Date.now()}.${fileExt}`);
 
-    const uploadRes = await axios.post(
-      'https://cdn.russellxz.click/upload.php',
-      form,
-      { headers: form.getHeaders() }
-    );
+        // Descargar el archivo
+        const stream = await downloadContentFromMessage(
+            quotedMsg.audioMessage || quotedMsg.videoMessage,
+            quotedMsg.audioMessage ? 'audio' : 'video'
+        );
+        const writer = fs.createWriteStream(inputPath);
+        for await (const chunk of stream) writer.write(chunk);
+        writer.end();
 
-    if (!uploadRes.data || !uploadRes.data.url) {
-      throw new Error("No se pudo subir el archivo para identificarlo.");
-    }
+        // Subir a russellxz.click
+        const form = new FormData();
+        form.append('file', fs.createReadStream(inputPath));
+        form.append('expiry', '3600');
 
-    const apiURL = `https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(uploadRes.data.url)}&apikey=russellxz`;
-    const { data } = await axios.get(apiURL);
-    if (!data.status || !data.data) throw new Error("No se pudo identificar la canción.");
+        const upload = await axios.post('https://cdn.russellxz.click/upload.php', form, {
+            headers: form.getHeaders()
+        });
 
-    const { title, artist, album, release } = data.data;
-    const ytSearch = await yts(`${title} ${artist}`);
-    const video = ytSearch.videos[0];
+        if (!upload.data || !upload.data.url) throw new Error('No se pudo subir el archivo');
+        const fileUrl = upload.data.url;
 
-    if (!video) throw new Error("No se encontró la canción en YouTube.");
+        // Buscar canción en la API de neoxr
+        const apiURL = `https://api.neoxr.eu/api/whatmusic?url=${encodeURIComponent(fileUrl)}&apikey=russellxz`;
+        const res = await axios.get(apiURL);
+        if (!res.data.status || !res.data.data) throw new Error('No se pudo identificar la canción');
 
-    const banner = `
+        const { title, artist, album, release } = res.data.data;
+
+        // Buscar en YouTube
+        const ytSearch = await yts(`${title} ${artist}`);
+        const video = ytSearch.videos[0];
+        if (!video) throw new Error("No se encontró la canción en YouTube");
+
+        const banner = `
 ╔══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+║ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
 ╚══════════════════╝
 
 🎵 *Canción detectada:*  
@@ -885,49 +872,65 @@ case 'whatmusic5': {
 ├ 👤 *Artista:* ${artist}
 ├ 💿 *Álbum:* ${album}
 ├ 📅 *Lanzamiento:* ${release}
-├ 🔎 *Encontrado:* ${video.title}
+├ 🔎 *Buscando:* ${video.title}
 ├ ⏱️ *Duración:* ${video.timestamp}
 ├ 👁️ *Vistas:* ${video.views.toLocaleString()}
 ├ 📺 *Canal:* ${video.author.name}
 ├ 🔗 *Link:* ${video.url}
 ╰───────────────╯
 
-⏳ *Descargando la canción...*`;
+⏳ *Espere un momento, descargando la canción...*`;
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      image: { url: video.thumbnail },
-      caption: banner
-    }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: video.thumbnail },
+            caption: banner
+        }, { quoted: msg });
 
-    // Descargar y enviar el MP3 desde la API
-    const mp3Res = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(video.url)}&type=audio&quality=128kbps&apikey=russellxz`);
-    if (!mp3Res.data.status || !mp3Res.data.data?.url) throw new Error("No se pudo obtener el audio.");
-    const mp3Url = mp3Res.data.data.url;
+        // Descargar el audio desde YouTube
+        const ytRes = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(video.url)}&type=audio&quality=128kbps&apikey=russellxz`);
+        const audioURL = ytRes.data.data.url;
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      audio: { url: mp3Url },
-      mimetype: 'audio/mpeg',
-      fileName: `${title}.mp3`
-    }, { quoted: msg });
+        const rawPath = path.join(tmpDir, `${Date.now()}_raw.m4a`);
+        const finalPath = path.join(tmpDir, `${Date.now()}_final.mp3`);
 
-    fs.unlinkSync(inputPath);
-    fs.unlinkSync(finalPath);
+        const audioRes = await axios.get(audioURL, { responseType: 'stream' });
+        await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '✅', key: msg.key }
-    });
+        // Convertir con FFmpeg a MP3
+        await new Promise((resolve, reject) => {
+            ffmpeg(rawPath)
+                .audioCodec('libmp3lame')
+                .audioBitrate('128k')
+                .save(finalPath)
+                .on('end', resolve)
+                .on('error', reject);
+        });
 
-  } catch (err) {
-    console.error(err);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${err.message}`
-    }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            audio: fs.readFileSync(finalPath),
+            mimetype: 'audio/mpeg',
+            fileName: `${title}.mp3`
+        }, { quoted: msg });
 
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: '❌', key: msg.key }
-    });
-  }
-  break;
+        fs.unlinkSync(inputPath);
+        fs.unlinkSync(rawPath);
+        fs.unlinkSync(finalPath);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error(err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
 }
         
 case 'ff2': {
