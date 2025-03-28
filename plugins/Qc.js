@@ -1,6 +1,16 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');
 
+// Función para obtener el nombre del usuario (lógica de Rudy)
+async function getUserName(conn, jid) {
+  let name = await conn.getName(jid);
+  if (!name) {
+    const contact = await conn.fetchContact(jid);
+    name = contact?.notify || contact?.name || jid.split('@')[0];
+  }
+  return name;
+}
+
 const handler = async (msg, { conn, args }) => {
   try {
     // Determinar si hay mensaje citado y obtener el JID objetivo
@@ -9,27 +19,8 @@ const handler = async (msg, { conn, args }) => {
     const senderJid = msg.key.participant || msg.key.remoteJid;
     const targetJid = quotedJid || senderJid;
 
-    // Obtener el nombre del usuario objetivo
-    let targetName = "";
-    if (quotedJid) {
-      if (typeof conn.getName === 'function') {
-        targetName = await conn.getName(quotedJid);
-      }
-      if (!targetName && conn.contacts && conn.contacts[quotedJid]) {
-        targetName = conn.contacts[quotedJid].notify ||
-                     conn.contacts[quotedJid].vname ||
-                     conn.contacts[quotedJid].name ||
-                     "";
-      }
-      if (!targetName || targetName.trim() === "" || targetName === "Sin nombre") {
-        targetName = quotedJid.split('@')[0];
-      }
-    } else {
-      targetName = msg.pushName || "";
-      if (!targetName || targetName.trim() === "" || targetName === "Sin nombre") {
-        targetName = senderJid.split('@')[0];
-      }
-    }
+    // Obtener el nombre público usando la función getUserName
+    const targetName = await getUserName(conn, targetJid);
 
     // Obtener avatar con fallback por defecto
     const pp = await conn.profilePictureUrl(targetJid).catch(() =>
