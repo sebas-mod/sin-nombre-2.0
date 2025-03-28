@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');
 
-// Obtener la bandera según el prefijo del número
+// Bandera según prefijo
 const banderaPorPrefijo = (numero) => {
   const prefijos = {
     '507': '🇵🇦', '503': '🇸🇻', '502': '🇬🇹', '504': '🇭🇳',
@@ -19,7 +19,7 @@ const banderaPorPrefijo = (numero) => {
   return bandera || '🌎';
 };
 
-// Formatear número en modo bonito con bandera
+// Formato bonito para número
 const formatPhoneNumber = (jid) => {
   const number = jid.split('@')[0];
   const bandera = banderaPorPrefijo(jid);
@@ -33,21 +33,30 @@ const formatPhoneNumber = (jid) => {
   }
 };
 
-// Obtener el nombre del usuario o su número bonito si está en privado
+// Obtener nombre real o número si está oculto
 const getNombreBonito = async (jid, conn) => {
   try {
     let name = '';
 
+    // Intentar con getName
     if (typeof conn.getName === 'function') {
       name = await conn.getName(jid);
     }
 
+    // Revisar contactos si getName falla
+    if (!name || name.trim() === '' || name.includes('@')) {
+      const contacto = conn.contacts?.[jid] || {};
+      name = contacto.name || contacto.notify || contacto.vname || '';
+    }
+
+    // Si no hay nombre, mostrar número bonito
     if (!name || name.trim() === '' || name.includes('@')) {
       return formatPhoneNumber(jid);
     }
 
     return name;
-  } catch {
+  } catch (e) {
+    console.log("Error obteniendo nombre:", e);
     return formatPhoneNumber(jid);
   }
 };
@@ -70,7 +79,7 @@ const handler = async (msg, { conn, text, args }) => {
       }
     }
 
-    // Obtener nombre bonito
+    // Obtener nombre bien
     targetName = await getNombreBonito(targetJid, conn);
 
     // Obtener foto
