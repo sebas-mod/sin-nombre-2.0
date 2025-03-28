@@ -219,6 +219,97 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
+
+case 'tovideo': {
+  const fs = require('fs');
+  const path = require('path');
+  const axios = require('axios');
+  const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+  const { spawn } = require('child_process');
+  const FormData = require('form-data');
+  const { promisify } = require('util');
+  const { pipeline } = require('stream');
+  const streamPipeline = promisify(pipeline);
+
+  // Validar que se responda a un sticker
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage;
+  if (!quoted) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "⚠️ Responde a un sticker para convertirlo a video."
+    }, { quoted: msg });
+    break;
+  }
+
+  await sock.sendMessage(msg.key.remoteJid, {
+    react: { text: "⏳", key: msg.key }
+  });
+
+  try {
+    const tmpDir = path.join(__dirname, 'tmp');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+    const inputPath = path.join(tmpDir, `${Date.now()}.webp`);
+    const outputPath = path.join(tmpDir, `${Date.now()}_out.mp4`);
+
+    // Descargar el sticker
+    const stream = await downloadContentFromMessage(quoted, 'sticker');
+    const writer = fs.createWriteStream(inputPath);
+    for await (const chunk of stream) writer.write(chunk);
+    writer.end();
+
+    // Subir a russell.click
+    const form = new FormData();
+    form.append("file", fs.createReadStream(inputPath));
+    const upload = await axios.post("https://cdn.russellxz.click/upload.php", form, {
+      headers: form.getHeaders()
+    });
+
+    if (!upload.data?.url) throw new Error("No se pudo subir el sticker.");
+
+    // Pasar la URL a la API para convertir a video
+    const conv = await axios.get(`https://api.neoxr.eu/api/webp2mp4?url=${encodeURIComponent(upload.data.url)}&apikey=russellxz`);
+    const videoUrl = conv.data?.data?.url;
+    if (!videoUrl) throw new Error("No se pudo convertir el sticker a video.");
+
+    // Descargar el video convertido
+    const res = await axios.get(videoUrl, { responseType: 'stream' });
+    const tempMp4 = path.join(tmpDir, `${Date.now()}_orig.mp4`);
+    await streamPipeline(res.data, fs.createWriteStream(tempMp4));
+
+    // Convertir con ffmpeg para compatibilidad
+    await new Promise((resolve, reject) => {
+      const ff = spawn('ffmpeg', ['-i', tempMp4, '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', outputPath]);
+      ff.on('exit', code => code === 0 ? resolve() : reject(new Error("Error en ffmpeg")));
+    });
+
+    // Enviar el video final
+    await sock.sendMessage(msg.key.remoteJid, {
+      video: fs.readFileSync(outputPath),
+      mimetype: 'video/mp4',
+      caption: '✅ Sticker convertido a video.\n\n© Azura Ultra 2.0'
+    }, { quoted: msg });
+
+    fs.unlinkSync(inputPath);
+    fs.unlinkSync(tempMp4);
+    fs.unlinkSync(outputPath);
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "✅", key: msg.key }
+    });
+
+  } catch (e) {
+    console.error(e);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error:* ${e.message}`
+    }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "❌", key: msg.key }
+    });
+  }
+
+  break;
+}
+      
 case 'tourl': {
     const fs = require('fs');
     const path = require('path');
