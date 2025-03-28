@@ -230,7 +230,7 @@ case 'tourl': {
 
     if (!quotedMsg) {
         await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Debes responder a una imagen, video o sticker para subirlo a la nube.*'
+            text: '⚠️ *Responde a una imagen, video, sticker, nota de voz o audio para subirlo a la nube.*'
         }, { quoted: msg });
         break;
     }
@@ -240,25 +240,48 @@ case 'tourl': {
     });
 
     try {
-        const mediaTypes = ['imageMessage', 'videoMessage', 'stickerMessage'];
-        const mediaType = mediaTypes.find(type => quotedMsg[type]);
+        let typeDetected = null;
+        let mediaMessage = null;
 
-        if (!mediaType) {
-            throw new Error('⚠️ Solo puedes subir imágenes, videos o stickers.');
+        if (quotedMsg.imageMessage) {
+            typeDetected = 'image';
+            mediaMessage = quotedMsg.imageMessage;
+        } else if (quotedMsg.videoMessage) {
+            typeDetected = 'video';
+            mediaMessage = quotedMsg.videoMessage;
+        } else if (quotedMsg.stickerMessage) {
+            typeDetected = 'sticker';
+            mediaMessage = quotedMsg.stickerMessage;
+        } else if (quotedMsg.audioMessage) {
+            typeDetected = 'audio';
+            mediaMessage = quotedMsg.audioMessage;
+        } else {
+            throw new Error("❌ Solo se permiten imágenes, videos, stickers, audios o notas de voz.");
         }
 
-        const stream = await downloadContentFromMessage(quotedMsg[mediaType], mediaType.replace('Message', ''));
-        const buffer = [];
+        const tmpDir = path.join(__dirname, 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+        const ext = typeDetected === 'sticker' ? 'webp' :
+                    mediaMessage.mimetype ? mediaMessage.mimetype.split('/')[1] : 'bin';
+
+        const filePath = path.join(tmpDir, `${Date.now()}.${ext}`);
+
+        const stream = await downloadContentFromMessage(mediaMessage, typeDetected === 'sticker' ? 'sticker' : typeDetected);
+        const writeStream = fs.createWriteStream(filePath);
 
         for await (const chunk of stream) {
-            buffer.push(chunk);
+            writeStream.write(chunk);
         }
+        writeStream.end();
 
-        const finalBuffer = Buffer.concat(buffer);
-        const ext = mediaType === 'stickerMessage' ? 'webp' : quotedMsg[mediaType].mimetype.split('/')[1];
-        const fileName = `${Date.now()}.${ext}`;
-        const filePath = path.join(__dirname, 'tmp', fileName);
-        fs.writeFileSync(filePath, finalBuffer);
+        // Validar tamaño del archivo
+        const stats = fs.statSync(filePath);
+        const maxSize = 200 * 1024 * 1024; // 200 MB
+        if (stats.size > maxSize) {
+            fs.unlinkSync(filePath);
+            throw new Error('⚠️ El archivo excede el límite de 200MB permitido.');
+        }
 
         const form = new FormData();
         form.append('file', fs.createReadStream(filePath));
@@ -273,7 +296,7 @@ case 'tourl': {
         if (!res.data || !res.data.url) throw new Error('No se pudo obtener el enlace del archivo.');
 
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ *Archivo subido correctamente:*\n${res.data.url}`
+            text: `✅ *Archivo subido exitosamente:*\n${res.data.url}`
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
