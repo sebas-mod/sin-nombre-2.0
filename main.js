@@ -189,7 +189,7 @@ async function handleCommand(sock, msg, command, args, sender) {
         case 'ping':
             await sock.sendMessage(msg.key.remoteJid, { text: 'pong' }, { quoted: msg });
             break;
-        default:
+        
             break;
     }
 }
