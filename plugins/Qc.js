@@ -1,46 +1,55 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de que esta función esté disponible
+const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Definir el JID objetivo:
-    // Si se cita un mensaje, se usa el participant del mensaje citado; de lo contrario, el remitente.
-    const targetJid = msg.message?.extendedTextMessage?.contextInfo?.participant || (msg.key.participant || msg.key.remoteJid);
+    // Determinar si hay mensaje citado y obtener el JID objetivo
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const quotedJid = msg.message?.extendedTextMessage?.contextInfo?.participant;
+    const senderJid = msg.key.participant || msg.key.remoteJid;
+    // Si se cita a alguien, ese será el objetivo; de lo contrario, el remitente
+    const targetJid = quotedJid || senderJid;
 
-    // Intentar obtener el nombre del usuario usando conn.getName
-    let targetName = "";
-    if (typeof conn.getName === 'function') {
-      targetName = await conn.getName(targetJid);
-    }
-    // Si no se obtuvo un nombre o es igual al JID, intenta obtenerlo de los contactos
-    if (!targetName || targetName.trim() === "" || targetName === targetJid) {
-      if (conn.contacts && conn.contacts[targetJid]) {
-        targetName = conn.contacts[targetJid].notify || conn.contacts[targetJid].vname || conn.contacts[targetJid].name || "";
+    // Obtener el nombre del usuario objetivo
+    let targetName;
+    if (quotedJid) {
+      if (typeof conn.getName === 'function') {
+        targetName = await conn.getName(quotedJid);
+      } else if (conn.contacts && conn.contacts[quotedJid]) {
+        targetName =
+          conn.contacts[quotedJid].notify ||
+          conn.contacts[quotedJid].vname ||
+          conn.contacts[quotedJid].name ||
+          quotedJid;
+      } else {
+        targetName = quotedJid;
       }
+    } else {
+      targetName = msg.pushName || "";
     }
-    // Si aún no hay un nombre válido, usar solo el número (parte antes de @)
-    if (!targetName || targetName.trim() === "") {
+    // Si no se obtuvo un nombre válido (por ejemplo, si es igual al JID), usar solo el número
+    if (!targetName || targetName.trim() === "" || targetName === "Sin nombre" || targetName === targetJid) {
       targetName = targetJid.split('@')[0];
     }
 
-    // Obtener la foto de perfil (avatar) del usuario, con fallback por defecto
+    // Obtener la foto de perfil del usuario objetivo, con fallback por defecto
     const pp = await conn.profilePictureUrl(targetJid).catch(
       () => 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
     );
 
-    // Obtener el contenido del texto (ya sea ingresado en args o mediante mensaje citado)
+    // Obtener el contenido del texto (ya sea en args o del mensaje citado)
     let contenido = "";
     if (args.length > 0 && args.join(" ").trim() !== "") {
       contenido = args.join(" ").trim();
-    } else if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation) {
-      contenido = msg.message.extendedTextMessage.contextInfo.quotedMessage.conversation.trim();
+    } else if (quotedMsg && quotedMsg.conversation) {
+      contenido = quotedMsg.conversation.trim();
     } else {
       return await conn.sendMessage(msg.key.remoteJid, {
         text: "⚠️ Escribe una palabra o cita un mensaje."
       }, { quoted: msg });
     }
 
-    // Remover posibles menciones del contenido
+    // Remover menciones en el contenido
     const mentionRegex = new RegExp(
       `@${targetJid.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`,
       'g'
@@ -53,7 +62,7 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Construir la data para la generación del sticker con quote
+    // Construir la data para el quote con dimensiones aumentadas
     const quoteData = {
       type: "quote",
       format: "png",
