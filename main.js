@@ -223,16 +223,16 @@ sock.ev.on('messages.delete', (messages) => {
 case 'alien': {
     const fs = require('fs');
     const path = require('path');
-    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
     const axios = require('axios');
     const FormData = require('form-data');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
     const { promisify } = require('util');
     const { pipeline } = require('stream');
     const streamPipeline = promisify(pipeline);
 
-    // Verificar que el usuario respondió a una imagen
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     const image = quoted?.imageMessage;
+    
     if (!image) {
         await sock.sendMessage(msg.key.remoteJid, {
             text: '⚠️ *Responde a una imagen para aplicarle el efecto alienígena.*'
@@ -247,30 +247,35 @@ case 'alien': {
     try {
         const tmpDir = path.join(__dirname, 'tmp');
         if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const inputPath = path.join(tmpDir, `${Date.now()}_input.jpg`);
+        const inputPath = path.join(tmpDir, `${Date.now()}_alien.jpg`);
 
+        // Descargar imagen
         const stream = await downloadContentFromMessage(image, 'image');
-        const write = fs.createWriteStream(inputPath);
-        for await (const chunk of stream) write.write(chunk);
-        write.end();
+        const writeStream = fs.createWriteStream(inputPath);
+        await streamPipeline(stream, writeStream);
 
         // Subir imagen a russell.click
         const form = new FormData();
         form.append('file', fs.createReadStream(inputPath));
-        const upload = await axios.post('https://cdn.russellxz.click/upload.php', form, {
+        const uploadRes = await axios.post('https://cdn.russellxz.click/upload.php', form, {
             headers: form.getHeaders()
         });
 
-        const imageUrl = upload.data.url;
-        if (!imageUrl) throw new Error('No se pudo subir la imagen');
+        const imageUrl = uploadRes?.data?.url;
+        if (!imageUrl || !imageUrl.startsWith('http')) {
+            throw new Error('Error al subir la imagen. Intenta de nuevo.');
+        }
 
-        // Enviar a la API de efecto alien
-        const effectUrl = `https://api.neoxr.eu/api/effect?style=alien&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
-        const result = await axios.get(effectUrl, { responseType: 'arraybuffer' });
+        // Aplicar efecto alien
+        const effectURL = `https://api.neoxr.eu/api/effect?style=alien&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
+        const effectRes = await axios.get(effectURL, { responseType: 'arraybuffer' });
 
-        // Enviar imagen modificada
+        if (!effectRes.data || effectRes.data.length < 1000) {
+            throw new Error('La API devolvió una imagen inválida.');
+        }
+
         await sock.sendMessage(msg.key.remoteJid, {
-            image: Buffer.from(result.data),
+            image: Buffer.from(effectRes.data),
             caption: '👽 *Efecto alien aplicado exitosamente*'
         }, { quoted: msg });
 
@@ -281,7 +286,7 @@ case 'alien': {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error("❌ Error en comando alien:", err.message);
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
