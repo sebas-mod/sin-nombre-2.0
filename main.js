@@ -219,6 +219,80 @@ sock.ev.on('messages.delete', (messages) => {
     });
 });
     switch (lowerCommand) { 
+case 'tourl': {
+    const fs = require('fs');
+    const path = require('path');
+    const FormData = require('form-data');
+    const axios = require('axios');
+    const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+    if (!quotedMsg) {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '⚠️ *Debes responder a una imagen, video o sticker para subirlo a la nube.*'
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '☁️', key: msg.key }
+    });
+
+    try {
+        const mediaTypes = ['imageMessage', 'videoMessage', 'stickerMessage'];
+        const mediaType = mediaTypes.find(type => quotedMsg[type]);
+
+        if (!mediaType) {
+            throw new Error('⚠️ Solo puedes subir imágenes, videos o stickers.');
+        }
+
+        const stream = await downloadContentFromMessage(quotedMsg[mediaType], mediaType.replace('Message', ''));
+        const buffer = [];
+
+        for await (const chunk of stream) {
+            buffer.push(chunk);
+        }
+
+        const finalBuffer = Buffer.concat(buffer);
+        const ext = mediaType === 'stickerMessage' ? 'webp' : quotedMsg[mediaType].mimetype.split('/')[1];
+        const fileName = `${Date.now()}.${ext}`;
+        const filePath = path.join(__dirname, 'tmp', fileName);
+        fs.writeFileSync(filePath, finalBuffer);
+
+        const form = new FormData();
+        form.append('file', fs.createReadStream(filePath));
+        form.append('expiry', 3600); // 1 hora
+
+        const res = await axios.post('https://cdn.russellxz.click/upload.php', form, {
+            headers: form.getHeaders()
+        });
+
+        fs.unlinkSync(filePath);
+
+        if (!res.data || !res.data.url) throw new Error('No se pudo obtener el enlace del archivo.');
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✅ *Archivo subido correctamente:*\n${res.data.url}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error("❌ Error en tourl:", err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message || 'No se pudo subir el archivo.'}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
         
 case 'carga': {
   if (!isOwner) {
