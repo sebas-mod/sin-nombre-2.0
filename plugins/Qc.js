@@ -1,13 +1,12 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función
+const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función disponible
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Verificar si hay mensaje citado
+    // Determinar si hay mensaje citado y obtener el JID objetivo
     const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     const quotedJid = msg.message?.extendedTextMessage?.contextInfo?.participant;
     const senderJid = msg.key.participant || msg.key.remoteJid;
-    // Si se cita a alguien, ese será el objetivo; de lo contrario, el remitente
     const targetJid = quotedJid || senderJid;
 
     // Obtener el nombre del usuario objetivo
@@ -16,22 +15,25 @@ const handler = async (msg, { conn, text, args }) => {
       if (typeof conn.getName === 'function') {
         targetName = await conn.getName(quotedJid);
       } else if (conn.contacts && conn.contacts[quotedJid]) {
-        targetName = conn.contacts[quotedJid].notify || conn.contacts[quotedJid].vname || conn.contacts[quotedJid].name || quotedJid;
+        targetName = conn.contacts[quotedJid].notify ||
+                     conn.contacts[quotedJid].vname ||
+                     conn.contacts[quotedJid].name ||
+                     quotedJid;
       } else {
         targetName = quotedJid;
       }
     } else {
       targetName = msg.pushName || "";
     }
-    // Fallback: si no hay nombre o es vacío o "Sin nombre", usar el número
-    if (!targetName || targetName.trim() === "" || targetName === "Sin nombre") {
+    // Si no hay nombre o si contiene "@" (por ejemplo, "12345@s.whatsapp.net"), usar solo el número
+    if (!targetName || targetName.trim() === "" || targetName === "Sin nombre" || targetName.includes('@')) {
       targetName = targetJid.split('@')[0];
     }
 
-    // Obtener avatar del usuario objetivo con fallback
+    // Obtener avatar con fallback por defecto
     const pp = await conn.profilePictureUrl(targetJid).catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png');
 
-    // Validar entrada: texto ingresado en args o mensaje citado
+    // Obtener el contenido del texto (ya sea en args o del mensaje citado)
     let contenido = "";
     if (args.length > 0 && args.join(" ").trim() !== "") {
       contenido = args.join(" ").trim();
@@ -43,7 +45,7 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Remover posibles menciones del contenido
+    // Remover menciones del contenido (si existen)
     const mentionRegex = new RegExp(`@${targetJid.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`, 'g');
     const textoLimpio = contenido.replace(mentionRegex, "").trim();
 
@@ -53,7 +55,7 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Construir la data para el quote con dimensiones aumentadas para que el avatar y el texto se muestren más grandes
+    // Construir la data para el quote con dimensiones aumentadas
     const quoteData = {
       type: "quote",
       format: "png",
