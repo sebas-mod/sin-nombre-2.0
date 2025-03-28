@@ -257,52 +257,45 @@ sock.ev.on("group-participants.update", async (update) => {
 });
            
             // 🟢 Consola de mensajes entrantes con diseño
+
+// Lógica del bot con soporte a plugins y sistema case
 sock.ev.on("messages.upsert", async (messageUpsert) => {
   try {
     const msg = messageUpsert.messages[0];
     if (!msg) return;
 
-    const chatId = msg.key.remoteJid; // ID del grupo o usuario
-    const isGroup = chatId.endsWith("@g.us"); // Verifica si es un grupo
+    const chatId = msg.key.remoteJid;
+    const isGroup = chatId.endsWith("@g.us");
     const sender = msg.key.participant
       ? msg.key.participant.replace(/[^0-9]/g, "")
       : msg.key.remoteJid.replace(/[^0-9]/g, "");
-    const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
-    const fromMe = msg.key.fromMe || sender === botNumber; // Verifica si el mensaje es del bot
+    const botNumber = sock.user.id.split(":")[0];
+    const fromMe = msg.key.fromMe || sender === botNumber;
     let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-    let messageType = Object.keys(msg.message || {})[0]; // Tipo de mensaje (text, image, video, etc.)
+    let messageType = Object.keys(msg.message || {})[0];
 
-    // 🔥 Detectar si el mensaje fue eliminado
     if (msg.message?.protocolMessage?.type === 0) {
       console.log(chalk.red(`🗑️ Un mensaje fue eliminado por ${sender}`));
       return;
     }
 
-    // 🔍 Mostrar en consola el mensaje recibido
     console.log(chalk.yellow(`\n📩 Nuevo mensaje recibido`));
     console.log(chalk.green(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${chalk.bold(sender)}`));
     console.log(chalk.cyan(`💬 Tipo: ${messageType}`));
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-    // ********************** LÓGICA ANTILINK **********************
     if (isGroup) {
-      // Cargar activos.json y verificar si antilink está activado para este grupo
-      const fs = require("fs"); // ya tienes fs, pero no afecta si lo vuelves a requerir
+      const fs = require("fs");
       const pathActivos = "./activos.json";
       let activos = {};
       if (fs.existsSync(pathActivos)) {
         activos = JSON.parse(fs.readFileSync(pathActivos, "utf-8"));
       }
       if (activos.antilink && activos.antilink[chatId]) {
-        // Si el mensaje contiene el enlace de WhatsApp
         if (messageText.includes("https://chat.whatsapp.com/")) {
-          // Verificar si el remitente es admin o propietario
           let canBypass = false;
-          if (isOwner(sender)) {
-            canBypass = true;
-          }
-          // En grupo, obtener metadatos para verificar admin
+          if (isOwner(sender)) canBypass = true;
           try {
             const chatMetadata = await sock.groupMetadata(chatId);
             const participantInfo = chatMetadata.participants.find(p => p.id.includes(sender));
@@ -312,55 +305,44 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
           } catch (err) {
             console.error("Error obteniendo metadata del grupo:", err);
           }
-          // Si no es admin ni propietario, proceder a eliminar el mensaje y expulsar al usuario
           if (!canBypass) {
-            // Eliminar el mensaje
             await sock.sendMessage(chatId, { delete: msg.key });
-            // Enviar mensaje de advertencia con mención
             await sock.sendMessage(chatId, { 
               text: `⚠️ @${sender} ha enviado un enlace no permitido y ha sido expulsado.`, 
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
-            // Expulsar al usuario (nota: esta acción requiere permisos y la función groupParticipantsUpdate)
             try {
               await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
             } catch (expulsionError) {
               console.error("Error al expulsar al usuario:", expulsionError);
             }
-            return; // Salir de la lógica para que no se procese el mensaje
+            return;
           }
         }
       }
     }
-    // ***************** FIN LÓGICA ANTILINK **********************
 
-    // Lógica para determinar si el bot debe responder:
     if (!isGroup) {
-      // En chat privado: solo responde si es fromMe, owner o usuario permitido.
       if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     } else {
-      // En grupos: si el modo privado está activo, solo responde si es fromMe, owner o usuario permitido.
       if (modos.modoPrivado && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     }
 
-    // ⚠️ Si el "modo admins" está activado en este grupo, validar si el usuario es admin o el owner
     if (isGroup && modos.modoAdmins[chatId]) {
       const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
       if (chatMetadata) {
         const participant = chatMetadata.participants.find(p => p.id.includes(sender));
         const isAdmin = participant ? (participant.admin === "admin" || participant.admin === "superadmin") : false;
         if (!isAdmin && !isOwner(sender) && !fromMe) {
-          return; // Ignorar mensaje si no es admin ni owner
+          return;
         }
       }
     }
 
-    // ✅ Detectar si es un comando
     if (messageText.startsWith(global.prefix)) {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
       const args = messageText.slice(global.prefix.length + command.length).trim().split(" ");
 
-      // ⚙️ Comando para activar/desactivar "modo privado"
       if (command === "modoprivado" && (isOwner(sender) || fromMe)) {
         if (!["on", "off"].includes(args[0])) {
           await sock.sendMessage(chatId, { text: "⚠️ Usa `.modoprivado on` o `.modoprivado off`" });
@@ -372,7 +354,6 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         return;
       }
 
-      // ⚙️ Comando para activar/desactivar "modo admins" (solo en grupos)
       if (command === "modoadmins" && isGroup) {
         const chatMetadata = await sock.groupMetadata(chatId).catch(() => null);
         if (!chatMetadata) return;
@@ -387,16 +368,16 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
           return;
         }
         if (args[0] === "on") {
-          modos.modoAdmins[chatId] = true; // Activar en este grupo
+          modos.modoAdmins[chatId] = true;
         } else {
-          delete modos.modoAdmins[chatId]; // Desactivar en este grupo
+          delete modos.modoAdmins[chatId];
         }
         guardarModos(modos);
         await sock.sendMessage(chatId, { text: `👑 *Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo*` });
         return;
       }
 
-      // 🔄 Enviar el comando a `main.js`
+      // Aquí se ejecutan los comandos, incluyendo los plugins
       handleCommand(sock, msg, command, args, sender);
     }
 
@@ -404,6 +385,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.error("❌ Error en el evento messages.upsert:", error);
   }
 });
+
 
             
             
