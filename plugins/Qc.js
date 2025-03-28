@@ -24,34 +24,29 @@ const formatPhoneNumber = (jid) => {
   const number = jid.split('@')[0];
   const bandera = banderaPorPrefijo(jid);
 
+  // Ajusta la lógica de partición según la longitud real del número
   if (number.length === 12) {
     return `${bandera} +${number.slice(0, 3)} ${number.slice(3, 7)}-${number.slice(7)}`;
   } else if (number.length === 11) {
-    return `${bandera} +${number.slice(0, 2)} ${number.slice(2, 6)}-${number.slice(6)}`;
+    return `${bandera} +${number.slice(0, 1)} ${number.slice(1, 5)} ${number.slice(5, 8)} ${number.slice(8)}`;
   } else {
     return `${bandera} +${number}`;
   }
 };
 
-// Obtener nombre real usando conn.getName primero; si falla, retorna el número formateado.
-const getNombreBonito = async (jid, conn) => {
-  try {
-    let name = '';
-    // Opción principal: intentar con conn.getName
-    if (typeof conn.getName === 'function') {
-      name = await conn.getName(jid);
-    }
-
-    // Si no se obtuvo un nombre válido, se retorna el número formateado
-    if (!name || name.trim() === '' || name.includes('@')) {
-      return formatPhoneNumber(jid);
-    }
-
-    return name;
-  } catch (e) {
-    console.log("Error obteniendo nombre:", e);
-    return formatPhoneNumber(jid);
+// Función para obtener el nombre a mostrar:
+// Si el target es el remitente, se usa msg.pushName; 
+// de lo contrario, se busca en conn.contacts y se prioriza pushname o name.
+// Si no se encuentra, se formatea el número.
+const getDisplayName = (jid, conn, msg) => {
+  if (jid === msg.sender || jid === conn.user.id) {
+    return msg.pushName || "Sin nombre";
   }
+  const contact = conn.contacts && conn.contacts[jid];
+  if (contact) {
+    return contact.pushname || contact.name || msg.pushName || "Sin nombre";
+  }
+  return formatPhoneNumber(jid);
 };
 
 const handler = async (msg, { conn, text, args }) => {
@@ -60,8 +55,7 @@ const handler = async (msg, { conn, text, args }) => {
     const quotedMsg = quoted?.quotedMessage;
     const quotedJid = quoted?.participant;
 
-    let targetJid, targetName, targetPp;
-
+    let targetJid;
     // Si se cita un mensaje, se usa el jid del mensaje citado; de lo contrario, se determina según el remitente
     if (quotedJid) {
       targetJid = quotedJid;
@@ -71,17 +65,18 @@ const handler = async (msg, { conn, text, args }) => {
       targetJid = msg.key.participant || msg.key.remoteJid;
     }
 
-    // Obtener el nombre "bonito" o nick usando conn.getName como primera opción
-    targetName = await getNombreBonito(targetJid, conn);
+    // Obtener el nombre a mostrar usando la nueva lógica
+    const targetName = getDisplayName(targetJid, conn, msg);
 
     // Obtener foto de perfil
+    let targetPp;
     try {
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
       targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     }
 
-    // Obtener texto
+    // Obtener el texto a usar
     let contenido = args.join(" ").trim();
     if (!contenido && quotedMsg) {
       const tipo = Object.keys(quotedMsg)[0];
