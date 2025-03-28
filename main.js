@@ -225,6 +225,7 @@ case 'alien': {
     const path = require('path');
     const axios = require('axios');
     const FormData = require('form-data');
+    const ffmpeg = require('fluent-ffmpeg');
     const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
     const { promisify } = require('util');
     const { pipeline } = require('stream');
@@ -270,16 +271,37 @@ case 'alien': {
         const effectURL = `https://api.neoxr.eu/api/effect?style=alien&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
         const effectRes = await axios.get(effectURL, { responseType: 'arraybuffer' });
 
-        if (!effectRes.data || effectRes.data.length < 1000) {
-            throw new Error('La API devolvió una imagen inválida.');
+        const contentType = effectRes.headers['content-type'];
+        if (!contentType || !contentType.startsWith('image')) {
+            throw new Error('La API no devolvió una imagen válida.');
+        }
+
+        const rawImagePath = path.join(tmpDir, `${Date.now()}_raw`);
+        const finalImagePath = path.join(tmpDir, `${Date.now()}_converted.jpg`);
+
+        fs.writeFileSync(rawImagePath, effectRes.data);
+
+        if (contentType === 'image/webp') {
+            // Convertir de webp a jpg
+            await new Promise((resolve, reject) => {
+                ffmpeg(rawImagePath)
+                    .toFormat('jpeg')
+                    .save(finalImagePath)
+                    .on('end', resolve)
+                    .on('error', reject);
+            });
+        } else {
+            // Guardar tal cual si ya es jpg o png
+            fs.renameSync(rawImagePath, finalImagePath);
         }
 
         await sock.sendMessage(msg.key.remoteJid, {
-            image: Buffer.from(effectRes.data),
+            image: fs.readFileSync(finalImagePath),
             caption: '👽 *Efecto alien aplicado exitosamente*'
         }, { quoted: msg });
 
         fs.unlinkSync(inputPath);
+        fs.unlinkSync(finalImagePath);
 
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
