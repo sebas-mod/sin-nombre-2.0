@@ -77,12 +77,10 @@ const handler = async (msg, { conn, text, args }) => {
         { quoted: msg }
       );
 
-    const who =
-      (msg.mentionedJid && msg.mentionedJid[0])
-        ? msg.mentionedJid[0]
-        : (msg.fromMe ? conn.user.jid : msg.sender);
+    // Aseguramos definir "who" usando varias propiedades disponibles
+    const who = msg.mentionedJid?.[0] || msg.key?.participant || msg.key?.remoteJid || conn.user.jid;
 
-    // Se remueve la mención del texto
+    // Se remueve la mención del texto usando "who"
     const mentionRegex = new RegExp(
       `@${who.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`,
       'g'
@@ -95,6 +93,7 @@ const handler = async (msg, { conn, text, args }) => {
         { quoted: msg }
       );
 
+    // Intentar obtener la foto real; si falla, usar la imagen por defecto
     const pp = await conn.profilePictureUrl(who).catch(
       (_) => 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
     );
