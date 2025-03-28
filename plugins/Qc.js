@@ -1,9 +1,12 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');
 
-// Función para obtener el nombre del usuario (lógica de Rudy)
+// Función para obtener el nombre del usuario (lógica de Rudy modificada)
 async function getUserName(conn, jid) {
-  let name = await conn.getName(jid);
+  let name = "";
+  if (conn.getName && typeof conn.getName === "function") {
+    name = await conn.getName(jid);
+  }
   if (!name) {
     const contact = await conn.fetchContact(jid);
     name = contact?.notify || contact?.name || jid.split('@')[0];
