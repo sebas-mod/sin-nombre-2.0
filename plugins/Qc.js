@@ -69,20 +69,21 @@ const handler = async (msg, { conn, text, args }) => {
 
     let targetJid, targetName, targetPp;
 
+    // Si se está citando un mensaje, se toma el jid del mensaje citado.
+    // De lo contrario, si el mensaje es enviado por mí, se usa mi propio id.
+    // En grupos, si no es de mi autoría, se usa el participante del mensaje.
     if (quotedJid) {
       targetJid = quotedJid;
+    } else if (msg.key.fromMe) {
+      targetJid = conn.user.id;
     } else {
-      if (msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
-        targetJid = conn.user.id;
-      } else {
-        targetJid = msg.key.participant || msg.key.remoteJid;
-      }
+      targetJid = msg.key.participant || msg.key.remoteJid;
     }
 
-    // Obtener nombre bien
+    // Obtener nombre "bonito"
     targetName = await getNombreBonito(targetJid, conn);
 
-    // Obtener foto
+    // Obtener foto de perfil
     try {
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
