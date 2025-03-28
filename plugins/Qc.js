@@ -1,34 +1,55 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de que esta función esté disponible
+const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de tener esta función disponible
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Definir el JID objetivo:
-    // Si se cita un mensaje, se usa el participant del mensaje citado; de lo contrario, el remitente.
-    const targetJid = msg.message?.extendedTextMessage?.contextInfo?.participant || (msg.key.participant || msg.key.remoteJid);
+    // Determinar el JID objetivo:
+    // Si se cita un mensaje, se usa el participant citado; si no, se usa el remitente.
+    const quotedJid = msg.message?.extendedTextMessage?.contextInfo?.participant;
+    const targetJid = quotedJid || (msg.key.participant || msg.key.remoteJid);
 
-    // Intentar obtener el nombre del usuario usando conn.getName
+    // Intentar obtener el nombre del usuario objetivo:
     let targetName = "";
-    if (typeof conn.getName === 'function') {
-      targetName = await conn.getName(targetJid);
-    }
-    // Si no se obtuvo un nombre o es igual al JID, intenta obtenerlo de los contactos
-    if (!targetName || targetName.trim() === "" || targetName === targetJid) {
-      if (conn.contacts && conn.contacts[targetJid]) {
-        targetName = conn.contacts[targetJid].notify || conn.contacts[targetJid].vname || conn.contacts[targetJid].name || "";
+    if (quotedJid) {
+      // Si el mensaje es de grupo, intenta obtener el nombre de los participantes del grupo.
+      if (msg.key.remoteJid.endsWith("@g.us")) {
+        try {
+          const groupMetadata = await conn.groupMetadata(msg.key.remoteJid);
+          const participant = groupMetadata.participants.find(p => p.id === quotedJid);
+          if (participant && participant.notify) {
+            targetName = participant.notify;
+          }
+        } catch (err) {
+          // Si falla, lo ignoramos
+        }
       }
+      // Si no se obtuvo con el grupo, intenta con conn.getName si existe.
+      if (!targetName && typeof conn.getName === 'function') {
+        targetName = await conn.getName(quotedJid);
+      }
+      // Luego, si el bot tiene los contactos, intenta obtenerlo de ahí.
+      if (!targetName && conn.contacts && conn.contacts[quotedJid]) {
+        targetName =
+          conn.contacts[quotedJid].notify ||
+          conn.contacts[quotedJid].vname ||
+          conn.contacts[quotedJid].name ||
+          "";
+      }
+    } else {
+      // Si no se cita, se usa el pushName del remitente.
+      targetName = msg.pushName || "";
     }
-    // Si aún no hay un nombre válido, usar solo el número (parte antes de @)
-    if (!targetName || targetName.trim() === "") {
+    // Si no se obtuvo un nombre válido (o es igual al JID), usar solo la parte numérica.
+    if (!targetName || targetName.trim() === "" || targetName === targetJid) {
       targetName = targetJid.split('@')[0];
     }
 
-    // Obtener la foto de perfil (avatar) del usuario, con fallback por defecto
+    // Obtener el avatar del usuario objetivo, con fallback.
     const pp = await conn.profilePictureUrl(targetJid).catch(
       () => 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
     );
 
-    // Obtener el contenido del texto (ya sea ingresado en args o mediante mensaje citado)
+    // Obtener el contenido del texto ya sea mediante args o del mensaje citado.
     let contenido = "";
     if (args.length > 0 && args.join(" ").trim() !== "") {
       contenido = args.join(" ").trim();
@@ -40,7 +61,7 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Remover posibles menciones del contenido
+    // Remover posibles menciones en el contenido.
     const mentionRegex = new RegExp(
       `@${targetJid.split('@')[0].replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*`,
       'g'
@@ -53,7 +74,7 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Construir la data para la generación del sticker con quote
+    // Construir los parámetros para generar el sticker (quote)
     const quoteData = {
       type: "quote",
       format: "png",
@@ -76,7 +97,7 @@ const handler = async (msg, { conn, text, args }) => {
       ]
     };
 
-    // Enviar reacción mientras se genera el sticker
+    // Enviar una reacción mientras se genera el sticker
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '🎨', key: msg.key }
     });
