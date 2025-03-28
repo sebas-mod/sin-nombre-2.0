@@ -3,38 +3,17 @@ const { writeExifImg } = require('../libs/fuctions'); // Asegúrate de que esta 
 
 const handler = async (msg, { conn, text, args }) => {
   try {
-    // Si se cita un mensaje, se recoge el JID del remitente citado
+    // Determinar el usuario objetivo: si se cita un mensaje, se usa el JID citado; de lo contrario, se usa el remitente.
     const quotedJid = msg.message?.extendedTextMessage?.contextInfo?.participant;
-    // Si no hay mensaje citado, usamos al remitente actual (participante en grupo o remoto en privado)
-    const senderJid = msg.key.participant || msg.key.remoteJid;
-    // Elegimos cuál JID usar
-    const targetJid = quotedJid || senderJid;
+    const targetJid = quotedJid || (msg.key.participant || msg.key.remoteJid);
 
-    // --- OBTENCIÓN DEL NOMBRE ---
+    // Obtener el nombre usando únicamente conn.getName
     let targetName = "";
-
-    // 1) Intentar primero con conn.getName (si existe)
     if (typeof conn.getName === 'function') {
       targetName = await conn.getName(targetJid);
     }
-
-    // 2) Si seguimos sin nombre o nos devolvió exactamente el JID (típico en algunos casos),
-    //    vamos a intentar usar la info de "conn.contacts" como fallback.
-    if (
-      !targetName ||
-      targetName.trim() === "" ||
-      targetName === targetJid
-    ) {
-      const contactData = conn.contacts[targetJid] || {};
-      targetName =
-        contactData.name ||
-        contactData.notify ||
-        contactData.vname ||
-        targetJid.split('@')[0];
-    }
-
-    // 3) Si aún así quedó vacío, forzamos al menos el número
-    if (!targetName || targetName.trim() === "") {
+    // Si no se obtuvo un nombre válido, se usa solo la parte numérica
+    if (!targetName || targetName.trim() === "" || targetName === targetJid) {
       targetName = targetJid.split('@')[0];
     }
 
@@ -62,7 +41,6 @@ const handler = async (msg, { conn, text, args }) => {
     );
     const textoLimpio = contenido.replace(mentionRegex, "").trim();
 
-    // Limite de 35 caracteres
     if (textoLimpio.length > 35) {
       return await conn.sendMessage(msg.key.remoteJid, {
         text: "⚠️ El texto no puede tener más de 35 caracteres."
@@ -97,28 +75,24 @@ const handler = async (msg, { conn, text, args }) => {
       react: { text: '🎨', key: msg.key }
     });
 
-    // Generar la imagen usando el servicio de quote
     const json = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    // Convertir a Buffer y luego a sticker con metadatos
     const buffer = Buffer.from(json.data.result.image, 'base64');
     const sticker = await writeExifImg(buffer, {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
     });
 
-    // Enviar sticker
     await conn.sendMessage(msg.key.remoteJid, {
       sticker: { url: sticker }
     }, { quoted: msg });
 
-    // Enviar reacción de confirmación
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '✅', key: msg.key }
     });
-
+    
   } catch (err) {
     console.error("❌ Error en el comando qc:", err);
     await conn.sendMessage(msg.key.remoteJid, {
