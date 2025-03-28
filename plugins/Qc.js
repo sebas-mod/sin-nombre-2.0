@@ -7,25 +7,37 @@ const handler = async (msg, { conn, text, args }) => {
     const quotedMsg = quoted?.quotedMessage;
     const quotedJid = quoted?.participant;
 
-    // Detectar si es un mensaje citado o no
-    const isQuoted = !!quotedMsg;
-    const authorJid = isQuoted ? quotedJid : msg.key.participant || msg.key.remoteJid;
+    let targetJid, targetName, targetPp;
 
-    // Nombre del usuario
-    let targetName;
-    try {
-      targetName = await conn.getName(authorJid);
-    } catch {
-      targetName = authorJid.split('@')[0];
+    if (quotedJid) {
+      // Si hay mensaje citado, usar datos del citado
+      targetJid = quotedJid;
+    } else {
+      // Si NO hay mensaje citado:
+      if (msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
+        // Es chat privado → usar JID del propio bot
+        targetJid = conn.user.id;
+      } else {
+        // Es grupo → usar quien envió el mensaje
+        targetJid = msg.key.participant || msg.key.remoteJid;
+      }
     }
 
-    // Foto de perfil
-    let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
+    // Obtener nombre
     try {
-      avatar = await conn.profilePictureUrl(authorJid, 'image');
-    } catch {}
+      targetName = await conn.getName(targetJid);
+    } catch {
+      targetName = targetJid.split('@')[0];
+    }
 
-    // Obtener el contenido
+    // Obtener foto
+    try {
+      targetPp = await conn.profilePictureUrl(targetJid, 'image');
+    } catch {
+      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
+    }
+
+    // Obtener texto
     let contenido = args.join(" ").trim();
     if (!contenido && quotedMsg) {
       const tipo = Object.keys(quotedMsg)[0];
@@ -38,8 +50,8 @@ const handler = async (msg, { conn, text, args }) => {
       }, { quoted: msg });
     }
 
-    // Limpiar menciones
     const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
+
     if (textoLimpio.length > 35) {
       return await conn.sendMessage(msg.key.remoteJid, {
         text: '⚠️ El texto no puede tener más de 35 caracteres.'
@@ -51,7 +63,7 @@ const handler = async (msg, { conn, text, args }) => {
       react: { text: '🎨', key: msg.key }
     });
 
-    // Crear quote
+    // Construir sticker
     const quoteData = {
       type: "quote",
       format: "png",
@@ -66,7 +78,7 @@ const handler = async (msg, { conn, text, args }) => {
           from: {
             id: 1,
             name: targetName,
-            photo: { url: avatar }
+            photo: { url: targetPp }
           },
           text: textoLimpio,
           replyMessage: {}
