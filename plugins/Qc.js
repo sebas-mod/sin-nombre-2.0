@@ -19,7 +19,7 @@ const banderaPorPrefijo = (numero) => {
     '56': '🇨🇱',
     '57': '🇨🇴',
     '58': '🇻🇪',
-    '1': '🇺🇸'
+    '1':  '🇺🇸'
   };
   const numeroSinArroba = numero.split('@')[0];
   let bandera = '';
@@ -31,7 +31,6 @@ const banderaPorPrefijo = (numero) => {
   return bandera || '🌎';
 };
 
-// Formato bonito para número
 const formatPhoneNumber = (jid) => {
   const number = jid.split('@')[0];
   const bandera = banderaPorPrefijo(jid);
@@ -45,96 +44,118 @@ const formatPhoneNumber = (jid) => {
   }
 };
 
-// Obtener nombre real con preferencia a conn.getName
-// Si no existe nombre público, se usa el número.
-const getNombreBonito = async (jid, conn) => {
+/**
+ * Intenta obtener un nombre “bonito” (preferencia):
+ * 1) conn.getName
+ * 2) msg.pushName (nombre que trae el mensaje)
+ * 3) conn.contacts
+ * 4) Número formateado
+ */
+const getNombreBonito = async (jid, conn, fallbackPushName = '') => {
+  // Si no tenemos JID, retornamos algo genérico
+  if (!jid) return '???';
+
   try {
     let name = '';
 
-    // 1) Intentar usar siempre conn.getName (Baileys)
+    // (1) Intentar usar siempre conn.getName
     if (typeof conn.getName === 'function') {
       name = await conn.getName(jid);
     }
 
-    // 2) Si sigue vacío, revisamos contactos
-    if (!name || name.trim() === '' || name.includes('@')) {
-      const contacto = conn.contacts?.[jid] || {};
-      name = contacto.name || contacto.notify || contacto.vname || '';
+    // (2) Si sigue vacío, usar pushName
+    if (!name || !name.trim() || name.includes('@')) {
+      if (fallbackPushName && fallbackPushName.trim()) {
+        name = fallbackPushName;
+      }
     }
 
-    // 3) Si de plano no hay nada, o está oculto, formateamos el número
-    if (!name || name.trim() === '' || name.includes('@')) {
+    // (3) Si aún está vacío, revisar contactos
+    if (!name || !name.trim() || name.includes('@')) {
+      const c = conn.contacts?.[jid] || {};
+      const cName = c.name || c.notify || c.vname || '';
+      if (cName && cName.trim() && !cName.includes('@')) {
+        name = cName;
+      }
+    }
+
+    // (4) Si no hay nada, usar el número
+    if (!name || !name.trim() || name.includes('@')) {
       name = formatPhoneNumber(jid);
     }
 
     return name;
-  } catch (e) {
-    console.log("Error obteniendo nombre:", e);
-    // Fallback: número formateado
+  } catch (err) {
+    console.log("Error en getNombreBonito:", err);
     return formatPhoneNumber(jid);
   }
 };
 
-const handler = async (msg, { conn, text, args }) => {
+const handler = async (msg, { conn, args }) => {
   try {
-    // Info de mensaje citado
+    // Info del mensaje citado
     const quoted = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = quoted?.quotedMessage;
     const quotedJid = quoted?.participant;
 
-    // Determinar el JID de quien generará el sticker
-    let targetJid;
+    // En Baileys, si fromMe es true, significa que lo envió el bot
+    const isFromBot = !!msg.key.fromMe;
 
+    // Sacar pushName del mensaje
+    // (En Baileys MD a veces viene en msg.pushName o msg.pushName)
+    const fallbackPushName = msg.pushName || '';
+
+    // Determinar JID objetivo
+    let targetJid;
     if (quotedJid) {
-      // Si se está citando a alguien
+      // Si hay mensaje citado, se usa el que se citó
       targetJid = quotedJid;
     } else {
-      // Sin cita: en grupos tomamos participant, en privado tomamos remoteJid
+      // Sino, sacamos del participant (en grupos) o remoteJid (en privado)
       targetJid = msg.key.participant || msg.key.remoteJid;
+
+      // Si en privado es el mismo bot (fromMe = true), a veces el remoteJid es nuestro propio JID.
+      // Tú decides si quieres forzar que aparezca tu "nombre de usuario" o algo:
+      if (msg.key.remoteJid.endsWith('@s.whatsapp.net') && isFromBot) {
+        // Por ejemplo, forzamos a que lo identifique con pushName o un alias:
+        targetJid = conn.user?.jid || targetJid;
+      }
     }
 
-    // Verificación extra para evitar confusiones si el bot y el usuario son el mismo.
-    // (Esto depende de tu lógica, ajusta según necesidades)
-    // Ejemplo: si en privado el remoteJid es el mismo que conn.user.id,
-    // usaremos mejor msg.key.id o algo que no confunda. Pero normalmente no haría falta.
-    if (targetJid === conn.user.jid) {
-      // Si el comando viene de 'sí mismo' en privado, por ejemplo,
-      // podrías forzar el sticker con el remitente original (msg.key.id, etc.)
-      console.log("-> Es el mismo bot, ajustando target...");
-      // Ajusta esta línea según tu preferencia. 
-      // A veces se deja tal cual si no te afecta.
-    }
-
-    // Obtener el nombre con preferencia a getName
-    const targetName = await getNombreBonito(targetJid, conn);
+    // Obtener el nombre con la función priorizando getName
+    const targetName = await getNombreBonito(targetJid, conn, fallbackPushName);
 
     // Obtener foto de perfil
     let targetPp;
     try {
+      // Usa "image" o "preview", según tu versión de Baileys
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
       targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     }
 
-    // Obtener el texto: si no hay args, lo tomamos del mensaje citado
-    let contenido = args.join(" ").trim();
+    // Texto que irá en el sticker
+    let contenido = args.join(' ').trim();
+
+    // Si no hay args, tomamos el texto del mensaje citado (si existe)
     if (!contenido && quotedMsg) {
       const tipo = Object.keys(quotedMsg)[0];
-      contenido = quotedMsg[tipo]?.text 
-               || quotedMsg[tipo]?.caption 
-               || quotedMsg[tipo] 
+      contenido = quotedMsg[tipo]?.text
+               || quotedMsg[tipo]?.caption
+               || quotedMsg[tipo]
                || '';
     }
 
-    if (!contenido || contenido.trim() === '') {
+    // Validar que haya texto
+    if (!contenido.trim()) {
       return await conn.sendMessage(
         msg.key.remoteJid,
-        { text: '⚠️ Escribe algo o cita un mensaje para convertirlo en sticker.' },
+        { text: '⚠️ Escribe algo o cita un mensaje para crear el sticker.' },
         { quoted: msg }
       );
     }
 
-    // Límite de caracteres
+    // Límite de 35 caracteres
     const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
     if (textoLimpio.length > 35) {
       return await conn.sendMessage(
@@ -144,10 +165,12 @@ const handler = async (msg, { conn, text, args }) => {
       );
     }
 
-    // Reacción de "procesando"
-    await conn.sendMessage(msg.key.remoteJid, { react: { text: '🎨', key: msg.key } });
+    // Reacción de procesando
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: '🎨', key: msg.key }
+    });
 
-    // Datos para la API de quote
+    // Datos para la API quote
     const quoteData = {
       type: "quote",
       format: "png",
@@ -170,15 +193,15 @@ const handler = async (msg, { conn, text, args }) => {
       ]
     };
 
-    // Petición a la API
+    // Llamada al servicio
     const res = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    // Pasar el base64 a buffer
+    // Base64 -> Buffer
     const buffer = Buffer.from(res.data.result.image, 'base64');
 
-    // Agregar metadata para sticker
+    // Sticker con metadatos
     const sticker = await writeExifImg(buffer, {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
@@ -191,14 +214,16 @@ const handler = async (msg, { conn, text, args }) => {
       { quoted: msg }
     );
 
-    // Reacción de "finalizado"
-    await conn.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
+    // Reacción final
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: '✅', key: msg.key }
+    });
 
-  } catch (e) {
-    console.error("❌ Error en el comando qc:", e);
+  } catch (err) {
+    console.error("❌ Error en qc:", err);
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: '❌ Ocurrió un error al generar el sticker.' },
+      { text: '❌ Error al generar el sticker.' },
       { quoted: msg }
     );
   }
