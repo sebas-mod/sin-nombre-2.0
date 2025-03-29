@@ -183,6 +183,67 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
         
+case 'serbot': {
+    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("baileys");
+    const fs = require("fs");
+    const path = require("path");
+    const pino = require("pino");
+
+    const id = msg.key.participant || msg.key.remoteJid;
+    const numero = id.split("@")[0];
+    const sessionPath = path.join(__dirname, "subbots", `${numero}@azura`);
+    if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '🔑', key: msg.key }
+    });
+
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+        const { version } = await fetchLatestBaileysVersion();
+
+        const subSock = makeWASocket({
+            version,
+            logger: pino({ level: "silent" }),
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
+            },
+            browser: ["Azura Subbot", "Firefox", "2.0"]
+        });
+
+        setTimeout(async () => {
+            let code = await subSock.requestPairingCode(numero);
+            const pairing = code.match(/.{1,4}/g).join("-");
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `🔗 *Código para emparejar tu subbot:*\n\n${pairing}\n\n📌 Usa este código en tu WhatsApp y serás subbot de Azura Ultra Bot.`,
+                quoted: msg
+            });
+        }, 1500);
+
+        subSock.ev.on("creds.update", saveCreds);
+
+        subSock.ev.on("connection.update", async (update) => {
+            const { connection } = update;
+            if (connection === "open") {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    text: `✅ *Subbot conectado correctamente.*`,
+                    quoted: msg
+                });
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error en serbot:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Ocurrió un error:* ${error.message}`,
+            quoted: msg
+        });
+    }
+
+    break;
+}
+        
 case 'tovideo': {
   const fs = require('fs');
   const path = require('path');
