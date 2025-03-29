@@ -437,117 +437,87 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 
 const path = require("path");
             
+async function cargarSubbots() { const subbotFolder = "./subbots"; const path = require("path"); const fs = require("fs"); const pino = require("pino"); const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
 
-async function cargarSubbots() {
-  const subbotFolder = "./subbots";
-  const path = require("path");
-  const fs = require("fs");
-  const pino = require("pino");
-  const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
-  } = require("@whiskeysockets/baileys");
+function loadSubPlugins() { const plugins = []; const pluginDir = path.join(__dirname, 'plugins2'); if (!fs.existsSync(pluginDir)) return plugins; const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.js')); for (const file of files) { const plugin = require(path.join(pluginDir, file)); if (plugin && plugin.command) plugins.push(plugin); } return plugins; }
 
-  // Función para cargar plugins exclusivos para subbots
-  function loadSubPlugins() {
-    const plugins = [];
-    const pluginDir = path.join(__dirname, 'plugins2');
-    if (!fs.existsSync(pluginDir)) return plugins;
-    const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.js'));
-    for (const file of files) {
-      const plugin = require(path.join(pluginDir, file));
-      if (plugin && plugin.command) plugins.push(plugin);
+const subPlugins = loadSubPlugins();
+
+async function handleSubCommand(sock, msg, command, args) { const lowerCommand = command.toLowerCase(); const text = args.join(" "); const plugin = subPlugins.find(p => p.command.includes(lowerCommand)); if (plugin) { return plugin(msg, { conn: sock, text, args, command: lowerCommand, usedPrefix: "." }); } }
+
+if (!fs.existsSync(subbotFolder)) return console.log("⚠️ No hay carpeta de subbots.");
+
+const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(${subbotFolder}/${d}/creds.json));
+
+console.log(🤖 Cargando ${subDirs.length} subbot(s) conectados...);
+
+for (const dir of subDirs) { const sessionPath = path.join(subbotFolder, dir);
+
+try {
+  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+  const { version } = await fetchLatestBaileysVersion();
+  const subSock = makeWASocket({
+    version,
+    logger: pino({ level: "silent" }),
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
+    },
+    browser: ["Azura Subbot", "Firefox", "2.0"]
+  });
+
+  subSock.ev.on("creds.update", saveCreds);
+
+  subSock.ev.on("connection.update", (update) => {
+    const { connection } = update;
+    if (connection === "open") {
+      console.log(`✅ Subbot ${dir} conectado correctamente.`);
+    } else if (connection === "close") {
+      console.log(`❌ Subbot ${dir} se desconectó.`);
+
+      const sessionToDelete = path.join(subbotFolder, dir);
+      if (fs.existsSync(sessionToDelete)) {
+        fs.rmSync(sessionToDelete, { recursive: true, force: true });
+        console.log(`🗑️ Sesión eliminada de ${dir}`);
+      }
     }
-    return plugins;
-  }
+  });
 
-  const subPlugins = loadSubPlugins();
-
-  async function handleSubCommand(sock, msg, command, args) {
-    const lowerCommand = command.toLowerCase();
-    const text = args.join(" ");
-    const plugin = subPlugins.find(p => p.command.includes(lowerCommand));
-    if (plugin) {
-      return plugin(msg, {
-        conn: sock,
-        text,
-        args,
-        command: lowerCommand,
-        usedPrefix: "."
-      });
-    }
-  }
-
-  if (!fs.existsSync(subbotFolder)) return console.log("⚠️ No hay carpeta de subbots.");
-
-  const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
-
-  console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
-
-  for (const dir of subDirs) {
-    const sessionPath = path.join(subbotFolder, dir);
-
+  subSock.ev.on("messages.upsert", async (msg) => {
     try {
-      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-      const { version } = await fetchLatestBaileysVersion();
-      const subSock = makeWASocket({
-        version,
-        logger: pino({ level: "silent" }),
-        auth: {
-          creds: state.creds,
-          keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
-        },
-        browser: ["Azura Subbot", "Firefox", "2.0"]
-      });
+      const m = msg.messages[0];
+      if (!m || !m.message) return;
 
-      subSock.ev.on("creds.update", saveCreds);
+      const chatId = m.key.remoteJid;
+      const messageText = m.message?.conversation ||
+                          m.message?.extendedTextMessage?.text ||
+                          m.message?.imageMessage?.caption ||
+                          m.message?.videoMessage?.caption || "";
 
-      subSock.ev.on("connection.update", (update) => {
-        const { connection } = update;
-        if (connection === "open") {
-          console.log(`✅ Subbot ${dir} conectado correctamente.`);
-        } else if (connection === "close") {
-          console.log(`❌ Subbot ${dir} se desconectó.`);
-        }
-      });
+      const subbotPrefixes = [".", "#"];
+      const usedPrefix = subbotPrefixes.find(p => messageText.startsWith(p));
+      if (!usedPrefix) return;
 
-      // EVENTO DE MENSAJES DE LOS SUBBOTS
-      subSock.ev.on("messages.upsert", async (msg) => {
-        try {
-          const m = msg.messages[0];
-          if (!m || !m.message) return;
+      const body = messageText.slice(usedPrefix.length).trim();
+      const command = body.split(" ")[0].toLowerCase();
+      const args = body.split(" ").slice(1);
 
-          const chatId = m.key.remoteJid;
-          const messageText = m.message?.conversation ||
-                              m.message?.extendedTextMessage?.text ||
-                              m.message?.imageMessage?.caption ||
-                              m.message?.videoMessage?.caption || "";
-
-          const subbotPrefixes = [".", "#"];
-          const usedPrefix = subbotPrefixes.find(p => messageText.startsWith(p));
-          if (!usedPrefix) return;
-
-          const body = messageText.slice(usedPrefix.length).trim();
-          const command = body.split(" ")[0].toLowerCase();
-          const args = body.split(" ").slice(1);
-
-          await handleSubCommand(subSock, m, command, args);
-
-        } catch (err) {
-          console.error("❌ Error procesando mensaje del subbot:", err);
-        }
-      });
+      await handleSubCommand(subSock, m, command, args);
 
     } catch (err) {
-      console.error(`❌ Error al cargar subbot ${dir}:`, err);
+      console.error("❌ Error procesando mensaje del subbot:", err);
     }
-  }
+  });
+
+} catch (err) {
+  console.error(`❌ Error al cargar subbot ${dir}:`, err);
 }
 
-// Ejecutar después de iniciar el bot principal
+} }
+
 setTimeout(cargarSubbots, 3000);
+
+
 
 
             sock.ev.on("creds.update", saveCreds);
