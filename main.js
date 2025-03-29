@@ -296,7 +296,7 @@ case 'serbotqr': {
     useMultiFileAuthState,
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore
-  } = require("baileys");
+  } = require("@whiskeysockets/baileys");
   const fs = require("fs");
   const path = require("path");
   const pino = require("pino");
@@ -324,7 +324,7 @@ case 'serbotqr': {
         keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
       },
       browser: ["Azura Subbot", "Chrome", "2.0"],
-      printQRInTerminal: false // NO imprimir QR en consola
+      printQRInTerminal: false
     });
 
     subSock.ev.on("creds.update", saveCreds);
@@ -334,12 +334,12 @@ case 'serbotqr': {
 
       if (qr) {
         try {
-          // Generar imagen del código QR
+          // Genera imagen del QR
           const qrImageBuffer = await qrcode.toBuffer(qr, { type: 'png' });
 
           await sock.sendMessage(msg.key.remoteJid, {
             image: qrImageBuffer,
-            caption: `🔗 *Escanea este código QR para vincular tu subbot:*\n\n- Abre WhatsApp\n- Ve a Ajustes > Dispositivos vinculados\n- Escanea este código`,
+            caption: `🔗 *Escanea este código QR para vincular tu subbot:*\n\n1. Abre WhatsApp\n2. Ve a Ajustes > Dispositivos vinculados\n3. Escanea este código`,
             quoted: msg
           });
 
@@ -354,7 +354,7 @@ case 'serbotqr': {
       }
 
       if (connection === "open") {
-        console.log(`✅ Subbot ${numero} conectado correctamente.`);
+        console.log(`✅ Subbot ${numero} vinculado y conectado correctamente.`);
         await sock.sendMessage(msg.key.remoteJid, {
           text: `✅ *Subbot vinculado y conectado correctamente.*`,
           quoted: msg
@@ -375,7 +375,7 @@ case 'serbotqr': {
   }
 
   break;
-}            
+}
         
 case 'tovideo': {
   const fs = require('fs');
