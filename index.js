@@ -439,6 +439,16 @@ const path = require("path");
             
 async function cargarSubbots() {
   const subbotFolder = "./subbots";
+  const path = require("path");
+  const fs = require("fs");
+  const pino = require("pino");
+  const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
+  } = require("@whiskeysockets/baileys");
+  const { handleCommand } = require("./main");
 
   if (!fs.existsSync(subbotFolder)) return console.log("⚠️ No hay carpeta de subbots.");
 
@@ -493,25 +503,8 @@ async function cargarSubbots() {
           const command = body.split(" ")[0].toLowerCase();
           const args = body.split(" ").slice(1);
 
-          const pluginFile = path.join(__dirname, "plugins2", `${command}.js`);
+          handleCommand(subSock, m, command, args, chatId);
 
-          if (fs.existsSync(pluginFile)) {
-            try {
-              const plugin = require(pluginFile);
-              await plugin(m, {
-                conn: subSock,
-                text: args.join(" "),
-                args,
-                command,
-                usedPrefix
-              });
-            } catch (err) {
-              console.error(`⚠️ Error en el comando del subbot ${command}:`, err);
-              await subSock.sendMessage(chatId, {
-                text: `❌ *Error al ejecutar el comando:* ${command}`
-              });
-            }
-          }
         } catch (err) {
           console.error("❌ Error procesando mensaje del subbot:", err);
         }
@@ -525,6 +518,7 @@ async function cargarSubbots() {
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
+
 
             sock.ev.on("creds.update", saveCreds);
 
