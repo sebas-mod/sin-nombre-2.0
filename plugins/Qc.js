@@ -1,97 +1,79 @@
-const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions');
+// EJEMPLO DE HANDLER MINIMALISTA PARA "qc"
+// Sin banderas, ni formateos extra
 
-// (banderaPorPrefijo, formatPhoneNumber, getNombreBonito)
-// aquí van tus funciones de siempre...
-// ========================================
+const axios = require('axios');
+const { writeExifImg } = require('../libs/fuctions'); // Ajusta la ruta si es diferente
+
+// Obtener el nombre de un JID usando conn.getName.
+// Si no lo encuentra, devolvemos el número crudo sin "@s.whatsapp.net".
+async function getNameOrNumber(jid, conn) {
+  let name = '';
+  try {
+    if (typeof conn.getName === 'function') {
+      name = await conn.getName(jid);
+    }
+    // Si sigue vacío, tomamos el número (parte antes de @)
+    if (!name || !name.trim()) {
+      name = jid.split('@')[0];
+    }
+  } catch (err) {
+    console.log('Error en getNameOrNumber:', err);
+    name = jid.split('@')[0];
+  }
+  return name;
+}
 
 const handler = async (msg, { conn, args }) => {
   try {
-    // DEBUG: Imprime datos para ver dónde sale el autor real
-    console.log('-- msg completo --');
-    console.log(JSON.stringify(msg, null, 2));
-
-    // Determinar si el mensaje es del bot
-    const isFromBot = !!msg.key.fromMe;
-
-    // Leer contextInfo para ver el mensaje citado
+    // Info del mensaje citado
     const context = msg.message?.extendedTextMessage?.contextInfo;
-    console.log('-- contextInfo --');
-    console.log(JSON.stringify(context, null, 2));
+    const quotedMsg = context?.quotedMessage || null;
 
-    const quotedMsg = context?.quotedMessage;
-    if (quotedMsg) {
-      console.log('-- quotedMessage --');
-      console.log(JSON.stringify(quotedMsg, null, 2));
-      console.log('-- quotedMsg.key --');
-      console.log(JSON.stringify(quotedMsg.key, null, 2));
-    }
-
-    // Determinar JID de la persona a quien se le creará el sticker
+    // Determinar el JID objetivo
     let targetJid;
 
     if (quotedMsg) {
-      // 1. Checar si hay un "quotedMsg.key.participant" (o sender)
-      const quotedParticipant = quotedMsg.key?.participant;     // <--- REVISAR si te sale
-      const quotedSender      = quotedMsg.key?.sender;          // <--- REVISAR si existe
-      const quotedFromMe      = !!quotedMsg.key?.fromMe;
-      console.log('quotedParticipant:', quotedParticipant);
-      console.log('quotedSender     :', quotedSender);
-      console.log('quotedFromMe     :', quotedFromMe);
-
-      // 2. Si no es del bot, asumimos que "quotedParticipant" es el autor real
-      if (quotedParticipant && !quotedFromMe) {
-        targetJid = quotedParticipant;
-      } 
-      // SI NO, prueba con "quotedSender" si existe
-      else if (quotedSender && !quotedFromMe) {
-        targetJid = quotedSender;
-      } 
-      // Sino, fallback a context?.participant
-      else {
-        // A veces context.participant = autor del msg
-        // O a veces sale en context.remoteJid
-        targetJid = context?.participant || context?.remoteJid;
+      // Revisamos si hay un participant distinto al que envía
+      // (Muchas veces "context.participant" es quien escribió el msj original en grupos)
+      // Si no te funciona, pon un console.log para ver realmente dónde llega el JID.
+      const quotedFromMe = !!quotedMsg.key?.fromMe;
+      if (!quotedFromMe && context?.participant) {
+        targetJid = context.participant; 
+      } else {
+        // Si no existe o es del bot, fallback al que manda el comando
+        targetJid = msg.key.participant || msg.key.remoteJid;
       }
-    }
-
-    // Si no hubo quotedMsg (no se citó nada)
-    if (!targetJid) {
-      // fallback normal
+    } else {
+      // Sin mensaje citado, usamos el remitente
       targetJid = msg.key.participant || msg.key.remoteJid;
     }
 
-    // En privado, si fromMe es true, es el bot
-    // y tal vez quieras forzar un alias
-    if (msg.key.remoteJid.endsWith('@s.whatsapp.net') && isFromBot) {
-      // Podrías forzar
-      // targetJid = conn.user.jid;
-      // O dejarlo tal cual si no te importa
-    }
+    // Obtener el texto final
+    let contenido = args.join(" ").trim();
 
-    // === Obtener el texto (args o texto del citado)
-    let contenido = args.join(' ').trim();
+    // Si no hay texto en el comando, pero sí hay mensaje citado, usamos el texto del citado
     if (!contenido && quotedMsg) {
-      // Si no hay texto en comando, usa el contenido del msg citado
+      // Intentar extraer el texto del mensaje citado
       const tipo = Object.keys(quotedMsg)[0];
-      contenido = quotedMsg[tipo]?.text 
-               || quotedMsg[tipo]?.caption 
-               || quotedMsg[tipo]
-               || '';
+      contenido =
+        quotedMsg[tipo]?.text ||
+        quotedMsg[tipo]?.caption ||
+        quotedMsg[tipo] ||
+        '';
     }
 
-    if (!contenido.trim()) {
-      return conn.sendMessage(
+    // Validar que haya algo de texto
+    if (!contenido || !contenido.trim()) {
+      return await conn.sendMessage(
         msg.key.remoteJid,
         { text: '⚠️ Escribe algo o cita un mensaje para crear el sticker.' },
         { quoted: msg }
       );
     }
 
-    // Limitar a 35 chars
-    const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
-    if (textoLimpio.length > 35) {
-      return conn.sendMessage(
+    // Límite de caracteres
+    if (contenido.length > 35) {
+      return await conn.sendMessage(
         msg.key.remoteJid,
         { text: '⚠️ El texto no puede tener más de 35 caracteres.' },
         { quoted: msg }
@@ -99,20 +81,21 @@ const handler = async (msg, { conn, args }) => {
     }
 
     // Nombre y foto
-    const targetName = await getNombreBonito(targetJid, conn);
+    const targetName = await getNameOrNumber(targetJid, conn);
     let targetPp;
     try {
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
+      // Si falla, imagen por defecto
       targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     }
 
-    // Reaccionar “procesando”
+    // Reacción de “procesando”
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '🎨', key: msg.key }
     });
 
-    // Construir quoteData
+    // Construir los datos para la API
     const quoteData = {
       type: "quote",
       format: "png",
@@ -129,7 +112,7 @@ const handler = async (msg, { conn, args }) => {
             name: targetName,
             photo: { url: targetPp }
           },
-          text: textoLimpio,
+          text: contenido,
           replyMessage: {}
         }
       ]
@@ -139,28 +122,33 @@ const handler = async (msg, { conn, args }) => {
     const res = await axios.post('https://bot.lyo.su/quote/generate', quoteData, {
       headers: { 'Content-Type': 'application/json' }
     });
+
+    // Convertir la respuesta base64 a buffer
     const buffer = Buffer.from(res.data.result.image, 'base64');
 
+    // Crear el sticker con metadatos
     const sticker = await writeExifImg(buffer, {
       packname: "Azura Ultra 2.0 Bot",
       author: "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
     });
 
-    // Enviar
-    await conn.sendMessage(msg.key.remoteJid, {
-      sticker: { url: sticker }
-    }, { quoted: msg });
+    // Enviar el sticker
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { sticker: { url: sticker } },
+      { quoted: msg }
+    );
 
-    // Reaccionar “finalizado”
+    // Reacción final
     await conn.sendMessage(msg.key.remoteJid, {
       react: { text: '✅', key: msg.key }
     });
 
-  } catch (err) {
-    console.error('❌ Error en qc:', err);
+  } catch (e) {
+    console.error("❌ Error en qc:", e);
     await conn.sendMessage(
       msg.key.remoteJid,
-      { text: '❌ Error al generar el sticker.' },
+      { text: '❌ Ocurrió un error al generar el sticker.' },
       { quoted: msg }
     );
   }
