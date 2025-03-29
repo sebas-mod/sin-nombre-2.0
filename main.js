@@ -189,12 +189,17 @@ case 'serbot': {
     const path = require("path");
     const pino = require("pino");
 
+    // Detección correcta del número del usuario
     const senderId = msg.key.participant || msg.key.remoteJid;
     const numero = senderId.split("@")[0].replace(/\D/g, "");
-    const sessionPath = path.join(__dirname, "subbots", numero); // sin @azura, solo el número
+    const fullNumber = "+" + numero;
+    console.log("📞 Generando código de emparejamiento para:", fullNumber);
 
+    // Crear carpeta de sesión del subbot
+    const sessionPath = path.join(__dirname, "subbots", numero);
     if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
+    // Reacción inicial
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '🔑', key: msg.key }
     });
@@ -213,17 +218,20 @@ case 'serbot': {
             browser: ["Azura Subbot", "Firefox", "2.0"]
         });
 
+        // Esperar un poquito antes de pedir el código
         setTimeout(async () => {
-            const code = await subSock.requestPairingCode(numero);
+            const code = await subSock.requestPairingCode(fullNumber);
             const pairing = code.match(/.{1,4}/g).join("-");
             await sock.sendMessage(msg.key.remoteJid, {
-                text: `🔗 *Código válido para emparejar tu subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular Dispositivo y colócalo ahí.`,
+                text: `🔗 *Código válido para emparejar tu subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo y coloca este código.`,
                 quoted: msg
             });
         }, 1500);
 
+        // Guardar sesión
         subSock.ev.on("creds.update", saveCreds);
 
+        // Confirmar conexión
         subSock.ev.on("connection.update", async (update) => {
             const { connection } = update;
             if (connection === "open") {
