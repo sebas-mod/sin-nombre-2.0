@@ -182,7 +182,6 @@ async function handleCommand(sock, msg, command, args, sender) {
     }
 
     switch (lowerCommand) {
-        
 case 'serbot': {
   const {
     default: makeWASocket,
@@ -208,13 +207,17 @@ case 'serbot': {
       const sessionPath = path.join(subbotsDir, numero);
 
       if (!fs.existsSync(subbotsDir)) fs.mkdirSync(subbotsDir, { recursive: true });
-      if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
+
+      // No creamos carpeta aún. Solo si se conecta.
 
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+      const tempSession = path.join(__dirname, ".tmp", numero);
+      if (!fs.existsSync(tempSession)) fs.mkdirSync(tempSession, { recursive: true });
+
+      const { state, saveCreds } = await useMultiFileAuthState(tempSession);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
@@ -227,20 +230,6 @@ case 'serbot': {
         }
       });
 
-      let connectionStatus = "connecting";
-
-      const timeoutHandle = setTimeout(async () => {
-        if (connectionStatus !== "open") {
-          if (fs.existsSync(sessionPath)) {
-            fs.rmSync(sessionPath, { recursive: true, force: true });
-          }
-          await sock.sendMessage(jid, {
-            text: "⏳ *Tiempo de espera superado.* La sesión se ha eliminado. Usa `serbot` otra vez para generar un nuevo código.",
-            quoted: msg
-          });
-        }
-      }, 60000);
-
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
@@ -248,15 +237,20 @@ case 'serbot': {
           const code = await socky.requestPairingCode(numero);
           await sleep(5000);
           await sock.sendMessage(jid, {
-            text: `🔐 *Código de vinculación generado:*\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo > Pega el código.`,
+            text: `🔐 *Código generado:*\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo > Pega el código.`,
             quoted: msg
           });
         }
 
         switch (connection) {
           case "open":
-            connectionStatus = "open";
-            clearTimeout(timeoutHandle); // Evita eliminación
+            // Mover la sesión temporal a la carpeta final
+            fs.mkdirSync(sessionPath, { recursive: true });
+            for (const file of fs.readdirSync(tempSession)) {
+              fs.renameSync(path.join(tempSession, file), path.join(sessionPath, file));
+            }
+            fs.rmdirSync(tempSession, { recursive: true });
+
             await sock.sendMessage(jid, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
@@ -264,22 +258,21 @@ case 'serbot': {
             break;
 
           case "close":
-            connectionStatus = "close";
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
-            switch (reason) {
-              case DisconnectReason.restartRequired:
-                await serbot();
-                break;
-              default:
-                await sock.sendMessage(jid, {
-                  text: `❌ *Conexión cerrada inesperadamente:* ${DisconnectReason[reason]} (${reason})`,
-                  quoted: msg
-                });
-            }
-            break;
 
-          case "connecting":
-            connectionStatus = "connecting";
+            // Si se cerró y no se conectó nunca, limpiamos .tmp
+            if (fs.existsSync(tempSession)) {
+              fs.rmSync(tempSession, { recursive: true, force: true });
+            }
+
+            if (reason === DisconnectReason.restartRequired) {
+              await serbot();
+            } else {
+              await sock.sendMessage(jid, {
+                text: `❌ *Conexión cerrada inesperadamente:* ${DisconnectReason[reason]} (${reason})`,
+                quoted: msg
+              });
+            }
             break;
         }
       });
@@ -297,7 +290,8 @@ case 'serbot': {
 
   await serbot();
   break;
-}
+}        
+
         
 case 'tovideo': {
   const fs = require('fs');
