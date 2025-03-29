@@ -10,6 +10,8 @@ const handler = async (msg, { conn }) => {
     makeCacheableSignalKeyStore
   } = require("@whiskeysockets/baileys");
 
+  global.subBots = global.subBots || {}; // Almacena conexiones activas
+
   const subbotFolder = "./subbots";
   if (!fs.existsSync(subbotFolder)) {
     await conn.sendMessage(chatId, { text: "⚠️ No hay carpeta de subbots.", quoted: msg });
@@ -23,6 +25,11 @@ const handler = async (msg, { conn }) => {
   let reconectados = 0;
 
   for (const dir of subDirs) {
+    if (global.subBots[dir]) {
+      console.log(`⏩ Subbot ${dir} ya estaba conectado.`);
+      continue;
+    }
+
     const sessionPath = path.join(subbotFolder, dir);
     try {
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
@@ -46,6 +53,7 @@ const handler = async (msg, { conn }) => {
         }
       });
 
+      global.subBots[dir] = subSock;
       reconectados++;
 
     } catch (err) {
