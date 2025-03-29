@@ -184,69 +184,102 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
         
 case 'serbot': {
-    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
-    const fs = require("fs");
-    const path = require("path");
-    const pino = require("pino");
-    
-    const senderId = msg.key.participant || msg.key.remoteJid;
-    let numero = senderId.split("@")[0].replace(/\D/g, "");
-    numero = numero.startsWith("549") ? numero : `549${numero}`; // Ejemplo para Argentina
+  const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
+  } = require("@whiskeysockets/baileys");
+  const fs = require("fs");
+  const path = require("path");
+  const pino = require("pino");
 
-    const sessionPath = path.join(__dirname, "subbots", numero);
-    
-    if (!fs.existsSync(sessionPath)) {
-        fs.mkdirSync(sessionPath, { recursive: true, mode: 0o755 });
-    }
+  // Si no se pasa un número, se envía un ejemplo de uso.
+  if (!args[0]) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "Mi amor, para usar este comando debes enviar el número del subbot. Ejemplo:\n\n*serbot 15167083689*",
+      quoted: msg
+    });
+    return;
+  }
 
-    await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
+  // Se utiliza el número proporcionado en el argumento
+  const phoneArg = args[0].replace(/\D/g, "");
+  const numero = phoneArg;
+  const fullNumber = "+" + numero;
+  
+  const sessionPath = path.join(__dirname, "subbots", numero);
+  if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
-    try {
-        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-        const { version } = await fetchLatestBaileysVersion();
-        
-        const subSock = makeWASocket({
-            version,
-            logger: pino({ level: "silent" }),
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
-            },
-            browser: ["Azura Subbot", "Firefox", "2.0"],
-            printQRInTerminal: false
-        });
+  await sock.sendMessage(msg.key.remoteJid, {
+    react: { text: '⏳', key: msg.key }
+  });
 
-        subSock.ev.on("creds.update", saveCreds);
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+    const { version } = await fetchLatestBaileysVersion();
+    const subSock = makeWASocket({
+      version,
+      logger: pino({ level: "silent" }),
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
+      },
+      browser: ["Azura Subbot", "Firefox", "2.0"]
+    });
 
-        // Verificar si el número está en WhatsApp
-        const [exists] = await subSock.onWhatsApp(numero);
-        if (!exists || !exists.exists) {
-            throw new Error("El número no está registrado en WhatsApp");
-        }
+    subSock.ev.on("creds.update", saveCreds);
 
-        // Generar código válido
-        const code = await subSock.requestPairingCode(numero); 
-        const pairing = code.match(/.{1,4}/g).join("-");
-        
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ *Código válido:* ${pairing}\n\nVincula en WhatsApp > Ajustes > Vincular dispositivo.`,
-            quoted: msg
-        });
-
-        subSock.ev.on("connection.update", (update) => {
-            if (update.connection === "open") {
-                console.log(`✅ Subbot ${numero} conectado.`);
+    subSock.ev.on("connection.update", async (update) => {
+      const { connection } = update;
+      if (connection === "connecting") {
+        console.log(`🔁 Subbot ${numero} está conectando...`);
+        setTimeout(async () => {
+          try {
+            // Si no hay credenciales previas, se solicita el código de emparejamiento.
+            if (!state.creds.me) {
+              const code = await subSock.requestPairingCode(fullNumber);
+              const pairing = code.match(/.{1,4}/g).join("-");
+              console.log("✅ Código válido generado:", pairing);
+              await sock.sendMessage(msg.key.remoteJid, {
+                text: `🔗 *Código de emparejamiento generado:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
+                quoted: msg
+              });
+            } else {
+              console.log(`El subbot ${numero} ya tiene sesión activa, no se genera pairing code.`);
+              await sock.sendMessage(msg.key.remoteJid, {
+                text: `✅ *Subbot ya está autenticado.*`,
+                quoted: msg
+              });
             }
-        });
-        
-    } catch (error) {
-        console.error("Error crítico:", error);
+          } catch (err) {
+            console.error("❌ Error generando código pairing:", err);
+            await sock.sendMessage(msg.key.remoteJid, {
+              text: `❌ *Error al generar código:* ${err.message}`,
+              quoted: msg
+            });
+          }
+        }, 2000);
+      }
+      if (connection === "open") {
+        console.log(`✅ Subbot ${numero} conectado correctamente.`);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${error.message}`,
-            quoted: msg
+          text: `✅ *Subbot conectado correctamente.*`,
+          quoted: msg
         });
-    }
-    break;
+      }
+      if (connection === "close") {
+        console.log(`❌ Conexión cerrada para subbot ${numero}`);
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error general en serbot:", error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error:* ${error.message}`,
+      quoted: msg
+    });
+  }
+  break;
 }
         
 case 'tovideo': {
