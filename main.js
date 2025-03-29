@@ -182,6 +182,7 @@ async function handleCommand(sock, msg, command, args, sender) {
     }
 
     switch (lowerCommand) {
+
 case 'serbot': {
   const {
     default: makeWASocket,
@@ -199,12 +200,24 @@ case 'serbot': {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  // Creamos o reutilizamos el objeto global para sesiones activas
+  global.activeSubbots = global.activeSubbots || {};
+
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
+      // Si ya existe una sesión activa, no se permite generar un nuevo código
+      if (global.activeSubbots[rid] && global.activeSubbots[rid].active) {
+        return sock.sendMessage(number, {
+          text: "❌ Ya tienes una sesión activa. Espera a que se elimine para solicitar un nuevo código.",
+          quoted: msg
+        });
+      }
+
+      // Se reacciona al mensaje
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -222,42 +235,69 @@ case 'serbot': {
         }
       });
 
+      let codeSent = false;
+      let connected = false;
+      let timer = null;
+
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        if (qr) {
+        // Si se genera un QR y aún no se envió el código, se solicita y se envía el código
+        if (qr && !codeSent) {
+          codeSent = true;
           const code = await socky.requestPairingCode(rid);
+          // Esperamos 5 segundos antes de enviar el código (manteniendo la lógica original)
           await sleep(5000);
           await sock.sendMessage(number, {
             text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
+
+          // Iniciamos el temporizador de 90 segundos
+          timer = setTimeout(async () => {
+            if (!connected) {
+              fs.rm(file, { recursive: true, force: true }, (err) => {
+                if (err) {
+                  console.error(`Error al eliminar la sesión de ${number}:`, err);
+                }
+              });
+              await sock.sendMessage(number, {
+                text: "⏰ No te conectaste en 1 minuto y 30 segundos. Solicita un nuevo código.",
+                quoted: msg
+              });
+              delete global.activeSubbots[rid];
+            }
+          }, 90000);
         }
 
-        switch (connection) {
-          case "close": {
-            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
-            switch (reason) {
-              case DisconnectReason.restartRequired:
-                await serbot(); // Intentar reconectar
-                break;
-              default:
-                await sock.sendMessage(number, {
-                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
-                  quoted: msg
-                });
-            }
-            break;
+        if (connection === "open") {
+          connected = true;
+          clearTimeout(timer);
+          await sock.sendMessage(number, {
+            text: "✅ *Subbot conectado correctamente.*",
+            quoted: msg
+          });
+          // Marcamos la sesión como activa para impedir nuevos códigos
+          global.activeSubbots[rid] = { active: true };
+        } else if (connection === "close") {
+          let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+          switch (reason) {
+            case DisconnectReason.restartRequired:
+              // Se intenta reconectar de inmediato sin reiniciar el servidor
+              await serbot();
+              break;
+            default:
+              await sock.sendMessage(number, {
+                text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
+                quoted: msg
+              });
+              fs.rm(file, { recursive: true, force: true }, (err) => {
+                if (err) {
+                  console.error(`Error al eliminar la sesión de ${number}:`, err);
+                }
+              });
+              delete global.activeSubbots[rid];
           }
-          case "open":
-            await sock.sendMessage(number, {
-              text: "✅ *Subbot conectado correctamente.*",
-              quoted: msg
-            });
-            break;
-
-          case "connecting":
-            break;
         }
       });
 
@@ -275,8 +315,7 @@ case 'serbot': {
   await serbot();
   break;
 }
-
-        
+            
 case 'tovideo': {
   const fs = require('fs');
   const path = require('path');
