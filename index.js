@@ -449,7 +449,6 @@ async function cargarSubbots() {
     makeCacheableSignalKeyStore
   } = require("@whiskeysockets/baileys");
 
-  // Función para cargar plugins exclusivos para subbots
   function loadSubPlugins() {
     const plugins = [];
     const pluginDir = path.join(__dirname, 'plugins2');
@@ -503,16 +502,31 @@ async function cargarSubbots() {
 
       subSock.ev.on("creds.update", saveCreds);
 
-      subSock.ev.on("connection.update", (update) => {
+      subSock.ev.on("connection.update", async (update) => {
         const { connection } = update;
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
+          const jid = dir.includes("@s.whatsapp.net") ? dir : `${dir}@s.whatsapp.net`;
+
+          // Enviar mensaje de agradecimiento
+          await subSock.sendMessage(jid, {
+            text: "✨ Gracias por ser parte de *Azura Ultra 2.0 Bot*. Tu sesión ha finalizado. ¡Vuelve pronto, crack!"
+          }).catch(() => console.log("No se pudo enviar mensaje de despedida."));
+
+          // Eliminar la carpeta de sesión
+          try {
+            if (fs.existsSync(sessionPath)) {
+              fs.rmSync(sessionPath, { recursive: true, force: true });
+              console.log(`🧹 Sesión eliminada de ${dir}`);
+            }
+          } catch (e) {
+            console.error("❌ Error eliminando carpeta:", e);
+          }
         }
       });
 
-      // EVENTO DE MENSAJES DE LOS SUBBOTS
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
           const m = msg.messages[0];
@@ -520,9 +534,9 @@ async function cargarSubbots() {
 
           const chatId = m.key.remoteJid;
           const messageText = m.message?.conversation ||
-                              m.message?.extendedTextMessage?.text ||
-                              m.message?.imageMessage?.caption ||
-                              m.message?.videoMessage?.caption || "";
+            m.message?.extendedTextMessage?.text ||
+            m.message?.imageMessage?.caption ||
+            m.message?.videoMessage?.caption || "";
 
           const subbotPrefixes = [".", "#"];
           const usedPrefix = subbotPrefixes.find(p => messageText.startsWith(p));
@@ -546,10 +560,7 @@ async function cargarSubbots() {
 }
 
 // Ejecutar después de iniciar el bot principal
-setTimeout(cargarSubbots, 3000);
-            
-
-
+setTimeout(cargarSubbots, 3000);            
 
             
             sock.ev.on("creds.update", saveCreds);
