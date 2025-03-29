@@ -226,11 +226,11 @@ case 'serbot': {
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
-      // La carpeta de sesión se creará con el nombre del número (ej.: 50765000000)
+      // La carpeta de sesión se creará con el nombre exacto del número, por ejemplo "50765000000"
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Si ya existe la carpeta de sesión, se asume que ya hay una sesión activa
+      // Verifica si ya existe la carpeta de sesión (es decir, una sesión activa)
       if (fs.existsSync(file)) {
         return sock.sendMessage(number, {
           text: "⚠️ Ya tienes una sesión activa. Para reconectar, elimina tu sesión actual usando el comando 'delbots'.",
@@ -238,7 +238,7 @@ case 'serbot': {
         });
       }
 
-      // Crear la carpeta de sesión (solo se crea la carpeta, la lógica de conexión la maneja useMultiFileAuthState)
+      // Crear la carpeta de sesión
       fs.mkdirSync(file, { recursive: true });
 
       // Registrar en bots.json que este subbot está en proceso
@@ -264,11 +264,14 @@ case 'serbot': {
         }
       });
 
+      let codeSent = false;
+
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        if (qr) {
+        if (qr && !codeSent) {
           const code = await socky.requestPairingCode(rid);
+          codeSent = true;
           await sleep(5000);
           await sock.sendMessage(number, {
             text:
@@ -281,7 +284,7 @@ case 'serbot': {
 
         switch (connection) {
           case "open": {
-            // Al conectarse, actualiza bots.json con el tiempo de inicio y marca como conectado
+            // Al conectarse, actualiza bots.json: marca como conectado y guarda el startTime
             let botsData = loadBots();
             if (botsData[rid]) {
               botsData[rid].connected = true;
@@ -309,7 +312,7 @@ case 'serbot': {
                   quoted: msg
                 });
             }
-            // Calcular el tiempo conectado (si se inició)
+            // Calcular el tiempo conectado, si se inició
             let botsData = loadBots();
             let durationMsg = "";
             if (botsData[rid] && botsData[rid].startTime) {
@@ -317,11 +320,11 @@ case 'serbot': {
               const seconds = Math.floor(duration / 1000);
               durationMsg = `Tiempo conectado: ${seconds} segundos.`;
             }
-            // Enviar despedida y eliminar la información de bots.json
             await sock.sendMessage(number, {
               text: "👋 Gracias por ser subbot de Azura Ultra 2.0. " + durationMsg,
               quoted: msg
             });
+            // Eliminar la información del usuario en bots.json
             delete botsData[rid];
             saveBots(botsData);
             break;
