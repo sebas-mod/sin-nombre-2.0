@@ -190,14 +190,16 @@ case 'serbot': {
     const pino = require("pino");
     
     const senderId = msg.key.participant || msg.key.remoteJid;
-    const numero = senderId.split("@")[0].replace(/\D/g, ""); // Ej: 5491123456789
+    let numero = senderId.split("@")[0].replace(/\D/g, "");
+    numero = numero.startsWith("549") ? numero : `549${numero}`; // Ejemplo para Argentina
+
     const sessionPath = path.join(__dirname, "subbots", numero);
     
-    if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
+    if (!fs.existsSync(sessionPath)) {
+        fs.mkdirSync(sessionPath, { recursive: true, mode: 0o755 });
+    }
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
-    });
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '⏳', key: msg.key } });
 
     try {
         const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
@@ -211,52 +213,36 @@ case 'serbot': {
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
             },
             browser: ["Azura Subbot", "Firefox", "2.0"],
-            printQRInTerminal: false // Opcional para debug
+            printQRInTerminal: false
         });
 
         subSock.ev.on("creds.update", saveCreds);
 
-        subSock.ev.on("connection.update", async (update) => {
-            const { connection, qr } = update;
-            
-            if (connection === "connecting") {
-                console.log(`🔁 Subbot ${numero} está conectando...`);
-                
-                // Eliminamos el setTimeout y verificamos estado directamente
-                try {
-                    const code = await subSock.requestPairingCode(numero); // ¡Sin + aquí!
-                    const pairing = code.match(/.{1,4}/g).join("-");
-                    console.log("✅ Código válido generado:", pairing);
-                    
-                    await sock.sendMessage(msg.key.remoteJid, {
-                        text: `🔗 *Código de emparejamiento:*\n${pairing}\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
-                        quoted: msg
-                    });
-                } catch (err) {
-                    console.error("❌ Error generando código:", err);
-                    await sock.sendMessage(msg.key.remoteJid, {
-                        text: `❌ *Error:* ${err.message}`,
-                        quoted: msg
-                    });
-                }
-            }
-            
-            if (connection === "open") {
+        // Verificar si el número está en WhatsApp
+        const [exists] = await subSock.onWhatsApp(numero);
+        if (!exists || !exists.exists) {
+            throw new Error("El número no está registrado en WhatsApp");
+        }
+
+        // Generar código válido
+        const code = await subSock.requestPairingCode(numero); 
+        const pairing = code.match(/.{1,4}/g).join("-");
+        
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✅ *Código válido:* ${pairing}\n\nVincula en WhatsApp > Ajustes > Vincular dispositivo.`,
+            quoted: msg
+        });
+
+        subSock.ev.on("connection.update", (update) => {
+            if (update.connection === "open") {
                 console.log(`✅ Subbot ${numero} conectado.`);
-                await sock.sendMessage(msg.key.remoteJid, {
-                    text: "✅ *Subbot activo correctamente*",
-                    quoted: msg
-                });
-            }
-            
-            if (connection === "close") {
-                console.log(`❌ Subbot ${numero} desconectado.`);
             }
         });
+        
     } catch (error) {
-        console.error("❌ Error general:", error);
+        console.error("Error crítico:", error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error crítico:* ${error.message}`,
+            text: `❌ *Error:* ${error.message}`,
             quoted: msg
         });
     }
