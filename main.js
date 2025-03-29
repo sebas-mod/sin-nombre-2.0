@@ -210,13 +210,11 @@ case 'serbot': {
   // Funciones para leer y escribir en bots.json
   function loadBots() {
     try {
-      const data = fs.readFileSync(BOT_DB, "utf8");
-      return JSON.parse(data);
+      return JSON.parse(fs.readFileSync(BOT_DB, "utf8"));
     } catch (err) {
       return {};
     }
   }
-
   function saveBots(data) {
     fs.writeFileSync(BOT_DB, JSON.stringify(data, null, 2));
   }
@@ -228,33 +226,27 @@ case 'serbot': {
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
+      // La carpeta de sesión será exactamente el número, sin el id de WhatsApp.
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Verificar si ya existe la carpeta de sesión
+      // Verifica si ya existe la carpeta de sesión, lo que indica que ya hay una sesión activa.
       if (fs.existsSync(file)) {
         return sock.sendMessage(number, {
-          text: "⚠️ Ya tienes una sesión activa. Elimina tu sesión actual para solicitar una nueva.",
+          text: "⚠️ Ya tienes una sesión activa. Para reconectar, elimina tu sesión actual con el comando 'delbots'.",
           quoted: msg
         });
       }
 
-      // Crear la carpeta de sesión (para reservar el espacio)
-      fs.mkdirSync(file, { recursive: true });
+      // Si no existe, se crea la carpeta de sesión (se asume que useMultiFileAuthState la creará o la necesita).
+      // (Aquí no forzamos la creación, pues la lógica original de conexión la maneja.)
 
-      // Cargar bots.json y verificar si ya hay un registro para este usuario
+      // Guarda en bots.json que este subbot está en proceso (pendiente de conexión)
       let bots = loadBots();
-      if (bots[rid]) {
-        return sock.sendMessage(number, {
-          text: "⚠️ Ya tienes una sesión activa o en proceso.",
-          quoted: msg
-        });
-      }
-      // Marcar la sesión como pendiente en bots.json
       bots[rid] = { connected: false, startTime: null };
       saveBots(bots);
 
-      // Reaccionar al mensaje
+      // Reacciona al mensaje
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -262,6 +254,7 @@ case 'serbot': {
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
+
       const socky = makeWASocket({
         version,
         logger,
@@ -281,31 +274,17 @@ case 'serbot': {
             text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
-
-          // Inicia timer de 90 segundos: si no se conecta, se elimina la sesión
-          setTimeout(() => {
-            let botsData = loadBots();
-            if (botsData[rid] && botsData[rid].connected === false) {
-              fs.rm(file, { recursive: true, force: true }, (err) => {
-                if (err) console.error("Error al eliminar la sesión:", err);
-              });
-              delete botsData[rid];
-              saveBots(botsData);
-              sock.sendMessage(number, {
-                text: "⏰ No te conectaste en 90 segundos. Solicita un nuevo código.",
-                quoted: msg
-              });
-            }
-          }, 90000);
         }
 
         switch (connection) {
           case "open":
-            // Marcar como conectado y registrar el inicio de la conexión
-            let botsData = loadBots();
-            botsData[rid].connected = true;
-            botsData[rid].startTime = Date.now();
-            saveBots(botsData);
+            // Actualiza en bots.json: subbot conectado y guarda el startTime
+            {
+              let botsData = loadBots();
+              botsData[rid].connected = true;
+              botsData[rid].startTime = Date.now();
+              saveBots(botsData);
+            }
             await sock.sendMessage(number, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
@@ -324,14 +303,22 @@ case 'serbot': {
                   quoted: msg
                 });
             }
-            // Enviar mensaje de despedida
+            // Calcular el tiempo conectado (si se inició)
+            let botsData = loadBots();
+            let startTime = botsData[rid] && botsData[rid].startTime;
+            let durationMsg = "";
+            if (startTime) {
+              const duration = Date.now() - startTime;
+              const seconds = Math.floor(duration / 1000);
+              durationMsg = `Tiempo conectado: ${seconds} segundos.`;
+            }
+            // Enviar mensaje de despedida y eliminar el registro de bots.json
             await sock.sendMessage(number, {
-              text: "👋 Gracias por ser subbot de Azura Ultra 2.0.",
+              text: "👋 Gracias por ser subbot de Azura Ultra 2.0. " + durationMsg,
               quoted: msg
             });
-            let botsDataClose = loadBots();
-            delete botsDataClose[rid];
-            saveBots(botsDataClose);
+            delete botsData[rid];
+            saveBots(botsData);
             break;
           }
 
@@ -341,6 +328,7 @@ case 'serbot': {
       });
 
       socky.ev.on("creds.update", saveCreds);
+
     } catch (e) {
       console.error("❌ Error en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
