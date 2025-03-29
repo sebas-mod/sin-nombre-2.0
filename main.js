@@ -200,8 +200,8 @@ case 'serbot': {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Asegúrate de definir global.activeSubbots en el archivo principal
-  global.activeSubbots = global.activeSubbots || {};
+  // Se asume que global.activeSubbots ya fue definida en el archivo principal
+  // global.activeSubbots = {};
 
   async function serbot() {
     try {
@@ -209,7 +209,7 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Si ya hay un proceso pendiente o sesión activa, notificar y abortar
+      // Si ya existe un proceso pendiente o sesión activa, se notifica y se aborta.
       if (global.activeSubbots[rid]) {
         return sock.sendMessage(number, {
           text: "❌ Ya tienes una sesión pendiente o activa. Espera a que se complete o expire.",
@@ -217,10 +217,10 @@ case 'serbot': {
         });
       }
 
-      // Marcar la sesión como pendiente
+      // Marcar la sesión como pendiente.
       global.activeSubbots[rid] = { active: false, timer: null };
 
-      // Reaccionar al mensaje
+      // Reaccionar al mensaje.
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -243,7 +243,7 @@ case 'serbot': {
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        // Si se genera el QR y aún no se ha enviado el código
+        // Si se genera el QR y aún no se ha enviado el código, se solicita y envía el código.
         if (qr && !codeSent) {
           codeSent = true;
           const code = await socky.requestPairingCode(rid);
@@ -256,7 +256,7 @@ case 'serbot': {
             quoted: msg
           });
 
-          // Inicia el temporizador de 90 segundos para eliminar la sesión si no se conecta
+          // Inicia el temporizador de 90 segundos para eliminar la sesión si no se conecta.
           global.activeSubbots[rid].timer = setTimeout(async () => {
             if (!global.activeSubbots[rid].active) {
               fs.rm(file, { recursive: true, force: true }, (err) => {
@@ -274,7 +274,7 @@ case 'serbot': {
         }
 
         if (connection === "open") {
-          // Conexión establecida: marcar como activa y cancelar el temporizador
+          // Conexión establecida: marcar la sesión como activa y cancelar el temporizador.
           global.activeSubbots[rid].active = true;
           if (global.activeSubbots[rid].timer) {
             clearTimeout(global.activeSubbots[rid].timer);
@@ -289,8 +289,7 @@ case 'serbot': {
           if (lastDisconnect && lastDisconnect.error) {
             reason = new Boom(lastDisconnect.error)?.output?.statusCode;
           }
-
-          // Si el cierre es por restartRequired, intenta reconectar
+          // Si el cierre es por restartRequired, se reconecta automáticamente.
           if (reason === DisconnectReason.restartRequired) {
             if (global.activeSubbots[rid] && global.activeSubbots[rid].timer) {
               clearTimeout(global.activeSubbots[rid].timer);
@@ -303,24 +302,14 @@ case 'serbot': {
             await serbot();
             return;
           } else {
-            // Otros motivos: notificar y eliminar la sesión
+            // Para otros motivos (loggedOut, timedOut, etc.), solo se notifica y se deja el temporizador activo.
             const reasonText =
               DisconnectReason[reason] || reason || "desconocido";
             await sock.sendMessage(number, {
-              text:
-                "❌ Se cerró la conexión: " +
-                reasonText +
-                ` (${reason})`,
+              text: "❌ Se cerró la conexión: " + reasonText + ` (${reason})`,
               quoted: msg
             });
-            fs.rm(file, { recursive: true, force: true }, (err) => {
-              if (err)
-                console.error(`Error al eliminar la sesión de ${number}:`, err);
-            });
-            if (global.activeSubbots[rid] && global.activeSubbots[rid].timer) {
-              clearTimeout(global.activeSubbots[rid].timer);
-            }
-            delete global.activeSubbots[rid];
+            // No eliminamos la sesión de inmediato; se dejará que el temporizador de 90 segundos se encargue.
           }
         }
       });
