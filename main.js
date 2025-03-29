@@ -184,33 +184,41 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
         
 case 'serbot': {
-  const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
-    DisconnectReason
-  } = require("@whiskeysockets/baileys");
+  const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, DisconnectReason } = require("@whiskeysockets/baileys");
   const { Boom } = require("@hapi/boom");
   const path = require("path");
   const pino = require("pino");
   const fs = require("fs");
 
+  // Función sleep
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async function serbot() {
     try {
-      const number = msg.key?.participant || msg.key.remoteJid;
-      const file = path.join(__dirname, "subbots", number);
-      const rid = number.split("@")[0];
+      const jid = msg.key?.participant || msg.key.remoteJid;
+      const numero = jid.split("@")[0]; // Extrae solo el número sin el dominio
 
+      const subbotsDir = path.join(__dirname, "subbots");
+      const sessionPath = path.join(subbotsDir, numero);
+
+      // Verificar y crear el directorio 'subbots' si no existe
+      if (!fs.existsSync(subbotsDir)) {
+        fs.mkdirSync(subbotsDir, { recursive: true });
+      }
+
+      // Verificar y crear el directorio de la sesión si no existe
+      if (!fs.existsSync(sessionPath)) {
+        fs.mkdirSync(sessionPath, { recursive: true });
+      }
+
+      // Reacciona al comando usado
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      const { state, saveCreds } = await useMultiFileAuthState(file);
+      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
@@ -227,11 +235,11 @@ case 'serbot': {
 
       const timeoutHandle = setTimeout(async () => {
         if (connectionStatus !== "open") {
-          if (fs.existsSync(file)) {
-            fs.rmSync(file, { recursive: true, force: true });
+          if (fs.existsSync(sessionPath)) {
+            fs.rmSync(sessionPath, { recursive: true, force: true });
           }
-          await sock.sendMessage(number, { 
-            text: "⏳ Tiempo de espera superado. La sesión se ha borrado. Por favor, solicita el código nuevamente." 
+          await sock.sendMessage(jid, {
+            text: "Tiempo de espera superado. La sesión se ha borrado. Por favor, solicita el código de emparejamiento nuevamente."
           });
         }
       }, 60000);
@@ -239,9 +247,9 @@ case 'serbot': {
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
         if (qr) {
-          const code = await socky.requestPairingCode(rid);
+          const code = await socky.requestPairingCode(numero);
           await sleep(5000);
-          await sock.sendMessage(number, { text: "Código generado: " + code });
+          await sock.sendMessage(jid, { text: "Código generado: " + code });
         }
 
         switch (connection) {
@@ -250,10 +258,10 @@ case 'serbot': {
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                await serbot();
+                await serbot(); // Reinicia el proceso
                 break;
               default:
-                await sock.sendMessage(number, { 
+                await sock.sendMessage(jid, {
                   text: "Ocurrió un error desconocido: " + DisconnectReason[reason] + ` (${reason})`
                 });
             }
@@ -262,7 +270,7 @@ case 'serbot': {
           case "open":
             connectionStatus = "open";
             clearTimeout(timeoutHandle);
-            await sock.sendMessage(number, { text: "✅ Subbot conectado correctamente." });
+            await sock.sendMessage(jid, { text: "Subbot conectado correctamente." });
             break;
           case "connecting":
             connectionStatus = "connecting";
@@ -273,11 +281,13 @@ case 'serbot': {
       socky.ev.on("creds.update", saveCreds);
 
     } catch (e) {
-      console.error("❌ Error en serbot:", e);
+      console.error("Error en serbot:", e);
     }
   }
 
+  // Ejecutamos la función
   await serbot();
+
   break;
 }
         
