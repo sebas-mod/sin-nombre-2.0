@@ -474,31 +474,48 @@ async function cargarSubbots() {
       });
 
       subSock.ev.on("messages.upsert", async (msg) => {
-        const m = msg.messages[0];
-        if (!m.message) return;
+  try {
+    const m = msg.messages[0];
+    if (!m || !m.message) return;
 
-        const chatId = m.key.remoteJid;
-        const messageText = m.message.conversation || m.message?.extendedTextMessage?.text || "";
-        const command = messageText?.startsWith(global.prefix)
-          ? messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase()
-          : null;
+    const chatId = m.key.remoteJid;
+    const isGroup = chatId.endsWith("@g.us");
+    const sender = m.key.participant || m.key.remoteJid;
+    const botNumber = subSock.user.id.split(":")[0];
+    const fromMe = m.key.fromMe || sender.includes(botNumber);
 
-        const args = messageText.trim().split(" ").slice(1);
+    const messageText = m.message?.conversation ||
+                        m.message?.extendedTextMessage?.text ||
+                        m.message?.imageMessage?.caption ||
+                        m.message?.videoMessage?.caption ||
+                        "";
 
-        if (!command) return;
+    // Prefijos permitidos para subbots
+    const subbotPrefixes = [".", "#"];
+    const usedPrefix = subbotPrefixes.find(p => messageText.startsWith(p));
+    if (!usedPrefix) return;
 
-        // 🔄 Lógica para comandos en plugins2
-        const pluginFile = path.join(__dirname, "plugins2", `${command}.js`);
-        if (fs.existsSync(pluginFile)) {
-          try {
-            const plugin = require(pluginFile);
-            await plugin(m, {
-              conn: subSock,
-              text: args.join(" "),
-              args,
-              command,
-              usedPrefix: global.prefix
-            });
+    const body = messageText.slice(usedPrefix.length).trim();
+    const command = body.split(" ")[0].toLowerCase();
+    const args = body.split(" ").slice(1);
+
+    const pluginPath = path.join(__dirname, "plugins2", `${command}.js`);
+
+    if (fs.existsSync(pluginPath)) {
+      const plugin = require(pluginPath);
+      await plugin(m, {
+        conn: subSock,
+        text: args.join(" "),
+        args,
+        command,
+        usedPrefix
+      });
+    }
+
+  } catch (err) {
+    console.error("❌ Error en comando del subbot:", err);
+  }
+});
           } catch (err) {
             console.error(`⚠️ Error en el comando del subbot ${command}:`, err);
             await subSock.sendMessage(chatId, {
