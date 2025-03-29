@@ -204,15 +204,12 @@ case 'serbot': {
     try {
       const jid = msg.key?.participant || msg.key.remoteJid;
       const numero = jid.split("@")[0];
-      const sessionPath = path.join(__dirname, "subbots", numero);
+      const subbotsDir = path.join(__dirname, "subbots");
+      const sessionPath = path.join(subbotsDir, numero);
 
-      // Verificar y crear carpeta 'subbots' si no existe
-      if (!fs.existsSync("./subbots")) fs.mkdirSync("./subbots");
-
-      // Crear carpeta de sesión si no existe
+      if (!fs.existsSync(subbotsDir)) fs.mkdirSync(subbotsDir, { recursive: true });
       if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
-      // Reacción de espera
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -232,13 +229,12 @@ case 'serbot': {
 
       let connectionStatus = "connecting";
 
-      // Timeout de seguridad
       const timeoutHandle = setTimeout(async () => {
         if (connectionStatus !== "open") {
           if (fs.existsSync(sessionPath)) {
             fs.rmSync(sessionPath, { recursive: true, force: true });
           }
-          await sock.sendMessage(msg.key.remoteJid, {
+          await sock.sendMessage(jid, {
             text: "⏳ *Tiempo de espera superado.* La sesión se ha eliminado. Usa `serbot` otra vez para generar un nuevo código.",
             quoted: msg
           });
@@ -249,12 +245,10 @@ case 'serbot': {
         const { qr, connection, lastDisconnect } = c;
 
         if (qr) {
-          const code = await socky.requestPairingCode("+" + numero);
+          const code = await socky.requestPairingCode(numero);
           await sleep(5000);
-
-          const pairing = code.match(/.{1,4}/g).join("-");
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: `🔗 *Código de emparejamiento generado:*\n\n\`\`\`${pairing}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y pega ese código.`,
+          await sock.sendMessage(jid, {
+            text: `🔐 *Código de vinculación generado:*\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo > Pega el código.`,
             quoted: msg
           });
         }
@@ -262,8 +256,8 @@ case 'serbot': {
         switch (connection) {
           case "open":
             connectionStatus = "open";
-            clearTimeout(timeoutHandle); // Aquí detenemos el borrado automático
-            await sock.sendMessage(msg.key.remoteJid, {
+            clearTimeout(timeoutHandle); // Evita eliminación
+            await sock.sendMessage(jid, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
@@ -274,10 +268,10 @@ case 'serbot': {
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                await serbot(); // Reintento
+                await serbot();
                 break;
               default:
-                await sock.sendMessage(msg.key.remoteJid, {
+                await sock.sendMessage(jid, {
                   text: `❌ *Conexión cerrada inesperadamente:* ${DisconnectReason[reason]} (${reason})`,
                   quoted: msg
                 });
@@ -293,7 +287,7 @@ case 'serbot': {
       socky.ev.on("creds.update", saveCreds);
 
     } catch (e) {
-      console.error("❌ Error general en serbot:", e);
+      console.error("❌ Error en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
         text: `❌ *Error inesperado:* ${e.message}`,
         quoted: msg
