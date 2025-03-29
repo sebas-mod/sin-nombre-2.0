@@ -198,11 +198,11 @@ case 'serbot': {
   const fullNumber = "+" + numero;
   const sessionPath = path.join(__dirname, "subbots", numero);
   if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
-  
+
   await sock.sendMessage(msg.key.remoteJid, {
     react: { text: '⏳', key: msg.key }
   });
-  
+
   try {
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     const { version } = await fetchLatestBaileysVersion();
@@ -215,24 +215,31 @@ case 'serbot': {
       },
       browser: ["Azura Subbot", "Firefox", "2.0"]
     });
-    
+
     subSock.ev.on("creds.update", saveCreds);
-    
+
     subSock.ev.on("connection.update", async (update) => {
       const { connection } = update;
       if (connection === "connecting") {
         console.log(`🔁 Subbot ${numero} está conectando...`);
         setTimeout(async () => {
           try {
-            // Usamos generatePairingCode sin pasar el número; la función nos retorna un objeto
-            const { pairingCode } = await subSock.generatePairingCode();
-            // Formateamos el código en bloques de 4 dígitos
-            const pairing = pairingCode.match(/.{1,4}/g).join("-");
-            console.log("✅ Código válido generado:", pairing);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: `🔗 *Código de emparejamiento generado:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
-              quoted: msg
-            });
+            // Si no hay credenciales, se necesita generar el código de emparejamiento
+            if (!state.creds.me) {
+              const code = await subSock.requestPairingCode(fullNumber);
+              const pairing = code.match(/.{1,4}/g).join("-");
+              console.log("✅ Código válido generado:", pairing);
+              await sock.sendMessage(msg.key.remoteJid, {
+                text: `🔗 *Código de emparejamiento generado:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
+                quoted: msg
+              });
+            } else {
+              console.log(`El subbot ${numero} ya tiene sesión activa, no se genera pairing code.`);
+              await sock.sendMessage(msg.key.remoteJid, {
+                text: `✅ *Subbot ya está autenticado.*`,
+                quoted: msg
+              });
+            }
           } catch (err) {
             console.error("❌ Error generando código pairing:", err);
             await sock.sendMessage(msg.key.remoteJid, {
