@@ -197,7 +197,7 @@ case 'serbot': {
     if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '🔑', key: msg.key }
+        react: { text: '⏳', key: msg.key }
     });
 
     try {
@@ -214,29 +214,49 @@ case 'serbot': {
             browser: ["Azura Subbot", "Firefox", "2.0"]
         });
 
-        // Generar pairing inmediatamente después del socket
-        const code = await subSock.requestPairingCode(fullNumber);
-        const pairing = code.match(/.{1,4}/g).join("-");
-        console.log("Código pairing generado para:", fullNumber);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `🔗 *Código de emparejamiento para subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo y colócalo.`,
-            quoted: msg
-        });
-
         subSock.ev.on("creds.update", saveCreds);
 
+        // Solo pedimos el código cuando el estado sea 'connecting'
         subSock.ev.on("connection.update", async (update) => {
             const { connection } = update;
+
+            if (connection === "connecting") {
+                console.log(`🔁 Subbot ${numero} está conectando...`);
+
+                setTimeout(async () => {
+                    try {
+                        const code = await subSock.requestPairingCode(fullNumber);
+                        const pairing = code.match(/.{1,4}/g).join("-");
+                        console.log("✅ Código válido generado:", pairing);
+                        await sock.sendMessage(msg.key.remoteJid, {
+                            text: `🔗 *Código de emparejamiento generado:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
+                            quoted: msg
+                        });
+                    } catch (err) {
+                        console.error("❌ Error generando código pairing:", err);
+                        await sock.sendMessage(msg.key.remoteJid, {
+                            text: `❌ *Error al generar código:* ${err.message}`,
+                            quoted: msg
+                        });
+                    }
+                }, 2000); // 2 segundos de espera extra por seguridad
+            }
+
             if (connection === "open") {
+                console.log(`✅ Subbot ${numero} conectado correctamente.`);
                 await sock.sendMessage(msg.key.remoteJid, {
                     text: `✅ *Subbot conectado correctamente.*`,
                     quoted: msg
                 });
             }
+
+            if (connection === "close") {
+                console.log(`❌ Conexión cerrada para subbot ${numero}`);
+            }
         });
 
     } catch (error) {
-        console.error("❌ Error en serbot:", error);
+        console.error("❌ Error general en serbot:", error);
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${error.message}`,
             quoted: msg
