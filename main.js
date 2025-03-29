@@ -200,15 +200,17 @@ case 'serbot': {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Asegúrate de haber definido global.activeSubbots en tu archivo principal, por ejemplo:
-  // global.activeSubbots = {};
-
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
-      
+
+      // Asegurarse de que la carpeta de sesión exista
+      if (!fs.existsSync(file)) {
+        fs.mkdirSync(file, { recursive: true });
+      }
+
       // Verificar si ya existe una sesión activa o en proceso
       if (global.activeSubbots[rid]) {
         return sock.sendMessage(number, {
@@ -216,15 +218,15 @@ case 'serbot': {
           quoted: msg
         });
       }
-      
+
       // Marcar la sesión como en proceso
       global.activeSubbots[rid] = { connected: false, timer: null };
-      
+
       // Reaccionar
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
-      
+
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
@@ -236,10 +238,10 @@ case 'serbot': {
           keys: makeCacheableSignalKeyStore(state.keys, logger)
         }
       });
-      
+
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
-        
+
         if (qr) {
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
@@ -247,7 +249,7 @@ case 'serbot': {
             text: "🔐 Código generado:\n" + code + "\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
-          
+
           // Inicia timer de 90 segundos: si no se conecta, se elimina la sesión
           global.activeSubbots[rid].timer = setTimeout(() => {
             if (!global.activeSubbots[rid].connected) {
@@ -262,7 +264,7 @@ case 'serbot': {
             }
           }, 90000);
         }
-        
+
         switch (connection) {
           case "open":
             // Marcar como conectado y cancelar timer
@@ -276,7 +278,7 @@ case 'serbot': {
               quoted: msg
             });
             break;
-          
+
           case "close": {
             let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
             switch (reason) {
@@ -300,14 +302,14 @@ case 'serbot': {
             delete global.activeSubbots[rid];
             break;
           }
-          
+
           case "connecting":
             break;
         }
       });
-      
+
       socky.ev.on("creds.update", saveCreds);
-      
+
     } catch (e) {
       console.error("❌ Error en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
@@ -316,7 +318,7 @@ case 'serbot': {
       });
     }
   }
-  
+
   await serbot();
   break;
 }
