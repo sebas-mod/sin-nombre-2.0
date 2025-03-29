@@ -201,23 +201,15 @@ case 'serbot': {
 
   async function serbot() {
     try {
-      const jid = msg.key?.participant || msg.key.remoteJid;
-      const numero = jid.split("@")[0];
-      const subbotsDir = path.join(__dirname, "subbots");
-      const sessionPath = path.join(subbotsDir, numero);
-
-      if (!fs.existsSync(subbotsDir)) fs.mkdirSync(subbotsDir, { recursive: true });
-
-      // No creamos carpeta aún. Solo si se conecta.
+      const number = msg.key?.participant || msg.key.remoteJid;
+      const file = path.join(__dirname, "subbots", number);
+      const rid = number.split("@")[0];
 
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      const tempSession = path.join(__dirname, ".tmp", numero);
-      if (!fs.existsSync(tempSession)) fs.mkdirSync(tempSession, { recursive: true });
-
-      const { state, saveCreds } = await useMultiFileAuthState(tempSession);
+      const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
@@ -234,45 +226,37 @@ case 'serbot': {
         const { qr, connection, lastDisconnect } = c;
 
         if (qr) {
-          const code = await socky.requestPairingCode(numero);
+          const code = await socky.requestPairingCode(rid);
           await sleep(5000);
-          await sock.sendMessage(jid, {
-            text: `🔐 *Código generado:*\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo > Pega el código.`,
+          await sock.sendMessage(number, {
+            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
         }
 
         switch (connection) {
-          case "open":
-            // Mover la sesión temporal a la carpeta final
-            fs.mkdirSync(sessionPath, { recursive: true });
-            for (const file of fs.readdirSync(tempSession)) {
-              fs.renameSync(path.join(tempSession, file), path.join(sessionPath, file));
+          case "close": {
+            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
+            switch (reason) {
+              case DisconnectReason.restartRequired:
+                await serbot(); // Intentar reconectar
+                break;
+              default:
+                await sock.sendMessage(number, {
+                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
+                  quoted: msg
+                });
             }
-            fs.rmdirSync(tempSession, { recursive: true });
-
-            await sock.sendMessage(jid, {
+            break;
+          }
+          case "open":
+            await sock.sendMessage(number, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
             break;
 
-          case "close":
-            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
-
-            // Si se cerró y no se conectó nunca, limpiamos .tmp
-            if (fs.existsSync(tempSession)) {
-              fs.rmSync(tempSession, { recursive: true, force: true });
-            }
-
-            if (reason === DisconnectReason.restartRequired) {
-              await serbot();
-            } else {
-              await sock.sendMessage(jid, {
-                text: `❌ *Conexión cerrada inesperadamente:* ${DisconnectReason[reason]} (${reason})`,
-                quoted: msg
-              });
-            }
+          case "connecting":
             break;
         }
       });
@@ -290,7 +274,7 @@ case 'serbot': {
 
   await serbot();
   break;
-}        
+}
 
         
 case 'tovideo': {
