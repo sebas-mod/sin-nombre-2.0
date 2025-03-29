@@ -184,90 +184,83 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
         
 case 'serbot': {
-  const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
-  } = require("@whiskeysockets/baileys");
-  const fs = require("fs");
-  const path = require("path");
-  const pino = require("pino");
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const numero = senderId.split("@")[0].replace(/\D/g, "");
-  const fullNumber = "+" + numero;
-  const sessionPath = path.join(__dirname, "subbots", numero);
-  if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
+    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
+    const fs = require("fs");
+    const path = require("path");
+    const pino = require("pino");
+    
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const numero = senderId.split("@")[0].replace(/\D/g, ""); // Ej: 5491123456789
+    const sessionPath = path.join(__dirname, "subbots", numero);
+    
+    if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
-
-  try {
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-    const { version } = await fetchLatestBaileysVersion();
-    const subSock = makeWASocket({
-      version,
-      logger: pino({ level: "silent" }),
-      auth: {
-        creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
-      },
-      browser: ["Azura Subbot", "Firefox", "2.0"]
-    });
-
-    subSock.ev.on("creds.update", saveCreds);
-
-    subSock.ev.on("connection.update", async (update) => {
-      const { connection } = update;
-      if (connection === "connecting") {
-        console.log(`🔁 Subbot ${numero} está conectando...`);
-        setTimeout(async () => {
-          try {
-            // Si no hay credenciales, se necesita generar el código de emparejamiento
-            if (!state.creds.me) {
-              const code = await subSock.requestPairingCode(fullNumber);
-              const pairing = code.match(/.{1,4}/g).join("-");
-              console.log("✅ Código válido generado:", pairing);
-              await sock.sendMessage(msg.key.remoteJid, {
-                text: `🔗 *Código de emparejamiento generado:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
-                quoted: msg
-              });
-            } else {
-              console.log(`El subbot ${numero} ya tiene sesión activa, no se genera pairing code.`);
-              await sock.sendMessage(msg.key.remoteJid, {
-                text: `✅ *Subbot ya está autenticado.*`,
-                quoted: msg
-              });
-            }
-          } catch (err) {
-            console.error("❌ Error generando código pairing:", err);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: `❌ *Error al generar código:* ${err.message}`,
-              quoted: msg
-            });
-          }
-        }, 2000); // Espera extra de 2 segundos
-      }
-      if (connection === "open") {
-        console.log(`✅ Subbot ${numero} conectado correctamente.`);
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: `✅ *Subbot conectado correctamente.*`,
-          quoted: msg
-        });
-      }
-      if (connection === "close") {
-        console.log(`❌ Conexión cerrada para subbot ${numero}`);
-      }
-    });
-  } catch (error) {
-    console.error("❌ Error general en serbot:", error);
     await sock.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${error.message}`,
-      quoted: msg
+        react: { text: '⏳', key: msg.key }
     });
-  }
-  break;
+
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+        const { version } = await fetchLatestBaileysVersion();
+        
+        const subSock = makeWASocket({
+            version,
+            logger: pino({ level: "silent" }),
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
+            },
+            browser: ["Azura Subbot", "Firefox", "2.0"],
+            printQRInTerminal: false // Opcional para debug
+        });
+
+        subSock.ev.on("creds.update", saveCreds);
+
+        subSock.ev.on("connection.update", async (update) => {
+            const { connection, qr } = update;
+            
+            if (connection === "connecting") {
+                console.log(`🔁 Subbot ${numero} está conectando...`);
+                
+                // Eliminamos el setTimeout y verificamos estado directamente
+                try {
+                    const code = await subSock.requestPairingCode(numero); // ¡Sin + aquí!
+                    const pairing = code.match(/.{1,4}/g).join("-");
+                    console.log("✅ Código válido generado:", pairing);
+                    
+                    await sock.sendMessage(msg.key.remoteJid, {
+                        text: `🔗 *Código de emparejamiento:*\n${pairing}\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
+                        quoted: msg
+                    });
+                } catch (err) {
+                    console.error("❌ Error generando código:", err);
+                    await sock.sendMessage(msg.key.remoteJid, {
+                        text: `❌ *Error:* ${err.message}`,
+                        quoted: msg
+                    });
+                }
+            }
+            
+            if (connection === "open") {
+                console.log(`✅ Subbot ${numero} conectado.`);
+                await sock.sendMessage(msg.key.remoteJid, {
+                    text: "✅ *Subbot activo correctamente*",
+                    quoted: msg
+                });
+            }
+            
+            if (connection === "close") {
+                console.log(`❌ Subbot ${numero} desconectado.`);
+            }
+        });
+    } catch (error) {
+        console.error("❌ Error general:", error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error crítico:* ${error.message}`,
+            quoted: msg
+        });
+    }
+    break;
 }
         
 case 'tovideo': {
