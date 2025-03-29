@@ -517,6 +517,33 @@ async function cargarSubbots() {
 
   const subPlugins = loadSubPlugins();
 
+async function cargarSubbots() {
+  const subbotFolder = "./subbots";
+  const path = require("path");
+  const fs = require("fs");
+  const pino = require("pino");
+  const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
+  } = require("@whiskeysockets/baileys");
+
+  // Función para cargar plugins exclusivos para subbots
+  function loadSubPlugins() {
+    const plugins = [];
+    const pluginDir = path.join(__dirname, 'plugins2');
+    if (!fs.existsSync(pluginDir)) return plugins;
+    const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.js'));
+    for (const file of files) {
+      const plugin = require(path.join(pluginDir, file));
+      if (plugin && plugin.command) plugins.push(plugin);
+    }
+    return plugins;
+  }
+
+  const subPlugins = loadSubPlugins();
+
   async function handleSubCommand(sock, msg, command, args) {
     const lowerCommand = command.toLowerCase();
     const text = args.join(" ");
@@ -532,21 +559,14 @@ async function cargarSubbots() {
     }
   }
 
-  const subbotFolder = "./subbots";
-  if (!fs.existsSync(subbotFolder)) {
-    console.log("⚠️ No hay carpeta de subbots.");
-    return;
-  }
+  if (!fs.existsSync(subbotFolder)) return console.log("⚠️ No hay carpeta de subbots.");
 
-  const subDirs = fs.readdirSync(subbotFolder).filter(d =>
-    fs.existsSync(`${subbotFolder}/${d}/creds.json`)
-  );
+  const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
 
   console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
 
   for (const dir of subDirs) {
     const sessionPath = path.join(subbotFolder, dir);
-    const jid = dir.includes("@") ? dir.split("@")[0] : dir;
 
     try {
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
@@ -563,22 +583,16 @@ async function cargarSubbots() {
 
       subSock.ev.on("creds.update", saveCreds);
 
-      subSock.ev.on("connection.update", async (update) => {
+      subSock.ev.on("connection.update", (update) => {
         const { connection } = update;
-
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
-          try {
-            fs.rmSync(sessionPath, { recursive: true, force: true });
-            console.log(`📦 Sesión eliminada de ${dir}`);
-          } catch (err) {
-            console.error(`❌ Error al eliminar la sesión ${dir}:`, err);
-          }
         }
       });
 
+      // EVENTO DE MENSAJES DE LOS SUBBOTS
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
           const m = msg.messages[0];
@@ -613,6 +627,7 @@ async function cargarSubbots() {
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
+  
             
             sock.ev.on("creds.update", saveCreds);
 
