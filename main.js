@@ -13,9 +13,6 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 //subots
-const fs = require('fs');
-const path = require('path');
-
 const BOT_DB = path.join(__dirname, 'bots.json');
 
 if (!fs.existsSync(BOT_DB)) {
