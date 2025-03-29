@@ -182,6 +182,7 @@ async function handleCommand(sock, msg, command, args, sender) {
     }
 
     switch (lowerCommand) {
+
 case 'serbot': {
   const {
     default: makeWASocket,
@@ -205,6 +206,15 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
+      // 1) Verificar si ya existe sesión
+      if (fs.existsSync(file)) {
+        await sock.sendMessage(number, {
+          text: 'Ya tienes una sesión activa. Si quieres iniciar de nuevo, usa el comando "delbots" para eliminar tu sesión actual.',
+          quoted: msg
+        });
+        return;
+      }
+
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -222,10 +232,15 @@ case 'serbot': {
         }
       });
 
+      // 2) Evitar generar más de un código
+      let codeGenerated = false;
+
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        if (qr) {
+        // Generar el código solo una vez
+        if (qr && !codeGenerated) {
+          codeGenerated = true;
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
@@ -236,10 +251,10 @@ case 'serbot': {
 
         switch (connection) {
           case "close": {
-            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
+            let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                await serbot(); // Intentar reconectar
+                await serbot(); // Reintentar reconexión
                 break;
               default:
                 await sock.sendMessage(number, {
@@ -257,6 +272,7 @@ case 'serbot': {
             break;
 
           case "connecting":
+            // Puedes poner un mensaje o reacción aquí si lo deseas
             break;
         }
       });
@@ -275,7 +291,6 @@ case 'serbot': {
   await serbot();
   break;
 }
-
         
 case 'tovideo': {
   const fs = require('fs');
