@@ -206,23 +206,17 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Asegurarse de que la carpeta de sesión exista
-      if (!fs.existsSync(file)) {
-        fs.mkdirSync(file, { recursive: true });
-      }
-
-      // Verificar si ya existe una sesión activa o en proceso
-      if (global.activeSubbots[rid]) {
+      // Evitar que se inicie otra sesión si ya hay una en proceso o activa
+      if (global.activeSubbots && global.activeSubbots[rid]) {
         return sock.sendMessage(number, {
           text: "⚠️ Ya tienes una sesión activa o en proceso. Espera a que finalice o expire.",
           quoted: msg
         });
+      } else {
+        if (!global.activeSubbots) global.activeSubbots = {};
+        global.activeSubbots[rid] = { connected: false, timer: null };
       }
 
-      // Marcar la sesión como en proceso
-      global.activeSubbots[rid] = { connected: false, timer: null };
-
-      // Reaccionar
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -230,6 +224,7 @@ case 'serbot': {
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
+
       const socky = makeWASocket({
         version,
         logger,
@@ -246,18 +241,22 @@ case 'serbot': {
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
-            text: "🔐 Código generado:\n" + code + "\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+            text:
+              "🔐 Código generado:\n```" +
+              code +
+              "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
 
-          // Inicia timer de 90 segundos: si no se conecta, se elimina la sesión
+          // Inicia temporizador de 90 segundos: si no se conecta, se elimina la sesión
           global.activeSubbots[rid].timer = setTimeout(() => {
             if (!global.activeSubbots[rid].connected) {
               fs.rm(file, { recursive: true, force: true }, (err) => {
                 if (err) console.error("Error al eliminar la sesión:", err);
               });
               sock.sendMessage(number, {
-                text: "⏰ No te conectaste en 90 segundos. Solicita un nuevo código.",
+                text:
+                  "⏰ No te conectaste en 90 segundos. Solicita un nuevo código.",
                 quoted: msg
               });
               delete global.activeSubbots[rid];
@@ -267,7 +266,7 @@ case 'serbot': {
 
         switch (connection) {
           case "open":
-            // Marcar como conectado y cancelar timer
+            // Conexión establecida: marcar como conectado y cancelar el temporizador
             global.activeSubbots[rid].connected = true;
             if (global.activeSubbots[rid].timer) {
               clearTimeout(global.activeSubbots[rid].timer);
@@ -287,10 +286,13 @@ case 'serbot': {
                 break;
               default:
                 await sock.sendMessage(number, {
-                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
+                  text:
+                    "❌ Se cerró la conexión: " +
+                    DisconnectReason[reason] +
+                    ` (${reason})`,
                   quoted: msg
                 });
-                // Enviar mensaje de despedida extra
+                // Mensaje de despedida extra
                 await sock.sendMessage(number, {
                   text: "👋 Gracias por ser subbot de Azura Ultra 2.0.",
                   quoted: msg
@@ -309,7 +311,6 @@ case 'serbot': {
       });
 
       socky.ev.on("creds.update", saveCreds);
-
     } catch (e) {
       console.error("❌ Error en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
