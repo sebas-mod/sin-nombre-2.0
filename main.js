@@ -289,6 +289,93 @@ case 'serbot': {
   }
   break;
 }
+
+case 'serbotqr': {
+  const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
+  } = require("baileys");
+  const fs = require("fs");
+  const path = require("path");
+  const pino = require("pino");
+  const qrcode = require("qrcode");
+
+  const senderId = msg.key.participant || msg.key.remoteJid;
+  const numero = senderId.split("@")[0].replace(/\D/g, "");
+  const sessionPath = path.join(__dirname, "subbots", numero);
+
+  if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
+
+  await sock.sendMessage(msg.key.remoteJid, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+    const { version } = await fetchLatestBaileysVersion();
+
+    const subSock = makeWASocket({
+      version,
+      logger: pino({ level: "silent" }),
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
+      },
+      browser: ["Azura Subbot", "Chrome", "2.0"],
+      printQRInTerminal: false // NO imprimir QR en consola
+    });
+
+    subSock.ev.on("creds.update", saveCreds);
+
+    subSock.ev.on("connection.update", async (update) => {
+      const { qr, connection } = update;
+
+      if (qr) {
+        try {
+          // Generar imagen del código QR
+          const qrImageBuffer = await qrcode.toBuffer(qr, { type: 'png' });
+
+          await sock.sendMessage(msg.key.remoteJid, {
+            image: qrImageBuffer,
+            caption: `🔗 *Escanea este código QR para vincular tu subbot:*\n\n- Abre WhatsApp\n- Ve a Ajustes > Dispositivos vinculados\n- Escanea este código`,
+            quoted: msg
+          });
+
+          console.log(`📸 QR enviado para el subbot ${numero}`);
+        } catch (err) {
+          console.error("❌ Error generando QR:", err);
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error al generar el código QR:* ${err.message}`,
+            quoted: msg
+          });
+        }
+      }
+
+      if (connection === "open") {
+        console.log(`✅ Subbot ${numero} conectado correctamente.`);
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: `✅ *Subbot vinculado y conectado correctamente.*`,
+          quoted: msg
+        });
+      }
+
+      if (connection === "close") {
+        console.log(`❌ Conexión cerrada para subbot ${numero}`);
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error general:", err);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error:* ${err.message}`,
+      quoted: msg
+    });
+  }
+
+  break;
+}            
         
 case 'tovideo': {
   const fs = require('fs');
