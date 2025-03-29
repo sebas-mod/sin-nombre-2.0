@@ -473,55 +473,47 @@ async function cargarSubbots() {
         }
       });
 
+      // EVENTO DE MENSAJES DE LOS SUBBOTS
       subSock.ev.on("messages.upsert", async (msg) => {
-  try {
-    const m = msg.messages[0];
-    if (!m || !m.message) return;
+        try {
+          const m = msg.messages[0];
+          if (!m || !m.message) return;
 
-    const chatId = m.key.remoteJid;
-    const isGroup = chatId.endsWith("@g.us");
-    const sender = m.key.participant || m.key.remoteJid;
-    const botNumber = subSock.user.id.split(":")[0];
-    const fromMe = m.key.fromMe || sender.includes(botNumber);
+          const chatId = m.key.remoteJid;
+          const messageText = m.message?.conversation ||
+                              m.message?.extendedTextMessage?.text ||
+                              m.message?.imageMessage?.caption ||
+                              m.message?.videoMessage?.caption || "";
 
-    const messageText = m.message?.conversation ||
-                        m.message?.extendedTextMessage?.text ||
-                        m.message?.imageMessage?.caption ||
-                        m.message?.videoMessage?.caption ||
-                        "";
+          const subbotPrefixes = [".", "#"];
+          const usedPrefix = subbotPrefixes.find(p => messageText.startsWith(p));
+          if (!usedPrefix) return;
 
-    // Prefijos permitidos para subbots
-    const subbotPrefixes = [".", "#"];
-    const usedPrefix = subbotPrefixes.find(p => messageText.startsWith(p));
-    if (!usedPrefix) return;
+          const body = messageText.slice(usedPrefix.length).trim();
+          const command = body.split(" ")[0].toLowerCase();
+          const args = body.split(" ").slice(1);
 
-    const body = messageText.slice(usedPrefix.length).trim();
-    const command = body.split(" ")[0].toLowerCase();
-    const args = body.split(" ").slice(1);
+          const pluginFile = path.join(__dirname, "plugins2", `${command}.js`);
 
-    const pluginPath = path.join(__dirname, "plugins2", `${command}.js`);
-
-    if (fs.existsSync(pluginPath)) {
-      const plugin = require(pluginPath);
-      await plugin(m, {
-        conn: subSock,
-        text: args.join(" "),
-        args,
-        command,
-        usedPrefix
-      });
-    }
-
-  } catch (err) {
-    console.error("❌ Error en comando del subbot:", err);
-  }
-});
-          } catch (err) {
-            console.error(`⚠️ Error en el comando del subbot ${command}:`, err);
-            await subSock.sendMessage(chatId, {
-              text: `❌ *Error al ejecutar el comando:* ${command}`
-            });
+          if (fs.existsSync(pluginFile)) {
+            try {
+              const plugin = require(pluginFile);
+              await plugin(m, {
+                conn: subSock,
+                text: args.join(" "),
+                args,
+                command,
+                usedPrefix
+              });
+            } catch (err) {
+              console.error(`⚠️ Error en el comando del subbot ${command}:`, err);
+              await subSock.sendMessage(chatId, {
+                text: `❌ *Error al ejecutar el comando:* ${command}`
+              });
+            }
           }
+        } catch (err) {
+          console.error("❌ Error procesando mensaje del subbot:", err);
         }
       });
 
@@ -532,7 +524,7 @@ async function cargarSubbots() {
 }
 
 // Ejecutar después de iniciar el bot principal
-setTimeout(cargarSubbots, 3000);            
+setTimeout(cargarSubbots, 3000);
 
             sock.ev.on("creds.update", saveCreds);
 
