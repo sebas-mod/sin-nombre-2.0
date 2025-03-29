@@ -189,8 +189,10 @@ case 'serbot': {
     const path = require("path");
     const pino = require("pino");
 
-    const numero = msg.sender?.split("@")[0].replace(/\D/g, "");
-    const sessionPath = path.join(__dirname, "subbots", `${numero}@azura`);
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const numero = senderId.split("@")[0].replace(/\D/g, "");
+    const sessionPath = path.join(__dirname, "subbots", numero); // sin @azura, solo el número
+
     if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
     await sock.sendMessage(msg.key.remoteJid, {
@@ -215,7 +217,7 @@ case 'serbot': {
             const code = await subSock.requestPairingCode(numero);
             const pairing = code.match(/.{1,4}/g).join("-");
             await sock.sendMessage(msg.key.remoteJid, {
-                text: `🔗 *Código de emparejamiento válido para el subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular Dispositivo y usa este código.`,
+                text: `🔗 *Código válido para emparejar tu subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular Dispositivo y colócalo ahí.`,
                 quoted: msg
             });
         }, 1500);
