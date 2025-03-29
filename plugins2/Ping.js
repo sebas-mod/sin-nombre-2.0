@@ -1,22 +1,18 @@
-module.exports = async (m, { conn, usedPrefix }) => {
-  try {
-    const start = Date.now();
-    const msg = await conn.sendMessage(m.key.remoteJid, {
-      text: "🏓 *Pong!*"
-    }, { quoted: m });
+const handler = async (msg, { conn }) => {
+  const start = Date.now();
 
-    const end = Date.now();
-    const ping = end - start;
+  const respuesta = await conn.sendMessage(msg.key.remoteJid, {
+    text: "🏓 *Pong!*"
+  }, { quoted: msg });
 
-    await conn.sendMessage(m.key.remoteJid, {
-      text: `✅ *Ping:* ${ping} ms`,
-      quoted: msg
-    });
-  } catch (err) {
-    console.error("❌ Error en comando ping:", err);
-    await conn.sendMessage(m.key.remoteJid, {
-      text: "❌ Hubo un error al ejecutar el comando.",
-      quoted: m
-    });
-  }
+  const end = Date.now();
+  const ping = end - start;
+
+  await conn.sendMessage(msg.key.remoteJid, {
+    text: `✅ *Ping:* ${ping} ms`,
+    quoted: respuesta
+  });
 };
+
+handler.command = ['ping'];
+module.exports = handler;
