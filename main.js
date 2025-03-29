@@ -191,7 +191,7 @@ case 'serbot': {
     makeCacheableSignalKeyStore,
     DisconnectReason
   } = require("@whiskeysockets/baileys");
-  const { Boom } = require("@hapi/boom")
+  const { Boom } = require("@hapi/boom");
   const path = require("path");
   const pino = require("pino");
   const fs = require("fs");
@@ -202,83 +202,95 @@ case 'serbot': {
 
   try {
     const number = msg.key?.participant || msg.key.remoteJid;
-    const file = path.join(__dirname, "subbots", number);
     const rid = number.split("@")[0];
+    const sessionPath = path.join(__dirname, "subbots", rid);
+    if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: '⌛', key: msg.key }
     });
 
-    const { state, saveCreds } = await useMultiFileAuthState(file);
+    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     const { version } = await fetchLatestBaileysVersion();
-    const logger = pino({ level: "silent" });
 
     const socky = makeWASocket({
       version,
-      logger,
+      logger: pino({ level: "silent" }),
       syncFullHistory: true,
       browser: ["Azura Subbot", "Chrome", "10.0"],
       auth: {
         creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, logger)
+        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
       }
     });
 
     let connectionStatus = "connecting";
+    let pairingSent = false;
 
     const timeoutHandle = setTimeout(async () => {
       if (connectionStatus !== "open") {
-        if (fs.existsSync(file)) {
-          fs.rmSync(file, { recursive: true, force: true });
+        if (fs.existsSync(sessionPath)) {
+          fs.rmSync(sessionPath, { recursive: true, force: true });
         }
-        await sock.sendMessage(number, { 
-          text: "⏳ *Tiempo de espera superado.* La sesión fue eliminada. Intenta de nuevo con `serbot`." 
+        await sock.sendMessage(number, {
+          text: "⏳ *Tiempo de espera superado.* La sesión fue eliminada. Intenta de nuevo con `serbot`."
         });
       }
     }, 60000);
 
     socky.ev.on("connection.update", async (c) => {
-      const { qr, connection, lastDisconnect } = c;
-      if (qr) {
-        const code = await socky.requestPairingCode(rid);
-        await sleep(3000);
-        await sock.sendMessage(number, { 
-          text: `🔗 *Código de emparejamiento:*\n\n${code.match(/.{1,4}/g).join("-")}\n\nAbre WhatsApp > Vincular dispositivo.` 
+      const { connection, lastDisconnect } = c;
+
+      if (connection === "connecting" && !pairingSent) {
+        pairingSent = true;
+        await sleep(2000); // Espera leve para asegurar que el socket esté listo
+        try {
+          const code = await socky.requestPairingCode("+" + rid);
+          const pairing = code.match(/.{1,4}/g).join("-");
+          await sock.sendMessage(number, {
+            text: `🔗 *Código de emparejamiento:*\n\n${pairing}\n\nAbre WhatsApp > Vincular dispositivo.`,
+            quoted: msg
+          });
+        } catch (err) {
+          console.error("❌ Error al generar el código:", err);
+          await sock.sendMessage(number, {
+            text: `❌ *Error generando código:* ${err.message}`
+          });
+        }
+      }
+
+      if (connection === "open") {
+        connectionStatus = "open";
+        clearTimeout(timeoutHandle);
+        await sock.sendMessage(number, {
+          text: "✅ *Subbot conectado correctamente.*"
         });
       }
 
-      switch (connection) {
-        case "close": {
-          connectionStatus = "close";
-          let reason = new Boom(lastDisconnect.error)?.output.statusCode;
-          switch (reason) {
-            case DisconnectReason.restartRequired:
-              // puedes volver a llamar a serbot() si lo haces modular
-              break;
-            default:
-              await sock.sendMessage(number, { 
-                text: `❌ *Error desconocido:* ${DisconnectReason[reason]} (${reason})`
-              });
-          }
-          break;
+      if (connection === "close") {
+        connectionStatus = "close";
+        let reason = new Boom(lastDisconnect.error)?.output.statusCode;
+        switch (reason) {
+          case DisconnectReason.restartRequired:
+            break;
+          default:
+            await sock.sendMessage(number, {
+              text: `❌ *Error inesperado:* ${DisconnectReason[reason]} (${reason})`
+            });
         }
-        case "open":
-          connectionStatus = "open";
-          clearTimeout(timeoutHandle);
-          await sock.sendMessage(number, { 
-            text: "✅ *Subbot conectado correctamente.*"
-          });
-          break;
-        case "connecting":
-          connectionStatus = "connecting";
-          break;
       }
     });
 
     socky.ev.on("creds.update", saveCreds);
+
   } catch (e) {
-    console.error("Error en serbot:", e);
+    console.error("❌ Error en serbot:", e);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error general:* ${e.message}`,
+      quoted: msg
+    });
   }
+
   break;
 }
         
