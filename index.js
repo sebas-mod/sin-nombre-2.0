@@ -436,33 +436,6 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
 });
 
 const path = require("path");
-            
-async function cargarSubbots() {
-  const subbotFolder = "./subbots";
-  const path = require("path");
-  const fs = require("fs");
-  const pino = require("pino");
-  const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
-  } = require("@whiskeysockets/baileys");
-
-  // Función para cargar plugins exclusivos para subbots
-  function loadSubPlugins() {
-    const plugins = [];
-    const pluginDir = path.join(__dirname, 'plugins2');
-    if (!fs.existsSync(pluginDir)) return plugins;
-    const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.js'));
-    for (const file of files) {
-      const plugin = require(path.join(pluginDir, file));
-      if (plugin && plugin.command) plugins.push(plugin);
-    }
-    return plugins;
-  }
-
-  const subPlugins = loadSubPlugins();
 
 async function cargarSubbots() {
   const subbotFolder = "./subbots";
@@ -574,10 +547,11 @@ async function cargarSubbots() {
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
-  
+            
 
 
 
+            
             sock.ev.on("creds.update", saveCreds);
 
             // Manejo de errores global para evitar que el bot se detenga
