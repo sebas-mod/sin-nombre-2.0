@@ -200,7 +200,7 @@ case 'serbot': {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Objeto global para almacenar sesiones y sus temporizadores
+  // Asegúrate de definir global.activeSubbots en el archivo principal
   global.activeSubbots = global.activeSubbots || {};
 
   async function serbot() {
@@ -209,7 +209,7 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Si ya existe un proceso pendiente o sesión activa, se notifica y se aborta
+      // Si ya hay un proceso pendiente o sesión activa, notificar y abortar
       if (global.activeSubbots[rid]) {
         return sock.sendMessage(number, {
           text: "❌ Ya tienes una sesión pendiente o activa. Espera a que se complete o expire.",
@@ -217,7 +217,7 @@ case 'serbot': {
         });
       }
 
-      // Se marca la sesión como pendiente en el objeto global
+      // Marcar la sesión como pendiente
       global.activeSubbots[rid] = { active: false, timer: null };
 
       // Reaccionar al mensaje
@@ -243,13 +243,16 @@ case 'serbot': {
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        // Si se genera el QR y aún no se ha enviado el código, se solicita y se envía
+        // Si se genera el QR y aún no se ha enviado el código
         if (qr && !codeSent) {
           codeSent = true;
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
-            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+            text:
+              "🔐 Código generado:\n```" +
+              code +
+              "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
 
@@ -257,10 +260,12 @@ case 'serbot': {
           global.activeSubbots[rid].timer = setTimeout(async () => {
             if (!global.activeSubbots[rid].active) {
               fs.rm(file, { recursive: true, force: true }, (err) => {
-                if (err) console.error(`Error al eliminar la sesión de ${number}:`, err);
+                if (err)
+                  console.error(`Error al eliminar la sesión de ${number}:`, err);
               });
               await sock.sendMessage(number, {
-                text: "⏰ No te conectaste en 1 minuto y 30 segundos. Solicita un nuevo código.",
+                text:
+                  "⏰ No te conectaste en 1 minuto y 30 segundos. Solicita un nuevo código.",
                 quoted: msg
               });
               delete global.activeSubbots[rid];
@@ -269,7 +274,7 @@ case 'serbot': {
         }
 
         if (connection === "open") {
-          // Se establece la conexión: marcamos la sesión como activa y cancelamos el temporizador
+          // Conexión establecida: marcar como activa y cancelar el temporizador
           global.activeSubbots[rid].active = true;
           if (global.activeSubbots[rid].timer) {
             clearTimeout(global.activeSubbots[rid].timer);
@@ -280,23 +285,43 @@ case 'serbot': {
             quoted: msg
           });
         } else if (connection === "close") {
-          // Procesa el cierre de la conexión y elimina la sesión
           let reason;
           if (lastDisconnect && lastDisconnect.error) {
             reason = new Boom(lastDisconnect.error)?.output?.statusCode;
           }
-          const reasonText = DisconnectReason[reason] || reason || "desconocido";
-          await sock.sendMessage(number, {
-            text: "❌ Se cerró la conexión: " + reasonText + ` (${reason})`,
-            quoted: msg
-          });
-          fs.rm(file, { recursive: true, force: true }, (err) => {
-            if (err) console.error(`Error al eliminar la sesión de ${number}:`, err);
-          });
-          if (global.activeSubbots[rid] && global.activeSubbots[rid].timer) {
-            clearTimeout(global.activeSubbots[rid].timer);
+
+          // Si el cierre es por restartRequired, intenta reconectar
+          if (reason === DisconnectReason.restartRequired) {
+            if (global.activeSubbots[rid] && global.activeSubbots[rid].timer) {
+              clearTimeout(global.activeSubbots[rid].timer);
+            }
+            await sock.sendMessage(number, {
+              text: "🔄 La conexión se reinicia automáticamente. Un momento...",
+              quoted: msg
+            });
+            delete global.activeSubbots[rid];
+            await serbot();
+            return;
+          } else {
+            // Otros motivos: notificar y eliminar la sesión
+            const reasonText =
+              DisconnectReason[reason] || reason || "desconocido";
+            await sock.sendMessage(number, {
+              text:
+                "❌ Se cerró la conexión: " +
+                reasonText +
+                ` (${reason})`,
+              quoted: msg
+            });
+            fs.rm(file, { recursive: true, force: true }, (err) => {
+              if (err)
+                console.error(`Error al eliminar la sesión de ${number}:`, err);
+            });
+            if (global.activeSubbots[rid] && global.activeSubbots[rid].timer) {
+              clearTimeout(global.activeSubbots[rid].timer);
+            }
+            delete global.activeSubbots[rid];
           }
-          delete global.activeSubbots[rid];
         }
       });
 
