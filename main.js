@@ -196,18 +196,15 @@ case 'serbot': {
   const pino = require("pino");
   const fs = require("fs");
 
-  // Función sleep que recibe milisegundos
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   try {
-    // Obtenemos el número del remitente
     const number = msg.key?.participant || msg.key.remoteJid;
     const file = path.join(__dirname, "subbots", number);
     const rid = number.split("@")[0];
 
-    // Reacciona al comando usado
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: '⌛', key: msg.key }
     });
@@ -219,34 +216,35 @@ case 'serbot': {
     const socky = makeWASocket({
       version,
       logger,
+      syncFullHistory: true,
+      browser: ["Azura Subbot", "Chrome", "10.0"],
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, logger)
       }
     });
 
-    // Variable para almacenar el estado de conexión
     let connectionStatus = "connecting";
 
-    // Timeout: si no se conecta en 1 minuto, se borra la sesión
     const timeoutHandle = setTimeout(async () => {
       if (connectionStatus !== "open") {
         if (fs.existsSync(file)) {
           fs.rmSync(file, { recursive: true, force: true });
         }
         await sock.sendMessage(number, { 
-          text: "Tiempo de espera superado. La sesión se ha borrado. Por favor, solicita el código de emparejamiento nuevamente." 
+          text: "⏳ *Tiempo de espera superado.* La sesión fue eliminada. Intenta de nuevo con `serbot`." 
         });
       }
-    }, 60000); // 60,000 ms = 1 minuto
+    }, 60000);
 
     socky.ev.on("connection.update", async (c) => {
       const { qr, connection, lastDisconnect } = c;
       if (qr) {
-        // Solicita el código de emparejamiento usando el rid
         const code = await socky.requestPairingCode(rid);
-        await sleep(5000);
-        await sock.sendMessage(number, { text: "Código generado: " + code });
+        await sleep(3000);
+        await sock.sendMessage(number, { 
+          text: `🔗 *Código de emparejamiento:*\n\n${code.match(/.{1,4}/g).join("-")}\n\nAbre WhatsApp > Vincular dispositivo.` 
+        });
       }
 
       switch (connection) {
@@ -255,19 +253,21 @@ case 'serbot': {
           let reason = new Boom(lastDisconnect.error)?.output.statusCode;
           switch (reason) {
             case DisconnectReason.restartRequired:
-              await serbot(); // Reinicia el proceso
+              // puedes volver a llamar a serbot() si lo haces modular
               break;
             default:
               await sock.sendMessage(number, { 
-                text: "Ocurrió un error desconocido: " + DisconnectReason[reason] + ` (${reason})`
+                text: `❌ *Error desconocido:* ${DisconnectReason[reason]} (${reason})`
               });
           }
           break;
         }
         case "open":
           connectionStatus = "open";
-          clearTimeout(timeoutHandle); // Se cancela el timeout al conectarse
-          await sock.sendMessage(number, { text: "Subbot conectado correctamente." });
+          clearTimeout(timeoutHandle);
+          await sock.sendMessage(number, { 
+            text: "✅ *Subbot conectado correctamente.*"
+          });
           break;
         case "connecting":
           connectionStatus = "connecting";
@@ -279,93 +279,6 @@ case 'serbot': {
   } catch (e) {
     console.error("Error en serbot:", e);
   }
-  break;
-}
-
-case 'serbotqr': {
-  const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
-  } = require("@whiskeysockets/baileys");
-  const fs = require("fs");
-  const path = require("path");
-  const pino = require("pino");
-  const qrcode = require("qrcode");
-
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const numero = senderId.split("@")[0].replace(/\D/g, "");
-  const sessionPath = path.join(__dirname, "subbots", numero);
-
-  if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
-
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
-
-  try {
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-    const { version } = await fetchLatestBaileysVersion();
-
-    const subSock = makeWASocket({
-      version,
-      logger: pino({ level: "silent" }),
-      auth: {
-        creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
-      },
-      browser: ["Azura Subbot", "Chrome", "2.0"],
-      printQRInTerminal: false
-    });
-
-    subSock.ev.on("creds.update", saveCreds);
-
-    subSock.ev.on("connection.update", async (update) => {
-      const { qr, connection } = update;
-
-      if (qr) {
-        try {
-          // Genera imagen del QR
-          const qrImageBuffer = await qrcode.toBuffer(qr, { type: 'png' });
-
-          await sock.sendMessage(msg.key.remoteJid, {
-            image: qrImageBuffer,
-            caption: `🔗 *Escanea este código QR para vincular tu subbot:*\n\n1. Abre WhatsApp\n2. Ve a Ajustes > Dispositivos vinculados\n3. Escanea este código`,
-            quoted: msg
-          });
-
-          console.log(`📸 QR enviado para el subbot ${numero}`);
-        } catch (err) {
-          console.error("❌ Error generando QR:", err);
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error al generar el código QR:* ${err.message}`,
-            quoted: msg
-          });
-        }
-      }
-
-      if (connection === "open") {
-        console.log(`✅ Subbot ${numero} vinculado y conectado correctamente.`);
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: `✅ *Subbot vinculado y conectado correctamente.*`,
-          quoted: msg
-        });
-      }
-
-      if (connection === "close") {
-        console.log(`❌ Conexión cerrada para subbot ${numero}`);
-      }
-    });
-
-  } catch (err) {
-    console.error("❌ Error general:", err);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${err.message}`,
-      quoted: msg
-    });
-  }
-
   break;
 }
         
