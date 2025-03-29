@@ -12,14 +12,6 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
-//subots
-const BOT_DB = path.join(__dirname, 'bots.json');
-
-if (!fs.existsSync(BOT_DB)) {
-  fs.writeFileSync(BOT_DB, JSON.stringify({}, null, 2));
-}
-//subots
-
 global.zrapi = `ex-9bf9dc0318`;
 
 if (!fs.existsSync(stickersDir)) fs.mkdirSync(stickersDir, { recursive: true });
@@ -190,7 +182,6 @@ async function handleCommand(sock, msg, command, args, sender) {
     }
 
     switch (lowerCommand) {
-
 case 'serbot': {
   const {
     default: makeWASocket,
@@ -284,7 +275,8 @@ case 'serbot': {
   await serbot();
   break;
 }
-            
+
+        
 case 'tovideo': {
   const fs = require('fs');
   const path = require('path');
