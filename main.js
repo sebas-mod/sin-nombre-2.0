@@ -194,8 +194,9 @@ case 'serbot': {
   const Boom = require('@hapi/boom');
   const path = require("path");
   const pino = require("pino");
+  const fs = require("fs");
 
-  // Función sleep corregida para recibir milisegundos
+  // Función sleep que recibe milisegundos
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -205,6 +206,11 @@ case 'serbot': {
     const number = msg.key?.participant || msg.key.remoteJid;
     const file = path.join(__dirname, "subbots", number);
     const rid = number.split("@")[0];
+
+    // Reacciona al comando usado
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: '⌛', key: msg.key }
+    });
 
     const { state, saveCreds } = await useMultiFileAuthState(file);
     const { version } = await fetchLatestBaileysVersion();
@@ -219,6 +225,21 @@ case 'serbot': {
       }
     });
 
+    // Variable para almacenar el estado de conexión
+    let connectionStatus = "connecting";
+
+    // Timeout: si no se conecta en 1 minuto, se borra la sesión
+    const timeoutHandle = setTimeout(async () => {
+      if (connectionStatus !== "open") {
+        if (fs.existsSync(file)) {
+          fs.rmSync(file, { recursive: true, force: true });
+        }
+        await sock.sendMessage(number, { 
+          text: "Tiempo de espera superado. La sesión se ha borrado. Por favor, solicita el código de emparejamiento nuevamente." 
+        });
+      }
+    }, 60000); // 60,000 ms = 1 minuto
+
     socky.ev.on("connection.update", async (c) => {
       const { qr, connection, lastDisconnect } = c;
       if (qr) {
@@ -229,8 +250,8 @@ case 'serbot': {
       }
 
       switch (connection) {
-        case "close":
-          // Obtiene el motivo del cierre de conexión
+        case "close": {
+          connectionStatus = "close";
           let reason = new Boom(lastDisconnect.error)?.output.statusCode;
           switch (reason) {
             case DisconnectReason.restartRequired:
@@ -242,11 +263,14 @@ case 'serbot': {
               });
           }
           break;
+        }
         case "open":
-          // Conexión establecida; acá podés enviar un mensaje de confirmación si lo deseas
+          connectionStatus = "open";
+          clearTimeout(timeoutHandle); // Se cancela el timeout al conectarse
+          await sock.sendMessage(number, { text: "Subbot conectado correctamente." });
           break;
         case "connecting":
-          // Conexión en proceso
+          connectionStatus = "connecting";
           break;
       }
     });
