@@ -189,8 +189,7 @@ case 'serbot': {
     const path = require("path");
     const pino = require("pino");
 
-    const id = msg.key.participant || msg.key.remoteJid;
-    const numero = id.split("@")[0];
+    const numero = msg.sender?.split("@")[0].replace(/\D/g, "");
     const sessionPath = path.join(__dirname, "subbots", `${numero}@azura`);
     if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
@@ -213,10 +212,10 @@ case 'serbot': {
         });
 
         setTimeout(async () => {
-            let code = await subSock.requestPairingCode(numero);
+            const code = await subSock.requestPairingCode(numero);
             const pairing = code.match(/.{1,4}/g).join("-");
             await sock.sendMessage(msg.key.remoteJid, {
-                text: `🔗 *Código para emparejar tu subbot:*\n\n${pairing}\n\n📌 Usa este código en tu WhatsApp y serás subbot de Azura Ultra Bot.`,
+                text: `🔗 *Código de emparejamiento válido para el subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular Dispositivo y usa este código.`,
                 quoted: msg
             });
         }, 1500);
