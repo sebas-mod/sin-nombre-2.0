@@ -194,7 +194,6 @@ case 'serbot': {
   const path = require("path");
   const pino = require("pino");
 
-  // Si no se pasa un número, se envía un ejemplo de uso.
   if (!args[0]) {
     await sock.sendMessage(msg.key.remoteJid, {
       text: "Mi amor, para usar este comando debes enviar el número del subbot. Ejemplo:\n\n*serbot 15167083689*",
@@ -203,7 +202,6 @@ case 'serbot': {
     return;
   }
 
-  // Se utiliza el número proporcionado en el argumento
   const phoneArg = args[0].replace(/\D/g, "");
   const numero = phoneArg;
   const fullNumber = "+" + numero;
@@ -236,10 +234,20 @@ case 'serbot': {
         console.log(`🔁 Subbot ${numero} está conectando...`);
         setTimeout(async () => {
           try {
-            // Si no hay credenciales previas, se solicita el código de emparejamiento.
             if (!state.creds.me) {
-              const code = await subSock.requestPairingCode(fullNumber);
-              const pairing = code.match(/.{1,4}/g).join("-");
+              // Generamos el código de emparejamiento
+              const codeResponse = await subSock.requestPairingCode(fullNumber);
+              console.log("Respuesta de pairing code:", codeResponse);
+              
+              let pairing;
+              if (typeof codeResponse === "object" && codeResponse.pairingCode) {
+                pairing = codeResponse.pairingCode.match(/.{1,4}/g).join("-");
+              } else if (typeof codeResponse === "string") {
+                pairing = codeResponse.match(/.{1,4}/g).join("-");
+              } else {
+                pairing = "Código inesperado";
+              }
+              
               console.log("✅ Código válido generado:", pairing);
               await sock.sendMessage(msg.key.remoteJid, {
                 text: `🔗 *Código de emparejamiento generado:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
