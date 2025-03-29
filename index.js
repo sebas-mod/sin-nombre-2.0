@@ -535,15 +535,6 @@ async function cargarSubbots() {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
-          const fullPath = path.join(subbotFolder, dir);
-          if (fs.existsSync(fullPath)) {
-            try {
-              fs.rmSync(fullPath, { recursive: true, force: true });
-              console.log(`🗑️ Sesión eliminada de ${dir}`);
-            } catch (err) {
-              console.error(`❌ Error al eliminar la sesión del subbot ${dir}:`, err);
-            }
-          }
         }
       });
 
@@ -582,6 +573,7 @@ async function cargarSubbots() {
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
+
 
             
             sock.ev.on("creds.update", saveCreds);
