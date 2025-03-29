@@ -20,6 +20,7 @@ function isAllowedUser(sender) {
 }
     
     //privado y admins
+
 const path = "./activos.json";
 
 // 📂 Cargar configuración de modos desde el archivo JSON
