@@ -13,7 +13,7 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`;
-global.activeSubbots = {};
+
 if (!fs.existsSync(stickersDir)) fs.mkdirSync(stickersDir, { recursive: true });
 if (!fs.existsSync(stickersFile)) fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
 
