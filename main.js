@@ -200,27 +200,27 @@ case 'serbot': {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Se asume que global.activeSubbots ya fue definida en el archivo principal
-  // global.activeSubbots = {};
+  // Asegúrate de tener esto en tu archivo principal (index.js)
+  global.activeSubbots = global.activeSubbots || {};
 
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
-      const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
+      const file = path.join(__dirname, "subbots", number);
 
-      // Si ya existe un proceso pendiente o sesión activa, se notifica y se aborta.
+      // Verificar si ya hay una sesión activa o en proceso
       if (global.activeSubbots[rid]) {
         return sock.sendMessage(number, {
-          text: "❌ Ya tienes una sesión pendiente o activa. Espera a que se complete o expire.",
+          text: "⚠️ Ya tienes una sesión activa o en proceso. Por favor, espera a que finalice o expire.",
           quoted: msg
         });
       }
 
-      // Marcar la sesión como pendiente.
+      // Marcar como en proceso
       global.activeSubbots[rid] = { active: false, timer: null };
 
-      // Reaccionar al mensaje.
+      // Reaccionar
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -238,84 +238,61 @@ case 'serbot': {
         }
       });
 
-      let codeSent = false;
-
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        // Si se genera el QR y aún no se ha enviado el código, se solicita y envía el código.
-        if (qr && !codeSent) {
-          codeSent = true;
+        if (qr) {
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
-            text:
-              "🔐 Código generado:\n```" +
-              code +
-              "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
 
-          // Inicia el temporizador de 90 segundos para eliminar la sesión si no se conecta.
-          global.activeSubbots[rid].timer = setTimeout(async () => {
+          // Timer de 90 segundos para borrar si no se conecta
+          global.activeSubbots[rid].timer = setTimeout(() => {
             if (!global.activeSubbots[rid].active) {
               fs.rm(file, { recursive: true, force: true }, (err) => {
-                if (err)
-                  console.error(`Error al eliminar la sesión de ${number}:`, err);
-              });
-              await sock.sendMessage(number, {
-                text:
-                  "⏰ No te conectaste en 1 minuto y 30 segundos. Solicita un nuevo código.",
-                quoted: msg
+                if (!err) {
+                  sock.sendMessage(number, {
+                    text: "⏰ Tiempo agotado. No te conectaste en 90 segundos. Solicita un nuevo código.",
+                    quoted: msg
+                  });
+                }
               });
               delete global.activeSubbots[rid];
             }
           }, 90000);
         }
 
-        if (connection === "open") {
-          // Conexión establecida: marcar la sesión como activa y cancelar el temporizador.
-          global.activeSubbots[rid].active = true;
-          if (global.activeSubbots[rid].timer) {
-            clearTimeout(global.activeSubbots[rid].timer);
-            global.activeSubbots[rid].timer = null;
-          }
-          await sock.sendMessage(number, {
-            text: "✅ *Subbot conectado correctamente.*",
-            quoted: msg
-          });
-        } else if (connection === "close") {
-          let reason;
-          if (lastDisconnect && lastDisconnect.error) {
-            reason = new Boom(lastDisconnect.error)?.output?.statusCode;
-          }
-          // Si el cierre es por restartRequired, se reconecta automáticamente.
-          if (reason === DisconnectReason.restartRequired) {
-            if (global.activeSubbots[rid] && global.activeSubbots[rid].timer) {
-              clearTimeout(global.activeSubbots[rid].timer);
-            }
+        switch (connection) {
+          case "open":
+            global.activeSubbots[rid].active = true;
+            if (global.activeSubbots[rid].timer) clearTimeout(global.activeSubbots[rid].timer);
             await sock.sendMessage(number, {
-              text: "🔄 La conexión se reinicia automáticamente. Un momento...",
+              text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
+            break;
+
+          case "close":
+            const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+            const text = DisconnectReason[reason] || "desconocido";
+
+            // Enviar despedida si se desconecta
+            await sock.sendMessage(number, {
+              text: `👋 Gracias por ser parte de *Azura Ultra 2.0*, subbot finalizado.\nMotivo: ${text} (${reason})`,
+              quoted: msg
+            });
+
+            // No eliminamos carpeta aquí, tu lógica lo maneja
+            if (global.activeSubbots[rid]?.timer) clearTimeout(global.activeSubbots[rid].timer);
             delete global.activeSubbots[rid];
-            await serbot();
-            return;
-          } else {
-            // Para otros motivos (loggedOut, timedOut, etc.), solo se notifica y se deja el temporizador activo.
-            const reasonText =
-              DisconnectReason[reason] || reason || "desconocido";
-            await sock.sendMessage(number, {
-              text: "❌ Se cerró la conexión: " + reasonText + ` (${reason})`,
-              quoted: msg
-            });
-            // No eliminamos la sesión de inmediato; se dejará que el temporizador de 90 segundos se encargue.
-          }
+            break;
         }
       });
 
       socky.ev.on("creds.update", saveCreds);
-
     } catch (e) {
       console.error("❌ Error en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
