@@ -435,6 +435,8 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     }
 });
 
+const path = require("path");
+            
 async function cargarSubbots() {
   const subbotFolder = "./subbots";
 
