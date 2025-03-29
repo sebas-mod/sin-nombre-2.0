@@ -184,108 +184,76 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
         
 case 'serbot': {
-  const {
+  const { 
     default: makeWASocket,
     useMultiFileAuthState,
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
+    makeCacheableSignalKeyStore,
+    DisconnectReason
   } = require("@whiskeysockets/baileys");
-  const fs = require("fs");
+  const Boom = require('@hapi/boom');
   const path = require("path");
   const pino = require("pino");
 
-  if (!args[0]) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "Mi amor, para usar este comando debes enviar el número del subbot. Ejemplo:\n\n*serbot 15167083689*",
-      quoted: msg
-    });
-    return;
+  // Función sleep corregida para recibir milisegundos
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  const phoneArg = args[0].replace(/\D/g, "");
-  const numero = phoneArg;
-  const fullNumber = "+" + numero;
-  
-  const sessionPath = path.join(__dirname, "subbots", numero);
-  if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
-
-  await sock.sendMessage(msg.key.remoteJid, {
-    react: { text: '⏳', key: msg.key }
-  });
-
   try {
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+    // Obtenemos el número del remitente
+    const number = msg.key?.participant || msg.key.remoteJid;
+    const file = path.join(__dirname, "subbots", number);
+    const rid = number.split("@")[0];
+
+    const { state, saveCreds } = await useMultiFileAuthState(file);
     const { version } = await fetchLatestBaileysVersion();
-    const subSock = makeWASocket({
+    const logger = pino({ level: "silent" });
+
+    const socky = makeWASocket({
       version,
-      logger: pino({ level: "silent" }),
+      logger,
       auth: {
         creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
-      },
-      browser: ["Azura Subbot", "Firefox", "2.0"]
+        keys: makeCacheableSignalKeyStore(state.keys, logger)
+      }
     });
 
-    subSock.ev.on("creds.update", saveCreds);
+    socky.ev.on("connection.update", async (c) => {
+      const { qr, connection, lastDisconnect } = c;
+      if (qr) {
+        // Solicita el código de emparejamiento usando el rid
+        const code = await socky.requestPairingCode(rid);
+        await sleep(5000);
+        await sock.sendMessage(number, { text: "Código generado: " + code });
+      }
 
-    subSock.ev.on("connection.update", async (update) => {
-      const { connection } = update;
-      if (connection === "connecting") {
-        console.log(`🔁 Subbot ${numero} está conectando...`);
-        setTimeout(async () => {
-          try {
-            if (!state.creds.me) {
-              // Generamos el código de emparejamiento
-              const codeResponse = await subSock.requestPairingCode(fullNumber);
-              console.log("Respuesta de pairing code:", codeResponse);
-              
-              let pairing;
-              if (typeof codeResponse === "object" && codeResponse.pairingCode) {
-                pairing = codeResponse.pairingCode.match(/.{1,4}/g).join("-");
-              } else if (typeof codeResponse === "string") {
-                pairing = codeResponse.match(/.{1,4}/g).join("-");
-              } else {
-                pairing = "Código inesperado";
-              }
-              
-              console.log("✅ Código válido generado:", pairing);
-              await sock.sendMessage(msg.key.remoteJid, {
-                text: `🔗 *Código de emparejamiento generado:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo.`,
-                quoted: msg
+      switch (connection) {
+        case "close":
+          // Obtiene el motivo del cierre de conexión
+          let reason = new Boom(lastDisconnect.error)?.output.statusCode;
+          switch (reason) {
+            case DisconnectReason.restartRequired:
+              await serbot(); // Reinicia el proceso
+              break;
+            default:
+              await sock.sendMessage(number, { 
+                text: "Ocurrió un error desconocido: " + DisconnectReason[reason] + ` (${reason})`
               });
-            } else {
-              console.log(`El subbot ${numero} ya tiene sesión activa, no se genera pairing code.`);
-              await sock.sendMessage(msg.key.remoteJid, {
-                text: `✅ *Subbot ya está autenticado.*`,
-                quoted: msg
-              });
-            }
-          } catch (err) {
-            console.error("❌ Error generando código pairing:", err);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: `❌ *Error al generar código:* ${err.message}`,
-              quoted: msg
-            });
           }
-        }, 2000);
-      }
-      if (connection === "open") {
-        console.log(`✅ Subbot ${numero} conectado correctamente.`);
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: `✅ *Subbot conectado correctamente.*`,
-          quoted: msg
-        });
-      }
-      if (connection === "close") {
-        console.log(`❌ Conexión cerrada para subbot ${numero}`);
+          break;
+        case "open":
+          // Conexión establecida; acá podés enviar un mensaje de confirmación si lo deseas
+          break;
+        case "connecting":
+          // Conexión en proceso
+          break;
       }
     });
-  } catch (error) {
-    console.error("❌ Error general en serbot:", error);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `❌ *Error:* ${error.message}`,
-      quoted: msg
-    });
+
+    socky.ev.on("creds.update", saveCreds);
+  } catch (e) {
+    console.error("Error en serbot:", e);
   }
   break;
 }
