@@ -191,7 +191,7 @@ case 'serbot': {
     makeCacheableSignalKeyStore,
     DisconnectReason
   } = require("@whiskeysockets/baileys");
-  const Boom = require('@hapi/boom');
+  const { Boom } = require("@hapi/boom")
   const path = require("path");
   const pino = require("pino");
   const fs = require("fs");
