@@ -1,8 +1,18 @@
 const handler = async (msg, { conn }) => {
-  await conn.sendMessage(msg.key.remoteJid, {
-    text: "✅ El sistema de plugins está funcionando correctamente, azura ultra 2.0 bot activo mi rey."
+  const start = Date.now();
+
+  const respuesta = await conn.sendMessage(msg.key.remoteJid, {
+    text: "🏓 *Pong!*"
   }, { quoted: msg });
+
+  const end = Date.now();
+  const ping = end - start;
+
+  await conn.sendMessage(msg.key.remoteJid, {
+    text: `✅ *Ping:* ${ping} ms`,
+    quoted: respuesta
+  });
 };
 
-handler.command = ['test'];
+handler.command = ['ping'];
 module.exports = handler;
