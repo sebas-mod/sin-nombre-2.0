@@ -435,6 +435,86 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     }
 });
 
+async function cargarSubbots() {
+  const subbotFolder = "./subbots";
+
+  if (!fs.existsSync(subbotFolder)) return console.log("⚠️ No hay carpeta de subbots.");
+
+  const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
+
+  console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
+
+  for (const dir of subDirs) {
+    const sessionPath = path.join(subbotFolder, dir);
+
+    try {
+      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+      const { version } = await fetchLatestBaileysVersion();
+      const subSock = makeWASocket({
+        version,
+        logger: pino({ level: "silent" }),
+        auth: {
+          creds: state.creds,
+          keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
+        },
+        browser: ["Azura Subbot", "Firefox", "2.0"]
+      });
+
+      subSock.ev.on("creds.update", saveCreds);
+
+      subSock.ev.on("connection.update", (update) => {
+        const { connection } = update;
+        if (connection === "open") {
+          console.log(`✅ Subbot ${dir} conectado correctamente.`);
+        } else if (connection === "close") {
+          console.log(`❌ Subbot ${dir} se desconectó.`);
+        }
+      });
+
+      subSock.ev.on("messages.upsert", async (msg) => {
+        const m = msg.messages[0];
+        if (!m.message) return;
+
+        const chatId = m.key.remoteJid;
+        const messageText = m.message.conversation || m.message?.extendedTextMessage?.text || "";
+        const command = messageText?.startsWith(global.prefix)
+          ? messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase()
+          : null;
+
+        const args = messageText.trim().split(" ").slice(1);
+
+        if (!command) return;
+
+        // 🔄 Lógica para comandos en plugins2
+        const pluginFile = path.join(__dirname, "plugins2", `${command}.js`);
+        if (fs.existsSync(pluginFile)) {
+          try {
+            const plugin = require(pluginFile);
+            await plugin(m, {
+              conn: subSock,
+              text: args.join(" "),
+              args,
+              command,
+              usedPrefix: global.prefix
+            });
+          } catch (err) {
+            console.error(`⚠️ Error en el comando del subbot ${command}:`, err);
+            await subSock.sendMessage(chatId, {
+              text: `❌ *Error al ejecutar el comando:* ${command}`
+            });
+          }
+        }
+      });
+
+    } catch (err) {
+      console.error(`❌ Error al cargar subbot ${dir}:`, err);
+    }
+  }
+}
+
+// Ejecutar después de iniciar el bot principal
+setTimeout(cargarSubbots, 3000);            
+
             sock.ev.on("creds.update", saveCreds);
 
             // Manejo de errores global para evitar que el bot se detenga
