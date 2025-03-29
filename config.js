@@ -51,7 +51,7 @@ global.allowedPrefixes = [
 ];
 
 global.modoPrivado = false; // El modo privado está desactivado por defecto
-global.activeSubbots = {};
+
 // 🔍 Función para verificar si un usuario es Owner
 global.isOwner = (user) => {
     user = user.replace(/[^0-9]/g, ""); // Limpiar número
