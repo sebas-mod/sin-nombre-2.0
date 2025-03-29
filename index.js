@@ -503,41 +503,37 @@ async function cargarSubbots() {
 
       subSock.ev.on("creds.update", saveCreds);
 
-      subSock.ev.on("connection.update", (update) => {
-        const { connection } = update;
-        if (connection === "open") {
-          console.log(`✅ Subbot ${dir} conectado correctamente.`);
-        } else if (connection === "close") {
-          console.log(`❌ Subbot ${dir} se desconectó.`);
-        }
+      subSock.ev.on("connection.update", async (update) => {
+  const { connection, lastDisconnect } = update;
+
+  if (connection === "open") {
+    console.log(`✅ Subbot ${dir} conectado correctamente.`);
+  }
+
+  if (connection === "close") {
+    console.log(`❌ Subbot ${dir} se desconectó.`);
+
+    try {
+      // Extraer el número desde el nombre del subbot (la carpeta es el número)
+      const number = dir;
+      const jid = number + "@s.whatsapp.net";
+
+      // Enviar mensaje de despedida
+      await subSock.sendMessage(jid, {
+        text: "🔌 *Te has desconectado.*\nGracias por ser parte de *Azura Ultra 2.0 Bot*. Esperamos verte de nuevo, mi rey."
       });
 
-      // EVENTO DE MENSAJES DE LOS SUBBOTS
-      subSock.ev.on("messages.upsert", async (msg) => {
-        try {
-          const m = msg.messages[0];
-          if (!m || !m.message) return;
-
-          const chatId = m.key.remoteJid;
-          const messageText = m.message?.conversation ||
-                              m.message?.extendedTextMessage?.text ||
-                              m.message?.imageMessage?.caption ||
-                              m.message?.videoMessage?.caption || "";
-
-          const subbotPrefixes = [".", "#"];
-          const usedPrefix = subbotPrefixes.find(p => messageText.startsWith(p));
-          if (!usedPrefix) return;
-
-          const body = messageText.slice(usedPrefix.length).trim();
-          const command = body.split(" ")[0].toLowerCase();
-          const args = body.split(" ").slice(1);
-
-          await handleSubCommand(subSock, m, command, args);
-
-        } catch (err) {
-          console.error("❌ Error procesando mensaje del subbot:", err);
-        }
-      });
+      // Eliminar carpeta de sesión
+      const sessionPath = path.join(subbotFolder, dir);
+      if (fs.existsSync(sessionPath)) {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+        console.log(`🗑️ Sesión del subbot ${dir} eliminada correctamente.`);
+      }
+    } catch (error) {
+      console.error("⚠️ Error al eliminar sesión o enviar mensaje:", error);
+    }
+  }
+});
 
     } catch (err) {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
