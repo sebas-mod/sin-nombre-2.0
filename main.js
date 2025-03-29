@@ -203,7 +203,7 @@ case 'serbot': {
   async function serbot() {
     try {
       const sender = msg.key?.participant || msg.key.remoteJid;
-      const numero = sender.split("@")[0]; // solo el número limpio
+      const numero = sender.split("@")[0];
       const sessionPath = path.join(__dirname, "subbots", numero);
       if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
@@ -221,8 +221,7 @@ case 'serbot': {
         auth: {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, logger)
-        },
-        browser: ["Azura Subbot", "Chrome", "10.0"]
+        }
       });
 
       let connectionStatus = "connecting";
@@ -241,22 +240,16 @@ case 'serbot': {
 
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
+
         if (qr) {
-          try {
-            const code = await socky.requestPairingCode("+" + numero);
-            const pairing = code.match(/.{1,4}/g).join("-");
-            await sleep(3000);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: `🔑 *Código de emparejamiento para tu subbot:*\n\n\`\`\`${pairing}\`\`\`\n\nVe a *WhatsApp > Vincular dispositivo* y pégalo ahí.`,
-              quoted: msg
-            });
-          } catch (err) {
-            console.error("❌ Error generando pairing code:", err);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: `❌ *Error al generar el código:* ${err.message}`,
-              quoted: msg
-            });
-          }
+          const code = await socky.requestPairingCode("+" + numero);
+          await sleep(5000);
+
+          const pairing = code.match(/.{1,4}/g).join("-");
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: `🔑 *Código de emparejamiento generado:*\n\n\`\`\`${pairing}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y colócalo ahí.`,
+            quoted: msg
+          });
         }
 
         switch (connection) {
@@ -271,20 +264,24 @@ case 'serbot': {
           case "close":
             connectionStatus = "close";
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
-            if (reason === DisconnectReason.restartRequired) {
-              await serbot(); // Reinicia el proceso
-            } else {
-              await sock.sendMessage(msg.key.remoteJid, {
-                text: `❌ *Conexión cerrada:* ${DisconnectReason[reason]} (${reason})`,
-                quoted: msg
-              });
+            switch (reason) {
+              case DisconnectReason.restartRequired:
+                await serbot();
+                break;
+              default:
+                await sock.sendMessage(msg.key.remoteJid, {
+                  text: `❌ *Error de conexión:* ${DisconnectReason[reason]} (${reason})`,
+                  quoted: msg
+                });
             }
+            break;
+          case "connecting":
+            connectionStatus = "connecting";
             break;
         }
       });
 
       socky.ev.on("creds.update", saveCreds);
-
     } catch (e) {
       console.error("❌ Error general en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
