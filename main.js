@@ -12,6 +12,17 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
+//subots
+const fs = require('fs');
+const path = require('path');
+
+const BOT_DB = path.join(__dirname, 'bots.json');
+
+if (!fs.existsSync(BOT_DB)) {
+  fs.writeFileSync(BOT_DB, JSON.stringify({}, null, 2));
+}
+//subots
+
 global.zrapi = `ex-9bf9dc0318`;
 
 if (!fs.existsSync(stickersDir)) fs.mkdirSync(stickersDir, { recursive: true });
@@ -196,6 +207,23 @@ case 'serbot': {
   const pino = require("pino");
   const fs = require("fs");
 
+  // Ruta del archivo bots.json
+  const BOT_DB = path.join(__dirname, "bots.json");
+
+  // Funciones para leer y escribir en bots.json
+  function loadBots() {
+    try {
+      const data = fs.readFileSync(BOT_DB, "utf8");
+      return JSON.parse(data);
+    } catch (err) {
+      return {};
+    }
+  }
+
+  function saveBots(data) {
+    fs.writeFileSync(BOT_DB, JSON.stringify(data, null, 2));
+  }
+
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -206,17 +234,30 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Evitar que se inicie otra sesión si ya hay una en proceso o activa
-      if (global.activeSubbots && global.activeSubbots[rid]) {
+      // Verificar si ya existe la carpeta de sesión
+      if (fs.existsSync(file)) {
         return sock.sendMessage(number, {
-          text: "⚠️ Ya tienes una sesión activa o en proceso. Espera a que finalice o expire.",
+          text: "⚠️ Ya tienes una sesión activa. Elimina tu sesión actual para solicitar una nueva.",
           quoted: msg
         });
-      } else {
-        if (!global.activeSubbots) global.activeSubbots = {};
-        global.activeSubbots[rid] = { connected: false, timer: null };
       }
 
+      // Crear la carpeta de sesión (para reservar el espacio)
+      fs.mkdirSync(file, { recursive: true });
+
+      // Cargar bots.json y verificar si ya hay un registro para este usuario
+      let bots = loadBots();
+      if (bots[rid]) {
+        return sock.sendMessage(number, {
+          text: "⚠️ Ya tienes una sesión activa o en proceso.",
+          quoted: msg
+        });
+      }
+      // Marcar la sesión como pendiente en bots.json
+      bots[rid] = { connected: false, startTime: null };
+      saveBots(bots);
+
+      // Reaccionar al mensaje
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -224,7 +265,6 @@ case 'serbot': {
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
-
       const socky = makeWASocket({
         version,
         logger,
@@ -241,37 +281,34 @@ case 'serbot': {
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
-            text:
-              "🔐 Código generado:\n```" +
-              code +
-              "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
 
-          // Inicia temporizador de 90 segundos: si no se conecta, se elimina la sesión
-          global.activeSubbots[rid].timer = setTimeout(() => {
-            if (!global.activeSubbots[rid].connected) {
+          // Inicia timer de 90 segundos: si no se conecta, se elimina la sesión
+          setTimeout(() => {
+            let botsData = loadBots();
+            if (botsData[rid] && botsData[rid].connected === false) {
               fs.rm(file, { recursive: true, force: true }, (err) => {
                 if (err) console.error("Error al eliminar la sesión:", err);
               });
+              delete botsData[rid];
+              saveBots(botsData);
               sock.sendMessage(number, {
-                text:
-                  "⏰ No te conectaste en 90 segundos. Solicita un nuevo código.",
+                text: "⏰ No te conectaste en 90 segundos. Solicita un nuevo código.",
                 quoted: msg
               });
-              delete global.activeSubbots[rid];
             }
           }, 90000);
         }
 
         switch (connection) {
           case "open":
-            // Conexión establecida: marcar como conectado y cancelar el temporizador
-            global.activeSubbots[rid].connected = true;
-            if (global.activeSubbots[rid].timer) {
-              clearTimeout(global.activeSubbots[rid].timer);
-              global.activeSubbots[rid].timer = null;
-            }
+            // Marcar como conectado y registrar el inicio de la conexión
+            let botsData = loadBots();
+            botsData[rid].connected = true;
+            botsData[rid].startTime = Date.now();
+            saveBots(botsData);
             await sock.sendMessage(number, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
@@ -286,22 +323,18 @@ case 'serbot': {
                 break;
               default:
                 await sock.sendMessage(number, {
-                  text:
-                    "❌ Se cerró la conexión: " +
-                    DisconnectReason[reason] +
-                    ` (${reason})`,
-                  quoted: msg
-                });
-                // Mensaje de despedida extra
-                await sock.sendMessage(number, {
-                  text: "👋 Gracias por ser subbot de Azura Ultra 2.0.",
+                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
                   quoted: msg
                 });
             }
-            if (global.activeSubbots[rid] && global.activeSubbots[rid].timer) {
-              clearTimeout(global.activeSubbots[rid].timer);
-            }
-            delete global.activeSubbots[rid];
+            // Enviar mensaje de despedida
+            await sock.sendMessage(number, {
+              text: "👋 Gracias por ser subbot de Azura Ultra 2.0.",
+              quoted: msg
+            });
+            let botsDataClose = loadBots();
+            delete botsDataClose[rid];
+            saveBots(botsDataClose);
             break;
           }
 
