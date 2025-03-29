@@ -464,7 +464,7 @@ async function cargarSubbots() {
 
   const subPlugins = loadSubPlugins();
 
-  async function cargarSubbots() {
+async function cargarSubbots() {
   const subbotFolder = "./subbots";
   const path = require("path");
   const fs = require("fs");
@@ -574,7 +574,7 @@ async function cargarSubbots() {
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
-
+  
 
 
 
