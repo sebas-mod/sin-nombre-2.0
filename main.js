@@ -202,16 +202,15 @@ case 'serbot': {
 
   async function serbot() {
     try {
-      const sender = msg.key?.participant || msg.key.remoteJid;
-      const numero = sender.split("@")[0];
-      const sessionPath = path.join(__dirname, "subbots", numero);
-      if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
+      const number = msg.key?.participant || msg.key.remoteJid;
+      const file = path.join(__dirname, "subbots", number);
+      const rid = number.split("@")[0];
 
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+      const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
@@ -228,40 +227,25 @@ case 'serbot': {
 
       const timeoutHandle = setTimeout(async () => {
         if (connectionStatus !== "open") {
-          if (fs.existsSync(sessionPath)) {
-            fs.rmSync(sessionPath, { recursive: true, force: true });
+          if (fs.existsSync(file)) {
+            fs.rmSync(file, { recursive: true, force: true });
           }
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "⏳ *Tiempo de espera superado.* La sesión fue eliminada. Intenta de nuevo.",
-            quoted: msg
+          await sock.sendMessage(number, { 
+            text: "⏳ Tiempo de espera superado. La sesión se ha borrado. Por favor, solicita el código nuevamente." 
           });
         }
       }, 60000);
 
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
-
         if (qr) {
-          const code = await socky.requestPairingCode("+" + numero);
+          const code = await socky.requestPairingCode(rid);
           await sleep(5000);
-
-          const pairing = code.match(/.{1,4}/g).join("-");
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: `🔑 *Código de emparejamiento generado:*\n\n\`\`\`${pairing}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y colócalo ahí.`,
-            quoted: msg
-          });
+          await sock.sendMessage(number, { text: "Código generado: " + code });
         }
 
         switch (connection) {
-          case "open":
-            connectionStatus = "open";
-            clearTimeout(timeoutHandle);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: "✅ *Subbot conectado correctamente.*",
-              quoted: msg
-            });
-            break;
-          case "close":
+          case "close": {
             connectionStatus = "close";
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
             switch (reason) {
@@ -269,11 +253,16 @@ case 'serbot': {
                 await serbot();
                 break;
               default:
-                await sock.sendMessage(msg.key.remoteJid, {
-                  text: `❌ *Error de conexión:* ${DisconnectReason[reason]} (${reason})`,
-                  quoted: msg
+                await sock.sendMessage(number, { 
+                  text: "Ocurrió un error desconocido: " + DisconnectReason[reason] + ` (${reason})`
                 });
             }
+            break;
+          }
+          case "open":
+            connectionStatus = "open";
+            clearTimeout(timeoutHandle);
+            await sock.sendMessage(number, { text: "✅ Subbot conectado correctamente." });
             break;
           case "connecting":
             connectionStatus = "connecting";
@@ -282,12 +271,9 @@ case 'serbot': {
       });
 
       socky.ev.on("creds.update", saveCreds);
+
     } catch (e) {
-      console.error("❌ Error general en serbot:", e);
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: `❌ *Error inesperado:* ${e.message}`,
-        quoted: msg
-      });
+      console.error("❌ Error en serbot:", e);
     }
   }
 
