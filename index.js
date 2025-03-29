@@ -20,7 +20,7 @@ function isAllowedUser(sender) {
 }
     
     //privado y admins
-
+global.activeSubbots = {};
 const path = "./activos.json";
 
 // 📂 Cargar configuración de modos desde el archivo JSON
