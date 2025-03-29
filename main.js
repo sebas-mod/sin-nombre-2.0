@@ -189,17 +189,13 @@ case 'serbot': {
     const path = require("path");
     const pino = require("pino");
 
-    // Detección correcta del número del usuario
     const senderId = msg.key.participant || msg.key.remoteJid;
     const numero = senderId.split("@")[0].replace(/\D/g, "");
     const fullNumber = "+" + numero;
-    console.log("📞 Generando código de emparejamiento para:", fullNumber);
-
-    // Crear carpeta de sesión del subbot
     const sessionPath = path.join(__dirname, "subbots", numero);
+
     if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
 
-    // Reacción inicial
     await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '🔑', key: msg.key }
     });
@@ -218,20 +214,17 @@ case 'serbot': {
             browser: ["Azura Subbot", "Firefox", "2.0"]
         });
 
-        // Esperar un poquito antes de pedir el código
-        setTimeout(async () => {
-            const code = await subSock.requestPairingCode(fullNumber);
-            const pairing = code.match(/.{1,4}/g).join("-");
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: `🔗 *Código válido para emparejar tu subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo y coloca este código.`,
-                quoted: msg
-            });
-        }, 1500);
+        // Generar pairing inmediatamente después del socket
+        const code = await subSock.requestPairingCode(fullNumber);
+        const pairing = code.match(/.{1,4}/g).join("-");
+        console.log("Código pairing generado para:", fullNumber);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `🔗 *Código de emparejamiento para subbot:*\n\n*${pairing}*\n\nAbre WhatsApp > Ajustes > Vincular dispositivo y colócalo.`,
+            quoted: msg
+        });
 
-        // Guardar sesión
         subSock.ev.on("creds.update", saveCreds);
 
-        // Confirmar conexión
         subSock.ev.on("connection.update", async (update) => {
             const { connection } = update;
             if (connection === "open") {
@@ -245,7 +238,7 @@ case 'serbot': {
     } catch (error) {
         console.error("❌ Error en serbot:", error);
         await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Ocurrió un error:* ${error.message}`,
+            text: `❌ *Error:* ${error.message}`,
             quoted: msg
         });
     }
