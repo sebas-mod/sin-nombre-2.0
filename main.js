@@ -205,6 +205,15 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
+      // Primero revisamos si la carpeta ya existe
+      if (fs.existsSync(file)) {
+        await sock.sendMessage(number, {
+          text: `Ya tienes una sesión activa. Si quieres iniciar de nuevo, usa el comando "${global.prefix}delbots" para eliminar tu sesión actual.`,
+          quoted: msg
+        });
+        return; // Salimos si ya hay sesión
+      }
+
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -225,7 +234,7 @@ case 'serbot': {
       // 1. Agregamos al usuario a un "registro"
       userRecord[number] = { startTime: Date.now() };
 
-      // 2. Usamos setTimeout para verificar si socky.user existe.
+      // 2. Usamos setTimeout para verificar si socky.user existe (75 segundos)
       setTimeout(() => {
         if (!socky.user || !socky.user.id) {
           console.log(`No se detectó .me/.user para ${number}, cerrando socket...`);
@@ -267,6 +276,7 @@ case 'serbot': {
             });
             break;
           case "connecting":
+            // Mensaje opcional si deseas
             break;
         }
       });
