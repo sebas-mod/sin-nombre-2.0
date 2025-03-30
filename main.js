@@ -205,15 +205,6 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Verificar si ya existe una sesión
-      if (fs.existsSync(file)) {
-        await sock.sendMessage(number, {
-          text: 'Ya tienes una sesión activa. Si quieres iniciar de nuevo, usa el comando "delbots" para eliminar tu sesión actual.',
-          quoted: msg
-        });
-        return;
-      }
-
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
