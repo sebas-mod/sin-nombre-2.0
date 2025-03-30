@@ -203,24 +203,25 @@ case 'serbot': {
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
+      // Creamos la ruta de la carpeta
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // 1) Verifica si YA existe la carpeta => subbot “a medias” o activo
+      // 1) Verifica si la carpeta ya existe
       if (fs.existsSync(file)) {
+        // Notificamos al usuario y paramos
         await sock.sendMessage(number, {
-          text: 'Ya tienes una sesión activa. Usa el comando "delbots" para eliminar la sesión anterior y poder iniciar una nueva.',
+          text: 'Ya tienes una sesión activa. Usa el comando "delbots" para eliminar la sesión anterior y volver a generar el código.',
           quoted: msg
         });
         return;
       }
 
-      // Manda la reacción de que está procesando
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      // Configuración Baileys
+      // 2) Continúa EXACTAMENTE como tu código “que sí funciona”
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
@@ -234,34 +235,15 @@ case 'serbot': {
         }
       });
 
-      // 2) Si en 75s no se vincula correctamente, cerramos socket y borramos carpeta
-      const TIME_LIMIT = 75000; // 75s
-      const timer = setTimeout(() => {
-        if (!socky.user || !socky.user.id) {
-          console.log(`⏳ Pasaron 75s y ${number} no se conectó. Borrando carpeta...`);
-          // Cerramos el socket
-          socky.ws.close();
-
-          // Borramos la carpeta
-          fs.rm(file, { recursive: true, force: true }, (err) => {
-            if (err) {
-              console.error(`❌ Error al eliminar carpeta de sesión de ${number}:`, err);
-            } else {
-              console.log(`✅ Carpeta de sesión de ${number} eliminada por falta de vinculación.`);
-            }
-          });
-        }
-      }, TIME_LIMIT);
-
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        // 3) Generamos el pairing code UNA SOLA VEZ (sin usar el QR tradicional)
         if (qr) {
+          // pairing code
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
-            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo > Pegar código.",
+            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
         }
@@ -271,11 +253,8 @@ case 'serbot': {
             let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                // Si Baileys requiere reiniciar, intentamos reconectar:
-                console.log(`🔄 Reiniciando subbot para ${number}...`);
-                await serbot();
+                await serbot(); // Intentar reconectar
                 break;
-
               default:
                 await sock.sendMessage(number, {
                   text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
@@ -285,8 +264,6 @@ case 'serbot': {
             break;
           }
           case "open":
-            // 4) Si ya estamos "open", limpiamos el timer para NO borrar carpeta
-            clearTimeout(timer);
             await sock.sendMessage(number, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
@@ -294,12 +271,11 @@ case 'serbot': {
             break;
 
           case "connecting":
-            // Nada en especial aquí
+            // igual que tu código
             break;
         }
       });
 
-      // Guardar credenciales al cambiar
       socky.ev.on("creds.update", saveCreds);
 
     } catch (e) {
