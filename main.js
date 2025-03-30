@@ -196,29 +196,28 @@ case 'serbot': {
 
   async function serbot() {
     try {
-      // Obtenemos el número (ya sea de grupo o privado)
+      // Obtenemos el número del remitente
       const number = msg.key?.participant || msg.key.remoteJid;
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // (1) Verificar si ya existe una sesión activa
-      if(fs.existsSync(file)) {
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: "Ya tienes una sesión activa. Usa el comando global 'delbots' para eliminar tu sesión.",
-          quoted: msg
+      // Si ya existe una sesión activa, se notifica y no se genera nuevo código
+      if (fs.existsSync(file)) {
+        await sock.sendMessage(msg.key.remoteJid, { 
+          text: "Ya tienes una sesión activa. Usa el comando 'delbots' para eliminar tu sesión y crear una nueva." 
         });
-        return; // Detenemos la ejecución
+        return;
       }
 
-      // Reacciona al comando
+      // Reacciona al comando usado
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      // Inicializamos el estado de autenticación y el socket
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
+
       const socky = makeWASocket({
         version,
         logger,
@@ -228,85 +227,49 @@ case 'serbot': {
         }
       });
 
+      // Variable para almacenar el estado de conexión
       let connectionStatus = "connecting";
-      let alreadySentCode = false; // (5) Bandera para evitar reenvío múltiple de código
-      let autoReconnectInterval;
 
-      // (3) Timeout de 80 segundos: si no se conecta, se elimina la sesión
+      // Timeout: si no se conecta en 1 minuto, se borra la sesión
       const timeoutHandle = setTimeout(async () => {
-        if(connectionStatus !== "open") {
-          clearInterval(autoReconnectInterval);
-          if(fs.existsSync(file)) {
+        if (connectionStatus !== "open") {
+          if (fs.existsSync(file)) {
             fs.rmSync(file, { recursive: true, force: true });
           }
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "Tiempo de espera superado. La sesión se ha borrado. Por favor, solicita el código de emparejamiento nuevamente.",
-            quoted: msg
+          await sock.sendMessage(number, { 
+            text: "Tiempo de espera superado. La sesión se ha borrado. Por favor, solicita el código de emparejamiento nuevamente." 
           });
         }
-      }, 80000); // 80,000 ms = 80 segundos
+      }, 60000); // 60,000 ms = 1 minuto
 
-      // (3) Auto reconexión: cada 5 segundos se revisa si no se ha conectado
-      autoReconnectInterval = setInterval(async () => {
-        if(connectionStatus !== "open" && !alreadySentCode) {
-          // Se solicita el código de vinculación
-          const code = await socky.requestPairingCode(rid);
-          // (2) Enviar mensaje con instrucciones
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "🔐 Código generado:\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
-            quoted: msg
-          });
-          // (2) Enviar el código en un mensaje separado
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "```" + code + "```",
-            quoted: msg
-          });
-          alreadySentCode = true;
-        }
-      }, 5000);
-
-      // Se escucha el evento de actualización de conexión
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
-        if(qr && !alreadySentCode) {
-          // Si se recibe un QR y aún no se ha enviado el código, se solicita y se envía
+        if (qr) {
+          // Solicita el código de emparejamiento usando el rid y lo envía para que solo se copie y pegue
           const code = await socky.requestPairingCode(rid);
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "🔐 Código generado:\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
-            quoted: msg
-          });
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "```" + code + "```",
-            quoted: msg
-          });
-          alreadySentCode = true;
+          await sleep(5000);
+          await sock.sendMessage(number, { text: "Código generado: " + code });
         }
-        switch(connection) {
+
+        switch (connection) {
           case "close": {
             connectionStatus = "close";
-            clearTimeout(timeoutHandle);
-            clearInterval(autoReconnectInterval);
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                await serbot(); // Intentar reconectar
+                await serbot(); // Reinicia el proceso
                 break;
               default:
-                await sock.sendMessage(msg.key.remoteJid, {
-                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
-                  quoted: msg
+                await sock.sendMessage(number, { 
+                  text: "Ocurrió un error desconocido: " + DisconnectReason[reason] + ` (${reason})` 
                 });
             }
             break;
           }
           case "open":
             connectionStatus = "open";
-            clearTimeout(timeoutHandle);
-            clearInterval(autoReconnectInterval);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: "✅ *Subbot conectado correctamente.*",
-              quoted: msg
-            });
+            clearTimeout(timeoutHandle); // Se cancela el timeout al conectarse
+            await sock.sendMessage(number, { text: "Subbot conectado correctamente." });
             break;
           case "connecting":
             connectionStatus = "connecting";
@@ -316,13 +279,10 @@ case 'serbot': {
 
       socky.ev.on("creds.update", saveCreds);
     } catch (e) {
-      console.error("❌ Error en serbot:", e);
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: `❌ *Error inesperado:* ${e.message}`,
-        quoted: msg
-      });
+      console.error("Error en serbot:", e);
     }
   }
+
   await serbot();
   break;
 }
