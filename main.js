@@ -182,6 +182,7 @@ async function handleCommand(sock, msg, command, args, sender) {
     }
 
     switch (lowerCommand) {
+
 case 'serbot': {
   const {
     default: makeWASocket,
@@ -205,19 +206,21 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Primero revisamos si la carpeta ya existe
+      // 1) Verifica si YA existe la carpeta => subbot “a medias” o activo
       if (fs.existsSync(file)) {
         await sock.sendMessage(number, {
-          text: `Ya tienes una sesión activa. Si quieres iniciar de nuevo, usa el comando "${global.prefix}delbots" para eliminar tu sesión actual.`,
+          text: 'Ya tienes una sesión activa. Usa el comando "delbots" para eliminar la sesión anterior y poder iniciar una nueva.',
           quoted: msg
         });
-        return; // Salimos si ya hay sesión
+        return;
       }
 
+      // Manda la reacción de que está procesando
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
+      // Configuración Baileys
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
@@ -231,36 +234,48 @@ case 'serbot': {
         }
       });
 
-      // 1. Agregamos al usuario a un "registro"
-      userRecord[number] = { startTime: Date.now() };
-
-      // 2. Usamos setTimeout para verificar si socky.user existe (75 segundos)
-      setTimeout(() => {
+      // 2) Si en 75s no se vincula correctamente, cerramos socket y borramos carpeta
+      const TIME_LIMIT = 75000; // 75s
+      const timer = setTimeout(() => {
         if (!socky.user || !socky.user.id) {
-          console.log(`No se detectó .me/.user para ${number}, cerrando socket...`);
+          console.log(`⏳ Pasaron 75s y ${number} no se conectó. Borrando carpeta...`);
+          // Cerramos el socket
           socky.ws.close();
+
+          // Borramos la carpeta
+          fs.rm(file, { recursive: true, force: true }, (err) => {
+            if (err) {
+              console.error(`❌ Error al eliminar carpeta de sesión de ${number}:`, err);
+            } else {
+              console.log(`✅ Carpeta de sesión de ${number} eliminada por falta de vinculación.`);
+            }
+          });
         }
-      }, 75000); // 75 segundos
+      }, TIME_LIMIT);
 
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
+        // 3) Generamos el pairing code UNA SOLA VEZ (sin usar el QR tradicional)
         if (qr) {
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
-            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo > Pegar código.",
             quoted: msg
           });
         }
 
         switch (connection) {
           case "close": {
-            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
+            let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                await serbot(); // Intentar reconectar
+                // Si Baileys requiere reiniciar, intentamos reconectar:
+                console.log(`🔄 Reiniciando subbot para ${number}...`);
+                await serbot();
                 break;
+
               default:
                 await sock.sendMessage(number, {
                   text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
@@ -270,17 +285,21 @@ case 'serbot': {
             break;
           }
           case "open":
+            // 4) Si ya estamos "open", limpiamos el timer para NO borrar carpeta
+            clearTimeout(timer);
             await sock.sendMessage(number, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
             break;
+
           case "connecting":
-            // Mensaje opcional si deseas
+            // Nada en especial aquí
             break;
         }
       });
 
+      // Guardar credenciales al cambiar
       socky.ev.on("creds.update", saveCreds);
 
     } catch (e) {
