@@ -9,7 +9,7 @@ const os = require("os");
 const { execSync } = require("child_process");
 const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
-
+const activeSessions = new Set();
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`;
@@ -190,11 +190,14 @@ case 'serbot': {
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
     DisconnectReason
-  } = require("@whiskeysockets/baileys");
+  } = require("baileys");
   const { Boom } = require("@hapi/boom");
   const path = require("path");
   const pino = require("pino");
   const fs = require("fs");
+
+  const prefix = global.prefa ? global.prefa[0] : '.'; // usa el prefijo global
+  const activeSessions = new Set(); // para evitar múltiples códigos
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -202,24 +205,34 @@ case 'serbot': {
 
   async function serbot() {
     try {
-      // Para la sesión se usa el número del usuario (quien invoca el comando)
-      // Pero para enviar el mensaje se utiliza el chat de origen (grupo o privado)
-      const user = msg.key?.participant || msg.key.remoteJid;
-      const target = msg.key.remoteJid; 
-      const sessionPath = path.join(__dirname, "subbots", user);
-      const rid = user.split("@")[0];
+      const number = msg.key?.participant || msg.key.remoteJid;
+      const file = path.join(__dirname, "subbots", number);
+      const rid = number.split("@")[0];
 
-      // Envía reacción en el chat de origen (grupo o privado)
-      await sock.sendMessage(target, {
+      // Si ya hay una sesión activa
+      if (fs.existsSync(file)) {
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: `⚠️ Ya tienes una sesión activa.\nUsa *${prefix}delbots* para eliminar tu sesión actual.`,
+          quoted: msg
+        });
+        return;
+      }
+
+      // Verificar si ya está en espera de código
+      if (activeSessions.has(number)) {
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: `⏳ Ya estás esperando un código de vinculación.\nEspera a que termine o vuelve a intentarlo más tarde.`,
+          quoted: msg
+        });
+        return;
+      }
+
+      activeSessions.add(number);
+      await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      // Asegurarse de que exista la carpeta de sesión
-      if (!fs.existsSync(sessionPath)) {
-        fs.mkdirSync(sessionPath, { recursive: true });
-      }
-
-      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+      const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
@@ -229,35 +242,61 @@ case 'serbot': {
         auth: {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, logger)
-        },
-        browser: ["Azura Subbot", "Firefox", "2.0"]
+        }
       });
 
-      socky.ev.on("connection.update", async (update) => {
-        const { qr, connection, lastDisconnect } = update;
+      let connected = false;
+      let reconnecting = false;
+      let secondsWaited = 0;
 
-        if (qr) {
-          // Se solicita el código de vinculación siempre (modo code)
+      socky.ev.on("connection.update", async (c) => {
+        const { qr, connection, lastDisconnect } = c;
+
+        if (qr && !reconnecting) {
+          reconnecting = true;
+
           const code = await socky.requestPairingCode(rid);
-          const formattedCode = code.match(/.{1,4}/g)?.join("-");
           await sleep(5000);
-          // Se envía el código al chat de origen (por ejemplo, el grupo)
-          await sock.sendMessage(target, {
-            text: "🔐 Código generado:\n```" + formattedCode + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: `🔐 Código generado:\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y pega el código.`,
             quoted: msg
           });
+
+          await sleep(2000);
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: code
+          });
+
+          // Auto reconexión
+          const interval = setInterval(async () => {
+            secondsWaited += 5;
+            if (connected) {
+              clearInterval(interval);
+              activeSessions.delete(number);
+              return;
+            }
+            if (secondsWaited >= 80) {
+              clearInterval(interval);
+              if (fs.existsSync(file)) fs.rmSync(file, { recursive: true, force: true });
+              await sock.sendMessage(msg.key.remoteJid, {
+                text: "⛔ Tiempo agotado. No se vinculó la cuenta. Intenta nuevamente.",
+                quoted: msg
+              });
+              activeSessions.delete(number);
+            }
+          }, 5000);
         }
 
         switch (connection) {
           case "close": {
-            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
+            let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                console.log(`🔄 Reiniciando serbot para ${user} debido a restartRequired`);
-                await serbot(); // Intentar reconectar
+                await serbot(); // reconectar
                 break;
               default:
-                await sock.sendMessage(target, {
+                await sock.sendMessage(msg.key.remoteJid, {
                   text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
                   quoted: msg
                 });
@@ -265,13 +304,11 @@ case 'serbot': {
             break;
           }
           case "open":
-            await sock.sendMessage(target, {
+            connected = true;
+            await sock.sendMessage(msg.key.remoteJid, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
-            break;
-          case "connecting":
-            // Opcional: manejar el estado "connecting"
             break;
         }
       });
