@@ -201,18 +201,27 @@ case 'serbot': {
 
   async function serbot() {
     try {
+      // Determinar el número a partir del mensaje
       const number = msg.key?.participant || msg.key.remoteJid;
-      const file = path.join(__dirname, "subbots", number);
+      // Ruta para almacenar la sesión del subbot
+      const sessionPath = path.join(__dirname, "subbots", number);
+      // Crear la carpeta si no existe
+      if (!fs.existsSync(sessionPath)) {
+        fs.mkdirSync(sessionPath, { recursive: true });
+      }
       const rid = number.split("@")[0];
 
+      // Enviar reacción inicial para indicar que se está procesando
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      const { state, saveCreds } = await useMultiFileAuthState(file);
+      // Inicializar el estado de autenticación en múltiples archivos
+      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
+      // Crear la instancia del subbot (socky)
       const socky = makeWASocket({
         version,
         logger,
@@ -222,9 +231,10 @@ case 'serbot': {
         }
       });
 
-      socky.ev.on("connection.update", async (c) => {
-        const { qr, connection, lastDisconnect } = c;
+      socky.ev.on("connection.update", async (update) => {
+        const { qr, connection, lastDisconnect } = update;
 
+        // Si hay QR, solicitar el código de vinculación y enviarlo
         if (qr) {
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
@@ -239,6 +249,7 @@ case 'serbot': {
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
+                console.log(`🔄 Reiniciando serbot para ${number} debido a restartRequired`);
                 await serbot(); // Intentar reconectar
                 break;
               default:
@@ -255,8 +266,8 @@ case 'serbot': {
               quoted: msg
             });
             break;
-
           case "connecting":
+            // Opcional: manejar estado de conexión en proceso
             break;
         }
       });
