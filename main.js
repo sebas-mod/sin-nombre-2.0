@@ -9,7 +9,7 @@ const os = require("os");
 const { execSync } = require("child_process");
 const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
-
+const userRecord = {};
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`;
@@ -222,6 +222,17 @@ case 'serbot': {
         }
       });
 
+      // 1. Agregamos al usuario a un "registro"
+      userRecord[number] = { startTime: Date.now() };
+
+      // 2. Usamos setTimeout para verificar si socky.user existe.
+      setTimeout(() => {
+        if (!socky.user || !socky.user.id) {
+          console.log(`No se detectó .me/.user para ${number}, cerrando socket...`);
+          socky.ws.close();
+        }
+      }, 75000); // 75 segundos
+
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
@@ -255,7 +266,6 @@ case 'serbot': {
               quoted: msg
             });
             break;
-
           case "connecting":
             break;
         }
