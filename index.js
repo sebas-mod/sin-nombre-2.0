@@ -554,6 +554,7 @@ async function cargarSubbots() {
 setTimeout(cargarSubbots, 3000);
 
 
+
             sock.ev.on("creds.update", saveCreds);
 
             // Manejo de errores global para evitar que el bot se detenga
