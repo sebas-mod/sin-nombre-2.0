@@ -183,7 +183,7 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
-case 'serbot': {
+case 'sercode': {
   const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -197,38 +197,37 @@ case 'serbot': {
   const fs = require("fs");
 
   const prefix = global.prefa ? global.prefa[0] : '.';
-  if (typeof global.activeSessions === "undefined") global.activeSessions = new Set();
+  if (!global.activeSessions) global.activeSessions = new Set();
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async function serbot() {
+  async function sercode() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
+      const chatID = msg.key.remoteJid;
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Si ya existe la sesión
       if (fs.existsSync(file)) {
-        await sock.sendMessage(msg.key.remoteJid, {
+        await sock.sendMessage(chatID, {
           text: `⚠️ Ya tienes una sesión activa.\nUsa *${prefix}delbots* para eliminarla.`,
           quoted: msg
         });
         return;
       }
 
-      // Si ya está en proceso
       if (global.activeSessions.has(number)) {
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: "⏳ Ya estás esperando un código. Espera que termine o inténtalo más tarde.",
+        await sock.sendMessage(chatID, {
+          text: `⏳ Ya solicitaste un código. Espera que finalice o vuelve a intentarlo después.`,
           quoted: msg
         });
         return;
       }
 
       global.activeSessions.add(number);
-      await sock.sendMessage(msg.key.remoteJid, {
+      await sock.sendMessage(chatID, {
         react: { text: '⌛', key: msg.key }
       });
 
@@ -245,73 +244,221 @@ case 'serbot': {
         }
       });
 
-      let connectionStatus = "connecting";
+      let connected = false;
 
-      // Timeout: eliminar si no conecta
-      const timeoutHandle = setTimeout(async () => {
-        if (connectionStatus !== "open") {
+      const interval = setInterval(async () => {
+        if (connected) {
+          clearInterval(interval);
+          global.activeSessions.delete(number);
+          return;
+        }
+      }, 5000);
+
+      const timeout = setTimeout(async () => {
+        if (!connected) {
+          clearInterval(interval);
+          global.activeSessions.delete(number);
           if (fs.existsSync(file)) fs.rmSync(file, { recursive: true, force: true });
-          await sock.sendMessage(number, {
-            text: "⛔ Tiempo de espera superado. La sesión se ha borrado. Por favor, vuelve a intentarlo.",
+          await sock.sendMessage(chatID, {
+            text: "⛔ Tiempo agotado. No se vinculó la cuenta. Por favor, intenta nuevamente.",
             quoted: msg
           });
-          global.activeSessions.delete(number);
         }
-      }, 60000); // 60 segundos
+      }, 80000);
 
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
         if (qr) {
-          try {
-            const code = await socky.requestPairingCode(rid);
-            await sleep(3000);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: `🔐 Código generado:\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y pega el código.`,
-              quoted: msg
-            });
-            await sleep(2000);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: code
-            });
-          } catch (err) {
-            await sock.sendMessage(number, {
-              text: "❌ Error al generar el código de emparejamiento.",
-              quoted: msg
-            });
-            global.activeSessions.delete(number);
-            return;
-          }
+          const code = await socky.requestPairingCode(rid);
+          await sleep(3000);
+          await sock.sendMessage(chatID, {
+            text: `🔐 Código generado:\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y pega el código.`,
+            quoted: msg
+          });
+          await sleep(1000);
+          await sock.sendMessage(chatID, { text: code });
         }
 
         switch (connection) {
           case "close": {
-            connectionStatus = "close";
             let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
-            if (reason === DisconnectReason.restartRequired) {
-              await serbot(); // Reintenta
-            } else {
-              await sock.sendMessage(number, {
-                text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
-                quoted: msg
-              });
+            switch (reason) {
+              case DisconnectReason.restartRequired:
+                await sercode(); // Reconectar
+                break;
+              default:
+                await sock.sendMessage(chatID, {
+                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
+                  quoted: msg
+                });
+                global.activeSessions.delete(number);
+                clearTimeout(timeout);
+                clearInterval(interval);
+                break;
             }
-            global.activeSessions.delete(number);
             break;
           }
 
           case "open":
-            connectionStatus = "open";
-            clearTimeout(timeoutHandle);
-            await sock.sendMessage(number, {
+            connected = true;
+            clearTimeout(timeout);
+            clearInterval(interval);
+            global.activeSessions.delete(number);
+            await sock.sendMessage(chatID, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
-            global.activeSessions.delete(number);
             break;
+        }
+      });
 
-          case "connecting":
-            connectionStatus = "connecting";
+      socky.ev.on("creds.update", saveCreds);
+
+    } catch (e) {
+      console.error("❌ Error en sercode:", e);
+      global.activeSessions.delete(msg.key?.participant || msg.key.remoteJid);
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *Error inesperado:* ${e.message}`,
+        quoted: msg
+      });
+    }
+  }
+
+  await sercode();
+  break;
+}
+            
+case 'serbot': {
+  const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore,
+    DisconnectReason
+  } = require("@whiskeysockets/baileys");
+  const { Boom } = require("@hapi/boom");
+  const path = require("path");
+  const pino = require("pino");
+  const fs = require("fs");
+
+  const prefix = global.prefa ? global.prefa[0] : '.';
+  if (!global.activeSessions) global.activeSessions = new Set();
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function serbot() {
+    try {
+      const number = msg.key?.participant || msg.key.remoteJid;
+      const chatID = msg.key.remoteJid;
+      const file = path.join(__dirname, "subbots", number);
+      const rid = number.split("@")[0];
+
+      // Paso 1: Verificar sesión existente
+      if (fs.existsSync(file)) {
+        await sock.sendMessage(chatID, {
+          text: `⚠️ Ya tienes una sesión activa.\nUsa *${prefix}delbots* para eliminarla.`,
+          quoted: msg
+        });
+        return;
+      }
+
+      // Paso 5: Verificar si ya está en espera
+      if (global.activeSessions.has(number)) {
+        await sock.sendMessage(chatID, {
+          text: `⏳ Ya solicitaste un código. Espera a que finalice o vuelve a intentarlo después.`,
+          quoted: msg
+        });
+        return;
+      }
+
+      global.activeSessions.add(number);
+      await sock.sendMessage(chatID, {
+        react: { text: '⌛', key: msg.key }
+      });
+
+      const { state, saveCreds } = await useMultiFileAuthState(file);
+      const { version } = await fetchLatestBaileysVersion();
+      const logger = pino({ level: "silent" });
+
+      const socky = makeWASocket({
+        version,
+        logger,
+        auth: {
+          creds: state.creds,
+          keys: makeCacheableSignalKeyStore(state.keys, logger)
+        }
+      });
+
+      let connected = false;
+
+      // Paso 3 + 4: Auto reconexión cada 5s durante 80s
+      const interval = setInterval(async () => {
+        if (connected) {
+          clearInterval(interval);
+          global.activeSessions.delete(number);
+          return;
+        }
+      }, 5000);
+
+      const timeout = setTimeout(async () => {
+        if (!connected) {
+          clearInterval(interval);
+          global.activeSessions.delete(number);
+          if (fs.existsSync(file)) fs.rmSync(file, { recursive: true, force: true });
+          await sock.sendMessage(chatID, {
+            text: "⛔ Tiempo agotado. No se vinculó la cuenta. Por favor, intenta nuevamente.",
+            quoted: msg
+          });
+        }
+      }, 80000);
+
+      socky.ev.on("connection.update", async (c) => {
+        const { qr, connection, lastDisconnect } = c;
+
+        // Paso 2: Generar código REAL dentro del if (qr)
+        if (qr) {
+          const code = await socky.requestPairingCode(rid);
+          await sleep(3000);
+          await sock.sendMessage(chatID, {
+            text: `🔐 Código generado:\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y pega el código.`,
+            quoted: msg
+          });
+          await sleep(1000);
+          await sock.sendMessage(chatID, { text: code });
+        }
+
+        switch (connection) {
+          case "close": {
+            let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+            switch (reason) {
+              case DisconnectReason.restartRequired:
+                await serbot(); // Reconectar
+                break;
+              default:
+                await sock.sendMessage(chatID, {
+                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
+                  quoted: msg
+                });
+                clearTimeout(timeout);
+                clearInterval(interval);
+                global.activeSessions.delete(number);
+                break;
+            }
+            break;
+          }
+
+          case "open":
+            connected = true;
+            clearTimeout(timeout);
+            clearInterval(interval);
+            global.activeSessions.delete(number);
+            await sock.sendMessage(chatID, {
+              text: "✅ *Subbot conectado correctamente.*",
+              quoted: msg
+            });
             break;
         }
       });
