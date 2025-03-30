@@ -195,7 +195,7 @@ case 'serbot': {
   const path = require("path");
   const pino = require("pino");
   const fs = require("fs");
-  const activeSessions = new Set(); // Para controlar sesiones activas
+  const activeSessions = new Set();
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -208,7 +208,7 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Verificar sesión existente
+      // Verificación de sesión existente
       if (fs.existsSync(file)) {
         return await sock.sendMessage(msg.key.remoteJid, {
           text: "⚠️ Ya tienes una sesión activa. Usa el comando *delbots* para eliminar tu sesión actual.",
@@ -216,7 +216,6 @@ case 'serbot': {
         });
       }
 
-      // Evitar múltiples solicitudes
       if (activeSessions.has(number)) {
         return await sock.sendMessage(msg.key.remoteJid, {
           text: "⏳ Ya hay una solicitud en proceso. Por favor espera.",
@@ -242,54 +241,13 @@ case 'serbot': {
         }
       });
 
-      let connectionStatus = "connecting";
-      let qrGenerated = false;
-      let reconnectAttempts = 0;
-      const maxAttempts = 16; // 80 segundos (16 intentos * 5 segundos)
-      let checkInterval;
-
-      // Manejo de timeout
-      const timeoutHandler = async () => {
-        clearInterval(checkInterval);
-        if (fs.existsSync(file)) {
-          fs.rmSync(file, { recursive: true, force: true });
-        }
-        activeSessions.delete(number);
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: "⌛ Tiempo de espera agotado. Sesión eliminada. Usa el comando *serbot* nuevamente.",
-          quoted: msg
-        });
-      };
-
-      const timeout = setTimeout(timeoutHandler, 80000);
-
-      // Auto reconexión cada 5 segundos
-      const startChecking = () => {
-        checkInterval = setInterval(async () => {
-          if (connectionStatus === "open" || reconnectAttempts >= maxAttempts) {
-            clearInterval(checkInterval);
-            return;
-          }
-          
-          if (!qrGenerated) {
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: "🔄 Intentando reconexión...",
-              quoted: msg
-            });
-          }
-          
-          reconnectAttempts++;
-        }, 5000);
-      };
-
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        if (qr && !qrGenerated) {
-          qrGenerated = true;
+        if (qr) {
           const code = await socky.requestPairingCode(rid);
           
-          // Enviar mensaje separado
+          // Enviar mensaje dividido
           await sock.sendMessage(isGroup ? msg.key.remoteJid : number, {
             text: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
             quoted: msg
@@ -301,31 +259,23 @@ case 'serbot': {
             text: "```" + code + "```",
             quoted: msg
           });
-          
-          startChecking();
         }
 
         switch(connection) {
           case "close": {
-            connectionStatus = "close";
-            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
-            if (reason === DisconnectReason.restartRequired) {
-              await serbot();
-            }
+            const reason = new Boom(lastDisconnect.error)?.output.statusCode;
+            await sock.sendMessage(isGroup ? msg.key.remoteJid : number, {
+              text: `❌ Conexión cerrada: ${DisconnectReason[reason] || 'Desconocido'} (${reason})`
+            });
+            activeSessions.delete(number);
             break;
           }
           case "open":
-            connectionStatus = "open";
-            clearTimeout(timeout);
-            clearInterval(checkInterval);
-            activeSessions.delete(number);
             await sock.sendMessage(isGroup ? msg.key.remoteJid : number, {
               text: "✅ *Subbot conectado correctamente*",
               quoted: msg
             });
-            break;
-          case "connecting":
-            connectionStatus = "connecting";
+            activeSessions.delete(number);
             break;
         }
       });
@@ -344,10 +294,7 @@ case 'serbot': {
 
   await serbot();
   break;
-}
-
-
-
+}            
         
 case 'tovideo': {
   const fs = require('fs');
