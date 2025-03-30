@@ -183,129 +183,78 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
+case 'serbot': { const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, DisconnectReason } = require("@whiskeysockets/baileys"); const { Boom } = require("@hapi/boom"); const path = require("path"); const pino = require("pino"); const fs = require("fs");
 
-case 'serbot': {
-  const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
-    DisconnectReason
-  } = require("@whiskeysockets/baileys");
-  const { Boom } = require("@hapi/boom");
-  const path = require("path");
-  const pino = require("pino");
-  const fs = require("fs");
+async function serbot() { const number = msg.key?.participant || msg.key.remoteJid; const sessionDir = path.join(__dirname, "subbots", number); const rid = number.split("@")[0];
 
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+if (fs.existsSync(path.join(sessionDir, "creds.json"))) {
+  await sock.sendMessage(msg.key.remoteJid, {
+    text: `⚠️ Ya tienes una sesión activa. Usa el comando *${global.prefix}delbots* para eliminar tu sesión. Ejemplo: *${global.prefix}delbots*`,
+    quoted: msg
+  });
+  return;
+}
+
+await sock.sendMessage(msg.key.remoteJid, { react: { text: '⌛', key: msg.key } });
+
+const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+const { version } = await fetchLatestBaileysVersion();
+
+const socky = makeWASocket({
+  version,
+  logger: pino({ level: "silent" }),
+  auth: {
+    creds: state.creds,
+    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
   }
+});
 
-  async function serbot() {
-    const number = msg.key?.participant || msg.key.remoteJid;
-    const file = path.join(__dirname, "subbots", number);
-    const rid = number.split("@")[0];
+let qrSent = false;
 
-    if (fs.existsSync(path.join(file, "creds.json"))) {
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: `⚠️ Ya tienes una sesión activa. Usa el comando *${global.prefix}delbots* para eliminar tu sesión.`,
-        quoted: msg
-      });
-      return;
-    }
+socky.ev.on("connection.update", async (update) => {
+  const { qr, connection, lastDisconnect } = update;
 
-    await sock.sendMessage(msg.key.remoteJid, { react: { text: '⌛', key: msg.key } });
+  if (qr && !qrSent) {
+    qrSent = true;
+    const code = await socky.requestPairingCode(rid);
 
-    const { state, saveCreds } = await useMultiFileAuthState(file);
-    const { version } = await fetchLatestBaileysVersion();
-    const logger = pino({ level: "silent" });
-
-    let connectionStatus = "connecting";
-    let timeoutHandle;
-
-    const socky = makeWASocket({
-      version,
-      logger,
-      auth: {
-        creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, logger)
-      }
-    });
-
-    socky.ev.on("connection.update", async (c) => {
-      const { qr, connection, lastDisconnect } = c;
-
-      if (qr) {
-        const code = await socky.requestPairingCode(rid);
-
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
-          quoted: msg
-        });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: code,
-          quoted: msg
-        });
-
-        let attempt = 0;
-        timeoutHandle = setInterval(async () => {
-          attempt += 5;
-          if (connectionStatus === "open") {
-            clearInterval(timeoutHandle);
-          } else if (attempt >= 80) {
-            clearInterval(timeoutHandle);
-            fs.rmSync(file, { recursive: true, force: true });
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: "❌ Tiempo agotado. La sesión se eliminó, por favor inténtalo nuevamente.",
-              quoted: msg
-            });
-          }
-        }, 5000);
-      }
-
-      switch (connection) {
-        case "close":
-          connectionStatus = "close";
-          const reason = new Boom(lastDisconnect.error)?.output.statusCode;
-          if (reason === DisconnectReason.restartRequired) {
-            await serbot();
-          } else {
-            clearInterval(timeoutHandle);
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: "❌ Conexión cerrada: " + DisconnectReason[reason] + ` (${reason})`,
-              quoted: msg
-            });
-          }
-          break;
-
-        case "open":
-          connectionStatus = "open";
-          clearInterval(timeoutHandle);
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "✅ *Subbot conectado correctamente.*",
-            quoted: msg
-          });
-          break;
-      }
-    });
-
-    socky.ev.on("creds.update", saveCreds);
-  }
-
-  if (global.generatingCode) {
     await sock.sendMessage(msg.key.remoteJid, {
-      text: "⏳ Ya se está generando un código. Espera unos segundos y vuelve a intentarlo.",
+      text: `🔐 Código generado:\n\nAbre WhatsApp > Vincular dispositivo y pega este código:`,
       quoted: msg
     });
-  } else {
-    global.generatingCode = true;
-    await serbot();
-    setTimeout(() => { global.generatingCode = false; }, 80000);
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: code,
+      quoted: msg
+    });
   }
 
-  break;
+  if (connection === "open") {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "✅ *Subbot conectado exitosamente.*",
+      quoted: msg
+    });
+  }
+
+  if (connection === "close") {
+    const reason = new Boom(lastDisconnect.error)?.output.statusCode;
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `❌ *La conexión se cerró:* ${DisconnectReason[reason]} (${reason})`,
+      quoted: msg
+    });
+  }
+});
+
+socky.ev.on("creds.update", saveCreds);
+
 }
+
+await serbot();
+
+break; }
+
+
 
         
 case 'tovideo': {
