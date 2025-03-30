@@ -203,25 +203,13 @@ case 'serbot': {
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
-      // Creamos la ruta de la carpeta
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
-
-      // 1) Verifica si la carpeta ya existe
-      if (fs.existsSync(file)) {
-        // Notificamos al usuario y paramos
-        await sock.sendMessage(number, {
-          text: 'Ya tienes una sesión activa. Usa el comando "delbots" para eliminar la sesión anterior y volver a generar el código.',
-          quoted: msg
-        });
-        return;
-      }
 
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
 
-      // 2) Continúa EXACTAMENTE como tu código “que sí funciona”
       const { state, saveCreds } = await useMultiFileAuthState(file);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
@@ -239,7 +227,6 @@ case 'serbot': {
         const { qr, connection, lastDisconnect } = c;
 
         if (qr) {
-          // pairing code
           const code = await socky.requestPairingCode(rid);
           await sleep(5000);
           await sock.sendMessage(number, {
@@ -250,7 +237,7 @@ case 'serbot': {
 
         switch (connection) {
           case "close": {
-            let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
                 await serbot(); // Intentar reconectar
@@ -271,7 +258,6 @@ case 'serbot': {
             break;
 
           case "connecting":
-            // igual que tu código
             break;
         }
       });
