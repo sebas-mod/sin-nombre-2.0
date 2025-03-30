@@ -185,19 +185,19 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 case 'serbot': {
   const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
-  DisconnectReason
-} = require("@whiskeysockets/baileys");
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore,
+    DisconnectReason
+  } = require("@whiskeysockets/baileys");
   const { Boom } = require("@hapi/boom");
   const path = require("path");
   const pino = require("pino");
   const fs = require("fs");
 
-  const prefix = global.prefa ? global.prefa[0] : '.'; // usa el prefijo global
-  const activeSessions = new Set(); // para evitar múltiples códigos
+  const prefix = global.prefa ? global.prefa[0] : '.';
+  if (typeof global.activeSessions === "undefined") global.activeSessions = new Set();
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -209,25 +209,25 @@ case 'serbot': {
       const file = path.join(__dirname, "subbots", number);
       const rid = number.split("@")[0];
 
-      // Si ya hay una sesión activa
+      // Verificar si ya hay sesión
       if (fs.existsSync(file)) {
         await sock.sendMessage(msg.key.remoteJid, {
-          text: `⚠️ Ya tienes una sesión activa.\nUsa *${prefix}delbots* para eliminar tu sesión actual.`,
+          text: `⚠️ Ya tienes una sesión activa.\nUsa *${prefix}delbots* para eliminar tu sesión.`,
           quoted: msg
         });
         return;
       }
 
-      // Verificar si ya está en espera de código
-      if (activeSessions.has(number)) {
+      // Verificar si ya está en espera
+      if (global.activeSessions.has(number)) {
         await sock.sendMessage(msg.key.remoteJid, {
-          text: `⏳ Ya estás esperando un código de vinculación.\nEspera a que termine o vuelve a intentarlo más tarde.`,
+          text: `⏳ Ya solicitaste un código. Espera que termine el proceso o vuelve a intentarlo en un rato.`,
           quoted: msg
         });
         return;
       }
 
-      activeSessions.add(number);
+      global.activeSessions.add(number);
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -246,72 +246,64 @@ case 'serbot': {
       });
 
       let connected = false;
-      let reconnecting = false;
-      let secondsWaited = 0;
+      let connectionStatus = "connecting";
 
-      socky.ev.on("connection.update", async (c) => {
-        const { qr, connection, lastDisconnect } = c;
-
-        if (qr && !reconnecting) {
-          reconnecting = true;
-
-          const code = await socky.requestPairingCode(rid);
-          await sleep(5000);
-
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: `🔐 Código generado:\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y pega el código.`,
+      // Timeout: 80 segundos
+      const timeoutHandle = setTimeout(async () => {
+        if (!connected) {
+          if (fs.existsSync(file)) fs.rmSync(file, { recursive: true, force: true });
+          await sock.sendMessage(number, {
+            text: "⛔ Tiempo agotado. No se vinculó la cuenta. Intenta nuevamente.",
             quoted: msg
           });
-
-          await sleep(2000);
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: code
-          });
-
-          // Auto reconexión
-          const interval = setInterval(async () => {
-            secondsWaited += 5;
-            if (connected) {
-              clearInterval(interval);
-              activeSessions.delete(number);
-              return;
-            }
-            if (secondsWaited >= 80) {
-              clearInterval(interval);
-              if (fs.existsSync(file)) fs.rmSync(file, { recursive: true, force: true });
-              await sock.sendMessage(msg.key.remoteJid, {
-                text: "⛔ Tiempo agotado. No se vinculó la cuenta. Intenta nuevamente.",
-                quoted: msg
-              });
-              activeSessions.delete(number);
-            }
-          }, 5000);
+          global.activeSessions.delete(number);
         }
+      }, 80000);
+
+      // Escuchar conexión
+      socky.ev.on("connection.update", async (c) => {
+        const { connection, lastDisconnect } = c;
 
         switch (connection) {
           case "close": {
+            connectionStatus = "close";
             let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
-            switch (reason) {
-              case DisconnectReason.restartRequired:
-                await serbot(); // reconectar
-                break;
-              default:
-                await sock.sendMessage(msg.key.remoteJid, {
-                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
-                  quoted: msg
-                });
+            if (reason === DisconnectReason.restartRequired) {
+              await serbot(); // reintenta
+            } else {
+              await sock.sendMessage(number, {
+                text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
+                quoted: msg
+              });
             }
             break;
           }
           case "open":
+            connectionStatus = "open";
             connected = true;
-            await sock.sendMessage(msg.key.remoteJid, {
+            clearTimeout(timeoutHandle);
+            global.activeSessions.delete(number);
+            await sock.sendMessage(number, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
             break;
+
+          case "connecting":
+            connectionStatus = "connecting";
+            break;
         }
       });
+
+      // Pedir el código de emparejamiento (fuera del .on para que no se cuelgue)
+      const code = await socky.requestPairingCode(rid);
+      await sleep(3000);
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: `🔐 Código generado:\n\`\`\`${code}\`\`\`\n\nAbre WhatsApp > Vincular dispositivo y pega el código.`,
+        quoted: msg
+      });
+      await sleep(2000);
+      await sock.sendMessage(msg.key.remoteJid, { text: code });
 
       socky.ev.on("creds.update", saveCreds);
 
@@ -321,6 +313,7 @@ case 'serbot': {
         text: `❌ *Error inesperado:* ${e.message}`,
         quoted: msg
       });
+      global.activeSessions.delete(msg.key?.participant || msg.key.remoteJid);
     }
   }
 
