@@ -506,42 +506,21 @@ async function cargarSubbots() {
       subSock.ev.on("creds.update", saveCreds);
 
       subSock.ev.on("connection.update", (update) => {
-  const { connection, lastDisconnect } = update;
-  if (connection === "open") {
-    console.log(`✅ Subbot ${dir} conectado correctamente.`);
-  } else if (connection === "close") {
-    console.log(`❌ Subbot ${dir} se desconectó.`);
-    // Aquí es donde antes borrabas la carpeta siempre
-
-    // 1) Saca el "reason" con Boom (igual que en tu código principal):
-    const { Boom } = require("@hapi/boom");
-    const reason = new Boom(lastDisconnect?.error)?.output?.statusCode || 0;
-
-    // 2) Verificamos si de verdad es una sesión “invalidada” o “loggedOut”:
-    //    DisconnectReason.invalidSession = 419,
-    //    DisconnectReason.loggedOut = 401,
-    //    etc.
-    //    Tú ajusta según tus necesidades; la idea es que la carpeta se borre
-    //    SOLO si es un logout real, no en cualquier "close".
-    if (reason === 401 /* loggedOut */ || reason === 419 /* invalidSession */) {
-      console.log(`🗑️ Eliminando carpeta de sesión del subbot ${dir} (Razón: ${reason}).`);
-      fs.rm(sessionPath, { recursive: true, force: true }, (err) => {
-        if (err) {
-          console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
-        } else {
-          console.log(`✅ Carpeta de sesión del subbot ${dir} eliminada correctamente.`);
+        const { connection } = update;
+        if (connection === "open") {
+          console.log(`✅ Subbot ${dir} conectado correctamente.`);
+        } else if (connection === "close") {
+          console.log(`❌ Subbot ${dir} se desconectó.`);
+          // Eliminar la carpeta de sesión al desconectarse
+          fs.rm(sessionPath, { recursive: true, force: true }, (err) => {
+            if (err) {
+              console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
+            } else {
+              console.log(`🗑️ Carpeta de sesión del subbot ${dir} eliminada.`);
+            }
+          });
         }
       });
-    } else {
-      // Si la desconexión NO es por loggedOut ni invalidSession,
-      // Baileys normalmente intenta reconectar solo.
-      // Puedes poner un console.log extra o dejarlo así:
-      console.log(`⚠️ Subbot ${dir} desconectado (Razón: ${reason}). Intentando reconexión...`);
-      // Opcional: Podrías, si lo deseas, crear una lógica de reintento manual,
-      // pero por defecto Baileys hace un auto-reconnect.
-    }
-  }
-});
 
       // EVENTO DE MENSAJES DE LOS SUBBOTS
       subSock.ev.on("messages.upsert", async (msg) => {
@@ -573,7 +552,6 @@ async function cargarSubbots() {
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
-
 
 
             sock.ev.on("creds.update", saveCreds);
