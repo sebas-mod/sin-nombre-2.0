@@ -185,12 +185,12 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 case 'serbot': {
   const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
-    DisconnectReason
-  } = require("baileys");
+  default: makeWASocket,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
+  DisconnectReason
+} = require("@whiskeysockets/baileys");
   const { Boom } = require("@hapi/boom");
   const path = require("path");
   const pino = require("pino");
