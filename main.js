@@ -182,6 +182,7 @@ async function handleCommand(sock, msg, command, args, sender) {
     }
 
     switch (lowerCommand) {
+
 case 'serbot': {
   const {
     default: makeWASocket,
@@ -201,45 +202,48 @@ case 'serbot': {
 
   async function serbot() {
     try {
-      // Determinar el número a partir del mensaje
-      const number = msg.key?.participant || msg.key.remoteJid;
-      // Ruta para almacenar la sesión del subbot
-      const sessionPath = path.join(__dirname, "subbots", number);
-      // Crear la carpeta si no existe
-      if (!fs.existsSync(sessionPath)) {
-        fs.mkdirSync(sessionPath, { recursive: true });
-      }
-      const rid = number.split("@")[0];
+      // Para la sesión se usa el número del usuario (quien invoca el comando)
+      // Pero para enviar el mensaje se utiliza el chat de origen (grupo o privado)
+      const user = msg.key?.participant || msg.key.remoteJid;
+      const target = msg.key.remoteJid; 
+      const sessionPath = path.join(__dirname, "subbots", user);
+      const rid = user.split("@")[0];
 
-      // Enviar reacción inicial para indicar que se está procesando
-      await sock.sendMessage(msg.key.remoteJid, {
+      // Envía reacción en el chat de origen (grupo o privado)
+      await sock.sendMessage(target, {
         react: { text: '⌛', key: msg.key }
       });
 
-      // Inicializar el estado de autenticación en múltiples archivos
+      // Asegurarse de que exista la carpeta de sesión
+      if (!fs.existsSync(sessionPath)) {
+        fs.mkdirSync(sessionPath, { recursive: true });
+      }
+
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
-      // Crear la instancia del subbot (socky)
       const socky = makeWASocket({
         version,
         logger,
         auth: {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, logger)
-        }
+        },
+        browser: ["Azura Subbot", "Firefox", "2.0"]
       });
 
       socky.ev.on("connection.update", async (update) => {
         const { qr, connection, lastDisconnect } = update;
 
-        // Si hay QR, solicitar el código de vinculación y enviarlo
         if (qr) {
+          // Se solicita el código de vinculación siempre (modo code)
           const code = await socky.requestPairingCode(rid);
+          const formattedCode = code.match(/.{1,4}/g)?.join("-");
           await sleep(5000);
-          await sock.sendMessage(number, {
-            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+          // Se envía el código al chat de origen (por ejemplo, el grupo)
+          await sock.sendMessage(target, {
+            text: "🔐 Código generado:\n```" + formattedCode + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
             quoted: msg
           });
         }
@@ -249,11 +253,11 @@ case 'serbot': {
             let reason = new Boom(lastDisconnect.error)?.output.statusCode;
             switch (reason) {
               case DisconnectReason.restartRequired:
-                console.log(`🔄 Reiniciando serbot para ${number} debido a restartRequired`);
+                console.log(`🔄 Reiniciando serbot para ${user} debido a restartRequired`);
                 await serbot(); // Intentar reconectar
                 break;
               default:
-                await sock.sendMessage(number, {
+                await sock.sendMessage(target, {
                   text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
                   quoted: msg
                 });
@@ -261,13 +265,13 @@ case 'serbot': {
             break;
           }
           case "open":
-            await sock.sendMessage(number, {
+            await sock.sendMessage(target, {
               text: "✅ *Subbot conectado correctamente.*",
               quoted: msg
             });
             break;
           case "connecting":
-            // Opcional: manejar estado de conexión en proceso
+            // Opcional: manejar el estado "connecting"
             break;
         }
       });
@@ -286,7 +290,6 @@ case 'serbot': {
   await serbot();
   break;
 }
-
         
 case 'tovideo': {
   const fs = require('fs');
