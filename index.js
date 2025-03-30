@@ -488,6 +488,9 @@ async function cargarSubbots() {
     .filter((d) => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
   console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
 
+  // Objeto para almacenar las instancias y su estado de conexión
+  const subbotInstances = {};
+
   for (const dir of subDirs) {
     const sessionPath = path.join(subbotFolder, dir);
     try {
@@ -503,22 +506,23 @@ async function cargarSubbots() {
         browser: ["Azura Subbot", "Firefox", "2.0"],
       });
 
+      // Inicialmente, se marca el subbot como desconectado
+      subbotInstances[dir] = {
+        subSock,
+        sessionPath,
+        isConnected: false,
+      };
+
       subSock.ev.on("creds.update", saveCreds);
 
       subSock.ev.on("connection.update", (update) => {
         const { connection } = update;
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
+          subbotInstances[dir].isConnected = true;
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
-          // Eliminar la carpeta de sesión al desconectarse
-          fs.rm(sessionPath, { recursive: true, force: true }, (err) => {
-            if (err) {
-              console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
-            } else {
-              console.log(`🗑️ Carpeta de sesión del subbot ${dir} eliminada.`);
-            }
-          });
+          subbotInstances[dir].isConnected = false;
         }
       });
 
@@ -548,6 +552,25 @@ async function cargarSubbots() {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
     }
   }
+
+  // Verificar cada 1 minuto si los subbots siguen conectados y, si no, eliminar su carpeta
+  setInterval(() => {
+    for (const dir in subbotInstances) {
+      const instance = subbotInstances[dir];
+      if (!instance.isConnected) {
+        console.log(`🗑️ Subbot ${dir} no está conectado. Eliminando carpeta de sesión...`);
+        fs.rm(instance.sessionPath, { recursive: true, force: true }, (err) => {
+          if (err) {
+            console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
+          } else {
+            console.log(`🗑️ Carpeta de sesión del subbot ${dir} eliminada.`);
+            // Remover la instancia del objeto para dejar de chequearla
+            delete subbotInstances[dir];
+          }
+        });
+      }
+    }
+  }, 60000);
 }
 
 // Ejecutar después de iniciar el bot principal
