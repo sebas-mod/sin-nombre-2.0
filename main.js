@@ -9,7 +9,7 @@ const os = require("os");
 const { execSync } = require("child_process");
 const path = require("path");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio } = require('./libs/fuctions');
-const userRecord = {};
+
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
 global.zrapi = `ex-9bf9dc0318`;
@@ -182,7 +182,6 @@ async function handleCommand(sock, msg, command, args, sender) {
     }
 
     switch (lowerCommand) {
-
 case 'serbot': {
   const {
     default: makeWASocket,
@@ -276,6 +275,7 @@ case 'serbot': {
   await serbot();
   break;
 }
+
         
 case 'tovideo': {
   const fs = require('fs');
