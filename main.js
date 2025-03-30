@@ -196,6 +196,8 @@ case 'serbot': {
   const pino = require("pino");
   const fs = require("fs");
 
+  let sentCodeMessage = false;
+
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -234,7 +236,7 @@ case 'serbot': {
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        if (qr) {
+        if (qr && !sentCodeMessage) {
           const code = await socky.requestPairingCode(rid);
           await sock.sendMessage(msg.key.remoteJid, {
             text: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
@@ -245,6 +247,7 @@ case 'serbot': {
             text: "```" + code + "```",
             quoted: msg
           });
+          sentCodeMessage = true;
         }
 
         switch (connection) {
