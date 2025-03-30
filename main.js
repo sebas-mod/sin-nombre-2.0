@@ -203,20 +203,18 @@ case 'serbot': {
   async function serbot() {
     try {
       const number = msg.key?.participant || msg.key.remoteJid;
-      const file = path.join(__dirname, "subbots", number);
+      const isGroup = number.endsWith("@g.us");
+      const sessionDir = path.join(__dirname, "subbots");
+      const sessionPath = path.join(sessionDir, number);
       const rid = number.split("@")[0];
 
-      if (fs.existsSync(file)) {
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: `⚠️ Ya tienes una sesión activa, usa el comando ${prefix}delbots para eliminar tu sesión actual.`,
-          quoted: msg
-        });
-        return;
-      }
+      if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
 
-      await sock.sendMessage(msg.key.remoteJid, { react: { text: '⌛', key: msg.key } });
+      await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⌛', key: msg.key }
+      });
 
-      const { state, saveCreds } = await useMultiFileAuthState(file);
+      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
@@ -226,55 +224,59 @@ case 'serbot': {
         auth: {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, logger)
-        }
+        },
+        browser: ['Windows', 'Chrome']
       });
 
-      let codigoEnviado = false;
+      let reconnectionAttempts = 0;
+      const maxReconnectionAttempts = 3;
 
       socky.ev.on("connection.update", async (c) => {
         const { qr, connection, lastDisconnect } = c;
 
-        if (qr && !codigoEnviado) {
-          codigoEnviado = true;
+        if (qr) {
           const code = await socky.requestPairingCode(rid);
-
           await sock.sendMessage(msg.key.remoteJid, {
-            text: "🔐 Código generado:\n```" + code + "```\n\nAbre WhatsApp > Vincular dispositivo y pega el código.",
+            text: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
             quoted: msg
           });
-
           await sleep(1000);
-
-          await sock.sendMessage(msg.key.remoteJid, { text: code, quoted: msg });
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: "```" + code + "```",
+            quoted: msg
+          });
         }
 
         switch (connection) {
-          case "close": {
-            let reason = new Boom(lastDisconnect.error)?.output.statusCode;
-            switch (reason) {
-              case DisconnectReason.restartRequired:
-                await serbot();
-                break;
-              default:
-                await sock.sendMessage(msg.key.remoteJid, {
-                  text: "❌ Se cerró la conexión: " + DisconnectReason[reason] + ` (${reason})`,
-                  quoted: msg
-                });
-            }
-            break;
-          }
           case "open":
             await sock.sendMessage(msg.key.remoteJid, {
-              text: "✅ *Subbot conectado correctamente.*",
+              text: "✅ *Subbot conectado correctamente*",
               quoted: msg
             });
             break;
-          case "connecting":
+
+          case "close": {
+            const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+            console.log(`Subbot desconectado: ${number} (${DisconnectReason[reason] || reason})`);
+
+            if (reason === DisconnectReason.restartRequired && reconnectionAttempts < maxReconnectionAttempts) {
+              reconnectionAttempts++;
+              console.log(`🔁 Reintentando conexión para ${number} (${reconnectionAttempts})`);
+              await sleep(3000);
+              await serbot();
+            } else {
+              if (fs.existsSync(sessionPath)) {
+                fs.rmSync(sessionPath, { recursive: true, force: true });
+                console.log(`🗑️ Sesión eliminada de ${number}`);
+              }
+            }
             break;
+          }
         }
       });
 
       socky.ev.on("creds.update", saveCreds);
+
     } catch (e) {
       console.error("❌ Error en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
@@ -288,7 +290,6 @@ case 'serbot': {
   break;
 }
 
-        
 case 'tovideo': {
   const fs = require('fs');
   const path = require('path');
@@ -15290,3 +15291,12 @@ async function handleSubCommand(sock, msg, command, args) {
     });
   }
 }
+
+//----------------------------------     
+let file = require.resolve(__filename)
+fs.watchFile(file, () => {
+fs.unwatchFile(file)
+console.log(chalk.redBright(`Update ${__filename}`))
+delete require.cache[file]
+require(file)
+})
