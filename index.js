@@ -442,14 +442,13 @@ async function cargarSubbots() {
   const path = require("path");
   const fs = require("fs");
   const pino = require("pino");
-  const { 
+  const {
     default: makeWASocket,
     useMultiFileAuthState,
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
+    makeCacheableSignalKeyStore,
   } = require("@whiskeysockets/baileys");
 
-  // Función para cargar plugins exclusivos para subbots
   function loadSubPlugins() {
     const plugins = [];
     const pluginDir = path.join(__dirname, "plugins2");
@@ -488,7 +487,6 @@ async function cargarSubbots() {
     .filter((d) => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
   console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
 
-  // Objeto para almacenar las instancias y su estado de conexión
   const subbotInstances = {};
 
   for (const dir of subDirs) {
@@ -506,11 +504,11 @@ async function cargarSubbots() {
         browser: ["Azura Subbot", "Firefox", "2.0"],
       });
 
-      // Inicialmente, se marca el subbot como desconectado
       subbotInstances[dir] = {
         subSock,
         sessionPath,
         isConnected: false,
+        deleteTimer: null, // Para almacenar el temporizador de eliminación
       };
 
       subSock.ev.on("creds.update", saveCreds);
@@ -520,13 +518,32 @@ async function cargarSubbots() {
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
           subbotInstances[dir].isConnected = true;
+
+          // Cancelar temporizador si se había iniciado
+          if (subbotInstances[dir].deleteTimer) {
+            clearTimeout(subbotInstances[dir].deleteTimer);
+            subbotInstances[dir].deleteTimer = null;
+            console.log(`🔄 Temporizador de eliminación cancelado para ${dir}`);
+          }
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
           subbotInstances[dir].isConnected = false;
+
+          // Iniciar temporizador de 5 minutos para borrar carpeta si no se reconecta
+          subbotInstances[dir].deleteTimer = setTimeout(() => {
+            console.log(`🕔 Subbot ${dir} no se reconectó. Eliminando carpeta...`);
+            fs.rm(subbotInstances[dir].sessionPath, { recursive: true, force: true }, (err) => {
+              if (err) {
+                console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
+              } else {
+                console.log(`🗑️ Carpeta de sesión del subbot ${dir} eliminada.`);
+                delete subbotInstances[dir];
+              }
+            });
+          }, 5 * 60 * 1000); // 5 minutos
         }
       });
 
-      // EVENTO DE MENSAJES DE LOS SUBBOTS
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
           const m = msg.messages[0];
@@ -552,25 +569,6 @@ async function cargarSubbots() {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
     }
   }
-
-  // Verificar cada 1 minuto si los subbots siguen conectados y, si no, eliminar su carpeta
-  setInterval(() => {
-    for (const dir in subbotInstances) {
-      const instance = subbotInstances[dir];
-      if (!instance.isConnected) {
-        console.log(`🗑️ Subbot ${dir} no está conectado. Eliminando carpeta de sesión...`);
-        fs.rm(instance.sessionPath, { recursive: true, force: true }, (err) => {
-          if (err) {
-            console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
-          } else {
-            console.log(`🗑️ Carpeta de sesión del subbot ${dir} eliminada.`);
-            // Remover la instancia del objeto para dejar de chequearla
-            delete subbotInstances[dir];
-          }
-        });
-      }
-    }
-  }, 60000);
 }
 
 // Ejecutar después de iniciar el bot principal
