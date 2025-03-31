@@ -292,7 +292,15 @@ case 'serbot': {
           case "close": {
             const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
             console.log(`Subbot desconectado: ${number} (${DisconnectReason[reason] || reason})`);
-            console.log(`⚠️ Sesión de ${number} cerrada con código ${reason}, pero no se eliminará la carpeta.`);
+
+            if (reason === DisconnectReason.restartRequired && reconnectionAttempts < maxReconnectionAttempts) {
+              reconnectionAttempts++;
+              console.log(`🔁 Reintentando conexión para ${number} (${reconnectionAttempts})`);
+              await sleep(3000);
+              await serbot();
+            } else {
+              console.log(`⚠️ Sesión de ${number} cerrada con código ${reason}, pero no se eliminará la carpeta.`);
+            }
             break;
           }
         }
