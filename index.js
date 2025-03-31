@@ -442,7 +442,7 @@ async function cargarSubbots() {
   const path = require("path");
   const fs = require("fs");
   const pino = require("pino");
-  const {
+  const { 
     default: makeWASocket,
     useMultiFileAuthState,
     fetchLatestBaileysVersion,
@@ -488,6 +488,7 @@ async function cargarSubbots() {
     .filter((d) => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
   console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
 
+  // Objeto para almacenar las instancias y su estado de conexión
   const subbotInstances = {};
 
   for (const dir of subDirs) {
@@ -505,6 +506,7 @@ async function cargarSubbots() {
         browser: ["Azura Subbot", "Firefox", "2.0"],
       });
 
+      // Inicialmente, se marca el subbot como desconectado
       subbotInstances[dir] = {
         subSock,
         sessionPath,
@@ -524,6 +526,7 @@ async function cargarSubbots() {
         }
       });
 
+      // EVENTO DE MENSAJES DE LOS SUBBOTS
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
           const m = msg.messages[0];
@@ -549,6 +552,25 @@ async function cargarSubbots() {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
     }
   }
+
+  // Verificar cada 1 minuto si los subbots siguen conectados y, si no, eliminar su carpeta
+  setInterval(() => {
+    for (const dir in subbotInstances) {
+      const instance = subbotInstances[dir];
+      if (!instance.isConnected) {
+        console.log(`🗑️ Subbot ${dir} no está conectado. Eliminando carpeta de sesión...`);
+        fs.rm(instance.sessionPath, { recursive: true, force: true }, (err) => {
+          if (err) {
+            console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
+          } else {
+            console.log(`🗑️ Carpeta de sesión del subbot ${dir} eliminada.`);
+            // Remover la instancia del objeto para dejar de chequearla
+            delete subbotInstances[dir];
+          }
+        });
+      }
+    }
+  }, 60000);
 }
 
 // Ejecutar después de iniciar el bot principal
