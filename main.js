@@ -197,8 +197,7 @@ case 'serbot': {
   const fs = require("fs");
 
   // 🔁 Importamos la función para recargar subbots
-  const { cargarSubbots } = require("./subbots"); // Ajusta la ruta si es distinta
-
+  
   let sentCodeMessage = false;
 
   function sleep(ms) {
