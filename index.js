@@ -446,9 +446,10 @@ async function cargarSubbots() {
     default: makeWASocket,
     useMultiFileAuthState,
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
+    makeCacheableSignalKeyStore
   } = require("@whiskeysockets/baileys");
 
+  // Función para cargar plugins exclusivos para subbots
   function loadSubPlugins() {
     const plugins = [];
     const pluginDir = path.join(__dirname, "plugins2");
@@ -508,7 +509,6 @@ async function cargarSubbots() {
         subSock,
         sessionPath,
         isConnected: false,
-        deleteTimer: null, // Para almacenar el temporizador de eliminación
       };
 
       subSock.ev.on("creds.update", saveCreds);
@@ -518,29 +518,9 @@ async function cargarSubbots() {
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
           subbotInstances[dir].isConnected = true;
-
-          // Cancelar temporizador si se había iniciado
-          if (subbotInstances[dir].deleteTimer) {
-            clearTimeout(subbotInstances[dir].deleteTimer);
-            subbotInstances[dir].deleteTimer = null;
-            console.log(`🔄 Temporizador de eliminación cancelado para ${dir}`);
-          }
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
           subbotInstances[dir].isConnected = false;
-
-          // Iniciar temporizador de 5 minutos para borrar carpeta si no se reconecta
-          subbotInstances[dir].deleteTimer = setTimeout(() => {
-            console.log(`🕔 Subbot ${dir} no se reconectó. Eliminando carpeta...`);
-            fs.rm(subbotInstances[dir].sessionPath, { recursive: true, force: true }, (err) => {
-              if (err) {
-                console.error(`❌ Error al eliminar la carpeta de sesión ${dir}:`, err);
-              } else {
-                console.log(`🗑️ Carpeta de sesión del subbot ${dir} eliminada.`);
-                delete subbotInstances[dir];
-              }
-            });
-          }, 5 * 60 * 1000); // 5 minutos
         }
       });
 
