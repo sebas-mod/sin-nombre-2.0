@@ -197,7 +197,7 @@ case 'serbot': {
   const fs = require("fs");
 
   // ✅ Importamos la función desde index.js en la raíz
-  const { cargarSubbots } = require("../../index");
+  const { cargarSubbots } = require("./index");
 
   let sentCodeMessage = false;
 
