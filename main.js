@@ -293,16 +293,8 @@ case 'serbot': {
               console.log(`🔁 Reintentando conexión para ${number} (${reconnectionAttempts})`);
               await sleep(3000);
               await serbot();
-            } else if (
-              reason === DisconnectReason.loggedOut ||
-              reason === DisconnectReason.badSession
-            ) {
-              if (fs.existsSync(sessionPath)) {
-                fs.rmSync(sessionPath, { recursive: true, force: true });
-                console.log(`🗑️ Sesión eliminada de ${number}`);
-              }
             } else {
-              console.log(`⚠️ Sesión de ${number} no fue eliminada porque fue un cierre no crítico.`);
+              console.log(`⚠️ Sesión de ${number} cerrada con código ${reason}, pero no se eliminará la carpeta.`);
             }
             break;
           }
