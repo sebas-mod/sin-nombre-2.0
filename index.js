@@ -7,6 +7,7 @@
     const pino = require("pino");
     const { isOwner, getPrefix, allowedPrefixes } = require("./config");
     const { handleCommand } = require("./main"); 
+    const { cargarSubbots } = require("./subbots");
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 //lista
