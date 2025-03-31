@@ -253,20 +253,22 @@ case 'serbot': {
         switch (connection) {
   case "open":
     await sock.sendMessage(msg.key.remoteJid, {
-      text: `╭────✦ *AZURA ULTRA 2.0* ✦────╮
+      text: `
+╭───〔 *🤖 SUBBOT CONECTADO* 〕───╮
 │
-│  👋 *Bienvenido al sistema Subbot*  
-│  
-│  ✅ *Subbot conectado correctamente*
-│  
-│  🔗 Ya te conectaste exitosamente  
-│  
-│  ⚔️ Eres parte del mejor bot de juegos RPG  
-│  
-│  📜 Usa *${global.prefijo}help* o *${global.prefijo}menu*  
-│     para ver la lista de comandos disponibles.
+│ ✅ *Bienvenido a Azura Ultra 2.0*
 │
-╰───✦ *By Sky Ultra Plus* ✦───╯`,
+│ Ya eres parte del mejor sistema de juegos RPG
+│
+│ 🛠️ Usa los siguientes comandos para comenzar:
+│
+│ ${global.prefix}help
+│ ${global.prefix}menu
+│
+│ ⚔️ Disfruta de las funciones del subbot
+│ y conquista el mundo digital
+│
+╰────✦ *Sky Ultra Plus* ✦────╯`,
       quoted: msg
     });
     break;
