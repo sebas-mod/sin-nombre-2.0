@@ -214,12 +214,6 @@ case 'serbot': {
       const rid = number.split("@")[0];
 
       if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
-
-
-      if (fs.existsSync(sessionPath)) {
-        fs.rmSync(sessionPath, { recursive: true, force: true });
-        console.log(`🗑️ Carpeta de sesión previa eliminada para ${number}`);
-      }
         
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
@@ -261,8 +255,8 @@ case 'serbot': {
 
         switch (connection) {
           case "open":
-            await sock.sendMessage(msg.key.remoteJid, {
-              text: `
+  await sock.sendMessage(msg.key.remoteJid, {
+    text: `
 ╭───〔 *🤖 SUBBOT CONECTADO* 〕───╮
 │
 │ ✅ *Bienvenido a Azura Ultra 2.0*
@@ -277,9 +271,14 @@ case 'serbot': {
 │ ⚔️ Disfruta de las funciones del subbot
 │ y conquista el mundo digital
 │
+│ ℹ️ Si en algún momento te desconectas del subbot,
+│ puedes usar el comando:
+│ ${global.prefix}delbots
+│ para eliminar tu sesión y usar *${global.prefix}serbot* de nuevo.
+│
 ╰────✦ *Sky Ultra Plus* ✦────╯`,
-              quoted: msg
-            });
+    quoted: msg
+  });
 
             // 🔁 Reacción de recarga
             await sock.sendMessage(msg.key.remoteJid, {
