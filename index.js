@@ -598,3 +598,5 @@ setTimeout(cargarSubbots, 3000);
 
     startBot();
 })();
+
+module.exports = { cargarSubbots };
