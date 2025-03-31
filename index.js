@@ -575,7 +575,7 @@ async function cargarSubbots() {
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
-
+module.exports = { cargarSubbots };
 
 
             sock.ev.on("creds.update", saveCreds);
@@ -599,4 +599,4 @@ setTimeout(cargarSubbots, 3000);
     startBot();
 })();
 
-module.exports = { cargarSubbots };
+
