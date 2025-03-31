@@ -215,6 +215,12 @@ case 'serbot': {
 
       if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
 
+      // ✅ Si ya existe la carpeta, la eliminamos antes de iniciar sesión nueva
+      if (fs.existsSync(sessionPath)) {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+        console.log(`🗑️ Carpeta de sesión previa eliminada para ${number}`);
+      }
+
       await sock.sendMessage(msg.key.remoteJid, {
         react: { text: '⌛', key: msg.key }
       });
@@ -300,6 +306,7 @@ case 'serbot': {
           }
         }
       });
+
       socky.ev.on("creds.update", saveCreds);
 
     } catch (e) {
