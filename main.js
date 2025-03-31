@@ -195,9 +195,8 @@ case 'serbot': {
   const path = require("path");
   const pino = require("pino");
   const fs = require("fs");
-
+  const { cargarSubbots } = require("./subbots");
   // 🔁 Importamos la función para recargar subbots
-  
   let sentCodeMessage = false;
 
   function sleep(ms) {
