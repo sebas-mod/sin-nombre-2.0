@@ -293,17 +293,21 @@ case 'serbot': {
               console.log(`🔁 Reintentando conexión para ${number} (${reconnectionAttempts})`);
               await sleep(3000);
               await serbot();
-            } else {
+            } else if (
+              reason === DisconnectReason.loggedOut ||
+              reason === DisconnectReason.badSession
+            ) {
               if (fs.existsSync(sessionPath)) {
                 fs.rmSync(sessionPath, { recursive: true, force: true });
                 console.log(`🗑️ Sesión eliminada de ${number}`);
               }
+            } else {
+              console.log(`⚠️ Sesión de ${number} no fue eliminada porque fue un cierre no crítico.`);
             }
             break;
           }
         }
       });
-
       socky.ev.on("creds.update", saveCreds);
 
     } catch (e) {
