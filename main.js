@@ -196,6 +196,9 @@ case 'serbot': {
   const pino = require("pino");
   const fs = require("fs");
 
+  // 🔁 Importamos la función para recargar subbots
+  const { cargarSubbots } = require("../../subbots"); // Ajusta la ruta si es distinta
+
   let sentCodeMessage = false;
 
   function sleep(ms) {
@@ -251,9 +254,9 @@ case 'serbot': {
         }
 
         switch (connection) {
-  case "open":
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: `
+          case "open":
+            await sock.sendMessage(msg.key.remoteJid, {
+              text: `
 ╭───〔 *🤖 SUBBOT CONECTADO* 〕───╮
 │
 │ ✅ *Bienvenido a Azura Ultra 2.0*
@@ -269,9 +272,17 @@ case 'serbot': {
 │ y conquista el mundo digital
 │
 ╰────✦ *Sky Ultra Plus* ✦────╯`,
-      quoted: msg
-    });
-    break;
+              quoted: msg
+            });
+
+            // 🔁 Reacción de recarga
+            await sock.sendMessage(msg.key.remoteJid, {
+              react: { text: "🔁", key: msg.key }
+            });
+
+            // 🚀 Recargar todos los subbots (incluye al nuevo)
+            await cargarSubbots();
+            break;
 
           case "close": {
             const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
