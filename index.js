@@ -533,23 +533,32 @@ subSock.ev.on("messages.upsert", async (msg) => {
     const isGroup = from.endsWith("@g.us");
     const isFromSelf = m.key.fromMe;
     const senderJid = m.key.participant || from;
-    const senderNum = senderJid.split("@")[0]; // ¡CORREGIDO!
+    const senderNum = senderJid.split("@")[0]; // Número limpio
 
-    // Obtener el ID limpio del subbot
-    const rawSubbotID = subSock.user?.id || "";
-    const cleanSubbotID = rawSubbotID.split(":")[0] + "@s.whatsapp.net";
+    // Obtener ID limpio del subbot
+    const rawID = subSock.user?.id || "";
+    const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
-    // Cargar lista personalizada del subbot
+    // Cargar lista
     const listaPath = path.join(__dirname, "../listasubots.json");
     let data = {};
     if (fs.existsSync(listaPath)) {
       data = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
     }
 
-    const listaPermitidos = Array.isArray(data[cleanSubbotID]) ? data[cleanSubbotID] : [];
+    const listaPermitidos = Array.isArray(data[subbotID]) ? data[subbotID] : [];
 
-    // Si es privado, solo responder si el mensaje es del subbot o el usuario está en su lista
+    // DEBUG: Mostrar lo que está pasando
+    console.log("----------- SUBBOT PRIVADO DEBUG -----------");
+    console.log("Subbot ID:", subbotID);
+    console.log("Remitente:", senderNum);
+    console.log("Lista actual:", listaPermitidos);
+    console.log("¿Permitido?:", listaPermitidos.includes(senderNum));
+    console.log("--------------------------------------------");
+
+    // En privado: responder si es el dueño o alguien en la lista
     if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) {
+      console.log("⛔ Mensaje privado ignorado: no está en la lista.");
       return;
     }
 
@@ -568,7 +577,9 @@ subSock.ev.on("messages.upsert", async (msg) => {
     const command = body.split(" ")[0].toLowerCase();
     const args = body.split(" ").slice(1);
 
+    console.log("✅ Ejecutando comando:", command);
     await handleSubCommand(subSock, m, command, args);
+
   } catch (err) {
     console.error("❌ Error procesando mensaje del subbot:", err);
   }
