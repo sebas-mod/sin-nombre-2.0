@@ -188,7 +188,7 @@ case 'cargabots': {
     text: '❌ Este comando es solo para el *dueño del bot*.'
   }, { quoted: msg });
 
-  // ✅ Reacción inicial
+  // Reacción inicial
   await sock.sendMessage(msg.chat, {
     react: { text: '⚙️', key: msg.key }
   });
@@ -203,8 +203,7 @@ case 'cargabots': {
     makeCacheableSignalKeyStore
   } = require("@whiskeysockets/baileys");
 
-  // ✅ Importamos la función para recargar los subbots
-  const { cargarSubbots } = require("./index"); // Asegúrate que la ruta sea correcta
+  const { cargarSubbots } = require("./index"); // Asegúrate de que esta ruta esté correcta
 
   const subbotFolder = "./subbots";
   if (!fs.existsSync(subbotFolder)) {
@@ -225,6 +224,8 @@ case 'cargabots': {
 
   for (const dir of subDirs) {
     const sessionPath = path.join(subbotFolder, dir);
+    let conectado = false;
+
     try {
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       const { version } = await fetchLatestBaileysVersion();
@@ -241,26 +242,28 @@ case 'cargabots': {
       });
 
       await new Promise((resolve, reject) => {
-        let timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 8000);
+        let timeout = setTimeout(() => reject(new Error("timeout")), 8000);
 
         socky.ev.once("connection.update", async ({ connection }) => {
           clearTimeout(timeout);
           if (connection === "open") {
-            reconectados.push(dir);
+            conectado = true;
             socky.ev.on("creds.update", saveCreds);
             resolve();
           } else {
-            reject(new Error("No se pudo reconectar"));
+            reject(new Error("fallo"));
           }
         });
       });
+
+      if (conectado) reconectados.push(dir);
     } catch (err) {
       eliminados.push(dir);
       fs.rmSync(sessionPath, { recursive: true, force: true });
     }
   }
 
-  // ✅ Recargamos el sistema para que los reconectados funcionen
+  // 🔁 Recargar los subbots que quedaron vivos
   await cargarSubbots();
 
   const mensaje = `
