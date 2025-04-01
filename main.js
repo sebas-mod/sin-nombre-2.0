@@ -16,7 +16,17 @@ global.zrapi = `ex-9bf9dc0318`;
 global.generatingCode = false;
 if (!fs.existsSync(stickersDir)) fs.mkdirSync(stickersDir, { recursive: true });
 if (!fs.existsSync(stickersFile)) fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
+//para los subot
+const rutaLista = path.join(__dirname, "listasubots.json");
 
+// Verificar y crear el archivo si no existe
+if (!fs.existsSync(rutaLista)) {
+  fs.writeFileSync(rutaLista, JSON.stringify([], null, 2));
+  console.log("✅ Archivo listasubots.json creado.");
+} else {
+  console.log("📂 Archivo listasubots.json ya existe.");
+}
+//para los subot
 const rpgFile = "./rpg.json";
 if (!fs.existsSync(rpgFile)) {
     const rpgDataInicial = { usuarios: {}, tiendaMascotas: [], tiendaPersonajes: [], mercadoPersonajes: [] };
