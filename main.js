@@ -27,6 +27,18 @@ if (!fs.existsSync(rutaLista)) {
   console.log("📂 Archivo listasubots.json ya existe.");
 }
 //para los subot
+//grupo subot
+const grupoPath = path.resolve("grupo.json");
+
+// Verifica si el archivo existe, si no lo crea vacío con estructura básica
+if (!fs.existsSync(grupoPath)) {
+  fs.writeFileSync(grupoPath, JSON.stringify({}, null, 2));
+  console.log("✅ grupo.json creado correctamente.");
+} else {
+  console.log("✅ grupo.json ya existe.");
+}
+
+//grupo subot
 const rpgFile = "./rpg.json";
 if (!fs.existsSync(rpgFile)) {
     const rpgDataInicial = { usuarios: {}, tiendaMascotas: [], tiendaPersonajes: [], mercadoPersonajes: [] };
