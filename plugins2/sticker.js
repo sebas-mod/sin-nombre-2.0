@@ -1,37 +1,68 @@
-const handler = async (m, { conn, usedPrefix, command }) => {
-  try {
-    const quoted = m.quoted ? m.quoted : m;
-    const mime = (quoted.msg || quoted).mimetype || '';
-    
-    if (!/image|video/.test(mime)) throw `*[❗] Responda a una imagen o video corto (menos de 10 segundos) con el comando ${usedPrefix + command}*`;
-    if (/video/.test(mime) if ((quoted.msg || quoted).seconds > 10) throw '[❗] El video no puede superar los 10 segundos';
+const axios = require('axios');
+const { writeExifImg, writeExifVid } = require('../libs/functions');
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
-    await conn.sendMessage(m.chat, { react: { text: '⏳', key: m.key } });
+const handler = async (msg, { conn, usedPrefix, command }) => {
+  try {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     
-    const media = await quoted.download();
-    const sticker = await (mime.split('/')[0] === 'image' ? 
-      conn.sendImageAsSticker(m.chat, media, m, { 
-        packname: 'Azura Ultra 2.0 SubBot', 
-        author: 'Russell xz' 
-      }) : 
-      conn.sendVideoAsSticker(m.chat, media, m, { 
-        packname: 'Azura Ultra 2.0 SubBot', 
-        author: 'Russell xz' 
-      }));
+    if (!quoted) {
+      await conn.sendMessage(msg.key.remoteJid, {
+        text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix + command}* respondiendo a una imagen/video`
+      }, { quoted: msg });
+      return;
+    }
+
+    const mediaType = quoted.imageMessage ? 'image' : quoted.videoMessage ? 'video' : null;
+    if (!mediaType) throw '⚠️ Solo puedes convertir imágenes o videos en stickers';
+
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: '⏳', key: msg.key }
+    });
+
+    const mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
+    let buffer = Buffer.alloc(0);
     
-    if (!sticker) throw '*[❗] Error al crear el sticker*';
-    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+    for await (const chunk of mediaStream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+
+    if (buffer.length === 0) throw '❌ Error al descargar el archivo';
+
+    const metadata = {
+      packname: '✦ Azura Ultra 2.0 SubBot ✦',
+      author: '𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻',
+      categories: ['Azura', 'Sticker', 'SubBot']
+    };
+
+    let stickerBuffer;
+    if (mediaType === 'image') {
+      stickerBuffer = await writeExifImg(buffer, metadata);
+    } else {
+      if (quoted.videoMessage.seconds > 10) throw '⚠️ El video no puede superar los 10 segundos';
+      stickerBuffer = await writeExifVid(buffer, metadata);
+    }
+
+    await conn.sendMessage(msg.key.remoteJid, {
+      sticker: { url: stickerBuffer }
+    }, { quoted: msg });
+
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: '✅', key: msg.key }
+    });
 
   } catch (error) {
     console.error(error);
-    await conn.sendMessage(m.chat, { 
-      text: `*[❗] Error:* ${error.message || 'Ocurrió un error al procesar el sticker'}` 
-    }, { quoted: m });
-    await conn.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+    await conn.sendMessage(msg.key.remoteJid, {
+      text: `❌ *Error:* ${typeof error === 'string' ? error : 'Ocurrió un error al crear el sticker'}`
+    }, { quoted: msg });
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: '❌', key: msg.key }
+    });
   }
 };
 
-handler.help = ['s'];
-handler.tags = ['sticker'];
 handler.command = ['s', 'sticker', 'stick'];
-export default handler;
+handler.help = ['s <responder a imagen/video>'];
+handler.tags = ['sticker'];
+module.exports = handler;
