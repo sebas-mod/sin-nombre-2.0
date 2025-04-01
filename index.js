@@ -563,7 +563,7 @@ subSock.ev.on("messages.upsert", async (msg) => {
     }
 
     // Validar mensajes en grupo
-    if (isGroup && !gruposPermitidos.includes(from)) {
+    if (isGroup && !isFromSelf && !gruposPermitidos.includes(from)) {
       return;
     }
 
