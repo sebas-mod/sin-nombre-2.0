@@ -50,26 +50,13 @@ const handler = async (msg, { conn, usedPrefix }) => {
 │ • pong - Medir latencia del bot
 │
 ╰───『 © Azura Ultra Subbot 』───╯`;
- 
-  await conn.sendMessage(msg.key.remoteJid, {
-    text: menu,
-    mentions: [userId],
-    contextInfo: {
-      externalAdReply: {
-        title: "Azura Ultra Subbot",
-        body: "Menú actualizado con todos los comandos disponibles.",
-        thumbnailUrl: "https://cdn.russellxz.click/73a12c4f.jpeg",
-        sourceUrl: "https://github.com/russellxz",
-        mediaType: 1,
-        renderLargerThumbnail: true
-      }
-    }
-  }, { quoted: msg });
+conn.sendMessage(msg.from, { image: { url: `https://cdn.russellxz.click/73a12c4f.jpeg`}, caption: menu }, { quoted: msg })
 
   await conn.sendMessage(msg.key.remoteJid, {
     react: { text: "✅", key: msg.key }
   });
 };
+
 
 handler.command = ['menu', 'help', 'ayuda', 'comandos'];
 module.exports = handler;
