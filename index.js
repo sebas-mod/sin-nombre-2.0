@@ -525,26 +525,37 @@ async function cargarSubbots() {
       });
 
       subSock.ev.on("messages.upsert", async (msg) => {
-        try {
-          const m = msg.messages[0];
-          if (!m || !m.message) return;
-          const messageText =
-            m.message?.conversation ||
-            m.message?.extendedTextMessage?.text ||
-            m.message?.imageMessage?.caption ||
-            m.message?.videoMessage?.caption ||
-            "";
-          const subbotPrefixes = [".", "#"];
-          const usedPrefix = subbotPrefixes.find((p) => messageText.startsWith(p));
-          if (!usedPrefix) return;
-          const body = messageText.slice(usedPrefix.length).trim();
-          const command = body.split(" ")[0].toLowerCase();
-          const args = body.split(" ").slice(1);
-          await handleSubCommand(subSock, m, command, args);
-        } catch (err) {
-          console.error("❌ Error procesando mensaje del subbot:", err);
-        }
-      });
+  try {
+    const m = msg.messages[0];
+    if (!m || !m.message) return;
+
+    const from = m.key.remoteJid;
+    const isGroup = from.endsWith("@g.us");
+    const isFromSelf = m.key.fromMe;
+
+    // Solo responder si es grupo o si se está respondiendo a sí mismo
+    if (!isGroup && !isFromSelf) return;
+
+    const messageText =
+      m.message?.conversation ||
+      m.message?.extendedTextMessage?.text ||
+      m.message?.imageMessage?.caption ||
+      m.message?.videoMessage?.caption ||
+      "";
+      
+    const subbotPrefixes = [".", "#"];
+    const usedPrefix = subbotPrefixes.find((p) => messageText.startsWith(p));
+    if (!usedPrefix) return;
+
+    const body = messageText.slice(usedPrefix.length).trim();
+    const command = body.split(" ")[0].toLowerCase();
+    const args = body.split(" ").slice(1);
+
+    await handleSubCommand(subSock, m, command, args);
+  } catch (err) {
+    console.error("❌ Error procesando mensaje del subbot:", err);
+  }
+});
     } catch (err) {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
     }
