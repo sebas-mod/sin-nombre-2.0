@@ -7,7 +7,19 @@ const { pipeline } = require('stream');
 const { promisify } = require('util');
 const streamPipeline = promisify(pipeline);
 
-const handler = async (msg, { conn, text, usedPrefix }) => {
+const handler = async (msg, { conn, text }) => {
+  const rawID = conn.user?.id || "";
+  const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
+
+  // Cargar prefijo personalizado
+  const prefixPath = path.resolve("prefixes.json");
+  let prefixes = {};
+  if (fs.existsSync(prefixPath)) {
+    prefixes = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
+  }
+
+  const usedPrefix = prefixes[subbotID] || "."; // Por defecto .
+
   if (!text) {
     return await conn.sendMessage(msg.key.remoteJid, {
       text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix}play* bad bunny diles`
