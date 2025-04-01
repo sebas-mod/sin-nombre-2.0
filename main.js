@@ -184,13 +184,13 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
 
 case 'cargabots': {
-  if (!isOwner) return await sock.sendMessage(m.chat, {
+  if (!isOwner) return await sock.sendMessage(msg.chat, {
     text: '❌ Este comando es solo para el *dueño del bot*.'
-  }, { quoted: m });
+  }, { quoted: msg });
 
   // ✅ Reacción inicial
-  await sock.sendMessage(m.chat, {
-    react: { text: '⚙️', key: m.key }
+  await sock.sendMessage(msg.chat, {
+    react: { text: '⚙️', key: msg.key }
   });
 
   const fs = require("fs");
@@ -205,16 +205,16 @@ case 'cargabots': {
 
   const subbotFolder = "./subbots";
   if (!fs.existsSync(subbotFolder)) {
-    return await sock.sendMessage(m.chat, {
+    return await sock.sendMessage(msg.chat, {
       text: "⚠️ No hay carpeta de subbots."
-    }, { quoted: m });
+    }, { quoted: msg });
   }
 
   const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
   if (subDirs.length === 0) {
-    return await sock.sendMessage(m.chat, {
+    return await sock.sendMessage(msg.chat, {
       text: "⚠️ No hay subbots activos para recargar."
-    }, { quoted: m });
+    }, { quoted: msg });
   }
 
   const reconectados = [];
@@ -267,9 +267,9 @@ ${eliminados.length ? eliminados.map(s => `- ${s}`).join("\n") : "Ninguno"}
 💡 Usa *${global.prefix}serbot* para volver a conectar uno nuevo.
 `.trim();
 
-  await sock.sendMessage(m.chat, {
+  await sock.sendMessage(msg.chat, {
     text: mensaje
-  }, { quoted: m });
+  }, { quoted: msg });
 
   break;
 }
