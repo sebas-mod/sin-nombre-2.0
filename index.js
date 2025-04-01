@@ -542,9 +542,11 @@ subSock.ev.on("messages.upsert", async (msg) => {
     // Cargar listas
     const listaPath = path.join(__dirname, "listasubots.json");
     const grupoPath = path.join(__dirname, "grupo.json");
+    const prefixPath = path.join(__dirname, "prefixes.json");
 
     let dataPriv = {};
     let dataGrupos = {};
+    let dataPrefijos = {};
 
     if (fs.existsSync(listaPath)) {
       dataPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
@@ -552,6 +554,10 @@ subSock.ev.on("messages.upsert", async (msg) => {
 
     if (fs.existsSync(grupoPath)) {
       dataGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
+    }
+
+    if (fs.existsSync(prefixPath)) {
+      dataPrefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
     }
 
     const listaPermitidos = Array.isArray(dataPriv[subbotID]) ? dataPriv[subbotID] : [];
@@ -574,8 +580,11 @@ subSock.ev.on("messages.upsert", async (msg) => {
       m.message?.videoMessage?.caption ||
       "";
 
-    const subbotPrefixes = [".", "#"];
-    const usedPrefix = subbotPrefixes.find((p) => messageText.startsWith(p));
+    // Obtener prefijo del subbot
+    const customPrefix = dataPrefijos[subbotID];
+    const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
+
+    const usedPrefix = allowedPrefixes.find((p) => messageText.startsWith(p));
     if (!usedPrefix) return;
 
     const body = messageText.slice(usedPrefix.length).trim();
