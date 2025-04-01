@@ -184,37 +184,38 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
 
 case 'cargabots': {
-  if (!isOwner) return await conn.sendMessage(m.chat, {
+  if (!isOwner) return await sock.sendMessage(m.chat, {
     text: '❌ Este comando es solo para el *dueño del bot*.'
   }, { quoted: m });
+
+  // ✅ Reacción inicial
+  await sock.sendMessage(m.chat, {
+    react: { text: '⚙️', key: m.key }
+  });
 
   const fs = require("fs");
   const path = require("path");
   const pino = require("pino");
   const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore
-} = require("@whiskeysockets/baileys");
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
+  } = require("@whiskeysockets/baileys");
 
   const subbotFolder = "./subbots";
   if (!fs.existsSync(subbotFolder)) {
-    return await conn.sendMessage(m.chat, {
+    return await sock.sendMessage(m.chat, {
       text: "⚠️ No hay carpeta de subbots."
     }, { quoted: m });
   }
 
   const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
   if (subDirs.length === 0) {
-    return await conn.sendMessage(m.chat, {
+    return await sock.sendMessage(m.chat, {
       text: "⚠️ No hay subbots activos para recargar."
     }, { quoted: m });
   }
-
-  await conn.sendMessage(m.chat, {
-    react: { text: '🔁', key: m.key }
-  });
 
   const reconectados = [];
   const eliminados = [];
@@ -226,7 +227,7 @@ case 'cargabots': {
       const { version } = await fetchLatestBaileysVersion();
       const logger = pino({ level: "silent" });
 
-      const sock = makeWASocket({
+      const socky = makeWASocket({
         version,
         logger,
         auth: {
@@ -239,11 +240,11 @@ case 'cargabots': {
       await new Promise((resolve, reject) => {
         let timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 8000);
 
-        sock.ev.once("connection.update", async ({ connection }) => {
+        socky.ev.once("connection.update", async ({ connection }) => {
           clearTimeout(timeout);
           if (connection === "open") {
             reconectados.push(dir);
-            sock.ev.on("creds.update", saveCreds);
+            socky.ev.on("creds.update", saveCreds);
             resolve();
           } else {
             reject(new Error("No se pudo reconectar"));
@@ -266,7 +267,7 @@ ${eliminados.length ? eliminados.map(s => `- ${s}`).join("\n") : "Ninguno"}
 💡 Usa *${global.prefix}serbot* para volver a conectar uno nuevo.
 `.trim();
 
-  await conn.sendMessage(m.chat, {
+  await sock.sendMessage(m.chat, {
     text: mensaje
   }, { quoted: m });
 
