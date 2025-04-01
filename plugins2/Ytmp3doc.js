@@ -6,9 +6,19 @@ const { promisify } = require('util');
 const { pipeline } = require('stream');
 const streamPipeline = promisify(pipeline);
 
-const handler = async (msg, { conn, text, usedPrefix }) => {
-  const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
+const handler = async (msg, { conn, text }) => {
+  const rawID = conn.user?.id || "";
+  const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
+  // Obtener prefijo del subbot
+  const prefixPath = path.resolve("prefixes.json");
+  let prefixes = {};
+  if (fs.existsSync(prefixPath)) {
+    prefixes = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
+  }
+  const usedPrefix = prefixes[subbotID] || ".";
+
+  const isYoutubeUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(text);
   if (!text || !isYoutubeUrl) {
     return await conn.sendMessage(msg.key.remoteJid, {
       text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix}ytmp3doc* https://music.youtube.com/watch?v=abc123`
@@ -30,7 +40,7 @@ const handler = async (msg, { conn, text, usedPrefix }) => {
 
     await conn.sendMessage(msg.key.remoteJid, {
       image: { url: thumbnail },
-      caption: `🎧 *Título:* ${title}\n🕒 *Duración:* ${fduration}\n📥 *Tamaño:* ${data.size}\n\n⏳ Descargando audio...`
+      caption: `╭─⭓ *𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝗦𝘂𝗯𝗯𝗼𝘁*\n│\n├ 🎧 *Título:* ${title}\n├ 🕒 *Duración:* ${fduration}\n├ 📥 *Tamaño:* ${data.size}\n│\n└ ⏳ Descargando audio...\n╰───────────────⭓`
     }, { quoted: msg });
 
     const tmpDir = path.join(__dirname, '../tmp');
