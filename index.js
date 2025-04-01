@@ -524,7 +524,7 @@ async function cargarSubbots() {
         }
       });
 
-      subSock.ev.on("messages.upsert", async (msg) => {
+subSock.ev.on("messages.upsert", async (msg) => {
   try {
     const m = msg.messages[0];
     if (!m || !m.message) return;
@@ -532,9 +532,22 @@ async function cargarSubbots() {
     const from = m.key.remoteJid;
     const isGroup = from.endsWith("@g.us");
     const isFromSelf = m.key.fromMe;
+    const sender = m.key.participant || from;
+    const subbotID = subSock.user?.id;
+    
+    // Cargar lista por subbot
+    const listaPath = path.join(__dirname, "../listasubots.json");
+    let data = {};
+    if (fs.existsSync(listaPath)) {
+      data = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
+    }
 
-    // Solo responder si es grupo o si se está respondiendo a sí mismo
-    if (!isGroup && !isFromSelf) return;
+    const listaPermitidos = Array.isArray(data[subbotID]) ? data[subbotID] : [];
+
+    // Si es privado, solo responder si es el mismo subbot o está en su lista
+    if (!isGroup && !isFromSelf && !listaPermitidos.includes(sender.replace(/\D/g, ""))) {
+      return;
+    }
 
     const messageText =
       m.message?.conversation ||
@@ -542,7 +555,7 @@ async function cargarSubbots() {
       m.message?.imageMessage?.caption ||
       m.message?.videoMessage?.caption ||
       "";
-      
+
     const subbotPrefixes = [".", "#"];
     const usedPrefix = subbotPrefixes.find((p) => messageText.startsWith(p));
     if (!usedPrefix) return;
@@ -556,6 +569,7 @@ async function cargarSubbots() {
     console.error("❌ Error procesando mensaje del subbot:", err);
   }
 });
+      
     } catch (err) {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
     }
