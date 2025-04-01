@@ -2,6 +2,11 @@ const fs = require("fs");
 const path = require("path");
 
 const handler = async (msg, { conn, text }) => {
+  // Reacción inicial
+  await conn.sendMessage(msg.key.remoteJid, {
+    react: { text: "➕", key: msg.key }
+  });
+
   const fromMe = msg.key.fromMe;
 
   if (!fromMe) {
@@ -29,7 +34,7 @@ const handler = async (msg, { conn, text }) => {
   const rawID = conn.user?.id || "";
   const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
-  const filePath = path.join(__dirname, "../listasubots.json");
+  const filePath = path.resolve("listasubots.json");
   let data = {};
 
   if (fs.existsSync(filePath)) {
