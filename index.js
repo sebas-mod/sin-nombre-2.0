@@ -532,20 +532,24 @@ subSock.ev.on("messages.upsert", async (msg) => {
     const from = m.key.remoteJid;
     const isGroup = from.endsWith("@g.us");
     const isFromSelf = m.key.fromMe;
-    const sender = m.key.participant || from;
-    const subbotID = subSock.user?.id;
-    
-    // Cargar lista por subbot
+    const senderJid = m.key.participant || from;
+    const senderNum = senderJid.replace(/\D/g, ""); // Solo número del usuario
+
+    // Obtener el ID limpio del subbot
+    const rawSubbotID = subSock.user?.id || "";
+    const cleanSubbotID = rawSubbotID.split(":")[0] + "@s.whatsapp.net";
+
+    // Cargar lista personalizada del subbot
     const listaPath = path.join(__dirname, "../listasubots.json");
     let data = {};
     if (fs.existsSync(listaPath)) {
       data = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
     }
 
-    const listaPermitidos = Array.isArray(data[subbotID]) ? data[subbotID] : [];
+    const listaPermitidos = Array.isArray(data[cleanSubbotID]) ? data[cleanSubbotID] : [];
 
-    // Si es privado, solo responder si es el mismo subbot o está en su lista
-    if (!isGroup && !isFromSelf && !listaPermitidos.includes(sender.replace(/\D/g, ""))) {
+    // Si es privado, solo responder si el mensaje es del subbot o el usuario está en su lista
+    if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) {
       return;
     }
 
