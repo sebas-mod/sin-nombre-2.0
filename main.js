@@ -246,14 +246,23 @@ case "cargabots":
                 });
 
                 const conectado = await new Promise((resolve) => {
-                    let timeout = setTimeout(() => resolve(false), 7000);
+                    let resolved = false;
+                    const timeout = setTimeout(() => {
+                        if (!resolved) {
+                            resolved = true;
+                            resolve(false);
+                        }
+                    }, 10000); // Espera hasta 10 segundos
 
-                    socky.ev.once("connection.update", ({ connection }) => {
-                        if (connection === "open") {
+                    socky.ev.on("connection.update", ({ connection }) => {
+                        if (connection === "open" && !resolved) {
+                            resolved = true;
                             clearTimeout(timeout);
                             socky.ev.on("creds.update", saveCreds);
                             resolve(true);
-                        } else if (connection === "close") {
+                        }
+                        if (connection === "close" && !resolved) {
+                            resolved = true;
                             clearTimeout(timeout);
                             resolve(false);
                         }
@@ -266,13 +275,13 @@ case "cargabots":
                     fs.rmSync(sessionPath, { recursive: true, force: true });
                     eliminados.push(dir);
                 }
+
             } catch (e) {
                 eliminados.push(dir);
                 fs.rmSync(sessionPath, { recursive: true, force: true });
             }
         }
 
-        // Resultado final
         const resultado = `
 ✅ *Subbots Reconectados:*
 ${reconectados.length ? reconectados.map(d => `- ${d}`).join("\n") : "Ninguno"}
