@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { writeExifImg, writeExifVid } = require('./libs/functions');
+const { writeExifImg, writeExifVid } = require('../../libs/functions');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
 const handler = async (msg, { conn, usedPrefix, command }) => {
