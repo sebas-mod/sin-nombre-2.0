@@ -533,32 +533,37 @@ subSock.ev.on("messages.upsert", async (msg) => {
     const isGroup = from.endsWith("@g.us");
     const isFromSelf = m.key.fromMe;
     const senderJid = m.key.participant || from;
-    const senderNum = senderJid.split("@")[0]; // Número limpio
+    const senderNum = senderJid.split("@")[0];
 
     // Obtener ID limpio del subbot
     const rawID = subSock.user?.id || "";
     const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
-    // Cargar lista
+    // Cargar listas
     const listaPath = path.join(__dirname, "listasubots.json");
-    let data = {};
+    const grupoPath = path.join(__dirname, "grupo.json");
+
+    let dataPriv = {};
+    let dataGrupos = {};
+
     if (fs.existsSync(listaPath)) {
-      data = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
+      dataPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
     }
 
-    const listaPermitidos = Array.isArray(data[subbotID]) ? data[subbotID] : [];
+    if (fs.existsSync(grupoPath)) {
+      dataGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
+    }
 
-    // DEBUG: Mostrar lo que está pasando
-    console.log("----------- SUBBOT PRIVADO DEBUG -----------");
-    console.log("Subbot ID:", subbotID);
-    console.log("Remitente:", senderNum);
-    console.log("Lista actual:", listaPermitidos);
-    console.log("¿Permitido?:", listaPermitidos.includes(senderNum));
-    console.log("--------------------------------------------");
+    const listaPermitidos = Array.isArray(dataPriv[subbotID]) ? dataPriv[subbotID] : [];
+    const gruposPermitidos = Array.isArray(dataGrupos[subbotID]) ? dataGrupos[subbotID] : [];
 
-    // En privado: responder si es el dueño o alguien en la lista
+    // Validar mensajes privados
     if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) {
-      console.log("⛔ Mensaje privado ignorado: no está en la lista.");
+      return;
+    }
+
+    // Validar mensajes en grupo
+    if (isGroup && !gruposPermitidos.includes(from)) {
       return;
     }
 
@@ -577,7 +582,6 @@ subSock.ev.on("messages.upsert", async (msg) => {
     const command = body.split(" ")[0].toLowerCase();
     const args = body.split(" ").slice(1);
 
-    console.log("✅ Ejecutando comando:", command);
     await handleSubCommand(subSock, m, command, args);
 
   } catch (err) {
