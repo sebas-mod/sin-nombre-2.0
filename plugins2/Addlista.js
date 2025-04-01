@@ -3,7 +3,6 @@ const path = require("path");
 
 const handler = async (msg, { conn, text }) => {
   const fromMe = msg.key.fromMe;
-  const subbotID = conn.user?.id;
 
   if (!fromMe) {
     return await conn.sendMessage(msg.key.remoteJid, {
@@ -25,6 +24,11 @@ const handler = async (msg, { conn, text }) => {
   }
 
   target = target.replace(/\D/g, "");
+
+  // Obtener el ID limpio del subbot
+  const rawID = conn.user?.id || "";
+  const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
+
   const filePath = path.join(__dirname, "../listasubots.json");
   let data = {};
 
