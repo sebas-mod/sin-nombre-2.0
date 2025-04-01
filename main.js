@@ -203,6 +203,9 @@ case 'cargabots': {
     makeCacheableSignalKeyStore
   } = require("@whiskeysockets/baileys");
 
+  // ✅ Importamos la función para recargar los subbots
+  const { cargarSubbots } = require("./index"); // Asegúrate que la ruta sea correcta
+
   const subbotFolder = "./subbots";
   if (!fs.existsSync(subbotFolder)) {
     return await sock.sendMessage(msg.chat, {
@@ -256,6 +259,9 @@ case 'cargabots': {
       fs.rmSync(sessionPath, { recursive: true, force: true });
     }
   }
+
+  // ✅ Recargamos el sistema para que los reconectados funcionen
+  await cargarSubbots();
 
   const mensaje = `
 ✅ *Subbots Reconectados:*
