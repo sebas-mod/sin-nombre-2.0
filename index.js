@@ -540,7 +540,7 @@ subSock.ev.on("messages.upsert", async (msg) => {
     const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
     // Cargar lista
-    const listaPath = path.join(__dirname, "../listasubots.json");
+    const listaPath = path.join(__dirname, "listasubots.json");
     let data = {};
     if (fs.existsSync(listaPath)) {
       data = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
