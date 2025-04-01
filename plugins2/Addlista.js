@@ -2,10 +2,10 @@ const fs = require("fs");
 
 const handler = async (msg, { conn, text }) => {
   const fromMe = msg.key.fromMe;
-  const sender = msg.key.participant || msg.key.remoteJid;
-  if (!global.owner?.includes(sender.split("@")[0]) && !fromMe) {
+
+  if (!fromMe) {
     return await conn.sendMessage(msg.key.remoteJid, {
-      text: "⛔ Solo el dueño del bot o el subbot pueden usar este comando."
+      text: "⛔ Solo el *subbot dueño* puede usar este comando."
     }, { quoted: msg });
   }
 
