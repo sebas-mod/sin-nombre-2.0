@@ -533,7 +533,7 @@ subSock.ev.on("messages.upsert", async (msg) => {
     const isGroup = from.endsWith("@g.us");
     const isFromSelf = m.key.fromMe;
     const senderJid = m.key.participant || from;
-    const senderNum = senderJid.replace(/\D/g, ""); // Solo número del usuario
+    const senderNum = senderJid.split("@")[0]; // ¡CORREGIDO!
 
     // Obtener el ID limpio del subbot
     const rawSubbotID = subSock.user?.id || "";
