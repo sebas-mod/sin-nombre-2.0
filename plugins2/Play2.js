@@ -5,7 +5,19 @@ const { promisify } = require('util');
 const { pipeline } = require('stream');
 const streamPipeline = promisify(pipeline);
 
-const handler = async (msg, { conn, text, usedPrefix }) => {
+const handler = async (msg, { conn, text }) => {
+  // Detectar subbotID y prefijo
+  const rawID = conn.user?.id || "";
+  const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
+
+  const prefixPath = path.resolve("prefixes.json");
+  let prefixes = {};
+  if (fs.existsSync(prefixPath)) {
+    prefixes = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
+  }
+
+  const usedPrefix = prefixes[subbotID] || ".";
+
   if (!text) {
     return await conn.sendMessage(msg.key.remoteJid, {
       text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix}play2* La Factoría - Perdoname`
@@ -31,9 +43,9 @@ const handler = async (msg, { conn, text, usedPrefix }) => {
     const videoLink = `https://www.youtube.com/watch?v=${videoInfo.id}`;
 
     const captionPreview = `
-╔═════════════════╗
-║✦ 𝘼𝙕𝙐𝙍𝘼 𝗨𝗹𝘁𝗿𝗮 2.0 𝗕𝗢𝗧 ✦
-╚═════════════════╝
+╔════════════════╗
+║ ✦ 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝗦𝘂𝗯𝗯𝗼𝘁 ✦
+╚════════════════╝
 
 📀 *Info del video:*  
 ├ 🎼 *Título:* ${title}
@@ -95,7 +107,7 @@ const handler = async (msg, { conn, text, usedPrefix }) => {
       video: fs.readFileSync(filePath),
       mimetype: 'video/mp4',
       fileName: `${videoData.title}.mp4`,
-      caption: `🎬 Aquí tiene su video en calidad normal.\n\n© Azura Ultra 2.0 Bot`
+      caption: `🎬 Aquí tiene su video en calidad normal.\n\n© Azura Ultra Subbot`
     }, { quoted: msg });
 
     fs.unlinkSync(filePath);
