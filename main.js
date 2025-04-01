@@ -429,19 +429,26 @@ case 'serbot': {
 │ ℹ️ Por defecto, el subbot está en *modo privado*,
 │ lo que significa que *solo tú puedes usarlo*.
 │
-│ usa el comando:
+│ Usa el comando:
 │ ${global.prefix}menu
-│ (para ver configuraciónes y ver como hacer que otros lo puedan usar.)
+│ (para ver configuraciones y cómo hacer
+│ que otras personas puedan usarlo.)
 │
 │ ➕ Los prefijos por defecto son: *. y #*
 │ Si quieres cambiarlos, usa:
 │ ${global.prefix}setprefix
 │
-│ 🔄 Si te desconectas del subbot, usa:
+│ 🔄 Si notas que el subbot *no responde al instante*
+│ o tarda mucho *aunque esté conectado*, no te preocupes.
+│ Puede ser un fallo temporal.
+│
+│ En ese caso, simplemente ejecuta:
 │ ${global.prefix}delbots
-│ para eliminar tu sesión y luego ejecuta:
+│ para eliminar tu sesión y luego vuelve a conectarte usando:
 │ ${global.prefix}serbot
-│ para reconectarte.
+│ hasta que se conecte correctamente.
+│
+│ Esto ayuda a establecer una conexión *estable y funcional*.
 │
 ╰────✦ *Sky Ultra Plus* ✦────╯`,
   quoted: msg
