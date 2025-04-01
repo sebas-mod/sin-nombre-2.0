@@ -380,7 +380,7 @@ case 'serbot': {
         switch (connection) {
           case "open":
   await sock.sendMessage(msg.key.remoteJid, {
-    text: `
+  text: `
 ╭───〔 *🤖 SUBBOT CONECTADO* 〕───╮
 │
 │ ✅ *Bienvenido a Azura Ultra 2.0*
@@ -395,14 +395,26 @@ case 'serbot': {
 │ ⚔️ Disfruta de las funciones del subbot
 │ y conquista el mundo digital
 │
-│ ℹ️ Si en algún momento te desconectas del subbot,
-│ puedes usar el comando:
+│ ℹ️ Por defecto, el subbot está en *modo privado*,
+│ lo que significa que *solo tú puedes usarlo*.
+│
+│ usa el comando:
+│ ${global.prefix}menu
+│ (para ver configuraciónes y ver como hacer que otros lo puedan usar.)
+│
+│ ➕ Los prefijos por defecto son: *. y #*
+│ Si quieres cambiarlos, usa:
+│ ${global.prefix}setprefix
+│
+│ 🔄 Si te desconectas del subbot, usa:
 │ ${global.prefix}delbots
-│ para eliminar tu sesión y usar *${global.prefix}serbot* de nuevo.
+│ para eliminar tu sesión y luego ejecuta:
+│ ${global.prefix}serbot
+│ para reconectarte.
 │
 ╰────✦ *Sky Ultra Plus* ✦────╯`,
-    quoted: msg
-  });
+  quoted: msg
+});
 
             // 🔁 Reacción de recarga
             await sock.sendMessage(msg.key.remoteJid, {
