@@ -15,27 +15,25 @@ const handler = async (msg, { conn, usedPrefix }) => {
 │ • geminis - Consulta a Gemini IA
 │
 ├─❖ *Descargas:*
-│ • play / playdoc - Descargar música MP3
-│ • play2 - Descargar video en calidad óptima
-│ • ytmp3 / ytmp3doc - MP3 desde YouTube o Music
-│ • ytmp4 / ytmp4doc - Videos desde YouTube
-│ • apk - Descargar APK desde Play Store
-│ • instagram / ig - Descargas desde Instagram
-│ • tiktok / tt - Descarga de videos de TikTok
-│ • get - Descargar estados de WhatsApp
+│ • play / playdoc 
+│ • play2 
+│ • ytmp3 / ytmp3doc 
+│ • ytmp4 / ytmp4doc 
+│ • apk 
+│ • instagram / ig 
+│ • tiktok / tt 
+│ • get 
 │
 ├─❖ *Stickers & Multimedia:*
-│ • s - Crear sticker desde imagen o video
-│ • ver - Ver mensajes de una sola vista
-│ • tts - Texto a voz (audios hablados)
+│ • s 
+│ • ver
+│ • tts 
 │
 ├─❖ *Grupos:*
-│ • abrirgrupo - Abrir grupo (permitir mensajes)
-│ • cerrargrupo - Cerrar grupo (solo admins)
-│ • infogrupo - Ver nombre y descripción
-│ • addgrupo - Autorizar grupo al subbot
-│ • delgrupo - Eliminar grupo del subbot
-│ • kick - Expulsar usuario
+│ • abrirgrupo 
+│ • cerrargrupo 
+│ • infogrupo 
+│ • kick 
 │
 ├─❖ *Usuarios:*
 │ • perfil - Obtener foto de perfil
@@ -47,6 +45,8 @@ const handler = async (msg, { conn, usedPrefix }) => {
 ├─❖ *Configuración & Dueño:*
 │ • setprefix - Cambiar prefijo del subbot
 │ • creador - Ver contacto del creador
+│ ° delgrupo - Eliminar grupo del subbot
+│ ° addgrupo - Autorizar grupo al subbot
 │ • pong - Medir latencia del bot
 │
 ╰───『 © Azura Ultra Subbot 』───╯`;
