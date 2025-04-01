@@ -446,10 +446,10 @@ async function cargarSubbots() {
     default: makeWASocket,
     useMultiFileAuthState,
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
+    makeCacheableSignalKeyStore,
+    DisconnectReason
   } = require("@whiskeysockets/baileys");
 
-  // Función para cargar plugins exclusivos para subbots
   function loadSubPlugins() {
     const plugins = [];
     const pluginDir = path.join(__dirname, "plugins2");
@@ -486,15 +486,15 @@ async function cargarSubbots() {
   const subDirs = fs
     .readdirSync(subbotFolder)
     .filter((d) => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
-  console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
 
-  const subbotInstances = {};
+  console.log(`🤖 Cargando ${subDirs.length} subbot(s) conectados...`);
 
   for (const dir of subDirs) {
     const sessionPath = path.join(subbotFolder, dir);
     try {
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       const { version } = await fetchLatestBaileysVersion();
+
       const subSock = makeWASocket({
         version,
         logger: pino({ level: "silent" }),
@@ -505,25 +505,42 @@ async function cargarSubbots() {
         browser: ["Azura Subbot", "Firefox", "2.0"],
       });
 
-      subbotInstances[dir] = {
-        subSock,
-        sessionPath,
-        isConnected: false,
-      };
+      // Esperar conexión real
+      await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.log(`⚠️ Subbot ${dir} tardó demasiado en conectar.`);
+          resolve();
+        }, 10000); // espera 10s como máximo
 
+        subSock.ev.once("connection.update", ({ connection }) => {
+          if (connection === "open") {
+            console.log(`✅ Subbot ${dir} conectado correctamente.`);
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+
+      // Guardar cambios si hay actualización de credenciales
       subSock.ev.on("creds.update", saveCreds);
 
-      subSock.ev.on("connection.update", (update) => {
-        const { connection } = update;
-        if (connection === "open") {
-          console.log(`✅ Subbot ${dir} conectado correctamente.`);
-          subbotInstances[dir].isConnected = true;
-        } else if (connection === "close") {
-          console.log(`❌ Subbot ${dir} se desconectó.`);
-          subbotInstances[dir].isConnected = false;
+      // Manejo de desconexión (sin eliminar sesión)
+      subSock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
+        if (connection === "close") {
+          const code = lastDisconnect?.error?.output?.statusCode || 0;
+          const reason = DisconnectReason[code] || "desconocido";
+          console.log(`❌ Subbot ${dir} se desconectó. Razón: ${reason}`);
+
+          if (code !== DisconnectReason.loggedOut) {
+            console.log(`🔁 Reintentando conexión para subbot ${dir}...`);
+            cargarSubbots(); // reintenta conectar
+          } else {
+            console.log(`⚠️ Sesión del subbot ${dir} está cerrada (logged out), pero no se eliminará la carpeta.`);
+          }
         }
       });
 
+      // Manejo de mensajes entrantes
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
           const m = msg.messages[0];
@@ -545,13 +562,13 @@ async function cargarSubbots() {
           console.error("❌ Error procesando mensaje del subbot:", err);
         }
       });
+
     } catch (err) {
-      console.error(`❌ Error al cargar subbot ${dir}:`, err);
+      console.error(`❌ Error al iniciar subbot ${dir}:`, err);
     }
   }
 }
 
-// Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 3000);
 module.exports = { cargarSubbots };
 
