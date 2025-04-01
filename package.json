@@ -23,6 +23,7 @@
     "@hiudyy/ytdl": "^0.2.3",
     "acrcloud": "^1.4.0",
     "hispamemes": "^1.0.7",
+     "canvas": "^3.0.0-rc2", 
     "child_process": "^1.0.2",
     "figlet": "^1.8.0",
     "google-tts-api": "^2.0.2",
