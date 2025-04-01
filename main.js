@@ -183,6 +183,96 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
+case 'cargabots': {
+  if (!isOwner) return await conn.sendMessage(m.chat, {
+    text: '❌ Este comando es solo para el *dueño del bot*.'
+  }, { quoted: m });
+
+  const fs = require("fs");
+  const path = require("path");
+  const pino = require("pino");
+  const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
+  } = require("baileys");
+
+  const subbotFolder = "./subbots";
+  if (!fs.existsSync(subbotFolder)) {
+    return await conn.sendMessage(m.chat, {
+      text: "⚠️ No hay carpeta de subbots."
+    }, { quoted: m });
+  }
+
+  const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
+  if (subDirs.length === 0) {
+    return await conn.sendMessage(m.chat, {
+      text: "⚠️ No hay subbots activos para recargar."
+    }, { quoted: m });
+  }
+
+  await conn.sendMessage(m.chat, {
+    react: { text: '🔁', key: m.key }
+  });
+
+  const reconectados = [];
+  const eliminados = [];
+
+  for (const dir of subDirs) {
+    const sessionPath = path.join(subbotFolder, dir);
+    try {
+      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+      const { version } = await fetchLatestBaileysVersion();
+      const logger = pino({ level: "silent" });
+
+      const sock = makeWASocket({
+        version,
+        logger,
+        auth: {
+          creds: state.creds,
+          keys: makeCacheableSignalKeyStore(state.keys, logger),
+        },
+        browser: ["Azura Subbot", "Firefox", "2.0"],
+      });
+
+      await new Promise((resolve, reject) => {
+        let timeout = setTimeout(() => reject(new Error("Tiempo de espera agotado")), 8000);
+
+        sock.ev.once("connection.update", async ({ connection }) => {
+          clearTimeout(timeout);
+          if (connection === "open") {
+            reconectados.push(dir);
+            sock.ev.on("creds.update", saveCreds);
+            resolve();
+          } else {
+            reject(new Error("No se pudo reconectar"));
+          }
+        });
+      });
+    } catch (err) {
+      eliminados.push(dir);
+      fs.rmSync(sessionPath, { recursive: true, force: true });
+    }
+  }
+
+  const mensaje = `
+✅ *Subbots Reconectados:*
+${reconectados.length ? reconectados.map(s => `- ${s}`).join("\n") : "Ninguno"}
+
+❌ *Subbots Eliminados:*
+${eliminados.length ? eliminados.map(s => `- ${s}`).join("\n") : "Ninguno"}
+
+💡 Usa *${global.prefix}serbot* para volver a conectar uno nuevo.
+`.trim();
+
+  await conn.sendMessage(m.chat, {
+    text: mensaje
+  }, { quoted: m });
+
+  break;
+}
+            
 case 'serbot': {
   const {
     default: makeWASocket,
