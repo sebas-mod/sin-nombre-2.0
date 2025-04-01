@@ -185,12 +185,12 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 case 'cargabots': {
   if (!isOwner) return await sock.sendMessage(msg.chat, {
-    text: '❌ Este comando es solo para el *dueño del bot*.'
+    text: '❌ Solo el *dueño del bot* puede usar este comando.'
   }, { quoted: msg });
 
   // Reacción inicial
   await sock.sendMessage(msg.chat, {
-    react: { text: '⚙️', key: msg.key }
+    react: { text: '♻️', key: msg.key }
   });
 
   const fs = require("fs");
@@ -203,9 +203,9 @@ case 'cargabots': {
     makeCacheableSignalKeyStore
   } = require("@whiskeysockets/baileys");
 
-  const { cargarSubbots } = require("./index"); // Asegúrate de que esta ruta esté correcta
-
   const subbotFolder = "./subbots";
+  const { cargarSubbots } = require("./index"); // Ruta al archivo que exporta cargarSubbots
+
   if (!fs.existsSync(subbotFolder)) {
     return await sock.sendMessage(msg.chat, {
       text: "⚠️ No hay carpeta de subbots."
@@ -215,7 +215,7 @@ case 'cargabots': {
   const subDirs = fs.readdirSync(subbotFolder).filter(d => fs.existsSync(`${subbotFolder}/${d}/creds.json`));
   if (subDirs.length === 0) {
     return await sock.sendMessage(msg.chat, {
-      text: "⚠️ No hay subbots activos para recargar."
+      text: "⚠️ No hay subbots activos para verificar."
     }, { quoted: msg });
   }
 
@@ -224,60 +224,64 @@ case 'cargabots': {
 
   for (const dir of subDirs) {
     const sessionPath = path.join(subbotFolder, dir);
-    let conectado = false;
-
     try {
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       const { version } = await fetchLatestBaileysVersion();
-      const logger = pino({ level: "silent" });
 
       const socky = makeWASocket({
         version,
-        logger,
+        logger: pino({ level: "silent" }),
         auth: {
           creds: state.creds,
-          keys: makeCacheableSignalKeyStore(state.keys, logger),
+          keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
         },
         browser: ["Azura Subbot", "Firefox", "2.0"],
       });
 
-      await new Promise((resolve, reject) => {
-        let timeout = setTimeout(() => reject(new Error("timeout")), 8000);
+      const conectado = await new Promise((resolve) => {
+        let resuelto = false;
+        const timeout = setTimeout(() => {
+          if (!resuelto) resolve(false);
+        }, 7000);
 
-        socky.ev.once("connection.update", async ({ connection }) => {
-          clearTimeout(timeout);
+        socky.ev.once("connection.update", ({ connection }) => {
           if (connection === "open") {
-            conectado = true;
+            resuelto = true;
+            clearTimeout(timeout);
             socky.ev.on("creds.update", saveCreds);
-            resolve();
-          } else {
-            reject(new Error("fallo"));
+            resolve(true);
           }
         });
       });
 
-      if (conectado) reconectados.push(dir);
+      if (conectado) {
+        reconectados.push(dir);
+      } else {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+        eliminados.push(dir);
+      }
+
     } catch (err) {
       eliminados.push(dir);
       fs.rmSync(sessionPath, { recursive: true, force: true });
     }
   }
 
-  // 🔁 Recargar los subbots que quedaron vivos
+  // ✅ Recarga final solo con los buenos
   await cargarSubbots();
 
-  const mensaje = `
-✅ *Subbots Reconectados:*
+  const resumen = `
+✅ *Subbots Conectados:*
 ${reconectados.length ? reconectados.map(s => `- ${s}`).join("\n") : "Ninguno"}
 
-❌ *Subbots Eliminados:*
+❌ *Subbots Eliminados (fallo de conexión):*
 ${eliminados.length ? eliminados.map(s => `- ${s}`).join("\n") : "Ninguno"}
 
-💡 Usa *${global.prefix}serbot* para volver a conectar uno nuevo.
+ℹ️ El sistema ha sido recargado correctamente.
 `.trim();
 
   await sock.sendMessage(msg.chat, {
-    text: mensaje
+    text: resumen
   }, { quoted: msg });
 
   break;
