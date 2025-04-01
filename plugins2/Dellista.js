@@ -1,11 +1,13 @@
 const fs = require("fs");
+const path = require("path");
 
 const handler = async (msg, { conn, text }) => {
   const fromMe = msg.key.fromMe;
+  const subbotID = conn.user?.id;
 
   if (!fromMe) {
     return await conn.sendMessage(msg.key.remoteJid, {
-      text: "⛔ Solo el *subbot dueño* puede usar este comando."
+      text: "⛔ Solo el *dueño del subbot* puede usar este comando."
     }, { quoted: msg });
   }
 
@@ -23,25 +25,24 @@ const handler = async (msg, { conn, text }) => {
   }
 
   target = target.replace(/\D/g, "");
-  const archivo = "./listasubots.json";
-  let lista = [];
+  const filePath = path.join(__dirname, "../listasubots.json");
+  let data = {};
 
-  if (fs.existsSync(archivo)) {
-    lista = JSON.parse(fs.readFileSync(archivo, "utf-8"));
-    if (!Array.isArray(lista)) lista = [];
+  if (fs.existsSync(filePath)) {
+    data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
   }
 
-  if (!lista.includes(target)) {
+  if (!Array.isArray(data[subbotID]) || !data[subbotID].includes(target)) {
     return await conn.sendMessage(msg.key.remoteJid, {
-      text: "ℹ️ Ese número no está en la lista."
+      text: "ℹ️ Ese número no está en tu lista."
     }, { quoted: msg });
   }
 
-  lista = lista.filter(n => n !== target);
-  fs.writeFileSync(archivo, JSON.stringify(lista, null, 2));
+  data[subbotID] = data[subbotID].filter(n => n !== target);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
   await conn.sendMessage(msg.key.remoteJid, {
-    text: `✅ Usuario *${target}* eliminado de la lista.`
+    text: `✅ Usuario *${target}* eliminado de tu lista.`
   }, { quoted: msg });
 };
 
