@@ -192,11 +192,11 @@ case 'cargabots': {
   const path = require("path");
   const pino = require("pino");
   const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
-  } = require("baileys");
+  default: makeWASocket,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore
+} = require("@whiskeysockets/baileys");
 
   const subbotFolder = "./subbots";
   if (!fs.existsSync(subbotFolder)) {
