@@ -27,37 +27,37 @@ const handler = async (msg, { conn }) => {
 │ • ${usedPrefix}geminis - Consulta a Gemini IA
 │
 ├─❖ *Descargas:*
-│ • ${usedPrefix}play / ${usedPrefix}playdoc - Música en audio / documento
-│ • ${usedPrefix}play2 - Video desde búsqueda
-│ • ${usedPrefix}ytmp3 / ${usedPrefix}ytmp3doc - Audio por enlace YouTube
-│ • ${usedPrefix}ytmp4 / ${usedPrefix}ytmp4doc - Video por enlace YouTube
-│ • ${usedPrefix}apk - Descargar apps .apk
-│ • ${usedPrefix}instagram / ${usedPrefix}ig - Descargar de Instagram
-│ • ${usedPrefix}tiktok / ${usedPrefix}tt - Descargar de TikTok
+│ • ${usedPrefix}play / ${usedPrefix}playdoc
+│ • ${usedPrefix}play2 
+│ • ${usedPrefix}ytmp3 / ${usedPrefix}ytmp3doc 
+│ • ${usedPrefix}ytmp4 / ${usedPrefix}ytmp4doc
+│ • ${usedPrefix}apk
+│ • ${usedPrefix}instagram / ${usedPrefix}ig
+│ • ${usedPrefix}tiktok / ${usedPrefix}tt
 │
 ├─❖ *Stickers & Multimedia:*
-│ • ${usedPrefix}s - Crear sticker desde imagen/video
-│ • ${usedPrefix}ver - Ver mensajes de ver una vez
-│ • ${usedPrefix}tts - Texto a voz
+│ • ${usedPrefix}s 
+│ • ${usedPrefix}ver
+│ • ${usedPrefix}tts
 │
 ├─❖ *Grupos:*
-│ • ${usedPrefix}abrirgrupo - Abrir el grupo
-│ • ${usedPrefix}cerrargrupo - Cerrar el grupo
-│ • ${usedPrefix}infogrupo - Info del grupo
-│ • ${usedPrefix}kick - Expulsar usuarios
+│ • ${usedPrefix}abrirgrupo
+│ • ${usedPrefix}cerrargrupo
+│ • ${usedPrefix}infogrupo
+│ • ${usedPrefix}kick
 │
 ├─❖ *Usuarios:*
 │ • ${usedPrefix}perfil - Obtener foto de perfil
 │ • ${usedPrefix}tag - Reenviar mensaje mencionando a todos
 │ • ${usedPrefix}tagall / ${usedPrefix}invocar / ${usedPrefix}todos - Mencionar a todos
-│ • ${usedPrefix}addlista - Autorizar usuario privado
-│ • ${usedPrefix}dellista - Quitar usuario autorizado
 │
 ├─❖ *Configuración & Dueño:*
 │ • ${usedPrefix}setprefix - Cambiar prefijo del subbot
 │ • ${usedPrefix}creador - Contacto del creador
 │ • ${usedPrefix}get - Descargar estados
 │ • ${usedPrefix}addgrupo - Autorizar grupo
+│ • ${usedPrefix}addlista - Autorizar usuario privado
+│ • ${usedPrefix}dellista - Quitar usuario autorizado
 │ • ${usedPrefix}delgrupo - Eliminar grupo
 │ • ${usedPrefix}pong - Medir latencia del bot
 │
