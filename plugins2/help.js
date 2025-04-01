@@ -22,7 +22,6 @@ const handler = async (msg, { conn, usedPrefix }) => {
 │ • apk 
 │ • instagram / ig 
 │ • tiktok / tt 
-│ • get 
 │
 ├─❖ *Stickers & Multimedia:*
 │ • s 
@@ -45,6 +44,7 @@ const handler = async (msg, { conn, usedPrefix }) => {
 ├─❖ *Configuración & Dueño:*
 │ • setprefix - Cambiar prefijo del subbot
 │ • creador - Ver contacto del creador
+│ • get - Descargar estados
 │ ° delgrupo - Eliminar grupo del subbot
 │ ° addgrupo - Autorizar grupo al subbot
 │ • pong - Medir latencia del bot
