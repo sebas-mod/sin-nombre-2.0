@@ -2,8 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 const handler = async (msg, { conn, text }) => {
+  // Agregar reacción inicial
+  await conn.sendMessage(msg.key.remoteJid, {
+    react: { text: "🗑️", key: msg.key }
+  });
+
   const fromMe = msg.key.fromMe;
-  const subbotID = conn.user?.id;
 
   if (!fromMe) {
     return await conn.sendMessage(msg.key.remoteJid, {
@@ -25,7 +29,13 @@ const handler = async (msg, { conn, text }) => {
   }
 
   target = target.replace(/\D/g, "");
-  const filePath = path.join(__dirname, "../listasubots.json");
+
+  // Obtener el ID limpio del subbot
+  const rawID = conn.user?.id || "";
+  const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
+
+  // Ruta del archivo desde la raíz del proyecto
+  const filePath = path.resolve("listasubots.json");
   let data = {};
 
   if (fs.existsSync(filePath)) {
