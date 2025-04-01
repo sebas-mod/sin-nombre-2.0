@@ -27,6 +27,15 @@ if (!fs.existsSync(rutaLista)) {
   console.log("📂 Archivo listasubots.json ya existe.");
 }
 //para los subot
+const prefixPath = path.resolve("prefixes.json");
+
+// Crear archivo si no existe
+if (!fs.existsSync(prefixPath)) {
+  fs.writeFileSync(prefixPath, JSON.stringify({}, null, 2));
+  console.log("✅ prefixes.json creado correctamente.");
+} else {
+  console.log("✅ prefixes.json ya existe.");
+}
 //grupo subot
 const grupoPath = path.resolve("grupo.json");
 
