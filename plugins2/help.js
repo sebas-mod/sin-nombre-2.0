@@ -60,13 +60,13 @@ const handler = async (msg, { conn }) => {
 ▣ ${usedPrefix}get ↷
   Descargar estados
 ▣ ${usedPrefix}addgrupo ↷
-  Autorizar grupo
+  Autorizar grupo pa que lo usen.
 ▣ ${usedPrefix}addlista ↷
-  Autorizar usuario privado
+  Autorizar usuario privado pa lo usen.
 ▣ ${usedPrefix}dellista ↷
-  Quitar usuario autorizado
+  Quitar usuario autorizado pa que o lo usen.
 ▣ ${usedPrefix}delgrupo ↷
-  Eliminar grupo autorizado
+  Eliminar grupo autorizado pa que no lo usen.
 ▣ ${usedPrefix}pong ↷
   Medir latencia del bot
 
