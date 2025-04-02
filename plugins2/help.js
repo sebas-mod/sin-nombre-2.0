@@ -20,7 +20,7 @@ const handler = async (msg, { conn }) => {
   const menu = `
 ╔═⌬AZURA ULTRA SUBBOT⌬═╗
 ║   Menú por categorías  
-╚═─────────────═╝
+╚═────────────────═╝
 
 〔 AI & Respuestas 〕
 ⟢ ${usedPrefix}chatgpt
