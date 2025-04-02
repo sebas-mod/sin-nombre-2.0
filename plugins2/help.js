@@ -38,6 +38,7 @@ const handler = async (msg, { conn }) => {
 ├─❖ *Stickers & Multimedia:*
 │ • ${usedPrefix}s 
 │ • ${usedPrefix}ver
+│ • ${usedPrefix}whatmusic
 │ • ${usedPrefix}tts
 │
 ├─❖ *Grupos:*
