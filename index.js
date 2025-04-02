@@ -449,7 +449,6 @@ async function cargarSubbots() {
     makeCacheableSignalKeyStore
   } = require("@whiskeysockets/baileys");
 
-  // Función para cargar plugins exclusivos para subbots
   function loadSubPlugins() {
     const plugins = [];
     const pluginDir = path.join(__dirname, "plugins2");
@@ -460,6 +459,22 @@ async function cargarSubbots() {
       if (plugin && plugin.command) plugins.push(plugin);
     }
     return plugins;
+  }
+
+  async function handleSubCommand(sock, msg, command, args) {
+    const subPlugins = loadSubPlugins(); // Cargar siempre fresco
+    const lowerCommand = command.toLowerCase();
+    const text = args.join(" ");
+    const plugin = subPlugins.find((p) => p.command.includes(lowerCommand));
+    if (plugin) {
+      return plugin(msg, {
+        conn: sock,
+        text,
+        args,
+        command: lowerCommand,
+        usedPrefix: ".",
+      });
+    }
   }
 
   if (!fs.existsSync(subbotFolder)) {
@@ -492,9 +507,6 @@ async function cargarSubbots() {
         subSock,
         sessionPath,
         isConnected: false,
-        listaPriv: {},
-        listaGrupos: {},
-        prefijos: {}
       };
 
       subSock.ev.on("creds.update", saveCreds);
@@ -504,21 +516,6 @@ async function cargarSubbots() {
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
           subbotInstances[dir].isConnected = true;
-
-          // Cargar listas al momento de conexión exitosa
-          const listaPath = path.join(__dirname, "listasubots.json");
-          const grupoPath = path.join(__dirname, "grupo.json");
-          const prefixPath = path.join(__dirname, "prefixes.json");
-
-          if (fs.existsSync(listaPath)) {
-            subbotInstances[dir].listaPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
-          }
-          if (fs.existsSync(grupoPath)) {
-            subbotInstances[dir].listaGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
-          }
-          if (fs.existsSync(prefixPath)) {
-            subbotInstances[dir].prefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
-          }
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
           subbotInstances[dir].isConnected = false;
@@ -541,13 +538,29 @@ async function cargarSubbots() {
           const rawID = subSock.user?.id || "";
           const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
-          const listaPermitidos = Array.isArray(subbotInstances[dir].listaPriv[subbotID])
-            ? subbotInstances[dir].listaPriv[subbotID]
-            : [];
+          // Leer listas y prefijos DINÁMICAMENTE en cada mensaje
+          const listaPath = path.join(__dirname, "listasubots.json");
+          const grupoPath = path.join(__dirname, "grupo.json");
+          const prefixPath = path.join(__dirname, "prefixes.json");
 
-          const gruposPermitidos = Array.isArray(subbotInstances[dir].listaGrupos[subbotID])
-            ? subbotInstances[dir].listaGrupos[subbotID]
-            : [];
+          let dataPriv = {};
+          let dataGrupos = {};
+          let dataPrefijos = {};
+
+          if (fs.existsSync(listaPath)) {
+            dataPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
+          }
+
+          if (fs.existsSync(grupoPath)) {
+            dataGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
+          }
+
+          if (fs.existsSync(prefixPath)) {
+            dataPrefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
+          }
+
+          const listaPermitidos = Array.isArray(dataPriv[subbotID]) ? dataPriv[subbotID] : [];
+          const gruposPermitidos = Array.isArray(dataGrupos[subbotID]) ? dataGrupos[subbotID] : [];
 
           if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) return;
           if (isGroup && !isFromSelf && !gruposPermitidos.includes(from)) return;
@@ -559,7 +572,7 @@ async function cargarSubbots() {
             m.message?.videoMessage?.caption ||
             "";
 
-          const customPrefix = subbotInstances[dir].prefijos[subbotID];
+          const customPrefix = dataPrefijos[subbotID];
           const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
           const usedPrefix = allowedPrefixes.find((p) => messageText.startsWith(p));
           if (!usedPrefix) return;
@@ -568,17 +581,7 @@ async function cargarSubbots() {
           const command = body.split(" ")[0].toLowerCase();
           const args = body.split(" ").slice(1);
 
-          const subPlugins = loadSubPlugins(); // Ahora se carga aquí, siempre actualizado
-          const plugin = subPlugins.find((p) => p.command.includes(command));
-          if (plugin) {
-            await plugin(m, {
-              conn: subSock,
-              text: args.join(" "),
-              args,
-              command,
-              usedPrefix,
-            });
-          }
+          await handleSubCommand(subSock, m, command, args);
 
         } catch (err) {
           console.error("❌ Error procesando mensaje del subbot:", err);
@@ -592,9 +595,9 @@ async function cargarSubbots() {
 }
 
 // Ejecutar después de iniciar el bot principal
-setTimeout(cargarSubbots, 7000); // Tiempo aumentado a 7 segundos
+setTimeout(cargarSubbots, 7000);
 module.exports = { cargarSubbots };
-
+            
             sock.ev.on("creds.update", saveCreds);
 
             // Manejo de errores global para evitar que el bot se detenga
