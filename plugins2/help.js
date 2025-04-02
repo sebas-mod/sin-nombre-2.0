@@ -28,7 +28,7 @@ const handler = async (msg, { conn }) => {
 │
 ├─❖ *Descargas:*
 │ • ${usedPrefix}play / ${usedPrefix}playdoc
-│ • ${usedPrefix}play2 
+│ • ${usedPrefix}play2 / ${usedPrefix}play2doc
 │ • ${usedPrefix}ytmp3 / ${usedPrefix}ytmp3doc 
 │ • ${usedPrefix}ytmp4 / ${usedPrefix}ytmp4doc
 │ • ${usedPrefix}apk
