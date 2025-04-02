@@ -216,14 +216,17 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 case "cargabots":
     try {
-        if (!isOwner) {
+        const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
+        const botNumber = sock.user.id.split(":")[0];
+        const isBotMessage = msg.key.fromMe;
+
+        if (!isOwner(senderNumber) && !isBotMessage) {
             await sock.sendMessage(msg.key.remoteJid, {
                 text: "❌ Este comando es solo para el *dueño del bot*."
             }, { quoted: msg });
             return;
         }
-
-        // Reacción inicial
+  // Reacción inicial
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: "♻️", key: msg.key }
         });
