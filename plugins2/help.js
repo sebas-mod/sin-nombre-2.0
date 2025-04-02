@@ -66,7 +66,7 @@ const handler = async (msg, { conn }) => {
 ▣ ${usedPrefix}dellista ↷
   Quitar usuario autorizado
 ▣ ${usedPrefix}delgrupo ↷
-  Eliminar grupo
+  Eliminar grupo autorizado
 ▣ ${usedPrefix}pong ↷
   Medir latencia del bot
 
