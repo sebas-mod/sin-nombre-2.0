@@ -1,10 +1,9 @@
-// plugins2/menu.js
 const fs = require("fs");
 const path = require("path");
 
 const handler = async (msg, { conn }) => {
   const rawID = conn.user?.id || "";
-  const subbotID = rawID.split(":" )[0] + "@s.whatsapp.net";
+  const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
   const prefixPath = path.resolve("prefixes.json");
   let prefixes = {};
@@ -19,50 +18,59 @@ const handler = async (msg, { conn }) => {
   });
 
   const menu = `
-╭───〔 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝗦𝘂𝗯𝗯𝗼𝘁 〕───╮
-│ Menú completo con comandos por categoría:
-│
-├─❖ *AI & Respuestas:*
-│ • ${usedPrefix}chatgpt - Pregunta a GPT-4
-│ • ${usedPrefix}geminis - Consulta a Gemini IA
-│
-├─❖ *Descargas:*
-│ • ${usedPrefix}play / ${usedPrefix}playdoc
-│ • ${usedPrefix}play2 / ${usedPrefix}play2doc
-│ • ${usedPrefix}ytmp3 / ${usedPrefix}ytmp3doc 
-│ • ${usedPrefix}ytmp4 / ${usedPrefix}ytmp4doc
-│ • ${usedPrefix}apk
-│ • ${usedPrefix}instagram / ${usedPrefix}ig
-│ • ${usedPrefix}tiktok / ${usedPrefix}tt
-│
-├─❖ *Stickers & Multimedia:*
-│ • ${usedPrefix}s 
-│ • ${usedPrefix}ver
-│ • ${usedPrefix}whatmusic
-│ • ${usedPrefix}tts
-│
-├─❖ *Grupos:*
-│ • ${usedPrefix}abrirgrupo
-│ • ${usedPrefix}cerrargrupo
-│ • ${usedPrefix}infogrupo
-│ • ${usedPrefix}kick
-│
-├─❖ *Usuarios:*
-│ • ${usedPrefix}perfil - Obtener foto de perfil
-│ • ${usedPrefix}tag - Reenviar mensaje mencionando a todos
-│ • ${usedPrefix}tagall / ${usedPrefix}invocar / ${usedPrefix}todos - Mencionar a todos
-│
-├─❖ *Configuración & Dueño:*
-│ • ${usedPrefix}setprefix - Cambiar prefijo del subbot
-│ • ${usedPrefix}creador - Contacto del creador
-│ • ${usedPrefix}get - Descargar estados
-│ • ${usedPrefix}addgrupo - Autorizar grupo
-│ • ${usedPrefix}addlista - Autorizar usuario privado
-│ • ${usedPrefix}dellista - Quitar usuario autorizado
-│ • ${usedPrefix}delgrupo - Eliminar grupo
-│ • ${usedPrefix}pong - Medir latencia del bot
-│
-╰───『 © Azura Ultra Subbot 』───╯`;
+╔═─⌬AZURA ULTRA SUBBOT⌬─═╗
+║     Menú por categorías    ║
+╚═───────────────═╝
+
+〔 AI & Respuestas 〕
+⟢ ${usedPrefix}chatgpt
+⟢ ${usedPrefix}geminis
+
+〔 Descargas 〕
+⟢ ${usedPrefix}play / ${usedPrefix}playdoc
+⟢ ${usedPrefix}play2 / ${usedPrefix}play2doc
+⟢ ${usedPrefix}ytmp3 / ${usedPrefix}ytmp3doc
+⟢ ${usedPrefix}ytmp4 / ${usedPrefix}ytmp4doc
+⟢ ${usedPrefix}apk
+⟢ ${usedPrefix}instagram / ${usedPrefix}ig
+⟢ ${usedPrefix}tiktok / ${usedPrefix}tt
+⟢ ${usedPrefix}facebook / ${usedPrefix}fb
+
+〔 Stickers & Multimedia 〕
+⟢ ${usedPrefix}s
+⟢ ${usedPrefix}ver
+⟢ ${usedPrefix}whatmusic
+⟢ ${usedPrefix}tts
+⟢ ${usedPrefix}perfil
+
+〔 Grupos 〕
+⟢ ${usedPrefix}abrirgrupo
+⟢ ${usedPrefix}cerrargrupo
+⟢ ${usedPrefix}infogrupo
+⟢ ${usedPrefix}kick
+⟢ ${usedPrefix}tag
+⟢ ${usedPrefix}tagall / ${usedPrefix}invocar / ${usedPrefix}todos
+
+〔 Configuración & Dueño 〕
+
+▣ ${usedPrefix}setprefix ↷
+  Cambiar prefijo del subbot
+▣ ${usedPrefix}creador ↷
+  Contacto del creador
+▣ ${usedPrefix}get ↷
+  Descargar estados
+▣ ${usedPrefix}addgrupo ↷
+  Autorizar grupo
+▣ ${usedPrefix}addlista ↷
+  Autorizar usuario privado
+▣ ${usedPrefix}dellista ↷
+  Quitar usuario autorizado
+▣ ${usedPrefix}delgrupo ↷
+  Eliminar grupo
+▣ ${usedPrefix}pong ↷
+  Medir latencia del bot
+
+═⌬ © Azura Ultra Subbot ⌬═`;
 
   await conn.sendMessage(msg.key.remoteJid, {
     image: { url: `https://cdn.dorratz.com/files/1743560026026.jpg` },
