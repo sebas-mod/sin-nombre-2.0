@@ -462,23 +462,6 @@ async function cargarSubbots() {
     return plugins;
   }
 
-  const subPlugins = loadSubPlugins();
-
-  async function handleSubCommand(sock, msg, command, args) {
-    const lowerCommand = command.toLowerCase();
-    const text = args.join(" ");
-    const plugin = subPlugins.find((p) => p.command.includes(lowerCommand));
-    if (plugin) {
-      return plugin(msg, {
-        conn: sock,
-        text,
-        args,
-        command: lowerCommand,
-        usedPrefix: ".",
-      });
-    }
-  }
-
   if (!fs.existsSync(subbotFolder)) {
     return console.log("⚠️ No hay carpeta de subbots.");
   }
@@ -509,6 +492,9 @@ async function cargarSubbots() {
         subSock,
         sessionPath,
         isConnected: false,
+        listaPriv: {},
+        listaGrupos: {},
+        prefijos: {}
       };
 
       subSock.ev.on("creds.update", saveCreds);
@@ -518,86 +504,87 @@ async function cargarSubbots() {
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);
           subbotInstances[dir].isConnected = true;
+
+          // Cargar listas al momento de conexión exitosa
+          const listaPath = path.join(__dirname, "listasubots.json");
+          const grupoPath = path.join(__dirname, "grupo.json");
+          const prefixPath = path.join(__dirname, "prefixes.json");
+
+          if (fs.existsSync(listaPath)) {
+            subbotInstances[dir].listaPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
+          }
+          if (fs.existsSync(grupoPath)) {
+            subbotInstances[dir].listaGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
+          }
+          if (fs.existsSync(prefixPath)) {
+            subbotInstances[dir].prefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
+          }
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
           subbotInstances[dir].isConnected = false;
         }
       });
 
-subSock.ev.on("messages.upsert", async (msg) => {
-  try {
-    const m = msg.messages[0];
-    if (!m || !m.message) return;
+      subSock.ev.on("messages.upsert", async (msg) => {
+        try {
+          if (!subbotInstances[dir].isConnected) return;
 
-    const from = m.key.remoteJid;
-    const isGroup = from.endsWith("@g.us");
-    const isFromSelf = m.key.fromMe;
-    const senderJid = m.key.participant || from;
-    const senderNum = senderJid.split("@")[0];
+          const m = msg.messages[0];
+          if (!m || !m.message) return;
 
-    // Obtener ID limpio del subbot
-    const rawID = subSock.user?.id || "";
-    const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
+          const from = m.key.remoteJid;
+          const isGroup = from.endsWith("@g.us");
+          const isFromSelf = m.key.fromMe;
+          const senderJid = m.key.participant || from;
+          const senderNum = senderJid.split("@")[0];
 
-    // Cargar listas
-    const listaPath = path.join(__dirname, "listasubots.json");
-    const grupoPath = path.join(__dirname, "grupo.json");
-    const prefixPath = path.join(__dirname, "prefixes.json");
+          const rawID = subSock.user?.id || "";
+          const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
-    let dataPriv = {};
-    let dataGrupos = {};
-    let dataPrefijos = {};
+          const listaPermitidos = Array.isArray(subbotInstances[dir].listaPriv[subbotID])
+            ? subbotInstances[dir].listaPriv[subbotID]
+            : [];
 
-    if (fs.existsSync(listaPath)) {
-      dataPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
-    }
+          const gruposPermitidos = Array.isArray(subbotInstances[dir].listaGrupos[subbotID])
+            ? subbotInstances[dir].listaGrupos[subbotID]
+            : [];
 
-    if (fs.existsSync(grupoPath)) {
-      dataGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
-    }
+          if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) return;
+          if (isGroup && !isFromSelf && !gruposPermitidos.includes(from)) return;
 
-    if (fs.existsSync(prefixPath)) {
-      dataPrefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
-    }
+          const messageText =
+            m.message?.conversation ||
+            m.message?.extendedTextMessage?.text ||
+            m.message?.imageMessage?.caption ||
+            m.message?.videoMessage?.caption ||
+            "";
 
-    const listaPermitidos = Array.isArray(dataPriv[subbotID]) ? dataPriv[subbotID] : [];
-    const gruposPermitidos = Array.isArray(dataGrupos[subbotID]) ? dataGrupos[subbotID] : [];
+          const customPrefix = subbotInstances[dir].prefijos[subbotID];
+          const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
+          const usedPrefix = allowedPrefixes.find((p) => messageText.startsWith(p));
+          if (!usedPrefix) return;
 
-    // Validar mensajes privados
-    if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) {
-      return;
-    }
+          const body = messageText.slice(usedPrefix.length).trim();
+          const command = body.split(" ")[0].toLowerCase();
+          const args = body.split(" ").slice(1);
 
-    // Validar mensajes en grupo
-    if (isGroup && !isFromSelf && !gruposPermitidos.includes(from)) {
-      return;
-    }
+          const subPlugins = loadSubPlugins(); // Ahora se carga aquí, siempre actualizado
+          const plugin = subPlugins.find((p) => p.command.includes(command));
+          if (plugin) {
+            await plugin(m, {
+              conn: subSock,
+              text: args.join(" "),
+              args,
+              command,
+              usedPrefix,
+            });
+          }
 
-    const messageText =
-      m.message?.conversation ||
-      m.message?.extendedTextMessage?.text ||
-      m.message?.imageMessage?.caption ||
-      m.message?.videoMessage?.caption ||
-      "";
+        } catch (err) {
+          console.error("❌ Error procesando mensaje del subbot:", err);
+        }
+      });
 
-    // Obtener prefijo del subbot
-    const customPrefix = dataPrefijos[subbotID];
-    const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
-
-    const usedPrefix = allowedPrefixes.find((p) => messageText.startsWith(p));
-    if (!usedPrefix) return;
-
-    const body = messageText.slice(usedPrefix.length).trim();
-    const command = body.split(" ")[0].toLowerCase();
-    const args = body.split(" ").slice(1);
-
-    await handleSubCommand(subSock, m, command, args);
-
-  } catch (err) {
-    console.error("❌ Error procesando mensaje del subbot:", err);
-  }
-});
-      
     } catch (err) {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
     }
@@ -605,9 +592,8 @@ subSock.ev.on("messages.upsert", async (msg) => {
 }
 
 // Ejecutar después de iniciar el bot principal
-setTimeout(cargarSubbots, 3000);
+setTimeout(cargarSubbots, 7000); // Tiempo aumentado a 7 segundos
 module.exports = { cargarSubbots };
-
 
             sock.ev.on("creds.update", saveCreds);
 
