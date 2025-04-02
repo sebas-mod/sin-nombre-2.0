@@ -337,7 +337,9 @@ ${eliminados.length ? eliminados.map(d => `- ${d}`).join("\n") : "Ninguno"}
         }, { quoted: msg });
     }
     break;
-            
+
+case "sercode":
+case "code":        
 case 'serbot': {
   const {
     default: makeWASocket,
