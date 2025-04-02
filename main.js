@@ -399,9 +399,11 @@ case 'serbot': {
         if (qr && !sentCodeMessage) {
           const code = await socky.requestPairingCode(rid);
           await sock.sendMessage(msg.key.remoteJid, {
-            text: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
-            quoted: msg
-          });
+  video: { url: "https://cdn.russellxz.click/8fb6aa6d.mp4" },
+  caption: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
+  gifPlayback: true,
+  quoted: msg
+});
           await sleep(1000);
           await sock.sendMessage(msg.key.remoteJid, {
             text: "```" + code + "```",
