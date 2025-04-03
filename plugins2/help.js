@@ -73,7 +73,7 @@ const handler = async (msg, { conn }) => {
 ═⌬ © Azura Ultra Subbot ⌬═`;
 
   await conn.sendMessage(msg.key.remoteJid, {
-    image: { url: `https://cdn.dorratz.com/files/1743560026026.jpg` },
+    image: { url: `https://cdn.russellxz.click/ffb38c93.PNG` },
     caption: menu
   }, { quoted: msg });
 
