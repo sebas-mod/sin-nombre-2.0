@@ -48,7 +48,7 @@ if (!fs.existsSync(grupoPath)) {
 }
 //otro mas
 // Guardar sesión del dueño si no existe
-const sessionDataPath = path.join(__dirname, "subbots", dir, "ultimaSesion.json");
+const sessionDataPath = path.join(__dirname, "subbots", dir);
 if (!fs.existsSync(sessionDataPath) && !isGroup && !isFromSelf) {
   fs.writeFileSync(sessionDataPath, JSON.stringify({ jid: from }, null, 2));
 }
