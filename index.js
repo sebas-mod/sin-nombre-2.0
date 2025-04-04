@@ -511,60 +511,41 @@ async function cargarSubbots() {
 
       subSock.ev.on("creds.update", saveCreds);
 
-      subSock.ev.on("connection.update", (update) => {
-        const { connection } = update;
+subSock.ev.on("connection.update", (update) => {
+  const { connection } = update;
 
-        if (connection === "open") {
-          console.log(`✅ Subbot ${dir} conectado correctamente.`);
-          subbotInstances[dir].isConnected = true;
-        } else if (connection === "close") {
-          console.log(`❌ Subbot ${dir} se desconectó.`);
-          subbotInstances[dir].isConnected = false;
+  if (connection === "open") {
+    console.log(`✅ Subbot ${dir} conectado correctamente.`);
+    subbotInstances[dir].isConnected = true;
+  } else if (connection === "close") {
+    console.log(`❌ Subbot ${dir} se desconectó.`);
+    subbotInstances[dir].isConnected = false;
 
-          const sessionPath = path.join(__dirname, "subbots", dir);
-          const userNotifyPath = path.join(sessionPath, "ultimaSesion.json");
+    const sessionPath = path.join(__dirname, "subbots", dir);
 
-          let intentos = 0;
-          const MAX_INTENTOS = 18; // 90 segundos (18 x 5s)
-          let avisoEnviado = false;
+    let intentos = 0;
+    const MAX_INTENTOS = 18; // 90 segundos (18 x 5s)
 
-          const intervalo = setInterval(async () => {
-            if (subbotInstances[dir].isConnected) {
-              clearInterval(intervalo);
-              return;
-            }
+    const intervalo = setInterval(async () => {
+      if (subbotInstances[dir].isConnected) {
+        clearInterval(intervalo);
+        return;
+      }
 
-            intentos++;
+      intentos++;
 
-            if (!avisoEnviado) {
-              avisoEnviado = true;
-              try {
-                if (fs.existsSync(userNotifyPath)) {
-                  const info = JSON.parse(fs.readFileSync(userNotifyPath, "utf-8"));
-                  const jid = info?.jid;
-                  if (jid) {
-                    await subSock.sendMessage(jid, {
-                      text: `⚠️ Tu sesión se desconectó.\nIntentaremos reconectarla en los próximos segundos.\nSi no lo logramos, será eliminada y podrás volver a usar el comando *serbot* para crear una nueva.\n\nGracias por ser parte de *Azura Ultra 2.0*. Nos vemos pronto.`
-                    });
-                  }
-                }
-              } catch (e) {
-                console.log("❌ No se pudo enviar aviso de reconexión:", e);
-              }
-            }
-
-            if (intentos >= MAX_INTENTOS) {
-              clearInterval(intervalo);
-              try {
-                fs.rmSync(sessionPath, { recursive: true, force: true });
-                console.log(`⛔ Subbot ${dir} no se reconectó. Carpeta eliminada.`);
-              } catch (e) {
-                console.error(`❌ Error al eliminar carpeta del subbot ${dir}:`, e);
-              }
-            }
-          }, 5000);
+      if (intentos >= MAX_INTENTOS) {
+        clearInterval(intervalo);
+        try {
+          fs.rmSync(sessionPath, { recursive: true, force: true });
+          console.log(`⛔ Subbot ${dir} no se reconectó. Carpeta eliminada.`);
+        } catch (e) {
+          console.error(`❌ Error al eliminar carpeta del subbot ${dir}:`, e);
         }
-      });
+      }
+    }, 5000);
+  }
+});
 
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
@@ -582,13 +563,7 @@ async function cargarSubbots() {
           const rawID = subSock.user?.id || "";
           const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
 
-          // Guardar JID del dueño si no existe
-          const sessionDataPath = path.join(__dirname, "subbots", dir, "ultimaSesion.json");
-          if (!fs.existsSync(sessionDataPath) && !isGroup && !isFromSelf) {
-            fs.writeFileSync(sessionDataPath, JSON.stringify({ jid: from }, null, 2));
-          }
-
-          // Leer listas y prefijos
+          // Leer listas y prefijos DINÁMICAMENTE en cada mensaje
           const listaPath = path.join(__dirname, "listasubots.json");
           const grupoPath = path.join(__dirname, "grupo.json");
           const prefixPath = path.join(__dirname, "prefixes.json");
