@@ -397,28 +397,11 @@ case 'serbot': {
       const maxReconnectionAttempts = 3;
 
       socky.ev.on("connection.update", async (c) => {
-        const { qr, connection, lastDisconnect } = c;
+  const { qr, connection, lastDisconnect, isNewLogin } = c;
 
-        if (qr && !sentCodeMessage) {
-          const code = await socky.requestPairingCode(rid);
-          await sock.sendMessage(msg.key.remoteJid, {
-  video: { url: "https://cdn.russellxz.click/b0cbbbd3.mp4" },
-  caption: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
-  gifPlayback: true,
-  quoted: msg
-});
-          await sleep(1000);
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "```" + code + "```",
-            quoted: msg
-          });
-          sentCodeMessage = true;
-        }
-
-        switch (connection) {
-          case "open":
-  await sock.sendMessage(msg.key.remoteJid, {
-  text: `
+  if (connection === "open") {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `
 ╭───〔 *🤖 SUBBOT CONECTADO* 〕───╮
 │
 │ ✅ *Bienvenido a Azura Ultra 2.0*
@@ -458,34 +441,55 @@ case 'serbot': {
 │ Esto ayuda a establecer una conexión *estable y funcional*.
 │
 ╰────✦ *Sky Ultra Plus* ✦────╯`,
-  quoted: msg
-});
+      quoted: msg
+    });
 
-            // 🔁 Reacción de recarga
-            await sock.sendMessage(msg.key.remoteJid, {
-              react: { text: "🔁", key: msg.key }
-            });
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "🔁", key: msg.key }
+    });
 
-            // 🚀 Recargar todos los subbots (incluye al nuevo)
-            await cargarSubbots();
-            break;
+    await cargarSubbots();
+  }
 
-          case "close": {
-            const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-            console.log(`Subbot desconectado: ${number} (${DisconnectReason[reason] || reason})`);
-
-            if (reason === DisconnectReason.restartRequired && reconnectionAttempts < maxReconnectionAttempts) {
-              reconnectionAttempts++;
-              console.log(`🔁 Reintentando conexión para ${number} (${reconnectionAttempts})`);
-              await sleep(3000);
-              await serbot();
-            } else {
-              console.log(`⚠️ Sesión de ${number} cerrada con código ${reason}, pero no se eliminará la carpeta.`);
-            }
-            break;
-          }
-        }
+  if (isNewLogin && !sentCodeMessage) {
+    try {
+      const code = await socky.requestPairingCode(rid);
+      await sock.sendMessage(msg.key.remoteJid, {
+        video: { url: "https://cdn.russellxz.click/b0cbbbd3.mp4" },
+        caption: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
+        gifPlayback: true,
+        quoted: msg
       });
+
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: "```" + code + "```",
+        quoted: msg
+      });
+
+      sentCodeMessage = true;
+    } catch (e) {
+      console.error("❌ Error al generar pairing code:", e);
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: `❌ *Error generando código:* ${e.message}`,
+        quoted: msg
+      });
+    }
+  }
+
+  if (connection === "close") {
+    const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+    console.log(`Subbot desconectado: ${number} (${DisconnectReason[reason] || reason})`);
+
+    if (reason === DisconnectReason.restartRequired && reconnectionAttempts < maxReconnectionAttempts) {
+      reconnectionAttempts++;
+      console.log(`🔁 Reintentando conexión para ${number} (${reconnectionAttempts})`);
+      await sleep(3000);
+      await serbot();
+    } else {
+      console.log(`⚠️ Sesión de ${number} cerrada con código ${reason}, pero no se eliminará la carpeta.`);
+    }
+  }
+});
       socky.ev.on("creds.update", saveCreds);
 
     } catch (e) {
