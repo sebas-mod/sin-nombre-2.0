@@ -46,6 +46,12 @@ if (!fs.existsSync(grupoPath)) {
 } else {
   console.log("✅ grupo.json ya existe.");
 }
+//otro mas
+// Guardar sesión del dueño si no existe
+const sessionDataPath = path.join(__dirname, "subbots", dir, "ultimaSesion.json");
+if (!fs.existsSync(sessionDataPath) && !isGroup && !isFromSelf) {
+  fs.writeFileSync(sessionDataPath, JSON.stringify({ jid: from }, null, 2));
+}
 
 //grupo subot
 const rpgFile = "./rpg.json";
