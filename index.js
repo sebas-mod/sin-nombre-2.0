@@ -511,41 +511,16 @@ async function cargarSubbots() {
 
       subSock.ev.on("creds.update", saveCreds);
 
-subSock.ev.on("connection.update", (update) => {
-  const { connection } = update;
-
-  if (connection === "open") {
-    console.log(`✅ Subbot ${dir} conectado correctamente.`);
-    subbotInstances[dir].isConnected = true;
-  } else if (connection === "close") {
-    console.log(`❌ Subbot ${dir} se desconectó.`);
-    subbotInstances[dir].isConnected = false;
-
-    const sessionPath = path.join(__dirname, "subbots", dir);
-
-    let intentos = 0;
-    const MAX_INTENTOS = 18; // 90 segundos (18 x 5s)
-
-    const intervalo = setInterval(async () => {
-      if (subbotInstances[dir].isConnected) {
-        clearInterval(intervalo);
-        return;
-      }
-
-      intentos++;
-
-      if (intentos >= MAX_INTENTOS) {
-        clearInterval(intervalo);
-        try {
-          fs.rmSync(sessionPath, { recursive: true, force: true });
-          console.log(`⛔ Subbot ${dir} no se reconectó. Carpeta eliminada.`);
-        } catch (e) {
-          console.error(`❌ Error al eliminar carpeta del subbot ${dir}:`, e);
+      subSock.ev.on("connection.update", (update) => {
+        const { connection } = update;
+        if (connection === "open") {
+          console.log(`✅ Subbot ${dir} conectado correctamente.`);
+          subbotInstances[dir].isConnected = true;
+        } else if (connection === "close") {
+          console.log(`❌ Subbot ${dir} se desconectó.`);
+          subbotInstances[dir].isConnected = false;
         }
-      }
-    }, 5000);
-  }
-});
+      });
 
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
