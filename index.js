@@ -511,132 +511,132 @@ async function cargarSubbots() {
 
       subSock.ev.on("creds.update", saveCreds);
 
-subSock.ev.on("connection.update", (update) => {
-  const { connection, lastDisconnect } = update;
+      subSock.ev.on("connection.update", (update) => {
+        const { connection } = update;
 
-  if (connection === "open") {
-    console.log(`✅ Subbot ${dir} conectado correctamente.`);
-    subbotInstances[dir].isConnected = true;
-  } else if (connection === "close") {
-    console.log(`❌ Subbot ${dir} se desconectó.`);
-    subbotInstances[dir].isConnected = false;
+        if (connection === "open") {
+          console.log(`✅ Subbot ${dir} conectado correctamente.`);
+          subbotInstances[dir].isConnected = true;
+        } else if (connection === "close") {
+          console.log(`❌ Subbot ${dir} se desconectó.`);
+          subbotInstances[dir].isConnected = false;
 
-    const sessionPath = path.join(__dirname, "subbots", dir);
-    const userNotifyPath = path.join(sessionPath, "ultimaSesion.json");
+          const sessionPath = path.join(__dirname, "subbots", dir);
+          const userNotifyPath = path.join(sessionPath, "ultimaSesion.json");
 
-    let intentos = 0;
-    const MAX_INTENTOS = 18; // 90 segundos (18 x 5s)
-    let avisoEnviado = false;
+          let intentos = 0;
+          const MAX_INTENTOS = 18; // 90 segundos (18 x 5s)
+          let avisoEnviado = false;
 
-    const intervalo = setInterval(async () => {
-      if (subbotInstances[dir].isConnected) {
-        clearInterval(intervalo);
-        return;
-      }
-
-      intentos++;
-
-      if (!avisoEnviado) {
-        avisoEnviado = true;
-        try {
-          if (fs.existsSync(userNotifyPath)) {
-            const info = JSON.parse(fs.readFileSync(userNotifyPath, "utf-8"));
-            const jid = info?.jid;
-            if (jid) {
-              await subSock.sendMessage(jid, {
-                text: `⚠️ Tu sesión se desconectó.\nIntentaremos reconectarla en los próximos segundos.\nSi no lo logramos, será eliminada y podrás volver a usar el comando *serbot* para crear una nueva.\n\nGracias por ser parte de *Azura Ultra 2.0*. Nos vemos pronto.`
-              });
+          const intervalo = setInterval(async () => {
+            if (subbotInstances[dir].isConnected) {
+              clearInterval(intervalo);
+              return;
             }
-          }
-        } catch (e) {
-          console.log("❌ No se pudo enviar aviso de reconexión:", e);
-        }
-      }
 
-      if (intentos >= MAX_INTENTOS) {
-        clearInterval(intervalo);
+            intentos++;
+
+            if (!avisoEnviado) {
+              avisoEnviado = true;
+              try {
+                if (fs.existsSync(userNotifyPath)) {
+                  const info = JSON.parse(fs.readFileSync(userNotifyPath, "utf-8"));
+                  const jid = info?.jid;
+                  if (jid) {
+                    await subSock.sendMessage(jid, {
+                      text: `⚠️ Tu sesión se desconectó.\nIntentaremos reconectarla en los próximos segundos.\nSi no lo logramos, será eliminada y podrás volver a usar el comando *serbot* para crear una nueva.\n\nGracias por ser parte de *Azura Ultra 2.0*. Nos vemos pronto.`
+                    });
+                  }
+                }
+              } catch (e) {
+                console.log("❌ No se pudo enviar aviso de reconexión:", e);
+              }
+            }
+
+            if (intentos >= MAX_INTENTOS) {
+              clearInterval(intervalo);
+              try {
+                fs.rmSync(sessionPath, { recursive: true, force: true });
+                console.log(`⛔ Subbot ${dir} no se reconectó. Carpeta eliminada.`);
+              } catch (e) {
+                console.error(`❌ Error al eliminar carpeta del subbot ${dir}:`, e);
+              }
+            }
+          }, 5000);
+        }
+      });
+
+      subSock.ev.on("messages.upsert", async (msg) => {
         try {
-          fs.rmSync(sessionPath, { recursive: true, force: true });
-          console.log(`⛔ Subbot ${dir} no se reconectó. Carpeta eliminada.`);
-        } catch (e) {
-          console.error(`❌ Error al eliminar carpeta del subbot ${dir}:`, e);
+          if (!subbotInstances[dir].isConnected) return;
+
+          const m = msg.messages[0];
+          if (!m || !m.message) return;
+
+          const from = m.key.remoteJid;
+          const isGroup = from.endsWith("@g.us");
+          const isFromSelf = m.key.fromMe;
+          const senderJid = m.key.participant || from;
+          const senderNum = senderJid.split("@")[0];
+
+          const rawID = subSock.user?.id || "";
+          const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
+
+          // Guardar JID del dueño si no existe
+          const sessionDataPath = path.join(__dirname, "subbots", dir, "ultimaSesion.json");
+          if (!fs.existsSync(sessionDataPath) && !isGroup && !isFromSelf) {
+            fs.writeFileSync(sessionDataPath, JSON.stringify({ jid: from }, null, 2));
+          }
+
+          // Leer listas y prefijos
+          const listaPath = path.join(__dirname, "listasubots.json");
+          const grupoPath = path.join(__dirname, "grupo.json");
+          const prefixPath = path.join(__dirname, "prefixes.json");
+
+          let dataPriv = {};
+          let dataGrupos = {};
+          let dataPrefijos = {};
+
+          if (fs.existsSync(listaPath)) {
+            dataPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
+          }
+
+          if (fs.existsSync(grupoPath)) {
+            dataGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
+          }
+
+          if (fs.existsSync(prefixPath)) {
+            dataPrefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
+          }
+
+          const listaPermitidos = Array.isArray(dataPriv[subbotID]) ? dataPriv[subbotID] : [];
+          const gruposPermitidos = Array.isArray(dataGrupos[subbotID]) ? dataGrupos[subbotID] : [];
+
+          if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) return;
+          if (isGroup && !isFromSelf && !gruposPermitidos.includes(from)) return;
+
+          const messageText =
+            m.message?.conversation ||
+            m.message?.extendedTextMessage?.text ||
+            m.message?.imageMessage?.caption ||
+            m.message?.videoMessage?.caption ||
+            "";
+
+          const customPrefix = dataPrefijos[subbotID];
+          const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
+          const usedPrefix = allowedPrefixes.find((p) => messageText.startsWith(p));
+          if (!usedPrefix) return;
+
+          const body = messageText.slice(usedPrefix.length).trim();
+          const command = body.split(" ")[0].toLowerCase();
+          const args = body.split(" ").slice(1);
+
+          await handleSubCommand(subSock, m, command, args);
+
+        } catch (err) {
+          console.error("❌ Error procesando mensaje del subbot:", err);
         }
-      }
-    }, 5000);
-  }
-});
-
-subSock.ev.on("messages.upsert", async (msg) => {
-  try {
-    if (!subbotInstances[dir].isConnected) return;
-
-    const m = msg.messages[0];
-    if (!m || !m.message) return;
-
-    const from = m.key.remoteJid;
-    const isGroup = from.endsWith("@g.us");
-    const isFromSelf = m.key.fromMe;
-    const senderJid = m.key.participant || from;
-    const senderNum = senderJid.split("@")[0];
-
-    const rawID = subSock.user?.id || "";
-    const subbotID = rawID.split(":")[0] + "@s.whatsapp.net";
-
-    // Guardar sesión del dueño si no existe
-    const sessionDataPath = path.join(__dirname, "subbots", dir, "ultimaSesion.json");
-    if (!fs.existsSync(sessionDataPath) && !isGroup && !isFromSelf) {
-      fs.writeFileSync(sessionDataPath, JSON.stringify({ jid: from }, null, 2));
-    }
-
-    // Leer listas y prefijos DINÁMICAMENTE en cada mensaje
-    const listaPath = path.join(__dirname, "listasubots.json");
-    const grupoPath = path.join(__dirname, "grupo.json");
-    const prefixPath = path.join(__dirname, "prefixes.json");
-
-    let dataPriv = {};
-    let dataGrupos = {};
-    let dataPrefijos = {};
-
-    if (fs.existsSync(listaPath)) {
-      dataPriv = JSON.parse(fs.readFileSync(listaPath, "utf-8"));
-    }
-
-    if (fs.existsSync(grupoPath)) {
-      dataGrupos = JSON.parse(fs.readFileSync(grupoPath, "utf-8"));
-    }
-
-    if (fs.existsSync(prefixPath)) {
-      dataPrefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
-    }
-
-    const listaPermitidos = Array.isArray(dataPriv[subbotID]) ? dataPriv[subbotID] : [];
-    const gruposPermitidos = Array.isArray(dataGrupos[subbotID]) ? dataGrupos[subbotID] : [];
-
-    if (!isGroup && !isFromSelf && !listaPermitidos.includes(senderNum)) return;
-    if (isGroup && !isFromSelf && !gruposPermitidos.includes(from)) return;
-
-    const messageText =
-      m.message?.conversation ||
-      m.message?.extendedTextMessage?.text ||
-      m.message?.imageMessage?.caption ||
-      m.message?.videoMessage?.caption ||
-      "";
-
-    const customPrefix = dataPrefijos[subbotID];
-    const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
-    const usedPrefix = allowedPrefixes.find((p) => messageText.startsWith(p));
-    if (!usedPrefix) return;
-
-    const body = messageText.slice(usedPrefix.length).trim();
-    const command = body.split(" ")[0].toLowerCase();
-    const args = body.split(" ").slice(1);
-
-    await handleSubCommand(subSock, m, command, args);
-
-  } catch (err) {
-    console.error("❌ Error procesando mensaje del subbot:", err);
-  }
-});
+      });
 
     } catch (err) {
       console.error(`❌ Error al cargar subbot ${dir}:`, err);
