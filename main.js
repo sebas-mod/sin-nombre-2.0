@@ -214,6 +214,71 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
+case "modoadmins": {
+  try {
+    const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
+    const isBotMessage = msg.key.fromMe;
+    const chatId = msg.key.remoteJid;
+    const isGroup = chatId.endsWith("@g.us");
+
+    if (!isGroup) {
+      await sock.sendMessage(chatId, {
+        text: "❌ Este comando solo se puede usar en grupos."
+      }, { quoted: msg });
+      break;
+    }
+
+    const metadata = await sock.groupMetadata(chatId);
+    const participant = metadata.participants.find(p => p.id.includes(senderNumber));
+    const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
+
+    if (!isAdmin && !isOwner(senderNumber) && !isBotMessage) {
+      await sock.sendMessage(chatId, {
+        text: "❌ Solo administradores o el owner pueden usar este comando."
+      }, { quoted: msg });
+      break;
+    }
+
+    const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+    const args = messageText.trim().split(" ").slice(1);
+
+    if (!["on", "off"].includes(args[0])) {
+      await sock.sendMessage(chatId, {
+        text: "✳️ Usa correctamente:\n\n.modoadmins on / off"
+      }, { quoted: msg });
+      break;
+    }
+
+    const fs = require("fs");
+    const path = require("path");
+    const activosPath = path.join(__dirname, "activos.json");
+    const activos = fs.existsSync(activosPath)
+      ? JSON.parse(fs.readFileSync(activosPath))
+      : {};
+
+    activos.modoAdmins = activos.modoAdmins || {};
+
+    if (args[0] === "on") {
+      activos.modoAdmins[chatId] = true;
+    } else {
+      delete activos.modoAdmins[chatId];
+    }
+
+    fs.writeFileSync(activosPath, JSON.stringify(activos, null, 2));
+
+    await sock.sendMessage(chatId, {
+      text: `👑 Modo admins *${args[0] === "on" ? "activado" : "desactivado"}* en este grupo.`
+    }, { quoted: msg });
+
+  } catch (err) {
+    console.error("❌ Error en modoadmins:", err);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ Ocurrió un error al cambiar el modo admins."
+    }, { quoted: msg });
+  }
+  break;
+}
+      
 case "modoprivado": {
   try {
     const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
