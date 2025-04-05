@@ -214,6 +214,49 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
+case "modoprivado": {
+  try {
+    const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
+    const isBotMessage = msg.key.fromMe;
+
+    if (!isOwner(senderNumber) && !isBotMessage) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: "❌ Este comando es solo para el *dueño del bot*."
+      }, { quoted: msg });
+      break;
+    }
+
+    const args = text.split(" ").slice(1);
+    if (!["on", "off"].includes(args[0])) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: "✳️ Usa correctamente:\n\n.modoprivado on / off"
+      }, { quoted: msg });
+      break;
+    }
+
+    const fs = require("fs");
+    const path = require("path");
+    const activosPath = path.join(__dirname, "activos.json");
+    const activos = fs.existsSync(activosPath)
+      ? JSON.parse(fs.readFileSync(activosPath))
+      : {};
+
+    activos.modoPrivado = args[0] === "on";
+    fs.writeFileSync(activosPath, JSON.stringify(activos, null, 2));
+
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: `🔐 Modo privado *${args[0] === "on" ? "activado" : "desactivado"}*.`
+    }, { quoted: msg });
+
+  } catch (err) {
+    console.error("❌ Error en modoprivado:", err);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ Ocurrió un error al activar el modo privado."
+    }, { quoted: msg });
+  }
+  break;
+}
+      
 case "cargabots":
     try {
         const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
