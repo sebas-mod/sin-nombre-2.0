@@ -2,31 +2,47 @@ const fs = require("fs");
 const path = require("path");
 const activosPath = path.join(__dirname, "..", "activos.json");
 
-module.exports = async (m, { conn, args, isGroup, isOwner }) => {
-  if (!isGroup) return m.reply("❌ Este comando solo funciona en grupos.");
+const handler = async (msg, { conn, args, isGroup, isOwner }) => {
+  const chatId = msg.key.remoteJid;
+  const sender = msg.key.participant
+    ? msg.key.participant.replace(/[^0-9]/g, "")
+    : msg.key.remoteJid.replace(/[^0-9]/g, "");
 
-  // Obtener metadata del grupo
-  const metadata = await conn.groupMetadata(m.chat).catch(() => null);
-  if (!metadata) return m.reply("❌ No se pudo obtener la información del grupo.");
+  if (!isGroup) {
+    return await conn.sendMessage(chatId, { text: "❌ Solo puede usarse en grupos." }, { quoted: msg });
+  }
 
-  const senderId = m.sender; // El que ejecutó el comando
-  const participante = metadata.participants.find(p => p.id === senderId);
-  const esAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
+  const metadata = await conn.groupMetadata(chatId);
+  const participant = metadata.participants.find(p => p.id.includes(sender));
+  const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
 
-  if (!esAdmin && !isOwner) return m.reply("❌ Solo administradores reales o el owner pueden usar este comando.");
-  if (!["on", "off"].includes(args[0])) return m.reply("⚠️ Usa: .modoadmins on/off");
+  if (!isAdmin && !isOwner(sender)) {
+    return await conn.sendMessage(chatId, { text: "❌ Solo administradores o el owner pueden usar este comando." }, { quoted: msg });
+  }
 
-  // Leer y actualizar el JSON
-  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+  if (!["on", "off"].includes(args[0])) {
+    return await conn.sendMessage(chatId, {
+      text: "✳️ Usa correctamente:\n\n.modoadmins on / off"
+    }, { quoted: msg });
+  }
+
+  const activos = fs.existsSync(activosPath)
+    ? JSON.parse(fs.readFileSync(activosPath))
+    : {};
+
   activos.modoAdmins = activos.modoAdmins || {};
   if (args[0] === "on") {
-    activos.modoAdmins[m.chat] = true;
+    activos.modoAdmins[chatId] = true;
   } else {
-    delete activos.modoAdmins[m.chat];
+    delete activos.modoAdmins[chatId];
   }
 
   fs.writeFileSync(activosPath, JSON.stringify(activos, null, 2));
-  m.reply(`👑 Modo admins ${args[0] === "on" ? "activado" : "desactivado"} en este grupo.`);
+
+  await conn.sendMessage(chatId, {
+    text: `👑 Modo admins *${args[0] === "on" ? "activado" : "desactivado"}* en este grupo.`
+  }, { quoted: msg });
 };
 
-module.exports.command = ["modoadmins"];
+handler.command = ["modoadmins"];
+module.exports = handler;
