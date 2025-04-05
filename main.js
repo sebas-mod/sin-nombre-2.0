@@ -226,7 +226,9 @@ case "modoprivado": {
       break;
     }
 
-    const args = text.split(" ").slice(1);
+    const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+    const args = messageText.trim().split(" ").slice(1);
+
     if (!["on", "off"].includes(args[0])) {
       await sock.sendMessage(msg.key.remoteJid, {
         text: "✳️ Usa correctamente:\n\n.modoprivado on / off"
