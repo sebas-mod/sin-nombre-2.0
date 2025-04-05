@@ -5424,26 +5424,37 @@ case 'tagall':
 case 'invocar':
 case 'todos': {
   try {
-    // Verificar que se use en un grupo
     const chatId = msg.key.remoteJid;
-    if (!chatId.endsWith("@g.us")) {
+    const sender = (msg.key.participant || msg.key.remoteJid).replace(/[^0-9]/g, "");
+    const isGroup = chatId.endsWith("@g.us");
+    const isBotMessage = msg.key.fromMe;
+
+    // Reacción inicial
+    await sock.sendMessage(chatId, { react: { text: "🔊", key: msg.key } });
+
+    if (!isGroup) {
       await sock.sendMessage(chatId, { text: "⚠️ *Este comando solo se puede usar en grupos.*" }, { quoted: msg });
       return;
     }
 
-    // Obtener metadata del grupo para extraer participantes
+    // Obtener metadata del grupo y verificar si es admin
     const metadata = await sock.groupMetadata(chatId);
-    const participants = metadata.participants; // Array de objetos con { id, ... }
+    const participant = metadata.participants.find(p => p.id.includes(sender));
+    const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
 
-    // Construir la lista de menciones (cada línea con "➥ @<numero>")
-    const mentionList = participants
-      .map(p => `➥ @${p.id.split("@")[0]}`)
-      .join("\n");
+    if (!isAdmin && !isOwner(sender) && !isBotMessage) {
+      await sock.sendMessage(chatId, {
+        text: "❌ *Este comando solo puede usarlo un administrador o el dueño del bot.*"
+      }, { quoted: msg });
+      return;
+    }
 
-    // Obtener el mensaje extra (argumentos) que el usuario envía
+    const participants = metadata.participants;
+    const mentionList = participants.map(p => `➥ @${p.id.split("@")[0]}`).join("\n");
+    const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+    const args = messageText.trim().split(" ").slice(1);
     const extraMsg = args.join(" ");
 
-    // Construir el mensaje final con un diseño alitorio
     let finalMsg = "━〔 *📢 INVOCACIÓN 📢* 〕━➫\n";
     finalMsg += "٩(͡๏̯͡๏)۶ Por Azura Ultra 2.0 Bot ٩(͡๏̯͡๏)۶\n";
     if (extraMsg.trim().length > 0) {
@@ -5453,18 +5464,18 @@ case 'todos': {
     }
     finalMsg += mentionList;
 
-    // Obtener la lista de IDs completos para la mención
     const mentionIds = participants.map(p => p.id);
 
-    // Enviar el mensaje con el caption y la lista de menciones
-    await sock.sendMessage(chatId, { 
+    await sock.sendMessage(chatId, {
       text: finalMsg,
       mentions: mentionIds
     }, { quoted: msg });
 
   } catch (error) {
     console.error("❌ Error en el comando tagall:", error);
-    await sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al ejecutar el comando tagall.*" }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ *Ocurrió un error al ejecutar el comando tagall.*"
+    }, { quoted: msg });
   }
   break;
 }
