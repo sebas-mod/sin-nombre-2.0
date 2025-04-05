@@ -2,11 +2,13 @@ const fs = require("fs");
 const path = require("path");
 const activosPath = path.join(__dirname, "..", "activos.json");
 
-const handler = async (msg, { conn, args, isGroup, isOwner }) => {
+const handler = async (msg, { conn, args, isOwner }) => {
   const chatId = msg.key.remoteJid;
   const sender = msg.key.participant
     ? msg.key.participant.replace(/[^0-9]/g, "")
     : msg.key.remoteJid.replace(/[^0-9]/g, "");
+
+  const isGroup = chatId.endsWith("@g.us");
 
   if (!isGroup) {
     return await conn.sendMessage(chatId, { text: "❌ Solo puede usarse en grupos." }, { quoted: msg });
