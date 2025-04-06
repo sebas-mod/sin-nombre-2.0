@@ -15448,54 +15448,77 @@ break;
             }
             break;
 
-        case "kick":
-            try {
-                if (!msg.key.remoteJid.includes("@g.us")) {
-                    return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
-                }
+case "kick": {
+  try {
+    const chatId = msg.key.remoteJid;
+    const sender = (msg.key.participant || msg.participant || msg.key.remoteJid).replace(/[^0-9]/g, "");
+    const isGroup = chatId.endsWith("@g.us");
 
-                const chat = await sock.groupMetadata(msg.key.remoteJid);
-                const senderId = msg.key.participant.replace(/@s.whatsapp.net/, '');
-                const isOwner = global.owner.some(o => o[0] === senderId);
-                const groupAdmins = chat.participants.filter(p => p.admin);
-                const isAdmin = groupAdmins.some(admin => admin.id === msg.key.participant);
+    // Reacción inicial
+    await sock.sendMessage(chatId, { react: { text: "🛑", key: msg.key } });
 
-                if (!isAdmin && !isOwner) {
-                    return sock.sendMessage(
-                        msg.key.remoteJid,
-                        { text: "🚫 *No tienes permisos para expulsar a miembros del grupo.*\n⚠️ *Solo los administradores o el dueño del bot pueden usar este comando.*" },
-                        { quoted: msg }
-                    );
-                }
+    if (!isGroup) {
+      return await sock.sendMessage(chatId, { text: "❌ *Este comando solo funciona en grupos.*" }, { quoted: msg });
+    }
 
-                let userToKick = null;
+    const metadata = await sock.groupMetadata(chatId);
+    const groupAdmins = metadata.participants.filter(p => p.admin);
+    const isSenderAdmin = groupAdmins.some(p => p.id.includes(sender));
+    const isSenderOwner = isOwner(sender);
 
-                if (msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
-                    userToKick = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
-                }
+    if (!isSenderAdmin && !isSenderOwner) {
+      return await sock.sendMessage(chatId, {
+        text: "🚫 *Solo los administradores o el owner pueden expulsar miembros del grupo.*"
+      }, { quoted: msg });
+    }
 
-                if (!userToKick && msg.message.extendedTextMessage?.contextInfo?.participant) {
-                    userToKick = msg.message.extendedTextMessage.contextInfo.participant;
-                }
+    // Obtener usuario a expulsar
+    let userToKick = null;
 
-                if (!userToKick) {
-                    return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ *Debes mencionar o responder a un usuario para expulsarlo.*" }, { quoted: msg });
-                }
+    if (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
+      userToKick = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
+    } else if (msg.message?.extendedTextMessage?.contextInfo?.participant) {
+      userToKick = msg.message.extendedTextMessage.contextInfo.participant;
+    }
 
-                await sock.groupParticipantsUpdate(msg.key.remoteJid, [userToKick], "remove");
+    if (!userToKick) {
+      return await sock.sendMessage(chatId, {
+        text: "⚠️ *Debes mencionar o responder al usuario que deseas expulsar.*"
+      }, { quoted: msg });
+    }
 
-                return sock.sendMessage(
-                    msg.key.remoteJid,
-                    { text: `🚷 *El usuario @${userToKick.split('@')[0]} ha sido expulsado del grupo.*`, mentions: [userToKick] },
-                    { quoted: msg }
-                );
+    const isTargetAdmin = groupAdmins.some(p => p.id === userToKick);
+    const botId = sock.user.id;
 
-            } catch (error) {
-                console.error('❌ Error en el comando kick:', error);
-                return sock.sendMessage(msg.key.remoteJid, { text: "❌ *Ocurrió un error al intentar expulsar al usuario.*" }, { quoted: msg });
-            }
-            break;
+    if (isTargetAdmin) {
+      return await sock.sendMessage(chatId, {
+        text: "❌ *No se puede expulsar a otro administrador.*"
+      }, { quoted: msg });
+    }
 
+    if (userToKick === botId) {
+      return await sock.sendMessage(chatId, {
+        text: "❌ *No puedo expulsarme a mí mismo.*"
+      }, { quoted: msg });
+    }
+
+    await sock.groupParticipantsUpdate(chatId, [userToKick], "remove");
+
+    await sock.sendMessage(chatId, {
+      text: `🚷 *El usuario @${userToKick.split("@")[0]} ha sido expulsado del grupo.*`,
+      mentions: [userToKick]
+    }, { quoted: msg });
+
+  } catch (error) {
+    console.error("❌ Error en el comando kick:", error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ *Ocurrió un error al intentar expulsar al usuario.*"
+    }, { quoted: msg });
+  }
+  break;
+}
+        
+        
 case "instagram":
 case "ig":
     if (!text) return sock.sendMessage(msg.key.remoteJid, { 
