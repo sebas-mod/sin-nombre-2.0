@@ -310,17 +310,18 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
       }
 
       // 🔗 Antilink en grupos
+// 🔗 Antilink en grupos
       if (isGroup && activos.antilink?.[chatId]) {
         if (messageText.includes("https://chat.whatsapp.com/")) {
           let canBypass = fromMe || isOwner(sender);
           try {
             const metadata = await sock.groupMetadata(chatId);
-            const participant = metadata.participants.find(p => p.id.includes(sender));
-            if (participant?.admin === "admin" || participant?.admin === "superadmin") {
-              canBypass = true;
-            }
+            const participant = metadata.participants.find(p => p.id.replace(/[^0-9]/g, "") === sender);
+            const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
+            if (isAdmin) canBypass = true;
           } catch (e) {
-            console.error("Error leyendo metadata:", e);
+            console.error("Error leyendo metadata (antilink):", e);
+            canBypass = true; // Evita expulsar por error si no se puede obtener metadata
           }
 
           if (!canBypass) {
