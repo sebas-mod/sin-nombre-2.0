@@ -4488,7 +4488,7 @@ case 'menu': {
     });
 
     const chatId = msg.key.remoteJid;
-    const menuText = `╔═══════════════╗  
+    const captionText = `╔═══════════════╗  
 ║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
 ║   🤖 𝘼𝙎𝙄𝙎𝙏𝙀𝙉𝙏𝙀 🤖   ║  
 ╚═══════════════╝  
@@ -4510,7 +4510,65 @@ case 'menu': {
 ⎔ ${global.prefix}info  
 ⎔ ${global.prefix}menuowner  
 
-[ ... resto del texto del menú ... ]
+╭──────────────╮  
+│ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}play → título  
+⎔ ${global.prefix}play1 → título  
+⎔ ${global.prefix}play2 → título  
+⎔ ${global.prefix}play3 spotify → titulo
+⎔ ${global.prefix}play4 → titulo
+⎔ ${global.prefix}play5 → titulo
+⎔ ${global.prefix}play6 → titulo
+⎔ ${global.prefix}ytmp3 → link  
+⎔ ${global.prefix}ytmp35 → link  
+⎔ ${global.prefix}ytmp4 → link  
+⎔ ${global.prefix}ytmp45 → link  
+⎔ ${global.prefix}tiktok → link  
+⎔ ${global.prefix}fb → link  
+⎔ ${global.prefix}ig → link  
+⎔ ${global.prefix}spotify → link
+⎔ ${global.prefix}mediafire → link
+⎔ ${global.prefix}Tiktoksearch → título
+⎔ ${global.prefix}Yts → título
+⎔ ${global.prefix}apk → título
+
+╭──────────────╮  
+│ ✦ 𝙊𝙏𝙍𝙊𝙎 𝘾𝙊𝙈𝘼𝙉𝘿𝙊𝙎 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}ver  
+⎔ ${global.prefix}perfil  
+⎔ ${global.prefix}get  
+⎔ ${global.prefix}ping  
+⎔ ${global.prefix}creador  
+⎔ ${global.prefix}toimg  
+⎔ ${global.prefix}personalidad  
+⎔ ${global.prefix}ship  
+⎔ ${global.prefix}parejas  
+⎔ ${global.prefix}speedtest  
+⎔ ${global.prefix}tomp3  
+⎔ ${global.prefix}tts  
+⎔ ${global.prefix}visión  
+⎔ ${global.prefix}verdad  
+⎔ ${global.prefix}reto  
+⎔ ${global.prefix}géminis  
+⎔ ${global.prefix}gemini  
+⎔ ${global.prefix}chatgpt
+⎔ ${global.prefix}IA
+⎔ ${global.prefix}pixai  
+⎔ ${global.prefix}newpack
+⎔ ${global.prefix}addsticker
+⎔ ${global.prefix}listpacks
+⎔ ${global.prefix}sendpack
+⎔ ${global.prefix}tiktokstalk
+⎔ ${global.prefix}dalle
+⎔ ${global.prefix}visión2
+⎔ ${global.prefix}chatgpt o IA
+
+╭─────────────────╮  
+ ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟚.𝟘 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. 
+  𝙎𝙀 𝘼𝙂𝙍𝙀𝙂𝘼𝙍Á𝙉 𝙈Á𝙎 𝙁𝙐𝙉𝘾𝙄𝙊𝙉𝙀𝙎 𝙋𝙍𝙊𝙉𝙏𝙊.   
+╰─────────────────╯  
 
 👨‍💻 𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕`;
 
@@ -4520,7 +4578,7 @@ case 'menu': {
       {
         video: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" },
         gifPlayback: true,
-        caption: menuText
+        caption: captionText
       },
       msg
     );
@@ -4529,13 +4587,12 @@ case 'menu': {
     console.error("Error en comando menu:", error);
     await sock.sendMessage2(
       msg.key.remoteJid,
-      "❌ Ocurrió un error al mostrar el menú. Inténtalo de nuevo.",
+      "❌ *Ocurrió un error al mostrar el menú. Inténtalo de nuevo.*",
       msg
     );
   }
   break;
 }
-
 case 'menugrupo': {
   try {
     await sock.sendMessage(msg.key.remoteJid, {
