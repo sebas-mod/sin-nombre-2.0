@@ -4385,18 +4385,13 @@ case 'menuowner': {
   }
   break;
 }
-
-        
 case 'menurpg': {
   try {
-    // Reacción inicial (opcional)
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: "⚔️", key: msg.key }
     });
 
     const chatId = msg.key.remoteJid;
-
-    // Construcción del mensaje (tu texto de menú)
     const captionText = `╔═════════════════╗  
 ║   𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏   ║  
 ╚═════════════════╝  
@@ -4484,29 +4479,33 @@ Así te registras
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-    // Descarga el MP4 con axios
     const { data: bufferVideo } = await axios.get(
       "https://cdn.dorratz.com/files/1741474416069.mp4", 
       { responseType: 'arraybuffer' }
     );
 
-    // Enviar el "video" como si fuera GIF
-    await sock.sendMessage(chatId, {
-      video: bufferVideo,
-      caption: captionText,
-      gifPlayback: true,
-      mimetype: "video/mp4"
-    }, { quoted: msg });
+    await conn.sendMessage2(
+      chatId,
+      {
+        video: bufferVideo,
+        caption: captionText,
+        gifPlayback: true,
+        mimetype: "video/mp4"
+      },
+      msg
+    );
 
   } catch (error) {
     console.error("❌ Error en el comando menurpg:", error);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al mostrar el menú RPG. Inténtalo de nuevo."
-    }, { quoted: msg });
+    await conn.sendMessage2(
+      msg.key.remoteJid,
+      "❌ Ocurrió un error al mostrar el menú RPG. Inténtalo de nuevo.",
+      msg
+    );
   }
   break;
 }
-
+        
         
 case 'menu': {
   try {
