@@ -4484,7 +4484,7 @@ Así te registras
       { responseType: 'arraybuffer' }
     );
 
-    await conn.sendMessage2(
+    await sock.sendMessage2(
       chatId,
       {
         video: bufferVideo,
