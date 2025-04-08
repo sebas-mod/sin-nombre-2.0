@@ -4497,7 +4497,7 @@ Así te registras
 
   } catch (error) {
     console.error("❌ Error en el comando menurpg:", error);
-    await conn.sendMessage2(
+    await sock.sendMessage2(
       msg.key.remoteJid,
       "❌ Ocurrió un error al mostrar el menú RPG. Inténtalo de nuevo.",
       msg
