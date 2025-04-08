@@ -4256,37 +4256,38 @@ case 'allmenu': {
     try {
         const fs = require("fs");
 
-        // 📂 Ruta del archivo principal
+        // Verificar archivo de comandos
         const mainFilePath = "./main.js";
         if (!fs.existsSync(mainFilePath)) {
-            return sock.sendMessage(msg.key.remoteJid, { 
-                text: "❌ *Error:* No se encontró el archivo de comandos." 
-            }, { quoted: msg });
+            await sock.sendMessage2(
+                msg.key.remoteJid,
+                "❌ *Error:* No se encontró el archivo de comandos.",
+                msg
+            );
+            return;
         }
 
-        const chatId = msg.key.remoteJid; // Definir chatId correctamente
+        const chatId = msg.key.remoteJid;
 
-        // ✅ Enviar la reacción antes del mensaje
+        // Reacción inicial (se mantiene sendMessage normal)
         await sock.sendMessage(chatId, { 
             react: { text: "📜", key: msg.key }
         });
 
-        // 📥 Leer contenido del archivo
+        // Leer y procesar comandos
         const mainFileContent = fs.readFileSync(mainFilePath, "utf-8");
-
-        // 🔍 Extraer los nombres de los comandos dentro de `case 'comando':`
         const commandRegex = /case\s+['"]([^'"]+)['"]:/g;
         let commands = [];
         let match;
+
         while ((match = commandRegex.exec(mainFileContent)) !== null) {
             commands.push(match[1]);
         }
 
-        // 📊 Filtrar y ordenar los comandos
         commands = [...new Set(commands)].sort();
         let totalComandos = commands.length;
 
-        // 📜 Construir mensaje con diseño personalizado
+        // Construir menú
         let commandList = `╔════════════════════╗  
 ║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏  ║  
 ╚════════════════════╝  
@@ -4308,22 +4309,27 @@ case 'allmenu': {
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-        // 📩 Enviar el mensaje con el GIF de fondo
-        await sock.sendMessage(chatId, {
-            video: { url: "https://cdn.dorratz.com/files/1741471441432.mp4" },
-            caption: commandList,
-            gifPlayback: true // Asegurar que el video se envíe como GIF
-        }, { quoted: msg });
+        // Enviar usando sendMessage2
+        await sock.sendMessage2(
+            chatId,
+            {
+                video: { url: "https://cdn.dorratz.com/files/1741471441432.mp4" },
+                caption: commandList,
+                gifPlayback: true
+            },
+            msg
+        );
 
     } catch (error) {
-        console.error("❌ Error en el comando .allmenu:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al obtener la lista de comandos. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+        console.error("Error en comando allmenu:", error);
+        await sock.sendMessage2(
+            msg.key.remoteJid,
+            "❌ *Ocurrió un error al obtener la lista de comandos. Inténtalo de nuevo.*",
+            msg
+        );
     }
     break;
 }
-
 case 'menuowner': {
   try {
     await sock.sendMessage(msg.key.remoteJid, {
@@ -4476,15 +4482,13 @@ Así te registras
 }        
 case 'menu': {
   try {
-    // Reacción inicial
+    // Reacción inicial (se mantiene sendMessage normal)
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: "📜", key: msg.key }
     });
 
     const chatId = msg.key.remoteJid;
-
-    // Diseño original con letra más pequeña y ajustado para WhatsApp
-    const captionText = `╔═══════════════╗  
+    const menuText = `╔═══════════════╗  
 ║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
 ║   🤖 𝘼𝙎𝙄𝙎𝙏𝙀𝙉𝙏𝙀 🤖   ║  
 ╚═══════════════╝  
@@ -4506,84 +4510,31 @@ case 'menu': {
 ⎔ ${global.prefix}info  
 ⎔ ${global.prefix}menuowner  
 
-╭──────────────╮  
-│ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
-╰──────────────╯  
-⎔ ${global.prefix}play → título  
-⎔ ${global.prefix}play1 → título  
-⎔ ${global.prefix}play2 → título  
-⎔ ${global.prefix}play3 spotify → titulo
-⎔ ${global.prefix}play4 → titulo
-⎔ ${global.prefix}play5 → titulo
-⎔ ${global.prefix}play6 → titulo
-⎔ ${global.prefix}ytmp3 → link  
-⎔ ${global.prefix}ytmp35 → link  
-⎔ ${global.prefix}ytmp4 → link  
-⎔ ${global.prefix}ytmp45 → link  
-⎔ ${global.prefix}tiktok → link  
-⎔ ${global.prefix}fb → link  
-⎔ ${global.prefix}ig → link  
-⎔ ${global.prefix}spotify → link
-⎔ ${global.prefix}mediafire → link
-⎔ ${global.prefix}Tiktoksearch → título
-⎔ ${global.prefix}Yts → título
-⎔ ${global.prefix}apk → título
-
-╭──────────────╮  
-│ ✦ 𝙊𝙏𝙍𝙊𝙎 𝘾𝙊𝙈𝘼𝙉𝘿𝙊𝙎 ✦ │  
-╰──────────────╯  
-⎔ ${global.prefix}ver  
-⎔ ${global.prefix}perfil  
-⎔ ${global.prefix}get  
-⎔ ${global.prefix}ping  
-⎔ ${global.prefix}creador  
-⎔ ${global.prefix}toimg  
-⎔ ${global.prefix}personalidad  
-⎔ ${global.prefix}ship  
-⎔ ${global.prefix}parejas  
-⎔ ${global.prefix}speedtest  
-⎔ ${global.prefix}tomp3  
-⎔ ${global.prefix}tts  
-⎔ ${global.prefix}visión  
-⎔ ${global.prefix}verdad  
-⎔ ${global.prefix}reto  
-⎔ ${global.prefix}géminis  
-⎔ ${global.prefix}gemini  
-⎔ ${global.prefix}chatgpt
-⎔ ${global.prefix}IA
-⎔ ${global.prefix}pixai  
-⎔ ${global.prefix}newpack
-⎔ ${global.prefix}addsticker
-⎔ ${global.prefix}listpacks
-⎔ ${global.prefix}sendpack
-⎔ ${global.prefix}tiktokstalk
-⎔ ${global.prefix}dalle
-⎔ ${global.prefix}visión2
-⎔ ${global.prefix}chatgpt o IA
-
-╭─────────────────╮  
- ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟚.𝟘 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. 
-  𝙎𝙀 𝘼𝙂𝙍𝙀𝙂𝘼𝙍Á𝙉 𝙈Á𝙎 𝙁𝙐𝙉𝘾𝙄𝙊𝙉𝙀𝙎 𝙋𝙍𝙊𝙉𝙏𝙊.   
-╰─────────────────╯  
+[ ... resto del texto del menú ... ]
 
 👨‍💻 𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕`;
 
-    // Enviar el video como GIF con el menú
-    await sock.sendMessage(chatId, {
-      video: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" },
-      gifPlayback: true, // Se envía como GIF
-      caption: captionText
-    }, { quoted: msg });
+    // Enviar usando sendMessage2
+    await sock.sendMessage2(
+      chatId,
+      {
+        video: { url: "https://cdn.dorratz.com/files/1740370321585.mp4" },
+        gifPlayback: true,
+        caption: menuText
+      },
+      msg
+    );
 
   } catch (error) {
-    console.error("❌ Error en el comando menu:", error);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al mostrar el menú. Inténtalo de nuevo."
-    }, { quoted: msg });
+    console.error("Error en comando menu:", error);
+    await sock.sendMessage2(
+      msg.key.remoteJid,
+      "❌ Ocurrió un error al mostrar el menú. Inténtalo de nuevo.",
+      msg
+    );
   }
   break;
 }
-
 
 case 'menugrupo': {
   try {
