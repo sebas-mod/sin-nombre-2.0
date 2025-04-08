@@ -4392,7 +4392,7 @@ case 'menurpg': {
     });
 
     const chatId = msg.key.remoteJid;
-    const captionText = `╔═════════════════╗  
+    const menuText = `╔═════════════════╗  
 ║   𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏   ║  
 ╚═════════════════╝  
 
@@ -4405,90 +4405,58 @@ Así te registras
 ━━━━━━━━━━━━━━━━━━  
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗨𝗦𝗨𝗔𝗥𝗜𝗢𝗦  
-(Sube de nivel y de top)  
-➤ ${global.prefix}nivel  
-➤ ${global.prefix}picar  
-➤ ${global.prefix}minar  
-➤ ${global.prefix}minar2  
-➤ ${global.prefix}work  
-➤ ${global.prefix}crime  
-➤ ${global.prefix}robar  
-➤ ${global.prefix}cofre  
-➤ ${global.prefix}claim  
-➤ ${global.prefix}batallauser  
-➤ ${global.prefix}hospital  
-➤ ${global.prefix}hosp  
+➤ ${global.prefix}nivel ➤ ${global.prefix}picar  
+➤ ${global.prefix}minar ➤ ${global.prefix}minar2  
+➤ ${global.prefix}work ➤ ${global.prefix}crime  
+➤ ${global.prefix}robar ➤ ${global.prefix}cofre  
+➤ ${global.prefix}claim ➤ ${global.prefix}batallauser  
+➤ ${global.prefix}hospital ➤ ${global.prefix}hosp  
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗣𝗘𝗥𝗦𝗢𝗡𝗔𝗝𝗘𝗦  
-(Sube de nivel a tu personaje y top)  
-➤ ${global.prefix}luchar  
-➤ ${global.prefix}poder  
-➤ ${global.prefix}volar  
-➤ ${global.prefix}otromundo  
-➤ ${global.prefix}otrouniverso  
-➤ ${global.prefix}mododios  
-➤ ${global.prefix}mododiablo  
-➤ ${global.prefix}podermaximo  
-➤ ${global.prefix}enemigos  
-➤ ${global.prefix}nivelper  
-➤ ${global.prefix}per  
-➤ ${global.prefix}bolasdeldragon  
-➤ ${global.prefix}vender  
-➤ ${global.prefix}quitarventa  
-➤ ${global.prefix}batallaanime  
-➤ ${global.prefix}comprar  
-➤ ${global.prefix}tiendaper
-➤ ${global.prefix}alaventa
+➤ ${global.prefix}luchar ➤ ${global.prefix}poder  
+➤ ${global.prefix}volar ➤ ${global.prefix}otromundo  
+➤ ${global.prefix}otrouniverso ➤ ${global.prefix}mododios  
+➤ ${global.prefix}mododiablo ➤ ${global.prefix}podermaximo  
+➤ ${global.prefix}enemigos ➤ ${global.prefix}nivelper  
+➤ ${global.prefix}per ➤ ${global.prefix}bolasdeldragon  
+➤ ${global.prefix}vender ➤ ${global.prefix}quitarventa  
+➤ ${global.prefix}batallaanime ➤ ${global.prefix}comprar  
+➤ ${global.prefix}tiendaper ➤ ${global.prefix}alaventa  
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗠𝗔𝗦𝗖𝗢𝗧𝗔𝗦  
-(Sube de nivel a tu mascota y top)  
-➤ ${global.prefix}daragua  
-➤ ${global.prefix}darcariño  
-➤ ${global.prefix}darcomida  
-➤ ${global.prefix}presumir  
-➤ ${global.prefix}cazar  
-➤ ${global.prefix}entrenar  
-➤ ${global.prefix}pasear  
-➤ ${global.prefix}supermascota  
-➤ ${global.prefix}mascota  
-➤ ${global.prefix}curar  
-➤ ${global.prefix}nivelmascota  
-➤ ${global.prefix}batallamascota  
-➤ ${global.prefix}compra  
-➤ ${global.prefix}tiendamascotas  
+➤ ${global.prefix}daragua ➤ ${global.prefix}darcariño  
+➤ ${global.prefix}darcomida ➤ ${global.prefix}presumir  
+➤ ${global.prefix}cazar ➤ ${global.prefix}entrenar  
+➤ ${global.prefix}pasear ➤ ${global.prefix}supermascota  
+➤ ${global.prefix}mascota ➤ ${global.prefix}curar  
+➤ ${global.prefix}nivelmascota ➤ ${global.prefix}batallamascota  
+➤ ${global.prefix}compra ➤ ${global.prefix}tiendamascotas  
 
 📌 𝗢𝗧𝗥𝗢𝗦 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦  
-➤ ${global.prefix}addmascota  
-➤ ${global.prefix}addper  
-➤ ${global.prefix}deleteuser  
-➤ ${global.prefix}deleteper  
-➤ ${global.prefix}deletemascota  
-➤ ${global.prefix}totalper
-➤ ${global.prefix}tran
-➤ ${global.prefix}transferir
+➤ ${global.prefix}addmascota ➤ ${global.prefix}addper  
+➤ ${global.prefix}deleteuser ➤ ${global.prefix}deleteper  
+➤ ${global.prefix}deletemascota ➤ ${global.prefix}totalper  
+➤ ${global.prefix}tran ➤ ${global.prefix}transferir  
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
-➤ ${global.prefix}topuser  
-➤ ${global.prefix}topmascotas  
+➤ ${global.prefix}topuser ➤ ${global.prefix}topmascotas  
 ➤ ${global.prefix}topper  
 
 ━━━━━━━━━━━━━━━━━━  
-𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: russell xz
+𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: russell xz  
 
 ╭────────────────╮  
 │ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
 ╰────────────────╯`;
 
-    const { data: bufferVideo } = await axios.get(
-      "https://cdn.dorratz.com/files/1741474416069.mp4", 
-      { responseType: 'arraybuffer' }
-    );
+    const videoUrl = "https://cdn.dorratz.com/files/1741474416069.mp4";
+    const videoBuffer = (await axios.get(videoUrl, { responseType: 'arraybuffer' })).data;
 
     await sock.sendMessage2(
       chatId,
       {
-        video: bufferVideo,
-        caption: captionText,
+        video: videoBuffer,
+        caption: menuText,
         gifPlayback: true,
         mimetype: "video/mp4"
       },
@@ -4496,17 +4464,15 @@ Así te registras
     );
 
   } catch (error) {
-    console.error("❌ Error en el comando menurpg:", error);
+    console.error("Error en menurpg:", error);
     await sock.sendMessage2(
       msg.key.remoteJid,
-      "❌ Ocurrió un error al mostrar el menú RPG. Inténtalo de nuevo.",
+      "❌ Error al mostrar el menú RPG",
       msg
     );
   }
   break;
-}
-        
-        
+}        
 case 'menu': {
   try {
     // Reacción inicial
