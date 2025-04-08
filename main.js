@@ -14128,8 +14128,9 @@ case "s":
     try {
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
+        const xds = `👾 *Uso correcto:*\nResponde a una imagen/video con `${global.prefix}s` para convertirlo en sticker\n\nEjemplo: Responde a una foto con `${global.prefix}s``
             await sock.sendMessage(msg.key.remoteJid, {  // <- Mensaje directo normal
-                text: "👾 *Uso correcto:*\nResponde a una imagen/video con `${global.prefix}s` para convertirlo en sticker\n\nEjemplo: Responde a una foto con `${global.prefix}s`"
+                text: xds
             }, { quoted: msg });
             return;
         }
