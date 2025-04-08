@@ -14128,14 +14128,12 @@ case "s":
     try {
         let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted) {
-            await sock.sendMessage2(  // <- Cambiado a sendMessage2
-                msg.key.remoteJid,
-                "⚠️ *Responde a una imagen o video con el comando `.s` para crear un sticker.*",
-                msg
-            );
+            await sock.sendMessage(msg.key.remoteJid, {  // <- Mensaje directo normal
+                text: "👾 *Uso correcto:*\nResponde a una imagen/video con `${global.prefix}s` para convertirlo en sticker\n\nEjemplo: Responde a una foto con `${global.prefix}s`"
+            }, { quoted: msg });
             return;
         }
-
+         
         let mediaType = quoted.imageMessage ? "image" : quoted.videoMessage ? "video" : null;
         if (!mediaType) {
             await sock.sendMessage2(  // <- Cambiado a sendMessage2
