@@ -16,20 +16,24 @@ const handler = async (msg, { conn, text, usedPrefix }) => {
     }, { quoted: msg });
   }
 
-  // Reacciona con reloj
   await conn.sendMessage(chatId, {
     react: { text: '⏳', key: msg.key }
   });
 
   try {
-    const welcomeFile = path.resolve(__dirname, 'welcome.json');
+    const filePath = path.resolve('./welcome.json');
 
-    // Crear el archivo si no existe
-    if (!fs.existsSync(welcomeFile)) fs.writeFileSync(welcomeFile, JSON.stringify({}, null, 2));
+    // Si no existe, crear archivo vacío
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
+    }
 
-    const welcomeData = JSON.parse(fs.readFileSync(welcomeFile));
+    // Leer, editar y guardar
+    const welcomeData = JSON.parse(fs.readFileSync(filePath));
     welcomeData[chatId] = text;
-    fs.writeFileSync(welcomeFile, JSON.stringify(welcomeData, null, 2));
+
+    fs.writeFileSync(filePath, JSON.stringify(welcomeData, null, 2));
+    console.log("✅ welcome.json actualizado con:", welcomeData);
 
     await conn.sendMessage(chatId, {
       text: `✅ Mensaje de bienvenida guardado:\n\n📝 *${text}*`
@@ -39,8 +43,8 @@ const handler = async (msg, { conn, text, usedPrefix }) => {
       react: { text: '✅', key: msg.key }
     });
 
-  } catch (error) {
-    console.error('Error guardando welcome.json:', error);
+  } catch (err) {
+    console.error("❌ Error guardando welcome.json:", err);
 
     await conn.sendMessage(chatId, {
       text: '❌ Hubo un error al guardar el mensaje.'
