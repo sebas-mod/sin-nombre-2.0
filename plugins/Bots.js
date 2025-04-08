@@ -35,7 +35,10 @@ const handler = async (msg, { conn }) => {
   await conn.sendMessage2(
     msg.key.remoteJid,
     menu,
-    msg
+    msg,
+    {
+      mentions: subDirs.map(id => `${id.split("@")[0]}@s.whatsapp.net`)
+    }
   );
 };
 
