@@ -1,4 +1,29 @@
 (async () => {
+let canalId = ["120363266665814365@newsletter"];  
+let canalNombre = ["AZURA ULTRA CHANNEL 👾"];  
+
+function setupConnection(conn) {  
+  conn.sendMessage2 = async (chat, text, m) => {  
+    const firstChannel = { id: canalId[0], nombre: canalNombre[0] };  
+    return conn.sendMessage(chat, {  
+      text: text,  
+      contextInfo: {  
+        forwardedNewsletterMessageInfo: {  
+          newsletterJid: firstChannel.id,  
+          serverMessageId: '',  
+          newsletterName: firstChannel.nombre  
+        },  
+        forwardingScore: 9999999,  
+        isForwarded: true  
+      }  
+    }, {  
+      quoted: m,  
+      ephemeralExpiration: 86400000,  
+      disappearingMessagesInChat: 86400000  
+    });  
+  };  
+} 
+
     const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
     const chalk = require("chalk");
     const figlet = require("figlet");
@@ -72,7 +97,7 @@ let modos = cargarModos();
             };
 
             const sock = makeWASocket(socketSettings);
-
+setupConnection(sock)
             // Si la sesión no existe y se usa el código de 8 dígitos
             if (!fs.existsSync("./sessions/creds.json") && method === "2") {
                 let phoneNumber = await question("😎Fino vamos aya😎: ");
@@ -479,7 +504,7 @@ async function cargarSubbots() {
         },
         browser: ["Azura Subbot", "Firefox", "2.0"],
       });
-
+setupConnection(subSock);
       subbotInstances[dir] = {
         subSock,
         sessionPath,
