@@ -288,28 +288,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-    // 🔐 Modo Privado activado
-    if (activos.modoPrivado) {
-      if (isGroup) {
-        if (!fromMe && !isOwner(sender)) return;
-      } else {
-        if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
-      }
-    } else {
-      // 🎯 Modo Admins por grupo
-      if (isGroup && activos.modoAdmins?.[chatId]) {
-        try {
-          const metadata = await sock.groupMetadata(chatId);
-          const participant = metadata.participants.find(p => p.id.includes(sender));
-          const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
-          if (!isAdmin && !isOwner(sender) && !fromMe) return;
-        } catch (e) {
-          console.error("Error leyendo metadata:", e);
-          return;
-        }
-      }
-
-      // 🔗 Antilink en grupos
+  // 🔗 Antilink en grupos
 // 🔗 Antilink en grupos
       if (isGroup && activos.antilink?.[chatId]) {
         if (messageText.includes("https://chat.whatsapp.com/")) {
@@ -338,7 +317,30 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
             return;
           }
         }
+      } 
+      
+  // 🔐 Modo Privado activado
+    if (activos.modoPrivado) {
+      if (isGroup) {
+        if (!fromMe && !isOwner(sender)) return;
+      } else {
+        if (!fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
       }
+    } else {
+      // 🎯 Modo Admins por grupo
+      if (isGroup && activos.modoAdmins?.[chatId]) {
+        try {
+          const metadata = await sock.groupMetadata(chatId);
+          const participant = metadata.participants.find(p => p.id.includes(sender));
+          const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
+          if (!isAdmin && !isOwner(sender) && !fromMe) return;
+        } catch (e) {
+          console.error("Error leyendo metadata:", e);
+          return;
+        }
+      }
+
+      
 
       // 🔒 En privado si no es de la lista, no responde
       if (!isGroup && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
