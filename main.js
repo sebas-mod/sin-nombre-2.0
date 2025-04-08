@@ -46,7 +46,17 @@ if (!fs.existsSync(grupoPath)) {
 } else {
   console.log("✅ grupo.json ya existe.");
 }
-//otro mas
+//bienvemidad personalizada
+const fs = require('fs');
+const path = require('path');
+
+const welcomePath = path.join(__dirname, 'welcome.json');
+
+if (!fs.existsSync(welcomePath)) {
+  fs.writeFileSync(welcomePath, JSON.stringify({}, null, 2));
+  console.log("✅ Archivo welcome.json creado exitosamente.");
+}
+
 //grupo subot
 const rpgFile = "./rpg.json";
 if (!fs.existsSync(rpgFile)) {
