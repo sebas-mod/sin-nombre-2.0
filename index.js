@@ -155,9 +155,13 @@ sock.ev.on("group-participants.update", async (update) => {
     // **************** FIN LÓGICA ANTIARABE ****************
 
     // **************** LÓGICA BIENVENIDA/DESPEDIDA ****************
-    // Si la función welcome no está activada en este grupo, salimos
-    if (!activos.welcome || !activos.welcome[update.id]) return;
+if (!activos.welcome || !activos.welcome[update.id]) return;
 
+const welcomePath = "./welcome.json";
+let customWelcomes = {};
+if (fs.existsSync(welcomePath)) {
+  customWelcomes = JSON.parse(fs.readFileSync(welcomePath, "utf-8"));
+}
     // Textos integrados para bienvenida y despedida
     const welcomeTexts = [
       "¡Bienvenido(a)! Azura Ultra 2.0 Bot te recibe con los brazos abiertos 🤗✨. ¡Disfruta y comparte!",
@@ -185,70 +189,91 @@ sock.ev.on("group-participants.update", async (update) => {
     ];
 
     // Procesar según la acción: "add" (entrada) o "remove" (salida)
-    if (update.action === "add") {
-      for (const participant of update.participants) {
-        const mention = `@${participant.split("@")[0]}`;
-        const mensajeTexto = welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)];
-        const option = Math.random();
-        if (option < 0.33) {
-          // Opción 1: Con foto del usuario (si se puede obtener, sino URL por defecto)
-          let profilePicUrl;
-          try {
-            profilePicUrl = await sock.profilePictureUrl(participant, "image");
-          } catch (err) {
-            profilePicUrl = "https://cdn.dorratz.com/files/1741323171822.jpg";
-          }
-          await sock.sendMessage(update.id, {
-            image: { url: profilePicUrl },
-            caption: `👋 ${mention}\n\n${mensajeTexto}`,
-            mentions: [participant]
-          });
-        } else if (option < 0.66) {
-          // Opción 2: Con la descripción del grupo (si está disponible)
-          let groupDesc = "";
-          try {
-            const metadata = await sock.groupMetadata(update.id);
-            groupDesc = metadata.desc ? `\n\n📜 *Descripción del grupo:*\n${metadata.desc}` : "";
-          } catch (err) {
-            groupDesc = "";
-          }
-          await sock.sendMessage(update.id, {
-            text: `👋 ${mention}\n\n${mensajeTexto}${groupDesc}`,
-            mentions: [participant]
-          });
-        } else {
-          // Opción 3: Solo texto
-          await sock.sendMessage(update.id, {
-            text: `👋 ${mention}\n\n${mensajeTexto}`,
-            mentions: [participant]
-          });
-        }
-      }
-    } else if (update.action === "remove") {
-      for (const participant of update.participants) {
-        const mention = `@${participant.split("@")[0]}`;
-        const mensajeTexto = farewellTexts[Math.floor(Math.random() * farewellTexts.length)];
-        const option = Math.random();
-        if (option < 0.5) {
-          let profilePicUrl;
-          try {
-            profilePicUrl = await sock.profilePictureUrl(participant, "image");
-          } catch (err) {
-            profilePicUrl = "https://cdn.dorratz.com/files/1741323171822.jpg";
-          }
-          await sock.sendMessage(update.id, {
-            image: { url: profilePicUrl },
-            caption: `👋 ${mention}\n\n${mensajeTexto}`,
-            mentions: [participant]
-          });
-        } else {
-          await sock.sendMessage(update.id, {
-            text: `👋 ${mention}\n\n${mensajeTexto}`,
-            mentions: [participant]
-          });
-        }
+if (update.action === "add") {
+  for (const participant of update.participants) {
+    const mention = `@${participant.split("@")[0]}`;
+    const customMessage = customWelcomes[update.id];
+
+    // Obtener foto de perfil (o grupo si falla)
+    let profilePicUrl;
+    try {
+      profilePicUrl = await sock.profilePictureUrl(participant, "image");
+    } catch (err) {
+      try {
+        profilePicUrl = await sock.profilePictureUrl(update.id, "image");
+      } catch {
+        profilePicUrl = "https://cdn.dorratz.com/files/1741323171822.jpg";
       }
     }
+
+    if (customMessage) {
+      // Enviar mensaje personalizado
+      await sock.sendMessage(update.id, {
+        image: { url: profilePicUrl },
+        caption: `👋 ${mention}\n\n${customMessage}`,
+        mentions: [participant]
+      });
+    } else {
+      // Elegir mensaje aleatorio
+      const mensajeTexto = welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)];
+      const option = Math.random();
+
+      if (option < 0.33) {
+        await sock.sendMessage(update.id, {
+          image: { url: profilePicUrl },
+          caption: `👋 ${mention}\n\n${mensajeTexto}`,
+          mentions: [participant]
+        });
+      } else if (option < 0.66) {
+        let groupDesc = "";
+        try {
+          const metadata = await sock.groupMetadata(update.id);
+          groupDesc = metadata.desc ? `\n\n📜 *Descripción del grupo:*\n${metadata.desc}` : "";
+        } catch (err) {
+          groupDesc = "";
+        }
+
+        await sock.sendMessage(update.id, {
+          text: `👋 ${mention}\n\n${mensajeTexto}${groupDesc}`,
+          mentions: [participant]
+        });
+      } else {
+        await sock.sendMessage(update.id, {
+          text: `👋 ${mention}\n\n${mensajeTexto}`,
+          mentions: [participant]
+        });
+      }
+    }
+  }
+} else if (update.action === "remove") {
+  // Tu lógica de despedida sigue igual
+  for (const participant of update.participants) {
+    const mention = `@${participant.split("@")[0]}`;
+    const mensajeTexto = farewellTexts[Math.floor(Math.random() * farewellTexts.length)];
+    const option = Math.random();
+
+    let profilePicUrl;
+    try {
+      profilePicUrl = await sock.profilePictureUrl(participant, "image");
+    } catch (err) {
+      profilePicUrl = "https://cdn.dorratz.com/files/1741323171822.jpg";
+    }
+
+    if (option < 0.5) {
+      await sock.sendMessage(update.id, {
+        image: { url: profilePicUrl },
+        caption: `👋 ${mention}\n\n${mensajeTexto}`,
+        mentions: [participant]
+      });
+    } else {
+      await sock.sendMessage(update.id, {
+        text: `👋 ${mention}\n\n${mensajeTexto}`,
+        mentions: [participant]
+      });
+    }
+  }
+}
+// **************** FIN LÓGICA BIENVENIDA/DESPEDIDA ****************
     // **************** FIN LÓGICA BIENVENIDA/DESPEDIDA ****************
 
   } catch (error) {
