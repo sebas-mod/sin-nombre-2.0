@@ -47,9 +47,6 @@ if (!fs.existsSync(grupoPath)) {
   console.log("✅ grupo.json ya existe.");
 }
 //bienvemidad personalizada
-const fs = require('fs');
-const path = require('path');
-
 const welcomePath = path.join(__dirname, 'welcome.json');
 
 if (!fs.existsSync(welcomePath)) {
