@@ -1,56 +1,53 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 const handler = async (msg, { conn, text, usedPrefix }) => {
   const chatId = msg.key.remoteJid;
 
-  if (!chatId.endsWith("@g.us")) {
-    return await conn.sendMessage(chatId, {
-      text: "❌ Este comando solo puede usarse en grupos."
+  if (!chatId.endsWith('@g.us')) {
+    return conn.sendMessage(chatId, {
+      text: '❌ Este comando solo funciona en grupos.'
     }, { quoted: msg });
   }
 
   if (!text) {
-    return await conn.sendMessage(chatId, {
-      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix}setwelcome* Hola, bienvenido al grupo Azura Ultra.`
+    return conn.sendMessage(chatId, {
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${usedPrefix}setwelcome* Hola, bienvenido a Azura Ultra.`
     }, { quoted: msg });
   }
 
+  // Reacciona con reloj
   await conn.sendMessage(chatId, {
-    react: { text: "⏳", key: msg.key }
+    react: { text: '⏳', key: msg.key }
   });
 
   try {
-    const filePath = path.join(__dirname, "welcome.json");
-    let welcomeData = {};
+    const welcomeFile = path.resolve(__dirname, 'welcome.json');
 
     // Crear el archivo si no existe
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
-    }
+    if (!fs.existsSync(welcomeFile)) fs.writeFileSync(welcomeFile, JSON.stringify({}, null, 2));
 
-    // Leer y actualizar
-    welcomeData = JSON.parse(fs.readFileSync(filePath));
+    const welcomeData = JSON.parse(fs.readFileSync(welcomeFile));
     welcomeData[chatId] = text;
-    fs.writeFileSync(filePath, JSON.stringify(welcomeData, null, 2));
+    fs.writeFileSync(welcomeFile, JSON.stringify(welcomeData, null, 2));
 
     await conn.sendMessage(chatId, {
-      text: `✅ Mensaje de bienvenida personalizado guardado:\n\n📝 *${text}*`
+      text: `✅ Mensaje de bienvenida guardado:\n\n📝 *${text}*`
     }, { quoted: msg });
 
     await conn.sendMessage(chatId, {
-      react: { text: "✅", key: msg.key }
+      react: { text: '✅', key: msg.key }
     });
 
-  } catch (err) {
-    console.error("❌ Error al guardar bienvenida:", err);
+  } catch (error) {
+    console.error('Error guardando welcome.json:', error);
 
     await conn.sendMessage(chatId, {
-      text: "❌ Hubo un error al guardar el mensaje de bienvenida."
+      text: '❌ Hubo un error al guardar el mensaje.'
     }, { quoted: msg });
 
     await conn.sendMessage(chatId, {
-      react: { text: "❌", key: msg.key }
+      react: { text: '❌', key: msg.key }
     });
   }
 };
