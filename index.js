@@ -1,29 +1,34 @@
 (async () => {
 let canalId = ["120363266665814365@newsletter"];  
 let canalNombre = ["AZURA ULTRA CHANNEL 👾"];  
+function setupConnection(conn) {
+  conn.sendMessage2 = async (chat, text, m, options = {}) => {
+    const firstChannel = { 
+      id: canalId[0], 
+      nombre: canalNombre[0] 
+    };
+    
+    const messageOptions = {
+      text: text,
+      contextInfo: {
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: firstChannel.id,
+          serverMessageId: '',
+          newsletterName: firstChannel.nombre
+        },
+        forwardingScore: 9999999,
+        isForwarded: true
+      },
+      ...options 
+    };
 
-function setupConnection(conn) {  
-  conn.sendMessage2 = async (chat, text, m) => {  
-    const firstChannel = { id: canalId[0], nombre: canalNombre[0] };  
-    return conn.sendMessage(chat, {  
-      text: text,  
-      contextInfo: {  
-        forwardedNewsletterMessageInfo: {  
-          newsletterJid: firstChannel.id,  
-          serverMessageId: '',  
-          newsletterName: firstChannel.nombre  
-        },  
-        forwardingScore: 9999999,  
-        isForwarded: true  
-      }  
-    }, {  
-      quoted: m,  
-      ephemeralExpiration: 86400000,  
-      disappearingMessagesInChat: 86400000  
-    });  
-  };  
-} 
-
+    return conn.sendMessage(chat, messageOptions, {
+      quoted: m,
+      ephemeralExpiration: 86400000,
+      disappearingMessagesInChat: 86400000
+    });
+  };
+}
     const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
     const chalk = require("chalk");
     const figlet = require("figlet");
