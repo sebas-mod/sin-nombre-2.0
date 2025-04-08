@@ -55,15 +55,6 @@ if (!fs.existsSync(welcomePath)) {
 }
 const setwelcome = require('./setwelcome');
 
-if (messageText.startsWith(global.prefix)) {
-  const command = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
-  const args = messageText.slice(global.prefix.length + command.length).trim();
-
-  if (command === "setwelcome") {
-    await setwelcome(msg, { conn: sock, text: args, usedPrefix: global.prefix });
-    return;
-  }
-}
 //grupo subot
 const rpgFile = "./rpg.json";
 if (!fs.existsSync(rpgFile)) {
