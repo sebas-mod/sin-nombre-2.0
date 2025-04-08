@@ -22,9 +22,11 @@ const handler = async (msg, { conn }) => {
   }
 
   const total = subDirs.length;
+  const mentions = [];
   const lista = subDirs.map((id, i) => {
     const jid = id.split("@")[0];
-    const subbotJid = id.includes("@s.whatsapp.net") ? id : `${jid}@s.whatsapp.net`;
+    const subbotJid = `${jid}@s.whatsapp.net`;
+    mentions.push(subbotJid);
     const prefijo = dataPrefijos[subbotJid] || ".";
 
     return `╭➤ *Subbot ${i + 1}*\n│ Número: @${jid}\n│ Prefijo: *${prefijo}*\n╰───────────────`;
@@ -37,7 +39,10 @@ const handler = async (msg, { conn }) => {
     menu,
     msg,
     {
-      mentions: subDirs.map(id => `${id.split("@")[0]}@s.whatsapp.net`)
+      mentions: mentions,
+      contextInfo: {
+        mentionedJid: mentions
+      }
     }
   );
 };
