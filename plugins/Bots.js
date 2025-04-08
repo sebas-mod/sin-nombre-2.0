@@ -16,7 +16,6 @@ const handler = async (msg, { conn }) => {
     });
   }
 
-  // Cargar prefijos si existen
   let dataPrefijos = {};
   if (fs.existsSync(prefixPath)) {
     dataPrefijos = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
@@ -33,11 +32,11 @@ const handler = async (msg, { conn }) => {
 
   const menu = `╭━〔 *AZURA ULTRA 2.0* 〕━⬣\n│  🤖 Subbots Conectados\n│  Total: *${total}*\n╰━━━━━━━━━━━━⬣\n\n${lista}`;
 
-  await conn.sendMessage2(msg.key.remoteJid, {
-    text: menu,
-    mentions: subDirs.map(id => id),
-    quoted: msg
-  });
+  await conn.sendMessage2(
+    msg.key.remoteJid,
+    menu,
+    msg
+  );
 };
 
 handler.command = ['bots'];
