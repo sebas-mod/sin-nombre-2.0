@@ -33,7 +33,7 @@ const handler = async (msg, { conn }) => {
 
   const menu = `╭━〔 *AZURA ULTRA 2.0* 〕━⬣\n│  🤖 Subbots Conectados\n│  Total: *${total}*\n╰━━━━━━━━━━━━⬣\n\n${lista}`;
 
-  await conn.sendMessage(msg.key.remoteJid, {
+  await conn.sendMessage2(msg.key.remoteJid, {
     text: menu,
     mentions: subDirs.map(id => id),
     quoted: msg
