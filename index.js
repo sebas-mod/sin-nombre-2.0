@@ -1,30 +1,24 @@
 (async () => {
 let canalId = ["120363266665814365@newsletter"];  
-let canalNombre = ["AZURA ULTRA CHANNEL 👾"];  
+let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
 function setupConnection(conn) {
-  conn.sendMessage2 = async (chat, text, m, options = {}) => {
-    const firstChannel = { 
-      id: canalId[0], 
-      nombre: canalNombre[0] 
-    };
+  conn.sendMessage2 = async (chat, content, m, options = {}) => {
+    const channel = { id: canalId[0], nombre: canalNombre[0] };
     
-    const messageOptions = {
-      text: text,
-      mentions: options.mentions || [],
+    return conn.sendMessage(chat, {
+      ...content,
       contextInfo: {
-        ...(options.contextInfo || {}),
+        ...content.contextInfo,
         forwardedNewsletterMessageInfo: {
-          newsletterJid: firstChannel.id,
+          newsletterJid: channel.id,
           serverMessageId: '',
-          newsletterName: firstChannel.nombre
+          newsletterName: channel.nombre
         },
         forwardingScore: 9999999,
         isForwarded: true,
         mentionedJid: options.mentions || []
       }
-    };
-
-    return conn.sendMessage(chat, messageOptions, {
+    }, {
       quoted: m,
       ephemeralExpiration: 86400000,
       disappearingMessagesInChat: 86400000,
