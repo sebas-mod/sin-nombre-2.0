@@ -53,7 +53,6 @@ if (!fs.existsSync(welcomePath)) {
   fs.writeFileSync(welcomePath, JSON.stringify({}, null, 2));
   console.log("✅ Archivo welcome.json creado exitosamente.");
 }
-const setwelcome = require('./setwelcome');
 
 //grupo subot
 const rpgFile = "./rpg.json";
