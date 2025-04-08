@@ -14461,16 +14461,14 @@ case "setprefix":
              
         
         
-case 'help':        
-case "info":
-    try {
-        // Reacción antes de enviar la información
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "ℹ️", key: msg.key } 
-        });
+case 'help':
+case 'info':
+  try {
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: "ℹ️", key: msg.key }
+    });
 
-        // Construcción del mensaje con información del bot
-        const infoMessage = `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
+    const infoMessage = `╭─ *🤖 AZURA ULTRA 2.0 BOT* ─╮
 │ 🔹 *Prefijo actual:* ${global.prefix}
 │ 👑 *Dueño:* Russell xz
 │ 🛠️ *Bot desarrollado desde cero* con la ayuda de Chatgpt.
@@ -14490,20 +14488,25 @@ case "info":
 │ 📌 Usa *${global.prefix}menu2* para ver los comandos de multimedia y guardado.  
 ╰──────────────────╯`;
 
-        // Enviar el mensaje con GIF animado
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740372626884.mp4" }, 
-            gifPlayback: true, // Esto hace que se reproduzca como GIF
-            caption: infoMessage
-        }, { quoted: msg });
+    await sock.sendMessage2(
+      msg.key.remoteJid,
+      {
+        video: { url: "https://cdn.dorratz.com/files/1740372626884.mp4" },
+        gifPlayback: true,
+        caption: infoMessage
+      },
+      msg
+    );
 
-    } catch (error) {
-        console.error("❌ Error en el comando info:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al mostrar la información. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
+  } catch (error) {
+    console.error("Error en comando info:", error);
+    await sock.sendMessage2(
+      msg.key.remoteJid,
+      "❌ *Ocurrió un error al mostrar la información. Inténtalo de nuevo.*",
+      msg
+    );
+  }
+  break;
         
         
 case "menu2": {
