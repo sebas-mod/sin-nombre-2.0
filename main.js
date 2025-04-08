@@ -4326,14 +4326,11 @@ case 'allmenu': {
 
 case 'menuowner': {
   try {
-    // Reacción inicial
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: "👑", key: msg.key }
     });
 
     const chatId = msg.key.remoteJid;
-
-    // Construcción del mensaje (tu texto de menú)
     const captionText = `╔═══════════════╗  
 ║     𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏     ║  
 ╚═══════════════╝  
@@ -4363,25 +4360,29 @@ case 'menuowner': {
 
          𝙖𝙯𝙪𝙧𝙖 𝙪𝙡𝙩𝙧𝙖 𝟮.𝟬 𝙗𝙤𝙩`;
 
-    // Descargamos el MP4 (para enviarlo como GIF)
-    const { data: bufferVideo } = await axios.get(
+    const videoResponse = await axios.get(
       "https://cdn.dorratz.com/files/1741471185939.mp4",
       { responseType: 'arraybuffer' }
     );
 
-    // Enviamos el video como GIF
-    await sock.sendMessage(chatId, {
-      video: bufferVideo,
-      caption: captionText,
-      gifPlayback: true,
-      mimetype: "video/mp4"
-    }, { quoted: msg });
+    await sock.sendMessage2(
+      chatId,
+      {
+        video: videoResponse.data,
+        caption: captionText,
+        gifPlayback: true,
+        mimetype: "video/mp4"
+      },
+      msg
+    );
 
   } catch (error) {
-    console.error("❌ Error en el comando menuowner:", error);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al mostrar el menú Owner. Inténtalo de nuevo."
-    }, { quoted: msg });
+    console.error("Error en menuowner:", error);
+    await sock.sendMessage2(
+      msg.key.remoteJid,
+      "❌ Ocurrió un error al mostrar el menú Owner",
+      msg
+    );
   }
   break;
 }
@@ -4583,19 +4584,17 @@ case 'menu': {
   break;
 }
 
+
 case 'menugrupo': {
   try {
-    // Reacción inicial
     await sock.sendMessage(msg.key.remoteJid, {
       react: { text: "📜", key: msg.key }
     });
 
     const chatId = msg.key.remoteJid;
-
-    // Construcción del mensaje
     const captionText = `╔══════════════════╗  
 ║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
-║   🎭 𝙼𝙴𝙽𝚄 𝙳𝙴 𝙂ℝ𝚄𝙿𝙾 🎭   ║  
+║   🎭 𝙼𝙴𝙽𝚄 𝙳𝙴 𝙶ℝ𝚄𝙿𝙾 🎭   ║  
 ╚══════════════════╝  
 
 🛠 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂𝐈Ó𝐍  
@@ -4627,30 +4626,31 @@ case 'menugrupo': {
 
 ⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
 
-    // Descargamos el MP4 para enviarlo como GIF
-    const { data: bufferVideo } = await axios.get(
-      "https://cdn.dorratz.com/files/1741471817068.mp4", 
-      { responseType: 'arraybuffer' }
+    const videoResponse = await axios.get("https://cdn.dorratz.com/files/1741471817068.mp4", { 
+      responseType: 'arraybuffer' 
+    });
+
+    await sock.sendMessage2(
+      chatId,
+      {
+        video: videoResponse.data,
+        caption: captionText,
+        gifPlayback: true,
+        mimetype: "video/mp4"
+      },
+      msg
     );
 
-    // Enviamos el video como GIF animado
-    await sock.sendMessage(chatId, {
-      video: bufferVideo,
-      caption: captionText,
-      gifPlayback: true,
-      mimetype: "video/mp4"
-    }, { quoted: msg });
-
   } catch (error) {
-    console.error("❌ Error en el comando menugrupo:", error);
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al mostrar el menú de grupo. Inténtalo de nuevo."
-    }, { quoted: msg });
+    console.error("Error en menugrupo:", error);
+    await sock.sendMessage2(
+      msg.key.remoteJid,
+      "❌ Ocurrió un error al mostrar el menú de grupo",
+      msg
+    );
   }
   break;
 }
-
-
             
 case 'setinfo': {
   try {
@@ -14125,77 +14125,79 @@ case "listpacks":
     }
     break;
 
-case "s":
-    try {
-        let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-        if (!quoted) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Responde a una imagen o video con el comando `.s` para crear un sticker.*" 
-            }, { quoted: msg });
-            return;
-        }
-
-        let mediaType = quoted.imageMessage ? "image" : quoted.videoMessage ? "video" : null;
-        if (!mediaType) {
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⚠️ *Solo puedes convertir imágenes o videos en stickers.*" 
-            }, { quoted: msg });
-            return;
-        }
-
-        // Obtener el nombre del usuario
-        let senderName = msg.pushName || "Usuario Desconocido";
-
-        // Obtener la fecha exacta de creación 📅
-        let now = new Date();
-        let fechaCreacion = `📅 Fecha de Creación de Stickerz: ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} 🕒 ${now.getHours()}:${now.getMinutes()}`;
-
-        // Mensaje de reacción mientras se crea el sticker ⚙️
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "🛠️", key: msg.key } 
-        });
-
-        let mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
-        let buffer = Buffer.alloc(0);
-        for await (const chunk of mediaStream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        if (buffer.length === 0) {
-            throw new Error("❌ Error: No se pudo descargar el archivo.");
-        }
-
-        // 🌟 Formato llamativo para la metadata del sticker 🌟
-        let metadata = {
-            packname: `✨ Lo Mandó Hacer: ${senderName} ✨`,
-            author: `🤖 Bot Creador: Azura Ultra 2.0\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz💻\n${fechaCreacion}`
-        };
-
-        let stickerBuffer;
-        if (mediaType === "image") {
-            stickerBuffer = await writeExifImg(buffer, metadata);
-        } else {
-            stickerBuffer = await writeExifVid(buffer, metadata);
-        }
-
-        await sock.sendMessage(msg.key.remoteJid, { 
-            sticker: { url: stickerBuffer } 
-        }, { quoted: msg });
-
-        // Confirmación final con reacción ✅
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .ss:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Hubo un error al procesar el sticker. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
+ case "s":
+  try {
+    let quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quoted) {
+      await sock.sendMessage2(
+        msg.key.remoteJid,
+        "⚠️ *Responde a una imagen o video con el comando `.s` para crear un sticker.*",
+        msg
+      );
+      return;
     }
-    break;
-            
-        
+
+    let mediaType = quoted.imageMessage ? "image" : quoted.videoMessage ? "video" : null;
+    if (!mediaType) {
+      await sock.sendMessage2(
+        msg.key.remoteJid,
+        "⚠️ *Solo puedes convertir imágenes o videos en stickers.*",
+        msg
+      );
+      return;
+    }
+
+    let senderName = msg.pushName || "Usuario Desconocido";
+    let now = new Date();
+    let fechaCreacion = `📅 Fecha de Creación: ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} 🕒 ${now.getHours()}:${now.getMinutes()}`;
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "🛠️", key: msg.key } 
+    });
+
+    let mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of mediaStream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+
+    if (buffer.length === 0) {
+      throw new Error("Error al descargar el archivo");
+    }
+
+    let metadata = {
+      packname: `✨ Lo Mandó Hacer: ${senderName} ✨`,
+      author: `🤖 Azura Ultra 2.0\n🛠️ Por: Russell xz\n${fechaCreacion}`
+    };
+
+    let stickerBuffer;
+    if (mediaType === "image") {
+      stickerBuffer = await writeExifImg(buffer, metadata);
+    } else {
+      stickerBuffer = await writeExifVid(buffer, metadata);
+    }
+
+    await sock.sendMessage2(
+      msg.key.remoteJid,
+      {
+        sticker: { url: stickerBuffer }
+      },
+      msg
+    );
+
+    await sock.sendMessage(msg.key.remoteJid, { 
+      react: { text: "✅", key: msg.key } 
+    });
+
+  } catch (error) {
+    console.error("Error en comando s:", error);
+    await sock.sendMessage2(
+      msg.key.remoteJid,
+      "❌ *Hubo un error al procesar el sticker. Inténtalo de nuevo.*",
+      msg
+    );
+  }
+  break;     
 case "sendpack":
     try {
         if (!args[0]) {
