@@ -10,22 +10,25 @@ function setupConnection(conn) {
     
     const messageOptions = {
       text: text,
+      mentions: options.mentions || [],
       contextInfo: {
+        ...(options.contextInfo || {}),
         forwardedNewsletterMessageInfo: {
           newsletterJid: firstChannel.id,
           serverMessageId: '',
           newsletterName: firstChannel.nombre
         },
         forwardingScore: 9999999,
-        isForwarded: true
-      },
-      ...options 
+        isForwarded: true,
+        mentionedJid: options.mentions || []
+      }
     };
 
     return conn.sendMessage(chat, messageOptions, {
       quoted: m,
       ephemeralExpiration: 86400000,
-      disappearingMessagesInChat: 86400000
+      disappearingMessagesInChat: 86400000,
+      ...options
     });
   };
 }
