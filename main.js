@@ -12,8 +12,13 @@ const { imageToWebp, videoToWebp, writeExifImg, writeExifVid, writeExif, toAudio
 const activeSessions = new Set();
 const stickersDir = "./stickers";
 const stickersFile = "./stickers.json";
+function isUrl(string) {
+  const regex = /^(https?:\/\/[^\s]+)/g;
+  return regex.test(string);
+}
 global.zrapi = `ex-9bf9dc0318`;
 global.generatingCode = false;
+
 if (!fs.existsSync(stickersDir)) fs.mkdirSync(stickersDir, { recursive: true });
 if (!fs.existsSync(stickersFile)) fs.writeFileSync(stickersFile, JSON.stringify({}, null, 2));
 //para los subot
@@ -11899,75 +11904,7 @@ case 'tomp3': {
     break;
 }
 
-case "tiktok":
-case "tt":
-    if (!text) {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ *Ejemplo de uso:*\n📌 ${global.prefix + command} https://vm.tiktok.com/ZMjdrFCtg/`
-        });
-    }
 
-    if (!isUrl(args[0]) || !args[0].includes('tiktok')) {
-        return sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Enlace de TikTok inválido.*" 
-        }, { quoted: msg });
-    }
-
-    try {
-        // ⏱️ Reacción de carga mientras se procesa el comando
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: '⏱️', key: msg.key } 
-        });
-
-        const axios = require('axios');
-        const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
-
-        if (!response.data || !response.data.data || !response.data.data.media) {
-            throw new Error("La API no devolvió un video válido.");
-        }
-
-        const videoData = response.data.data;
-        const videoUrl = videoData.media.org;
-        const videoTitle = videoData.title || "Sin título";
-        const videoAuthor = videoData.author.nickname || "Desconocido";
-        const videoDuration = videoData.duration ? `${videoData.duration} segundos` : "No especificado";
-        const videoLikes = videoData.like || "0";
-        const videoComments = videoData.comment || "0";
-
-        // 📜 Mensaje con la información del video
-        let mensaje = `🎥 *Video de TikTok* 🎥\n\n`;
-        mensaje += `📌 *Título:* ${videoTitle}\n`;
-        mensaje += `👤 *Autor:* ${videoAuthor}\n`;
-        mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
-        mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
-        
-        // 📢 Agregar la API utilizada y marca de agua con buen formato
-        mensaje += `───────\n🍧 *API utilizada:* https://api.dorratz.com\n`;
-        mensaje += `© Azura Ultra 2.0 Bot`;
-
-        // 📩 Enviar el video con la información
-        await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: videoUrl },
-            caption: mensaje
-        }, { quoted: msg });
-
-        // ✅ Reacción de éxito
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "✅", key: msg.key } 
-        });
-
-    } catch (error) {
-        console.error("❌ Error en el comando .tiktok:", error.message);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al procesar el enlace de TikTok.*\n🔹 _Inténtalo más tarde._" 
-        }, { quoted: msg });
-
-        // ❌ Reacción de error
-        await sock.sendMessage(msg.key.remoteJid, { 
-            react: { text: "❌", key: msg.key } 
-        });
-    }
-    break;
         
 case 'geminis':
 case 'gemini': {
@@ -14558,46 +14495,6 @@ case "setprefix":
     break;
              
         
-case "rest":
-    try {
-        // Obtener el número del remitente
-        const senderNumber = (msg.key.participant || sender).replace("@s.whatsapp.net", "");
-
-        // Obtener el número del bot
-        const botNumber = sock.user.id.split(":")[0]; // Obtener el número del bot correctamente
-
-        // Verificar si el mensaje fue enviado por el bot o por un dueño autorizado
-        const isBotMessage = msg.key.fromMe; // True si el mensaje es del bot
-        if (!isOwner(senderNumber) && !isBotMessage) { 
-            await sock.sendMessage(msg.key.remoteJid, { 
-                text: "⛔ *Solo los dueños del bot o el bot mismo pueden reiniciar el servidor.*"
-            }, { quoted: msg });
-            return;
-        }
-
-        // 🟢 Enviar reacción antes de reiniciar
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "🔄", key: msg.key } // Emoji de reinicio
-        });
-
-        // Enviar mensaje de confirmación
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: "🔄 *Reiniciando el servidor...* \nEspera unos segundos..."
-        }, { quoted: msg });
-
-        // Esperar unos segundos antes de reiniciar
-        setTimeout(() => {
-            process.exit(1); // Reiniciar el bot (depende de tu gestor de procesos)
-        }, 3000);
-
-    } catch (error) {
-        console.error("❌ Error en el comando rest:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Error al intentar reiniciar el servidor.*"
-        }, { quoted: msg });
-    }
-    break;
-
         
 case 'help':        
 case "info":
@@ -15573,7 +15470,75 @@ case "ig":
     }
     break;
         
+case "tiktok":
+case "tt":
+    if (!text) {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ *Ejemplo de uso:*\n📌 ${global.prefix + command} https://vm.tiktok.com/ZMjdrFCtg/`
+        });
+    }
 
+    if (!isUrl(args[0]) || !args[0].includes('tiktok')) {
+        return sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Enlace de TikTok inválido.*" 
+        }, { quoted: msg });
+    }
+
+    try {
+        // ⏱️ Reacción de carga mientras se procesa el comando
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: '⏱️', key: msg.key } 
+        });
+
+        const axios = require('axios');
+        const response = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${args[0]}`);
+
+        if (!response.data || !response.data.data || !response.data.data.media) {
+            throw new Error("La API no devolvió un video válido.");
+        }
+
+        const videoData = response.data.data;
+        const videoUrl = videoData.media.org;
+        const videoTitle = videoData.title || "Sin título";
+        const videoAuthor = videoData.author.nickname || "Desconocido";
+        const videoDuration = videoData.duration ? `${videoData.duration} segundos` : "No especificado";
+        const videoLikes = videoData.like || "0";
+        const videoComments = videoData.comment || "0";
+
+        // 📜 Mensaje con la información del video
+        let mensaje = `🎥 *Video de TikTok* 🎥\n\n`;
+        mensaje += `📌 *Título:* ${videoTitle}\n`;
+        mensaje += `👤 *Autor:* ${videoAuthor}\n`;
+        mensaje += `⏱️ *Duración:* ${videoDuration}\n`;
+        mensaje += `❤️ *Likes:* ${videoLikes} | 💬 *Comentarios:* ${videoComments}\n\n`;
+        
+        // 📢 Agregar la API utilizada y marca de agua con buen formato
+        mensaje += `───────\n🍧 *API utilizada:* https://api.dorratz.com\n`;
+        mensaje += `© Azura Ultra 2.0 Bot`;
+
+        // 📩 Enviar el video con la información
+        await sock.sendMessage(msg.key.remoteJid, {
+            video: { url: videoUrl },
+            caption: mensaje
+        }, { quoted: msg });
+
+        // ✅ Reacción de éxito
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "✅", key: msg.key } 
+        });
+
+    } catch (error) {
+        console.error("❌ Error en el comando .tiktok:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al procesar el enlace de TikTok.*\n🔹 _Inténtalo más tarde._" 
+        }, { quoted: msg });
+
+        // ❌ Reacción de error
+        await sock.sendMessage(msg.key.remoteJid, { 
+            react: { text: "❌", key: msg.key } 
+        });
+    }
+    break;
         
 case "facebook":
 case "fb":
