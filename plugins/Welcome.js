@@ -24,10 +24,13 @@ const handler = async (msg, { conn, text, usedPrefix }) => {
     const filePath = path.join(__dirname, "welcome.json");
     let welcomeData = {};
 
-    if (fs.existsSync(filePath)) {
-      welcomeData = JSON.parse(fs.readFileSync(filePath));
+    // Crear el archivo si no existe
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
     }
 
+    // Leer y actualizar
+    welcomeData = JSON.parse(fs.readFileSync(filePath));
     welcomeData[chatId] = text;
     fs.writeFileSync(filePath, JSON.stringify(welcomeData, null, 2));
 
