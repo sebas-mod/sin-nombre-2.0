@@ -13,6 +13,7 @@ const handler = async (msg, { conn }) => {
   const usedPrefix = prefixes[subbotID] || ".";
   const userId = msg.key.participant || msg.key.remoteJid;
 
+  // Reacción normal (no cambia)
   await conn.sendMessage(msg.key.remoteJid, {
     react: { text: "📜", key: msg.key }
   });
@@ -72,11 +73,17 @@ const handler = async (msg, { conn }) => {
 
 ═⌬ © Azura Ultra Subbot ⌬═`;
 
-  await conn.sendMessage(msg.key.remoteJid, {
-    image: { url: `https://cdn.russellxz.click/07af8428.PNG` },
-    caption: menu
-  }, { quoted: msg });
+  // Mensaje principal con sendMessage2
+  await conn.sendMessage2(
+    msg.key.remoteJid,
+    {
+      image: { url: `https://cdn.russellxz.click/07af8428.PNG` },
+      caption: menu
+    },
+    msg
+  );
 
+  // Reacción final normal (no cambia)
   await conn.sendMessage(msg.key.remoteJid, {
     react: { text: "✅", key: msg.key }
   });
