@@ -50,6 +50,7 @@ const handler = async (msg, { conn }) => {
 ⟢ ${usedPrefix}infogrupo
 ⟢ ${usedPrefix}kick
 ⟢ ${usedPrefix}antilink on o off
+⟢ ${usedPrefix}welcome on o off
 ⟢ ${usedPrefix}tag
 ⟢ ${usedPrefix}tagall / ${usedPrefix}invocar / ${usedPrefix}todos
 
