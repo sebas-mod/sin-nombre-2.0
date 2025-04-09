@@ -49,7 +49,9 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
     const { handleCommand } = require("./main"); 
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
-//lista
+const tmpPath = path.resolve('./tmp');
+  
+  //lista
 function isAllowedUser(sender) {
   const listaFile = "./lista.json";
   if (!fs.existsSync(listaFile)) return false;
@@ -777,8 +779,6 @@ module.exports = { cargarSubbots };
 
     startBot();
 })();
-
-const tmpPath = path.resolve('./tmp');
 
 setInterval(() => {
   if (!fs.existsSync(tmpPath)) return;
