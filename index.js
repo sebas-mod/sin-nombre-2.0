@@ -49,7 +49,6 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
     const { handleCommand } = require("./main"); 
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
-const tmpPath = path.resolve('./tmp');
   
   //lista
 function isAllowedUser(sender) {
