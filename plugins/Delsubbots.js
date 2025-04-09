@@ -1,6 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 
+const isOwner = (num) => {
+  num = num.replace(/[^0-9]/g, "");
+  const owners = global.owner.map(([id]) => id);
+  return owners.includes(num);
+};
+
 const handler = async (msg, { conn }) => {
   const senderId = msg.key.participant || msg.key.remoteJid;
   const senderClean = senderId.replace(/[^0-9]/g, '');
