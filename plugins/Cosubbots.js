@@ -35,15 +35,34 @@ const handler = async (msg, { conn }) => {
 
   for (const carpeta of carpetas) {
     const rutaCreds = path.join(subbotsPath, carpeta, "creds.json");
-    if (fs.existsSync(rutaCreds)) {
-      validos.push(carpeta);
-    } else {
+
+    if (!fs.existsSync(rutaCreds)) {
+      corruptos.push(carpeta);
+      continue;
+    }
+
+    try {
+      const contenido = fs.readFileSync(rutaCreds, "utf-8");
+      const creds = JSON.parse(contenido);
+
+      if (
+        !creds?.noiseKey ||
+        !creds?.identityKey ||
+        !creds?.signedIdentityKey ||
+        !creds?.signedPreKey
+      ) {
+        corruptos.push(carpeta);
+      } else {
+        validos.push(carpeta);
+      }
+
+    } catch (e) {
       corruptos.push(carpeta);
     }
   }
 
   const texto = `
-🤖 *Análisis de subbots realizados*
+🤖 *Análisis completo de subbots*
 
 ✅ Subbots válidos (${validos.length}):
 ${validos.length > 0 ? validos.map(n => "• " + n).join("\n") : "Ninguno"}
