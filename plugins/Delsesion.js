@@ -4,9 +4,8 @@ const path = require("path");
 const handler = async (msg, { conn }) => {
   const senderId = msg.key.participant || msg.key.remoteJid;
   const senderClean = senderId.replace(/[^0-9]/g, '');
-  const isOwner = global.owner.includes(senderClean);
 
-  if (!isOwner) {
+  if (!isOwner(senderClean)) {
     return conn.sendMessage(msg.key.remoteJid, {
       text: '❌ Solo el owner del bot puede usar este comando.'
     }, { quoted: msg });
