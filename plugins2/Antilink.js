@@ -13,7 +13,6 @@ const handler = async (msg, { conn, args }) => {
     }, { quoted: msg });
   }
 
-  // Verificar si es admin del grupo o owner del bot
   try {
     const metadata = await conn.groupMetadata(chatId);
     const participant = metadata.participants.find(p => p.id.includes(senderClean));
@@ -32,7 +31,14 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg });
     }
 
+    // Reacción de espera
+    await conn.sendMessage(chatId, {
+      react: { text: "⏳", key: msg.key }
+    });
+
+    const subbotID = conn.user.id;
     const filePath = path.resolve("./activossubbots.json");
+
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, JSON.stringify({ antilink: {} }, null, 2));
     }
@@ -40,14 +46,15 @@ const handler = async (msg, { conn, args }) => {
     const data = JSON.parse(fs.readFileSync(filePath));
 
     if (!data.antilink) data.antilink = {};
+    if (!data.antilink[subbotID]) data.antilink[subbotID] = {};
 
     if (args[0] === 'on') {
-      data.antilink[chatId] = true;
+      data.antilink[subbotID][chatId] = true;
       await conn.sendMessage(chatId, {
         text: "✅ Antilink *activado* en este grupo."
       }, { quoted: msg });
     } else {
-      delete data.antilink[chatId];
+      delete data.antilink[subbotID][chatId];
       await conn.sendMessage(chatId, {
         text: "✅ Antilink *desactivado* en este grupo."
       }, { quoted: msg });
@@ -55,11 +62,19 @@ const handler = async (msg, { conn, args }) => {
 
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
+    await conn.sendMessage(chatId, {
+      react: { text: "✅", key: msg.key }
+    });
+
   } catch (e) {
     console.error("❌ Error en comando antilink:", e);
     await conn.sendMessage(chatId, {
       text: "❌ Ocurrió un error al procesar el comando."
     }, { quoted: msg });
+
+    await conn.sendMessage(chatId, {
+      react: { text: "❌", key: msg.key }
+    });
   }
 };
 
