@@ -539,6 +539,119 @@ setupConnection(subSock);
         }
       });
 
+subSock.ev.on("group-participants.update", async (update) => {
+  try {
+    if (!subbotInstances[dir].isConnected) return;
+    if (!update.id.endsWith("@g.us")) return;
+
+    const chatId = update.id;
+    const filePath = path.resolve("./activossubbots.json");
+
+    // Leer archivo y verificar si bienvenida está activa
+    let activos = {};
+    if (fs.existsSync(filePath)) {
+      activos = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    }
+
+    console.log("[DEBUG] activossubbots.json:", activos);
+
+    if (!activos.welcome || !activos.welcome[chatId]) {
+      console.log(`[INFO] Bienvenida/despedida no activada en ${chatId}`);
+      return;
+    }
+
+    const welcomeTexts = [
+      "🎉 ¡Bienvenido(a)! Gracias por unirte al grupo.",
+      "👋 ¡Hola! Qué bueno tenerte con nosotros.",
+      "🌟 ¡Saludos! Esperamos que la pases genial aquí.",
+      "🚀 ¡Bienvenido(a)! Disfruta y participa activamente.",
+      "✨ ¡Qué alegría verte por aquí! Pásala bien."
+    ];
+
+    const farewellTexts = [
+      "👋 ¡Adiós! Esperamos verte pronto de nuevo.",
+      "😢 Se ha ido un miembro del grupo, ¡suerte!",
+      "📤 Gracias por estar con nosotros, hasta luego.",
+      "🔚 Un miembro se ha retirado. ¡Buena suerte!",
+      "💨 ¡Chao! Esperamos que hayas disfrutado del grupo."
+    ];
+
+    if (update.action === "add") {
+      for (const participant of update.participants) {
+        const mention = `@${participant.split("@")[0]}`;
+        const mensaje = welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)];
+        const tipo = Math.random();
+
+        if (tipo < 0.33) {
+          let profilePic;
+          try {
+            profilePic = await subSock.profilePictureUrl(participant, "image");
+          } catch {
+            profilePic = "https://cdn.dorratz.com/files/1741323171822.jpg";
+          }
+
+          await subSock.sendMessage(chatId, {
+            image: { url: profilePic },
+            caption: `👋 ${mention}\n\n${mensaje}`,
+            mentions: [participant]
+          });
+        } else if (tipo < 0.66) {
+          let groupDesc = "";
+          try {
+            const meta = await subSock.groupMetadata(chatId);
+            groupDesc = meta.desc ? `\n\n📜 *Descripción del grupo:*\n${meta.desc}` : "";
+          } catch {}
+
+          await subSock.sendMessage(chatId, {
+            text: `👋 ${mention}\n\n${mensaje}${groupDesc}`,
+            mentions: [participant]
+          });
+        } else {
+          await subSock.sendMessage(chatId, {
+            text: `👋 ${mention}\n\n${mensaje}`,
+            mentions: [participant]
+          });
+        }
+
+        console.log(`[LOG] Bienvenida enviada a ${mention}`);
+      }
+    }
+
+    if (update.action === "remove") {
+      for (const participant of update.participants) {
+        const mention = `@${participant.split("@")[0]}`;
+        const mensaje = farewellTexts[Math.floor(Math.random() * farewellTexts.length)];
+        const tipo = Math.random();
+
+        if (tipo < 0.5) {
+          let profilePic;
+          try {
+            profilePic = await subSock.profilePictureUrl(participant, "image");
+          } catch {
+            profilePic = "https://cdn.dorratz.com/files/1741323171822.jpg";
+          }
+
+          await subSock.sendMessage(chatId, {
+            image: { url: profilePic },
+            caption: `👋 ${mention}\n\n${mensaje}`,
+            mentions: [participant]
+          });
+        } else {
+          await subSock.sendMessage(chatId, {
+            text: `👋 ${mention}\n\n${mensaje}`,
+            mentions: [participant]
+          });
+        }
+
+        console.log(`[LOG] Despedida enviada a ${mention}`);
+      }
+    }
+
+  } catch (err) {
+    console.error("❌ Error en bienvenida/despedida del subbot:", err);
+  }
+});
+      
       subSock.ev.on("messages.upsert", async (msg) => {
         try {
           if (!subbotInstances[dir].isConnected) return;
