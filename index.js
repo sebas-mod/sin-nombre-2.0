@@ -778,17 +778,3 @@ module.exports = { cargarSubbots };
 
     startBot();
 })();
-
-setInterval(() => {
-  if (!fs.existsSync(tmpPath)) return;
-
-  const archivos = fs.readdirSync(tmpPath);
-  for (const archivo of archivos) {
-    const file = path.join(tmpPath, archivo);
-    fs.unlink(file, (err) => {
-      if (err) console.error("❌ Error al eliminar archivo tmp:", err);
-    });
-  }
-
-  console.log("🧹 Carpeta /tmp limpiada automáticamente.");
-}, 1000 * 60 * 60 * 2); // Cada 2 horas
