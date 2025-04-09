@@ -16,6 +16,20 @@ function isUrl(string) {
   const regex = /^(https?:\/\/[^\s]+)/g;
   return regex.test(string);
 }
+
+const filePath = path.resolve('./activossubbots.json');
+
+// Crear archivo con estructura inicial si no existe
+if (!fs.existsSync(filePath)) {
+  const estructuraInicial = {
+    antilink: {}
+    // futuro: modoAdmins: {}, antiarabe: {}
+  };
+
+  fs.writeFileSync(filePath, JSON.stringify(estructuraInicial, null, 2));
+  console.log("✅ Archivo activossubbots.json creado correctamente.");
+}
+
 global.zrapi = `ex-9bf9dc0318`;
 global.generatingCode = false;
 
