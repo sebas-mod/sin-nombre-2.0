@@ -13,7 +13,6 @@ const handler = async (msg, { conn, args }) => {
     }, { quoted: msg });
   }
 
-  // Verificar si es admin del grupo o owner del bot
   try {
     const metadata = await conn.groupMetadata(chatId);
     const participant = metadata.participants.find(p => p.id.includes(senderClean));
@@ -32,26 +31,29 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg });
     }
 
-    // Reacción de espera
     await conn.sendMessage(chatId, {
       react: { text: "⏳", key: msg.key }
     });
 
+    const subbotID = conn.user.id; // ID del subbot actual
     const filePath = path.resolve("./activossubbots.json");
+
     if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify({ antilink: {}, welcome: {} }, null, 2));
+      fs.writeFileSync(filePath, JSON.stringify({ welcome: {} }, null, 2));
     }
 
     const data = JSON.parse(fs.readFileSync(filePath));
+
     if (!data.welcome) data.welcome = {};
+    if (!data.welcome[subbotID]) data.welcome[subbotID] = {};
 
     if (args[0] === 'on') {
-      data.welcome[chatId] = true;
+      data.welcome[subbotID][chatId] = true;
       await conn.sendMessage(chatId, {
         text: "✅ Bienvenida y despedida *activadas* en este grupo."
       }, { quoted: msg });
     } else {
-      delete data.welcome[chatId];
+      delete data.welcome[subbotID][chatId];
       await conn.sendMessage(chatId, {
         text: "✅ Bienvenida y despedida *desactivadas* en este grupo."
       }, { quoted: msg });
