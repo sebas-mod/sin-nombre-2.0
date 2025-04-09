@@ -545,6 +545,7 @@ subSock.ev.on("group-participants.update", async (update) => {
     if (!update.id.endsWith("@g.us")) return;
 
     const chatId = update.id;
+    const subbotID = subSock.user.id;
     const filePath = path.resolve("./activossubbots.json");
 
     let activos = {};
@@ -552,7 +553,8 @@ subSock.ev.on("group-participants.update", async (update) => {
       activos = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     }
 
-    if (!activos.welcome || !activos.welcome[chatId]) return;
+    // Si el subbot no tiene lista de welcome, o ese grupo no está activado
+    if (!activos.welcome || !activos.welcome[subbotID] || !activos.welcome[subbotID][chatId]) return;
 
     const welcomeTexts = [
       "🎉 ¡Bienvenido(a)! Gracias por unirte al grupo.",
