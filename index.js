@@ -589,6 +589,41 @@ setupConnection(subSock);
             m.message?.videoMessage?.caption ||
             "";
 
+          // === LÓGICA ANTILINK AUTOMÁTICO SOLO WHATSAPP ===
+if (isGroup && !isFromSelf) {
+  const activossubPath = path.resolve("./activossubbots.json");
+  let dataActivados = {};
+  if (fs.existsSync(activossubPath)) {
+    dataActivados = JSON.parse(fs.readFileSync(activossubPath, "utf-8"));
+  }
+
+  const antilinkActivo = dataActivados.antilink && dataActivados.antilink[from];
+  const contieneLinkWhatsApp = /https:\/\/chat\.whatsapp\.com\//i.test(messageText);
+
+  if (antilinkActivo && contieneLinkWhatsApp) {
+    try {
+      const metadata = await subSock.groupMetadata(from);
+      const participant = metadata.participants.find(p => p.id === senderJid);
+      const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
+      const isOwner = global.owner.some(o => o[0] === senderNum);
+
+      if (!isAdmin && !isOwner) {
+        await subSock.sendMessage(from, { delete: m.key });
+
+        await subSock.sendMessage(from, {
+          text: `⚠️ @${senderNum} envió un enlace de grupo de WhatsApp y fue eliminado.`,
+          mentions: [senderJid]
+        });
+
+        await subSock.groupParticipantsUpdate(from, [senderJid], "remove");
+      }
+    } catch (err) {
+      console.error("❌ Error procesando antilink:", err);
+    }
+  }
+}
+// === FIN LÓGICA ANTILINK ===
+          
           const customPrefix = dataPrefijos[subbotID];
           const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
           const usedPrefix = allowedPrefixes.find((p) => messageText.startsWith(p));
