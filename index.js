@@ -694,15 +694,17 @@ subSock.ev.on("group-participants.update", async (update) => {
             m.message?.videoMessage?.caption ||
             "";
 
-          // === LÓGICA ANTILINK AUTOMÁTICO SOLO WHATSAPP ===
+// === LÓGICA ANTILINK AUTOMÁTICO SOLO WHATSAPP POR SUBBOT ===
 if (isGroup && !isFromSelf) {
   const activossubPath = path.resolve("./activossubbots.json");
   let dataActivados = {};
+
   if (fs.existsSync(activossubPath)) {
     dataActivados = JSON.parse(fs.readFileSync(activossubPath, "utf-8"));
   }
 
-  const antilinkActivo = dataActivados.antilink && dataActivados.antilink[from];
+  const subbotID = subSock.user?.id || "";
+  const antilinkActivo = dataActivados.antilink?.[subbotID]?.[from];
   const contieneLinkWhatsApp = /https:\/\/chat\.whatsapp\.com\//i.test(messageText);
 
   if (antilinkActivo && contieneLinkWhatsApp) {
@@ -719,7 +721,7 @@ if (isGroup && !isFromSelf) {
           text: `⚠️ @${senderNum} envió un enlace de grupo de WhatsApp y fue eliminado.`,
           mentions: [senderJid]
         });
-        
+
         await subSock.groupParticipantsUpdate(from, [senderJid], "remove");
       }
     } catch (err) {
