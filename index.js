@@ -547,18 +547,12 @@ subSock.ev.on("group-participants.update", async (update) => {
     const chatId = update.id;
     const filePath = path.resolve("./activossubbots.json");
 
-    // Leer archivo y verificar si bienvenida está activa
     let activos = {};
     if (fs.existsSync(filePath)) {
       activos = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     }
 
-    console.log("[DEBUG] activossubbots.json:", activos);
-
-    if (!activos.welcome || !activos.welcome[chatId]) {
-      console.log(`[INFO] Bienvenida/despedida no activada en ${chatId}`);
-      return;
-    }
+    if (!activos.welcome || !activos.welcome[chatId]) return;
 
     const welcomeTexts = [
       "🎉 ¡Bienvenido(a)! Gracias por unirte al grupo.",
@@ -612,8 +606,6 @@ subSock.ev.on("group-participants.update", async (update) => {
             mentions: [participant]
           });
         }
-
-        console.log(`[LOG] Bienvenida enviada a ${mention}`);
       }
     }
 
@@ -642,8 +634,6 @@ subSock.ev.on("group-participants.update", async (update) => {
             mentions: [participant]
           });
         }
-
-        console.log(`[LOG] Despedida enviada a ${mention}`);
       }
     }
 
