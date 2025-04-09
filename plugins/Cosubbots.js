@@ -45,12 +45,7 @@ const handler = async (msg, { conn }) => {
       const contenido = fs.readFileSync(rutaCreds, "utf-8");
       const creds = JSON.parse(contenido);
 
-      if (
-        !creds?.noiseKey ||
-        !creds?.identityKey ||
-        !creds?.signedIdentityKey ||
-        !creds?.signedPreKey
-      ) {
+      if (!creds?.me || !creds?.pairingCode) {
         corruptos.push(carpeta);
       } else {
         validos.push(carpeta);
@@ -62,7 +57,7 @@ const handler = async (msg, { conn }) => {
   }
 
   const texto = `
-🤖 *Análisis completo de subbots*
+🤖 *Análisis de subbots (v2)*
 
 ✅ Subbots válidos (${validos.length}):
 ${validos.length > 0 ? validos.map(n => "• " + n).join("\n") : "Ninguno"}
