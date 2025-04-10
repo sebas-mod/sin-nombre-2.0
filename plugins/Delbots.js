@@ -9,7 +9,7 @@ const handler = async (msg, { conn }) => {
   if (fs.existsSync(sessionPath)) {
     fs.rmSync(sessionPath, { recursive: true, force: true });
     await conn.sendMessage(msg.key.remoteJid, {
-      text: `🗑️ *Tu sesión ha sido eliminada correctamente.*\n\nPuedes volver a usar *serbot* cuando gustes.`,
+      text: `🗑️ *Tu sesión ha sido eliminada correctamente.*\n\nPuedes volver a usar *#sercode o #code* cuando gustes.`,
       quoted: msg
     });
     console.log(`✅ Carpeta del subbot ${number} eliminada por comando.`);
