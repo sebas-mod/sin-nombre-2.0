@@ -593,7 +593,7 @@ await sock.sendMessage(msg.key.remoteJid, {
 │ En ese caso, simplemente ejecuta:
 │ #delbots
 │ para eliminar tu sesión y luego vuelve a conectarte usando:
-│ #serbot
+│ #serbot o para code si no quieres qr usa: #code o #sercode. 
 │ hasta que se conecte correctamente.
 │
 │ Esto ayuda a establecer una conexión *estable y funcional*.
@@ -656,7 +656,7 @@ Usa ${global.prefix}serbot para volver a conectar.`
 │ 🔄 Si seguir en problemas, En ese caso, simplemente ejecuta:
 │ #delbots
 │ para eliminar tu sesión y luego vuelve a conectarte usando:
-│ #serbot
+│ #serbot o para code si no quieres qr usa: #code o #sercode. 
 │ hasta que se conecte correctamente.
 │
 │ Esto ayuda a establecer una conexión *estable y funcional*.
