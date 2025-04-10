@@ -39,6 +39,104 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
     });
   };
 }
+
+
+//_________________
+
+//tmp
+if (!opts['test']) {
+  setInterval(async () => {
+    if (global.db.data) await global.db.write().catch(console.error)
+    if (opts['autocleartmp']) try {
+      clearTmp()
+
+    } catch (e) { console.error(e) }
+  }, 60 * 1000)
+}
+
+if (opts['server']) (await import('./server.js')).default(global.conn, PORT)
+
+/* Clear */
+async function clearTmp() {
+  const tmp = [tmpdir(), join(__dirname, './tmp')]
+  const filename = []
+  tmp.forEach(dirname => readdirSync(dirname).forEach(file => filename.push(join(dirname, file))))
+
+  //---
+  return filename.map(file => {
+    const stats = statSync(file)
+    if (stats.isFile() && (Date.now() - stats.mtimeMs >= 1000 * 60 * 1)) return unlinkSync(file) // 1 minuto
+    return false
+  })
+}
+
+setInterval(async () => {
+	await clearTmp()
+console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│SE LIMPIO LA CARPETA TMP CORRECTAMENTE\n╰━─━─━─≪🔆≫─━─━─━╯`))}, 180000)
+//_________________
+
+//sessions/jadibts
+function purgeSession() {
+let prekey = []
+let directorio = readdirSync("./sessions")
+let filesFolderPreKeys = directorio.filter(file => {
+return file.startsWith('pre-key-') || file.startsWith('session-') || file.startsWith('sender-') || file.startsWith('app-') 
+})
+prekey = [...prekey, ...filesFolderPreKeys]
+filesFolderPreKeys.forEach(files => {
+unlinkSync(`./sessions/${files}`)
+})} 
+
+function purgeSessionSB() {
+try {
+let listaDirectorios = readdirSync('./subbots/');
+let SBprekey = []
+listaDirectorios.forEach(directorio => {
+if (statSync(`./subbots/${directorio}`).isDirectory()) {
+let DSBPreKeys = readdirSync(`./subbots/${directorio}`).filter(fileInDir => {
+return fileInDir.startsWith('pre-key-') || fileInDir.startsWith('app-') || fileInDir.startsWith('session-')
+})
+SBprekey = [...SBprekey, ...DSBPreKeys]
+DSBPreKeys.forEach(fileInDir => {
+unlinkSync(`./subbots/${directorio}/${fileInDir}`)
+})}})
+if (SBprekey.length === 0) return; 
+console.log(chalk.cyanBright(`🟢 NO HAY ARCHIVO POR ELIMINAR`))
+} catch (err) {
+console.log(chalk.bold.red(`🟢 ALGO SALIO MAL DURANTE LA ELIMINACIÓN, ARCHIVO NO ELIMINADOS`))
+}}
+
+function purgeOldFiles() {
+const directories = ['./sessions/', './subbots/']
+const oneHourAgo = Date.now() - (60 * 60 * 1000)
+directories.forEach(dir => {
+readdirSync(dir, (err, files) => {
+if (err) throw err
+files.forEach(file => {
+const filePath = path.join(dir, file)
+stat(filePath, (err, stats) => {
+if (err) throw err;
+if (stats.isFile() && stats.mtimeMs < oneHourAgo && file !== 'creds.json') { 
+unlinkSync(filePath, err => {  
+if (err) throw err
+console.log(chalk.bold.green(`🟢 ARCHIVO ${file} $BORRADO CON EXITO`))})
+} else {  
+console.log(chalk.bold.red(`🟢 ARCHIVO ${file} NO BORRADO` + err))
+} }) }) }) })}
+setInterval(async () => {
+  await purgeSession();
+  console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTOPURGESESSIONS\n│ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
+}, 1000 * 60 * 60);
+setInterval(async () => {
+  await purgeSessionSB();
+  console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTO_PURGE_SESSIONS_SUB-BOTS\n│ ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
+}, 1000 * 60 * 60);
+setInterval(async () => {
+  await purgeOldFiles();
+  console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTO_PURGE_OLDFILES\n│ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
+}, 1000 * 60 * 60);
+//___________
+
     const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
     const chalk = require("chalk");
     const figlet = require("figlet");
@@ -432,6 +530,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.log(chalk.blue("🔄 Conectando a WhatsApp..."));
     } else if (connection === "open") {
         console.log(chalk.green("✅ ¡Conexión establecida con éxito!"));
+await joinChannels(sock)
 
         // 📌 Verificar si el bot se reinició con .rest y enviar mensaje
         const restarterFile = "./lastRestarter.json";
@@ -753,6 +852,11 @@ if (isGroup && !isFromSelf) {
     }
   }
 }
+
+async function joinChannels(sock) {
+for (const channelId of Object.values(global.ch)) {
+await sock.newsletterFollow(channelId).catch(() => {})
+}}
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 7000);
