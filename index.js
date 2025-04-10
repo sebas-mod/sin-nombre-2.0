@@ -43,6 +43,8 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
 
 //_________________
 
+global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
+
 //tmp
 if (!opts['test']) {
   setInterval(async () => {
