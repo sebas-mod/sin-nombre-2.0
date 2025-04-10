@@ -478,8 +478,10 @@ ${eliminados.length ? eliminados.map(d => `- ${d}`).join("\n") : "Ninguno"}
     break;
 
 case "sercode":
-case "code":        
-case "serbot": {
+case "code":
+case "jadibot":
+case "serbot":
+case "qr": {
   const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -487,6 +489,7 @@ case "serbot": {
     makeCacheableSignalKeyStore,
     DisconnectReason
   } = require("@whiskeysockets/baileys");
+  const QRCode = require("qrcode");
   const { Boom } = require("@hapi/boom");
   const path = require("path");
   const pino = require("pino");
@@ -494,6 +497,7 @@ case "serbot": {
   const { cargarSubbots } = require("./index");
 
   let sentCodeMessage = false;
+  const usarPairingCode = ["sercode", "code"].includes(command);
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -523,34 +527,40 @@ case "serbot": {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, logger)
         },
+        printQRInTerminal: !usarPairingCode,
         browser: ['Windows', 'Chrome']
       });
 
       let reconnectionAttempts = 0;
       const maxReconnectionAttempts = 3;
 
-      socky.ev.on("connection.update", async (c) => {
-        const { qr, connection, lastDisconnect } = c;
-
+      socky.ev.on("connection.update", async ({ qr, connection, lastDisconnect }) => {
         if (qr && !sentCodeMessage) {
-          const code = await socky.requestPairingCode(rid);
-          await sock.sendMessage(msg.key.remoteJid, {
-            video: { url: "https://cdn.russellxz.click/b0cbbbd3.mp4" },
-            caption: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
-            gifPlayback: true }, { quoted: msg
-          });
-          await sleep(1000);
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: "```" + code + "```"  }, { quoted: msg
-          });
+          if (usarPairingCode) {
+            const code = await socky.requestPairingCode(rid);
+            await sock.sendMessage(msg.key.remoteJid, {
+              video: { url: "https://cdn.russellxz.click/b0cbbbd3.mp4" },
+              caption: "🔐 *Código generado:*\nAbre WhatsApp > Vincular dispositivo y pega el siguiente código:",
+              gifPlayback: true
+            }, { quoted: msg });
+            await sleep(1000);
+            await sock.sendMessage(msg.key.remoteJid, {
+              text: "```" + code + "```"
+            }, { quoted: msg });
+          } else {
+            const qrImage = await QRCode.toBuffer(qr);
+await sock.sendMessage(msg.key.remoteJid, {
+  image: qrImage,
+  caption: `📲 Escanea este código QR desde *WhatsApp > Vincular dispositivo* para conectarte como subbot.`
+}, { quoted: msg });
+          }
           sentCodeMessage = true;
         }
 
         switch (connection) {
           case "open":
             await sock.sendMessage(msg.key.remoteJid, {
-              text: `
-╭───〔 *🤖 SUBBOT CONECTADO* 〕───╮
+              text: `╭───〔 *🤖 SUBBOT CONECTADO* 〕───╮
 │
 │ ✅ *Bienvenido a Azura Ultra 2.0*
 │
@@ -561,15 +571,35 @@ case "serbot": {
 │ ${global.prefix}help
 │ ${global.prefix}menu
 │
-│ ℹ️ Por defecto, el subbot está en *modo privado*.
-│ Solo tú puedes usarlo.
+│ ⚔️ Disfruta de las funciones del subbot
+│ y conquista el mundo digital
 │
-│ ➕ Usa ${global.prefix}setprefix para cambiar el prefijo.
+│ ℹ️ Por defecto, el subbot está en *modo privado*,
+│ lo que significa que *solo tú puedes usarlo*.
 │
-│ 🔄 Si el bot se traba, ejecuta:
-│ ${global.prefix}delbots y luego ${global.prefix}serbot
+│ Usa el comando:
+│ #menu
+│ (para ver configuraciones y cómo hacer
+│ que otras personas puedan usarlo.)
 │
-╰────✦ *Sky Ultra Plus* ✦────╯` }, { quoted: msg });
+│ ➕ Los prefijos por defecto son: *. y #*
+│ Si quieres cambiarlos, usa:
+│ #setprefix
+│
+│ 🔄 Si notas que el subbot *no responde al instante*
+│ o tarda mucho *aunque esté conectado*, no te preocupes.
+│ Puede ser un fallo temporal.
+│
+│ En ese caso, simplemente ejecuta:
+│ #delbots
+│ para eliminar tu sesión y luego vuelve a conectarte usando:
+│ #serbot
+│ hasta que se conecte correctamente.
+│
+│ Esto ayuda a establecer una conexión *estable y funcional*.
+│
+╰────✦ *Sky Ultra Plus* ✦────╯`
+            }, { quoted: msg });
             await joinChannels(socky);
             await sock.sendMessage(msg.key.remoteJid, {
               react: { text: "🔁", key: msg.key }
@@ -581,66 +611,58 @@ case "serbot": {
             const reason = new Boom(lastDisconnect?.error)?.output.statusCode || lastDisconnect?.error?.output?.statusCode;
             const messageError = DisconnectReason[reason] || `Código desconocido: ${reason}`;
 
-            console.log(`❌ Subbot desconectado: ${number} (${messageError})`);
-
             const eliminarSesion = () => {
               if (fs.existsSync(sessionPath)) {
                 fs.rmSync(sessionPath, { recursive: true, force: true });
-                console.log(`🧹 Carpeta eliminada para: ${number}`);
               }
             };
 
             switch (reason) {
               case 401:
-                await sock.sendMessage(msg.key.remoteJid, {
-                  text: `⚠️ *Código 401*\nTu sesión venció o fue cerrada desde otro lugar.\nSe eliminó automáticamente.\n\nVuelve a usar:\n${global.prefix}serbot` }, { quoted: msg
-                });
-                eliminarSesion();
-                break;
-
               case DisconnectReason.badSession:
-                await sock.sendMessage(msg.key.remoteJid, {
-                  text: `❌ *Sesión corrupta.*\nLas credenciales están dañadas.\nSe eliminó la carpeta.\n\nUsa:\n${global.prefix}serbot para vincular de nuevo.` }, { quoted: msg
-                });
-                eliminarSesion();
-                break;
-
               case DisconnectReason.loggedOut:
                 await sock.sendMessage(msg.key.remoteJid, {
-                  text: `🔒 *Subbot cerrado manualmente.*\nLa sesión fue cerrada desde otro dispositivo.\nCarpeta eliminada.` }, { quoted: msg
-                });
+                  text: `⚠️ *Sesión eliminada.*
+${messageError}
+Usa ${global.prefix}serbot para volver a conectar.`
+                }, { quoted: msg });
                 eliminarSesion();
                 break;
 
               case DisconnectReason.restartRequired:
                 if (reconnectionAttempts < maxReconnectionAttempts) {
                   reconnectionAttempts++;
-                  await sock.sendMessage(msg.key.remoteJid, {
-                    text: `🔁 Reintentando conexión (${reconnectionAttempts})` }, { quoted: msg
-                  });
                   await sleep(3000);
                   await serbot();
                   return;
-                } else {
-                  await sock.sendMessage(msg.key.remoteJid, {
-                    text: `⚠️ *Demasiados intentos de reconexión fallidos.*` }, { quoted: msg
-                  });
                 }
+                await sock.sendMessage(msg.key.remoteJid, {
+                  text: `⚠️ *Reintentos de conexión fallidos.*`
+                }, { quoted: msg });
                 break;
 
-              case DisconnectReason.connectionClosed:
-              case DisconnectReason.connectionLost:
               case DisconnectReason.connectionReplaced:
-              case DisconnectReason.timedOut:
-                await sock.sendMessage(msg.key.remoteJid, {
-                  text: `⚠️ *Problema de conexión detectado:*\n${messageError}\nIntentando reconectar...` }, { quoted: msg
-                });
+                console.log(`ℹ️ Sesión reemplazada por otra instancia.`);
                 break;
 
               default:
                 await sock.sendMessage(msg.key.remoteJid, {
-                  text: `❌ *Error desconocido al conectar el subbot:*\nCódigo: ${reason || "desconocido"}\nMotivo: ${messageError}` }, { quoted: msg
-                });
+                  text: `╭───〔 *⚠️ SUBBOT* 〕───╮
+│
+│⚠️ *Problema de conexión detectado:*
+│ ${messageError}
+│ Intentando reconectar...
+│
+│ 🔄 Si seguir en problemas, En ese caso, simplemente ejecuta:
+│ #delbots
+│ para eliminar tu sesión y luego vuelve a conectarte usando:
+│ #serbot
+│ hasta que se conecte correctamente.
+│
+│ Esto ayuda a establecer una conexión *estable y funcional*.
+│
+╰────✦ *Sky Ultra Plus* ✦────╯`
+                }, { quoted: msg });
                 break;
             }
             break;
@@ -653,14 +675,14 @@ case "serbot": {
     } catch (e) {
       console.error("❌ Error en serbot:", e);
       await sock.sendMessage(msg.key.remoteJid, {
-        text: `❌ *Error inesperado:* ${e.message}` }, { quoted: msg
-      });
+        text: `❌ *Error inesperado:* ${e.message}`
+      }, { quoted: msg });
     }
   }
 
   await serbot();
 }
-  break;
+break;
 
 case 'tovideo': {
   const fs = require('fs');
