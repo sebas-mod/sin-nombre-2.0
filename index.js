@@ -133,7 +133,7 @@ global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse()
 //tmp
 if (!opts['test']) {
   setInterval(async () => {
-    if (global.db.data) await global.db.write().catch(console.error)
+  //  if (global.db.data) await global.db.write().catch(console.error)
     if (opts['autocleartmp']) try {
       clearTmp()
 
