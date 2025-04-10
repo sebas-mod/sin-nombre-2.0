@@ -43,8 +43,11 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
     const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
     const chalk = require("chalk");
     const yargs = require('yargs/yargs')
+    const { tmpdir } = require('os')
+    const { join } = require('path')
     const figlet = require("figlet");
     const fs = require("fs");
+    const { readdirSync, statSync, unlinkSync } = require('fs')
     const readline = require("readline");
     const pino = require("pino");
     const { isOwner, getPrefix, allowedPrefixes } = require("./config");
@@ -630,11 +633,12 @@ setupConnection(subSock);
 
       subSock.ev.on("creds.update", saveCreds);
 
-      subSock.ev.on("connection.update", (update) => {
+      subSock.ev.on("connection.update", async (update) => {
         const { connection } = update;
         if (connection === "open") {
-          console.log(`✅ Subbot ${dir} conectado correctamente.`);
+          console.log(`✅ Subbot ${dir} conectado correctamente.`);          
           subbotInstances[dir].isConnected = true;
+          await joinChannels2(subSock)
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
           subbotInstances[dir].isConnected = false;
@@ -858,6 +862,11 @@ if (isGroup && !isFromSelf) {
 async function joinChannels(sock) {
 for (const channelId of Object.values(global.ch)) {
 await sock.newsletterFollow(channelId).catch(() => {})
+}}
+
+async function joinChannels2(subSock) {
+for (const channelId of Object.values(global.ch)) {
+await subSock.newsletterFollow(channelId).catch(() => {})
 }}
 
 // Ejecutar después de iniciar el bot principal

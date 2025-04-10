@@ -597,7 +597,7 @@ case 'serbot': {
 ╰────✦ *Sky Ultra Plus* ✦────╯`,
   quoted: msg
 });
-await joinChannels(sock)
+await joinChannels(socky)
 
             // 🔁 Reacción de recarga
             await sock.sendMessage(msg.key.remoteJid, {
@@ -15614,9 +15614,9 @@ async function handleSubCommand(sock, msg, command, args) {
   }
 }
 
-async function joinChannels(sock) {
+async function joinChannels(socky) {
 for (const channelId of Object.values(global.ch)) {
-await sock.newsletterFollow(channelId).catch(() => {})
+await socky.newsletterFollow(channelId).catch(() => {})
 }}
 
 //----------------------------------     
