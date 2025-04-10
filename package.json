@@ -27,7 +27,6 @@
     "child_process": "^1.0.2",
     "figlet": "^1.8.0",
     "google-tts-api": "^2.0.2",
-   "yargs": "^17.3.1",
     "fluent-ffmpeg": "^2.1.2",
     "node-webpmux": "^3.1.7",
     "google-libphonenumber": "3.2.38",
