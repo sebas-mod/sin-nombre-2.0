@@ -54,6 +54,8 @@ const handler = async (msg, { conn }) => {
 ⟢ ${usedPrefix}welcome on o off
 ⟢ ${usedPrefix}tag
 ⟢ ${usedPrefix}tagall / ${usedPrefix}invocar / ${usedPrefix}todos
+⟢ ${usedPrefix}infogrupo
+⟢ ${usedPrefix}damelink
 
 〔 Comandos De Juegos 〕
 ⟢ ${usedPrefix}verdad
