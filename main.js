@@ -4321,6 +4321,26 @@ case 'menu': {
 ⎔ 𝗨𝘀𝗮 『${global.prefix}』 𝗮𝗻𝘁𝗲𝘀 𝗱𝗲 𝗰𝗮𝗱𝗮 𝗰𝗼𝗺𝗮𝗻𝗱𝗼.  
 
 ╭──────────────╮  
+│ ✦ 𝗨𝗡𝗘𝗧𝗘 𝗔 𝗡𝗨𝗘𝗦𝗧𝗥𝗢 𝗦𝗜𝗦𝗧𝗘𝗠𝗔 𝗗𝗘 𝗦𝗨𝗕𝗕𝗢𝗧𝗦(𝗛𝗔𝗭𝗧𝗘 𝗕𝗢𝗧) ✦ │  
+╰──────────────╯  
+
+👾 *Unete a nuestro sistema de subbots,.te voy a mostrar la lista de comandos para gestiónar/hacerte subbot: 
+
+⎔ ${global.prefix}serbot / ${global.prefix}jadibot
+⎔ ${global.prefix}sercode / ${global.prefix}code
+⎔ ${global.prefix}delbots
+° mas comandos en el menu de subbots...
+
+╭──────────────╮  
+│ ✦ 𝙄𝙉𝙁𝙊𝙍𝙈𝘼𝘾𝙄𝙊𝙉 ✦ │  
+╰──────────────╯
+
+⎔ ${global.prefix}speedtest  
+⎔ ${global.prefix}ping  
+⎔ ${global.prefix}creador  
+⎔ ${global.prefix}perfil  
+
+╭──────────────╮  
 │ ✦ 𝙈𝙀𝙉𝙐𝙎 𝘿𝙄𝙎𝙋𝙊𝙉𝙄𝘽𝙇𝙀𝙎 ✦ │  
 ╰──────────────╯  
 ⎔ ${global.prefix}allmenu  
@@ -4329,6 +4349,16 @@ case 'menu': {
 ⎔ ${global.prefix}menurpg  
 ⎔ ${global.prefix}info  
 ⎔ ${global.prefix}menuowner  
+
+╭──────────────╮  
+│ ✦ 𝙄𝘼 - 𝘾𝙃𝘼𝙏 𝘽𝙊𝙏 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}gemini  
+⎔ ${global.prefix}chatgpt
+⎔ ${global.prefix}dalle
+⎔ ${global.prefix}visión 
+⎔ ${global.prefix}simi
+⎔ ${global.prefix}visión2
 
 ╭──────────────╮  
 │ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
@@ -4341,6 +4371,7 @@ case 'menu': {
 ⎔ ${global.prefix}play6 → titulo
 ⎔ ${global.prefix}ytmp3 → link  
 ⎔ ${global.prefix}ytmp35 → link  
+⎔ ${global.prefix}get → responder a un estado.
 ⎔ ${global.prefix}ytmp4 → link  
 ⎔ ${global.prefix}ytmp45 → link  
 ⎔ ${global.prefix}tiktok → link  
@@ -4348,41 +4379,54 @@ case 'menu': {
 ⎔ ${global.prefix}ig → link  
 ⎔ ${global.prefix}spotify → link
 ⎔ ${global.prefix}mediafire → link
-⎔ ${global.prefix}Tiktoksearch → título
-⎔ ${global.prefix}Yts → título
 ⎔ ${global.prefix}apk → título
 
 ╭──────────────╮  
-│ ✦ 𝙊𝙏𝙍𝙊𝙎 𝘾𝙊𝙈𝘼𝙉𝘿𝙊𝙎 ✦ │  
+│ ✦ 𝘽𝙐𝙎𝘾𝘼𝘿𝙊𝙍𝙀𝙎  ✦ │  
 ╰──────────────╯  
-⎔ ${global.prefix}ver  
-⎔ ${global.prefix}perfil  
-⎔ ${global.prefix}get  
-⎔ ${global.prefix}ping  
-⎔ ${global.prefix}creador  
-⎔ ${global.prefix}toimg  
-⎔ ${global.prefix}personalidad  
-⎔ ${global.prefix}ship  
-⎔ ${global.prefix}parejas  
-⎔ ${global.prefix}speedtest  
+
+⎔ ${global.prefix}pixai → titulo
+⎔ ${global.prefix}Tiktoksearch → título
+⎔ ${global.prefix}Yts → título
+⎔ ${global.prefix}tiktokstalk → usuario
+
+╭──────────────╮  
+│ ✦ 𝘾𝙊𝙉𝙑𝙀𝙍𝙏𝙄𝘿𝙊𝙍𝙀𝙎 ✦ │  
+╰──────────────╯ 
+ 
 ⎔ ${global.prefix}tomp3  
 ⎔ ${global.prefix}tts  
-⎔ ${global.prefix}visión  
-⎔ ${global.prefix}verdad  
-⎔ ${global.prefix}reto  
-⎔ ${global.prefix}géminis  
-⎔ ${global.prefix}gemini  
-⎔ ${global.prefix}chatgpt
-⎔ ${global.prefix}IA
-⎔ ${global.prefix}pixai  
+⎔ ${global.prefix}tovideo
+⎔ ${global.prefix}toimg
+⎔ ${global.prefix}gifvideo → responde a un video.
+
+╭──────────────╮  
+│ ✦ 𝙎𝙏𝙄𝘾𝙆𝙀𝙍𝙎 ✦ │  
+╰──────────────╯  
+
 ⎔ ${global.prefix}newpack
 ⎔ ${global.prefix}addsticker
 ⎔ ${global.prefix}listpacks
 ⎔ ${global.prefix}sendpack
-⎔ ${global.prefix}tiktokstalk
-⎔ ${global.prefix}dalle
-⎔ ${global.prefix}visión2
-⎔ ${global.prefix}chatgpt o IA
+
+╭──────────────╮  
+│ ✦ 𝙃𝙀𝙍𝙍𝘼𝙈𝙄𝙀𝙉𝙏𝘼𝙎 ✦ │  
+╰──────────────╯  
+
+⎔ ${global.prefix}ver → responder a un mensaje  
+⎔ ${global.prefix}tourl → responder a una imagen/video/musica
+⎔ ${global.prefix}whatmusic → Responder a un audio(mp3)/video(mp4)
+ 
+╭──────────────╮  
+│ ✦ 𝙈𝙄𝙉𝙄 𝙅𝙐𝙀𝙂𝙊𝙎 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}verdad  
+⎔ ${global.prefix}reto  
+⎔ ${global.prefix}personalidad  
+⎔ ${global.prefix}ship  
+⎔ ${global.prefix}parejas  
+
+
 
 ╭─────────────────╮  
  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟚.𝟘 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. 
