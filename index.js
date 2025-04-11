@@ -579,7 +579,7 @@ setupConnection(subSock);
         if (connection === "open") {
           console.log(`✅ Subbot ${dir} conectado correctamente.`);          
           subbotInstances[dir].isConnected = true;
-          await joinChannels2(subSock)
+       //   await joinChannels2(subSock)
         } else if (connection === "close") {
           console.log(`❌ Subbot ${dir} se desconectó.`);
           subbotInstances[dir].isConnected = false;
