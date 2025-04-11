@@ -161,9 +161,9 @@ async function clearTmp() {
 }
 
 setInterval(async () => {
-	await clearTmp()
-console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│SE LIMPIO LA CARPETA TMP CORRECTAMENTE\n╰━─━─━─≪🔆≫─━─━─━╯`))}, 180000)
-//_________________
+  await clearTmp()
+  console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│SE LIMPIO LA CARPETA TMP CORRECTAMENTE\n╰━─━─━─≪🔆≫─━─━─━╯`))
+}, 1000 * 60 * 60); // ← 1 hora en milisegundos
 
 //sessions/jadibts
 function purgeSession() {
