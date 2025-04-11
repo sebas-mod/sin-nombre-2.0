@@ -8,11 +8,6 @@ const ffmpeg = require('fluent-ffmpeg');
 const streamPipeline = promisify(pipeline);
 
 const handler = async (msg, { conn, text }) => {
-    // Validar si es URL de YouTube
-    const isYoutubeUrl = (url) => {
-        return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/.test(url);
-    };
-
     // Formatos de audio soportados
     const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
 
@@ -67,7 +62,7 @@ const handler = async (msg, { conn, text }) => {
     // Validar texto de entrada
     if (!text) {
         return await conn.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Uso correcto:\n\n📌 Ejemplo: *${global.prefix}ytmp35* Bad Bunny - Diles\n📌 O envía un link de YouTube`
+            text: `✳️ Uso correcto:\n\n📌 Ejemplo: *${global.prefix}ytmp35* Bad Bunny - Diles`
         }, { quoted: msg });
     }
 
@@ -77,32 +72,19 @@ const handler = async (msg, { conn, text }) => {
     });
 
     try {
-        let videoData;
-
-        if (isYoutubeUrl(text)) {
-            // Procesar URL directa
-            const videoId = new URL(text).searchParams.get("v");
-            videoData = {
-                title: 'Audio YouTube',
-                url: text,
-                thumbnail: `https://i.ytimg.com/vi/${videoId}/0.jpg`,
-                timestamp: '--:--'
-            };
-        } else {
-            // Buscar por texto
-            const search = await yts(text);
-            if (!search.videos || search.videos.length === 0) {
-                throw new Error('No se encontraron resultados para tu búsqueda.');
-            }
-
-            const video = search.videos[0];
-            videoData = {
-                title: video.title,
-                url: video.url,
-                thumbnail: video.thumbnail,
-                timestamp: video.timestamp
-            };
+        // Buscar en YouTube
+        const search = await yts(text);
+        if (!search.videos || search.videos.length === 0) {
+            throw new Error('No se encontraron resultados para tu búsqueda.');
         }
+
+        const video = search.videos[0];
+        const videoData = {
+            title: video.title,
+            url: video.url,
+            thumbnail: video.thumbnail,
+            timestamp: video.timestamp
+        };
 
         const { title, url, thumbnail, timestamp } = videoData;
 
@@ -136,6 +118,8 @@ const handler = async (msg, { conn, text }) => {
         });
 
         await streamPipeline(audioRes.data, fs.createWriteStream(rawPath));
+
+        // Comprimir y convertir audio
         await new Promise((resolve, reject) => {
             ffmpeg(rawPath)
                 .audioBitrate(128)
@@ -152,12 +136,18 @@ const handler = async (msg, { conn, text }) => {
                 })
                 .save(finalPath);
         });
+
+        // Enviar audio
         await conn.sendMessage(msg.key.remoteJid, {
             audio: fs.readFileSync(finalPath),
             mimetype: 'audio/mpeg',
             fileName: `${title.substring(0, 100)}.mp3`.replace(/[^\w\s.-]/gi, '')
         }, { quoted: msg });
+
+        // Limpiar archivos temporales
         fs.unlinkSync(finalPath);
+
+        // Reacción de éxito
         await conn.sendMessage(msg.key.remoteJid, {
             react: { text: '✅', key: msg.key }
         });
@@ -178,7 +168,6 @@ const handler = async (msg, { conn, text }) => {
 handler.command = ['ytmp35', 'ytaudio'];
 handler.tags = ['downloader'];
 handler.help = [
-    'ytmp35 <búsqueda> - Descarga audio de YouTube',
-    'ytmp35 <url> - Descarga audio desde enlace'
+    'ytmp35 <búsqueda> - Descarga audio de YouTube'
 ];
 module.exports = handler;
