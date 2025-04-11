@@ -836,6 +836,26 @@ if (isGroup && !isFromSelf) {
   }
 }
 // === FIN LÓGICA ANTILINK ===
+// === VERIFICACIÓN MODO ADMINS (SUBBOTS) ===
+try {
+  const activossubPath = path.resolve("./activossubbots.json");
+  const dataActivados = fs.existsSync(activossubPath) ? JSON.parse(fs.readFileSync(activossubPath, "utf-8")) : {};
+  const modoAdminsActivo = dataActivados.modoadmins?.[subbotID]?.[from];
+
+  if (modoAdminsActivo) {
+    const metadata = await subSock.groupMetadata(from);
+    const participante = metadata.participants.find(p => p.id === senderJid);
+    const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
+    const isBot = subSock.user?.id?.split(":")[0] === senderNum;
+    const isOwner = global.owner.some(([id]) => id === senderNum);
+
+    if (!isAdmin && !isBot && !isOwner) {
+      return;
+    }
+  }
+} catch (e) {
+  console.error("❌ Error en verificación de modo admins:", e);
+}
           
           const customPrefix = dataPrefijos[subbotID];
           const allowedPrefixes = customPrefix ? [customPrefix] : [".", "#"];
