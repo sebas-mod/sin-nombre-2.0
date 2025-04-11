@@ -90,7 +90,7 @@ const handler = async (msg, { conn, text }) => {
 
         const infoMessage = `
 ╔══════════════════╗
-║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗦𝗨𝗕𝗕𝗢𝗧 ✦ ║
 ╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
@@ -112,7 +112,7 @@ const handler = async (msg, { conn, text }) => {
 ⚙️ *Azura Ultra 2.0 está procesando tu video...*
 
 ═════════════════════  
-         𖥔 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+         𖥔 𝗔𝘇𝘂𝗿𝗮 𝗨𝗹𝘁𝗿𝗮 𝟮.𝟬 𝗦𝗨𝗕𝗕𝗼𝘁 𖥔
 ═════════════════════`;
 
         await conn.sendMessage(msg.key.remoteJid, {
@@ -159,7 +159,7 @@ const handler = async (msg, { conn, text }) => {
                 .save(finalPath);
         });
 
-        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 Bot`;
+        const finalText = `🎬 Aquí tiene su video en calidad ${quality}p.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra 2.0 SubBot`;
 
         await conn.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(finalPath),
