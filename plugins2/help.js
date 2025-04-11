@@ -49,10 +49,16 @@ const handler = async (msg, { conn }) => {
 ⟢ ${usedPrefix}cerrargrupo
 ⟢ ${usedPrefix}infogrupo
 ⟢ ${usedPrefix}kick
+⟢ ${usedPrefix}modoadmins on o off
 ⟢ ${usedPrefix}antilink on o off
 ⟢ ${usedPrefix}welcome on o off
 ⟢ ${usedPrefix}tag
 ⟢ ${usedPrefix}tagall / ${usedPrefix}invocar / ${usedPrefix}todos
+
+〔 Comandos De Juegos 〕
+⟢ ${usedPrefix}verdad
+⟢ ${usedPrefix}reto
+⟢ ${usedPrefix}memes o meme
 
 〔 Configuración & Dueño 〕
 
