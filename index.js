@@ -837,30 +837,36 @@ if (isGroup && !isFromSelf) {
 }
 // === FIN LÓGICA ANTILINK ===
 // === INICIO LÓGICA MODOADMINS SUBBOT ===
-try {
+if (isGroup && !isFromSelf) {
   const activossubPath = path.resolve("./activossubbots.json");
-  const dataActivados = fs.existsSync(activossubPath)
-    ? JSON.parse(fs.readFileSync(activossubPath, "utf-8"))
-    : {};
+  let dataActivados = {};
+
+  if (fs.existsSync(activossubPath)) {
+    dataActivados = JSON.parse(fs.readFileSync(activossubPath, "utf-8"));
+  }
 
   const modoAdminsActivo = dataActivados.modoadmins?.[subbotID]?.[from];
 
   if (modoAdminsActivo) {
-    const metadata = await subSock.groupMetadata(from);
-    const participante = metadata.participants.find(p => p.id === senderJid);
-    const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
+    try {
+      const metadata = await subSock.groupMetadata(from);
+      const participante = metadata.participants.find(p => p.id === senderJid);
+      const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
-    const botNumber = subSock.user?.id.split(":")[0].replace(/[^0-9]/g, "");
-    const isBot = botNumber === senderNum;
+      const botNumber = subSock.user?.id.split(":")[0].replace(/[^0-9]/g, "");
+      const isBot = botNumber === senderNum;
+      const isOwner = global.owner.some(([id]) => id === senderNum);
 
-    const isOwner = global.owner.some(([id]) => id === senderNum);
+      if (!isAdmin && !isOwner && !isBot) {
+        // OJO: aquí se detiene si no cumple los requisitos
+        return;
+      }
 
-    if (!isAdmin && !isBot && !isOwner) {
-      return;
+    } catch (err) {
+      console.error("❌ Error en verificación de modo admins:", err);
+      return; // si no se puede obtener metadata, mejor no ejecutar nada
     }
   }
-} catch (e) {
-  console.error("❌ Error en verificación de modo admins:", e);
 }
 // === FIN LÓGICA MODOADMINS SUBBOT ===
           
