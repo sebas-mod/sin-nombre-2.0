@@ -30,8 +30,12 @@ const handler = async (msg, { conn }) => {
 〔 Descargas 〕
 ⟢ ${usedPrefix}play / ${usedPrefix}playdoc
 ⟢ ${usedPrefix}play2 / ${usedPrefix}play2doc
+⟢ ${usedPrefix}play5
+⟢ ${usedPrefix}play6
 ⟢ ${usedPrefix}ytmp3 / ${usedPrefix}ytmp3doc
+⟢ ${usedPrefix}ytmp35
 ⟢ ${usedPrefix}ytmp4 / ${usedPrefix}ytmp4doc
+⟢ ${usedPrefix}ytmp45
 ⟢ ${usedPrefix}apk
 ⟢ ${usedPrefix}instagram / ${usedPrefix}ig
 ⟢ ${usedPrefix}tiktok / ${usedPrefix}tt
@@ -40,6 +44,9 @@ const handler = async (msg, { conn }) => {
 〔 Stickers & Multimedia 〕
 ⟢ ${usedPrefix}s
 ⟢ ${usedPrefix}ver
+⟢ ${usedPrefix}toaudio 
+⟢ ${usedPrefix}hd
+⟢ ${usedPrefix}toimg
 ⟢ ${usedPrefix}whatmusic
 ⟢ ${usedPrefix}tts
 ⟢ ${usedPrefix}perfil
