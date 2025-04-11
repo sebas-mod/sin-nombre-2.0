@@ -14,6 +14,10 @@ const handler = async (msg, { conn, args }) => {
   const usedPrefix = prefixes[subbotID] || ".";
 
   const chatId = msg.key.remoteJid;
+  const senderJid = msg.key.participant || msg.key.remoteJid;
+  const senderNum = senderJid.replace(/[^0-9]/g, "");
+  const botNumber = conn.user?.id.split(":")[0].replace(/[^0-9]/g, "");
+
   if (!chatId.endsWith("@g.us")) {
     return await conn.sendMessage(chatId, {
       text: "⚠️ Este comando solo se puede usar en grupos."
@@ -21,6 +25,16 @@ const handler = async (msg, { conn, args }) => {
   }
 
   const groupMetadata = await conn.groupMetadata(chatId);
+  const participant = groupMetadata.participants.find(p => p.id.includes(senderNum));
+  const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
+  const isBot = botNumber === senderNum;
+
+  if (!isAdmin && !isBot) {
+    return await conn.sendMessage(chatId, {
+      text: "❌ Solo los administradores del grupo o el subbot pueden usar este comando."
+    }, { quoted: msg });
+  }
+
   const allMentions = groupMetadata.participants.map(p => p.id);
   let messageToForward = null;
   let hasMedia = false;
