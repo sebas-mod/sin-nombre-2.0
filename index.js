@@ -476,7 +476,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
         console.log(chalk.blue("🔄 Conectando a WhatsApp..."));
     } else if (connection === "open") {
         console.log(chalk.green("✅ ¡Conexión establecida con éxito!"));
-await joinChannels(sock)
+//await joinChannels(sock)
 
         // 📌 Verificar si el bot se reinició con .rest y enviar mensaje
         const restarterFile = "./lastRestarter.json";
