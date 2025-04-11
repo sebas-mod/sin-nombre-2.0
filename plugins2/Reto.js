@@ -1,3 +1,7 @@
+function pickRandom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 const handler = async (msg, { conn }) => {
   try {
     const reto = pickRandom(global.reto); // Selecciona un reto aleatorio
