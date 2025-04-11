@@ -1,8 +1,28 @@
-const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
+const axios = require("axios");
 const FormData = require("form-data");
+const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 
-// Tu función remini debe estar definida o importada en otro lado.
-// Asegúrate que `remini()` exista o lo implemente tu API local/externa.
+// Función que mejora la imagen usando la API de Neoxr
+async function remini(buffer, mode = "enhance") {
+  const form = new FormData();
+  form.append("image", buffer, { filename: "image.jpg" });
+  form.append("type", mode);
+
+  const res = await axios.post(
+    "https://api.neoxr.eu/api/remini",
+    form,
+    {
+      headers: {
+        ...form.getHeaders(),
+        apikey: "russellxz"
+      },
+      responseType: "arraybuffer"
+    }
+  );
+
+  if (res.status !== 200) throw new Error("❌ Falló la mejora con Remini API.");
+  return Buffer.from(res.data);
+}
 
 const handler = async (msg, { conn }) => {
   try {
@@ -40,11 +60,10 @@ const handler = async (msg, { conn }) => {
       throw new Error("❌ Error: No se pudo descargar la imagen.");
     }
 
-    // Ejecuta función externa de mejora
-    const pr = await remini(buffer, "enhance");
+    const mejorada = await remini(buffer, "enhance");
 
     await conn.sendMessage(msg.key.remoteJid, {
-      image: pr,
+      image: mejorada,
       caption: "✨ *Imagen mejorada con éxito.*\n\n© Azura Ultra 2.0 Bot"
     }, { quoted: msg });
 
