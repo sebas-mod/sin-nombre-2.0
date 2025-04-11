@@ -8,23 +8,23 @@ const handler = async (msg, { conn }) => {
   }
 
   await conn.sendMessage(chatId, {
-    react: { text: "📝", key: msg.key }
+    react: { text: "🔗", key: msg.key }
   });
 
   try {
-    const metadata = await conn.groupMetadata(chatId);
-    const groupDesc = metadata.desc || "Este grupo no tiene descripción.";
+    const code = await conn.groupInviteCode(chatId);
+    const link = `https://chat.whatsapp.com/${code}`;
 
     await conn.sendMessage(chatId, {
-      text: `📄 *Descripción del grupo:*\n\n${groupDesc}`
+      text: `🔗 *Enlace del grupo:*\n${link}`
     }, { quoted: msg });
 
   } catch (e) {
     await conn.sendMessage(chatId, {
-      text: "❌ Error al obtener la descripción del grupo."
+      text: "❌ No se pudo obtener el enlace. Asegúrate de ser administrador."
     }, { quoted: msg });
   }
 };
 
-handler.command = ["infogrupo"];
+handler.command = ["damelink"];
 module.exports = handler;
