@@ -834,7 +834,7 @@ if (isGroup && !isFromSelf) {
   }
 }
 
-async function joinChannels(sock) {
+/*async function joinChannels(sock) {
 for (const channelId of Object.values(global.ch)) {
 await sock.newsletterFollow(channelId).catch(() => {})
 }}
@@ -842,7 +842,7 @@ await sock.newsletterFollow(channelId).catch(() => {})
 async function joinChannels2(subSock) {
 for (const channelId of Object.values(global.ch)) {
 await subSock.newsletterFollow(channelId).catch(() => {})
-}}
+}}*/
 
 // Ejecutar después de iniciar el bot principal
 setTimeout(cargarSubbots, 7000);
