@@ -840,15 +840,12 @@ if (isGroup && !isFromSelf) {
 if (isGroup && !isFromSelf) {
   try {
     const activossubPath = path.resolve("./activossubbots.json");
-    let dataActivados = {};
+    if (!fs.existsSync(activossubPath)) return;
 
-    if (fs.existsSync(activossubPath)) {
-      dataActivados = JSON.parse(fs.readFileSync(activossubPath, "utf-8"));
-    }
-
-    const rawID = subSock.user?.id || ""; // ID completo del subbot
-    const subbotID = rawID.includes(":") ? rawID.split(":")[0] + "@s.whatsapp.net" : rawID;
-
+    const dataActivados = JSON.parse(fs.readFileSync(activossubPath, "utf-8"));
+    
+    // Obtener subbotID en el formato correcto
+    const subbotID = subSock.user?.id || ""; // ejemplo: 15167096032:20@s.whatsapp.net
     const modoAdminsActivo = dataActivados.modoadmins?.[subbotID]?.[from];
 
     if (modoAdminsActivo) {
@@ -856,17 +853,18 @@ if (isGroup && !isFromSelf) {
       const participante = metadata.participants.find(p => p.id === senderJid);
       const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
-      const botNumber = subSock.user?.id.split(":")[0].replace(/[^0-9]/g, "");
-      const isBot = botNumber === senderNum;
+      const botNum = subSock.user?.id.split(":")[0].replace(/[^0-9]/g, "");
+      const isBot = botNum === senderNum;
 
       const isOwner = global.owner.some(([id]) => id === senderNum);
 
       if (!isAdmin && !isOwner && !isBot) {
+        console.log(`⛔ ${senderNum} ignorado por MODOADMINS en ${from}`);
         return;
       }
     }
   } catch (err) {
-    console.error("❌ Error verificando modoadmins:", err);
+    console.error("❌ Error en verificación de modo admins:", err);
     return;
   }
 }
