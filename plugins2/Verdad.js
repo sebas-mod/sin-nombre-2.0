@@ -1,3 +1,7 @@
+function pickRandom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 const handler = async (msg, { conn }) => {
   try {
     // 🔄 Reacción antes de procesar el comando
