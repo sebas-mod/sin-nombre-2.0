@@ -198,7 +198,7 @@ console.log(chalk.bold.red(`🟢 ALGO SALIO MAL DURANTE LA ELIMINACIÓN, ARCHIVO
 
 function purgeOldFiles() {
 const directories = ['./sessions/', './subbots/']
-const oneHourAgo = Date.now() - (60 * 60 * 1000)
+const threeHoursAgo = Date.now() - (1000 * 60 * 60 * 3);
 directories.forEach(dir => {
 readdirSync(dir, (err, files) => {
 if (err) throw err
@@ -216,15 +216,15 @@ console.log(chalk.bold.red(`🟢 ARCHIVO ${file} NO BORRADO` + err))
 setInterval(async () => {
   await purgeSession();
   console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTOPURGESESSIONS\n│ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
-}, 1000 * 60 * 60);
+}, 1000 * 60 * 60 * 5); // ← 5 horas
 setInterval(async () => {
   await purgeSessionSB();
   console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTO_PURGE_SESSIONS_SUB-BOTS\n│ ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
-}, 1000 * 60 * 60);
+}, 1000 * 60 * 60 * 5); // ← 5 horas
 setInterval(async () => {
   await purgeOldFiles();
   console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTO_PURGE_OLDFILES\n│ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
-}, 1000 * 60 * 60);
+}, 1000 * 60 * 60 * 5); // ← 5 horas
 //___________
 
             // Función para verificar si un usuario es administrador en un grupo
