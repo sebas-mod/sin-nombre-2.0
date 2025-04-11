@@ -600,7 +600,7 @@ await sock.sendMessage(msg.key.remoteJid, {
 │
 ╰────✦ *Sky Ultra Plus* ✦────╯`
             }, { quoted: msg });
-            await joinChannels(socky);
+          //  await joinChannels(socky);
             await sock.sendMessage(msg.key.remoteJid, {
               react: { text: "🔁", key: msg.key }
             });
@@ -15462,10 +15462,6 @@ async function handleSubCommand(sock, msg, command, args) {
   }
 }
 
-async function joinChannels(socky) {
-for (const channelId of Object.values(global.ch)) {
-await socky.newsletterFollow(channelId).catch(() => {})
-}}
 
 //----------------------------------     
 let file = require.resolve(__filename)
