@@ -166,66 +166,7 @@ setInterval(async () => {
 }, 1000 * 60 * 60); // ← 1 hora en milisegundos
 
 //sessions/jadibts
-function purgeSession() {
-let prekey = []
-let directorio = readdirSync("./sessions")
-let filesFolderPreKeys = directorio.filter(file => {
-return file.startsWith('pre-key-') || file.startsWith('session-') || file.startsWith('sender-') || file.startsWith('app-') 
-})
-prekey = [...prekey, ...filesFolderPreKeys]
-filesFolderPreKeys.forEach(files => {
-unlinkSync(`./sessions/${files}`)
-})} 
 
-function purgeSessionSB() {
-try {
-let listaDirectorios = readdirSync('./subbots/');
-let SBprekey = []
-listaDirectorios.forEach(directorio => {
-if (statSync(`./subbots/${directorio}`).isDirectory()) {
-let DSBPreKeys = readdirSync(`./subbots/${directorio}`).filter(fileInDir => {
-return fileInDir.startsWith('pre-key-') || fileInDir.startsWith('app-') || fileInDir.startsWith('session-')
-})
-SBprekey = [...SBprekey, ...DSBPreKeys]
-DSBPreKeys.forEach(fileInDir => {
-unlinkSync(`./subbots/${directorio}/${fileInDir}`)
-})}})
-if (SBprekey.length === 0) return; 
-console.log(chalk.cyanBright(`🟢 NO HAY ARCHIVO POR ELIMINAR`))
-} catch (err) {
-console.log(chalk.bold.red(`🟢 ALGO SALIO MAL DURANTE LA ELIMINACIÓN, ARCHIVO NO ELIMINADOS`))
-}}
-
-function purgeOldFiles() {
-const directories = ['./sessions/', './subbots/']
-const threeHoursAgo = Date.now() - (1000 * 60 * 60 * 3);
-directories.forEach(dir => {
-readdirSync(dir, (err, files) => {
-if (err) throw err
-files.forEach(file => {
-const filePath = path.join(dir, file)
-stat(filePath, (err, stats) => {
-if (err) throw err;
-if (stats.isFile() && stats.mtimeMs < oneHourAgo && file !== 'creds.json') { 
-unlinkSync(filePath, err => {  
-if (err) throw err
-console.log(chalk.bold.green(`🟢 ARCHIVO ${file} $BORRADO CON EXITO`))})
-} else {  
-console.log(chalk.bold.red(`🟢 ARCHIVO ${file} NO BORRADO` + err))
-} }) }) }) })}
-setInterval(async () => {
-  await purgeSession();
-  console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTOPURGESESSIONS\n│ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
-}, 1000 * 60 * 60 * 5); // ← 5 horas
-setInterval(async () => {
-  await purgeSessionSB();
-  console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTO_PURGE_SESSIONS_SUB-BOTS\n│ ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
-}, 1000 * 60 * 60 * 5); // ← 5 horas
-setInterval(async () => {
-  await purgeOldFiles();
-  console.log(chalk.cyanBright(`╭━─━─━─≪🔆≫─━─━─━╮\n│AUTO_PURGE_OLDFILES\n│ARCHIVOS ELIMINADOS ✅\n╰━─━─━─≪🔆≫─━─━─━╯`));
-}, 1000 * 60 * 60 * 5); // ← 5 horas
-//___________
 
             // Función para verificar si un usuario es administrador en un grupo
             async function isAdmin(sock, chatId, sender) {
