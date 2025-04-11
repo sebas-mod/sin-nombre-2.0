@@ -1570,85 +1570,75 @@ case 'ff2': {
 
     break;
 }
-      
 case 'tag': {
   try {
     const chatId = msg.key.remoteJid;
+    const senderJid = msg.key.participant || msg.key.remoteJid;
+    const senderNum = senderJid.replace(/[^0-9]/g, "");
+    const botNumber = sock.user?.id.split(":")[0].replace(/[^0-9]/g, "");
+
     // Verificar que se use en un grupo
     if (!chatId.endsWith("@g.us")) {
       await sock.sendMessage(chatId, { text: "⚠️ Este comando solo se puede usar en grupos." }, { quoted: msg });
       return;
     }
 
-    // Obtener metadata del grupo para extraer la lista de participantes (menciones)
-    const groupMetadata = await sock.groupMetadata(chatId);
-    const allMentions = groupMetadata.participants.map(p => p.id);
+    // Verificar si es admin o el mismo bot
+    const metadata = await sock.groupMetadata(chatId);
+    const participant = metadata.participants.find(p => p.id.includes(senderNum));
+    const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
+    const isBot = botNumber === senderNum;
 
+    if (!isAdmin && !isBot) {
+      return await sock.sendMessage(chatId, {
+        text: "❌ Solo los administradores del grupo o el bot pueden usar este comando."
+      }, { quoted: msg });
+    }
+
+    const allMentions = metadata.participants.map(p => p.id);
     let messageToForward = null;
     let hasMedia = false;
 
-    // Si se responde a un mensaje (reply)
     if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
 
-      // Manejo de diferentes tipos de mensajes
       if (quoted.conversation) {
         messageToForward = { text: quoted.conversation };
-      } else if (quoted.extendedTextMessage && quoted.extendedTextMessage.text) {
+      } else if (quoted.extendedTextMessage?.text) {
         messageToForward = { text: quoted.extendedTextMessage.text };
       } else if (quoted.imageMessage) {
-        // Descargar imagen
         const stream = await downloadContentFromMessage(quoted.imageMessage, "image");
         let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk]);
-        }
-        if (!buffer || buffer.length === 0) throw new Error("Image buffer is empty");
+        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
         const mimetype = quoted.imageMessage.mimetype || "image/jpeg";
         const caption = quoted.imageMessage.caption || "";
         messageToForward = { image: buffer, mimetype, caption };
         hasMedia = true;
       } else if (quoted.videoMessage) {
-        // Descargar video
         const stream = await downloadContentFromMessage(quoted.videoMessage, "video");
         let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk]);
-        }
-        if (!buffer || buffer.length === 0) throw new Error("Video buffer is empty");
+        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
         const mimetype = quoted.videoMessage.mimetype || "video/mp4";
         const caption = quoted.videoMessage.caption || "";
         messageToForward = { video: buffer, mimetype, caption };
         hasMedia = true;
       } else if (quoted.audioMessage) {
-        // Descargar audio
         const stream = await downloadContentFromMessage(quoted.audioMessage, "audio");
         let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk]);
-        }
-        if (!buffer || buffer.length === 0) throw new Error("Audio buffer is empty");
+        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
         const mimetype = quoted.audioMessage.mimetype || "audio/mp3";
         messageToForward = { audio: buffer, mimetype };
         hasMedia = true;
       } else if (quoted.stickerMessage) {
-        // Descargar sticker
         const stream = await downloadContentFromMessage(quoted.stickerMessage, "sticker");
         let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk]);
-        }
-        if (!buffer || buffer.length === 0) throw new Error("Sticker buffer is empty");
+        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
         messageToForward = { sticker: buffer };
         hasMedia = true;
       } else if (quoted.documentMessage) {
-        // Descargar documento
         const stream = await downloadContentFromMessage(quoted.documentMessage, "document");
         let buffer = Buffer.alloc(0);
-        for await (const chunk of stream) {
-          buffer = Buffer.concat([buffer, chunk]);
-        }
-        if (!buffer || buffer.length === 0) throw new Error("Document buffer is empty");
+        for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
         const mimetype = quoted.documentMessage.mimetype || "application/pdf";
         const caption = quoted.documentMessage.caption || "";
         messageToForward = { document: buffer, mimetype, caption };
@@ -1656,26 +1646,29 @@ case 'tag': {
       }
     }
 
-    // Si no se respondió a un mensaje pero hay texto ingresado, se usa ese texto
     if (!hasMedia && args.join(" ").trim().length > 0) {
       messageToForward = { text: args.join(" ") };
     }
 
-    // Si no se detectó ni texto ni multimedia, enviar advertencia
     if (!messageToForward) {
       await sock.sendMessage(chatId, { text: "⚠️ Debes responder a un mensaje o proporcionar un texto para reenviar." }, { quoted: msg });
       return;
     }
 
-    // Enviar el mensaje con las menciones a todos (menciones "ocultas")
-    await sock.sendMessage(chatId, { ...messageToForward, mentions: allMentions }, { quoted: msg });
+    await sock.sendMessage(chatId, {
+      ...messageToForward,
+      mentions: allMentions
+    }, { quoted: msg });
 
   } catch (error) {
     console.error("❌ Error en el comando tag:", error);
-    await sock.sendMessage(msg.key.remoteJid, { text: "❌ Ocurrió un error al ejecutar el comando tag." }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: "❌ Ocurrió un error al ejecutar el comando tag."
+    }, { quoted: msg });
   }
   break;
-}     
+}      
+
 case 'whatmusic2': {
 const fs = require('fs');
 const path = require('path');
