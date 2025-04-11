@@ -4324,7 +4324,7 @@ case 'menu': {
 │ ✦ 𝗨𝗡𝗘𝗧𝗘 𝗔 𝗡𝗨𝗘𝗦𝗧𝗥𝗢 𝗦𝗜𝗦𝗧𝗘𝗠𝗔 𝗗𝗘 𝗦𝗨𝗕𝗕𝗢𝗧𝗦(𝗛𝗔𝗭𝗧𝗘 𝗕𝗢𝗧) ✦ │  
 ╰──────────────╯  
 
-👾 *Unete a nuestro sistema de subbots,.te voy a mostrar la lista de comandos para gestiónar/hacerte subbot: 
+👾 *Hazte subbot en nuestro sistema, te voy a mostrar la lista de comandos para gestiónar/hacerte subbot: 
 
 ⎔ ${global.prefix}serbot / ${global.prefix}jadibot
 ⎔ ${global.prefix}sercode / ${global.prefix}code
