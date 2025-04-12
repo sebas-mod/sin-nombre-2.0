@@ -240,6 +240,88 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
+case 'play8': {
+    const yts = require('yt-search');
+    const axios = require('axios');
+
+    if (!text || text.trim() === '') {
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play8* bad bunny diles`
+        }, { quoted: msg });
+        break;
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        react: { text: '⏳', key: msg.key }
+    });
+
+    try {
+        const search = await yts(text);
+        const video = search.videos[0];
+        if (!video) throw new Error('No se encontraron resultados');
+
+        const videoUrl = video.url;
+        const title = video.title;
+        const thumbnail = video.thumbnail;
+        const duration = video.timestamp;
+        const views = video.views.toLocaleString();
+        const channel = video.author.name || 'Desconocido';
+
+        const caption = `
+╭───≪『 *AZURA ULTRA 2.0* 』≫───╮
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${duration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Autor:* ${channel}
+└ 🔗 *Enlace:* ${videoUrl}
+╰─────────────────────────────╯
+
+⏳ *Selecciona una opción para descargar:*`;
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            image: { url: thumbnail },
+            caption,
+            footer: "Azura Ultra 2.0 Bot",
+            buttons: [
+                {
+                    buttonId: `${global.prefix}play5 ${videoUrl}`,
+                    buttonText: { displayText: "🎼 AUDIO" },
+                    type: 1
+                },
+                {
+                    buttonId: `${global.prefix}play6 ${videoUrl}`,
+                    buttonText: { displayText: "🎬 VIDEO" },
+                    type: 1
+                },
+                {
+                    buttonId: `${global.prefix}menu`,
+                    buttonText: { displayText: "📘 MENÚ" },
+                    type: 1
+                }
+            ],
+            viewOnce: true,
+            headerType: 4,
+            mentions: [msg.key.participant || msg.key.remoteJid]
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '✅', key: msg.key }
+        });
+
+    } catch (err) {
+        console.error("❌ Error en play8:", err);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Error:* ${err.message}`
+        }, { quoted: msg });
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: '❌', key: msg.key }
+        });
+    }
+
+    break;
+}
+        
 case "modoadmins": {
   try {
     const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
