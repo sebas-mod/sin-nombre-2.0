@@ -23,6 +23,11 @@ const handler = async (msg, { conn }) => {
 ║   Menú por categorías  
 ╚═─────────────────═╝
 
+〔 👇Has Que Tus Amigos Sean *SUBBOTS* Tambien Diles que envien estos comandos👇 〕
+⟢ ${usedPrefix}serbot / qr
+⟢ ${usedPrefix}code / codigo 
+⟢ ${usedPrefix}sercode / codigo
+
 〔 AI & Respuestas 〕
 ⟢ ${usedPrefix}chatgpt
 ⟢ ${usedPrefix}geminis
