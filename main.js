@@ -242,13 +242,11 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 case 'play8': {
     const yts = require('yt-search');
-    const axios = require('axios');
-
+    
     if (!text || text.trim() === '') {
-        await sock.sendMessage(msg.key.remoteJid, {
+        return sock.sendMessage(msg.key.remoteJid, {
             text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play8* la factoría perdóname`
         }, { quoted: msg });
-        break;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
@@ -260,49 +258,54 @@ case 'play8': {
         const video = search.videos[0];
         if (!video) throw new Error('No se encontraron resultados');
 
-        const videoUrl = video.url;
+        const url = video.url;
         const title = video.title;
         const thumbnail = video.thumbnail;
-        const duration = video.timestamp || "Desconocido";
-        const views = video.views.toLocaleString();
-        const channel = video.author.name || 'Desconocido';
+        const timestamp = video.duration.seconds;
+        const views = video.views;
+        const author = video.author.name;
 
-        const banner = `
-╭─────≪『 *AZURA ULTRA 2.0* 』≫─────╮
-├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${duration}
-├ 👁️ *Vistas:* ${views}
-├ 👤 *Autor:* ${channel}
-└ 🔗 *Enlace:* ${videoUrl}
-╰─────────────────────────────────╯
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return [h, m, s]
+                .map(v => v < 10 ? `0${v}` : v)
+                .filter((v, i) => v !== '00' || i > 0)
+                .join(':');
+        }
 
-⏳ Selecciona una opción para descargar:`;
-
-        const buttons = [
-            {
-                buttonId: `${global.prefix}play5 ${videoUrl}`,
-                buttonText: { displayText: "🎼 AUDIO" },
-                type: 1
-            },
-            {
-                buttonId: `${global.prefix}play6 ${videoUrl}`,
-                buttonText: { displayText: "🎬 VIDEO" },
-                type: 1
-            },
-            {
-                buttonId: `${global.prefix}menu`,
-                buttonText: { displayText: "📘 MENÚ" },
-                type: 1
-            }
-        ];
+        const caption = `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
+│║◈ 🎼 *Título:* ${title}
+│║◈ ⏱️ *Duración:* ${formatTime(timestamp || 0)}
+│║◈ 👁️ *Vistas:* ${views || 0}
+│║◈ 👤 *Autor:* ${author || 'Desconocido'}
+│║◈ 🔗 Link: ${url}
+╰─•┈┈┈•••✦Azura Ultra 2.0✦•••┈┈┈•─╯`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
-            caption: banner,
-            footer: "Azura Ultra 2.0 Bot",
-            buttons: buttons,
+            caption,
+            footer: "Azura Ultra 2.0",
+            buttons: [
+                {
+                    buttonId: `.play5 ${url}`,
+                    buttonText: { displayText: "🎼 AUDIO 🎼" },
+                    type: 1
+                },
+                {
+                    buttonId: `.play6 ${url}`,
+                    buttonText: { displayText: "🎬 VIDEO 🎬" },
+                    type: 1
+                },
+                {
+                    buttonId: `.menu`,
+                    buttonText: { displayText: "📘 MENU 📘" },
+                    type: 1
+                }
+            ],
             headerType: 4,
-            mentions: [msg.key.participant || msg.key.remoteJid]
+            mentions: [msg.key.participant]
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -314,12 +317,10 @@ case 'play8': {
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
     }
-
     break;
 }
         
