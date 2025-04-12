@@ -435,6 +435,8 @@ try {
           case 'ogg':
           case 'opus':
             payload.audio = buffer;
+            payload.mimetype = item.mimetype || 'audio/mpeg';
+            payload.ptt = false; // ← Cambia a true si quieres que lo envíe como nota de voz
             break;
           case 'webp':
             payload.sticker = buffer;
