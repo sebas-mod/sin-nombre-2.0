@@ -12,23 +12,8 @@ const {
 } = require('@whiskeysockets/baileys');
 
 const handler = async (msg, { conn, command, sock }) => {
-  const isOwner = (num) => {
-    num = num.replace(/[^0-9]/g, "");
-    const owners = global.owner.map(([id]) => id);
-    return owners.includes(num);
-  };
-
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const senderClean = senderId.replace(/[^0-9]/g, '');
-
-  if (!isOwner(senderClean)) {
-    return conn.sendMessage(msg.key.remoteJid, {
-      text: "❌ Solo el owner del bot puede usar este comando."
-    }, { quoted: msg });
-  }
-
-  let sentCodeMessage = false;
   const usarPairingCode = ["sercode", "code"].includes(command);
+  let sentCodeMessage = false;
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -133,6 +118,7 @@ const handler = async (msg, { conn, command, sock }) => {
 │
 ╰────✦ *Sky Ultra Plus* ✦────╯`
             }, { quoted: msg });
+
             await conn.sendMessage(msg.key.remoteJid, {
               react: { text: "🔁", key: msg.key }
             });
