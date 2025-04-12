@@ -242,85 +242,84 @@ async function handleCommand(sock, msg, command, args, sender) {
 
 case 'play8': {
     const yts = require('yt-search');
-    
+
     if (!text || text.trim() === '') {
         return sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play8* la factoría perdóname`
+            text: 'Por favor, proporciona el nombre o término de búsqueda del video.'
         }, { quoted: msg });
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '⏳', key: msg.key }
+        react: { text: "⏳", key: msg.key }
     });
 
+    const query = text;
+    let video = {};
+
     try {
-        const search = await yts(text);
-        const video = search.videos[0];
-        if (!video) throw new Error('No se encontraron resultados');
-
-        const url = video.url;
-        const title = video.title;
-        const thumbnail = video.thumbnail;
-        const timestamp = video.duration.seconds;
-        const views = video.views;
-        const author = video.author.name;
-
-        function formatTime(seconds) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = seconds % 60;
-            return [h, m, s]
-                .map(v => v < 10 ? `0${v}` : v)
-                .filter((v, i) => v !== '00' || i > 0)
-                .join(':');
+        const yt_play = await yts(query);
+        if (!yt_play || yt_play.all.length === 0) {
+            return sock.sendMessage(msg.key.remoteJid, {
+                text: 'No se encontraron resultados para tu búsqueda.'
+            }, { quoted: msg });
         }
 
-        const caption = `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
-│║◈ 🎼 *Título:* ${title}
-│║◈ ⏱️ *Duración:* ${formatTime(timestamp || 0)}
-│║◈ 👁️ *Vistas:* ${views || 0}
-│║◈ 👤 *Autor:* ${author || 'Desconocido'}
-│║◈ 🔗 Link: ${url}
-╰─•┈┈┈•••✦Azura Ultra 2.0✦•••┈┈┈•─╯`;
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            image: { url: thumbnail },
-            caption,
-            footer: "Azura Ultra 2.0",
-            buttons: [
-                {
-                    buttonId: `.play5 ${url}`,
-                    buttonText: { displayText: "🎼 AUDIO 🎼" },
-                    type: 1
-                },
-                {
-                    buttonId: `.play6 ${url}`,
-                    buttonText: { displayText: "🎬 VIDEO 🎬" },
-                    type: 1
-                },
-                {
-                    buttonId: `.menu`,
-                    buttonText: { displayText: "📘 MENU 📘" },
-                    type: 1
-                }
-            ],
-            headerType: 4,
-            mentions: [msg.key.participant]
+        const firstResult = yt_play.all[0];
+        video = {
+            url: firstResult.url,
+            title: firstResult.title,
+            thumbnail: firstResult.thumbnail || 'https://i.imgur.com/JP52fdP.jpg',
+            timestamp: firstResult.duration.seconds,
+            views: firstResult.views,
+            author: firstResult.author.name,
+        };
+    } catch {
+        return sock.sendMessage(msg.key.remoteJid, {
+            text: 'Ocurrió un error al buscar el video.'
         }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
-
-    } catch (err) {
-        console.error("❌ Error en el comando play8:", err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
-        }, { quoted: msg });
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
     }
+
+    function secondString(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return [h, m, s]
+            .map(v => v < 10 ? `0${v}` : v)
+            .filter((v, i) => v !== '00' || i > 0)
+            .join(':');
+    }
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        image: { url: video.thumbnail },
+        caption: `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
+│║◈ 🎼 Título: ${video.title}
+│║◈ ⏱️ Duración: ${secondString(video.timestamp || 0)}
+│║◈ 👁️ Vistas: ${video.views || 0}
+│║◈ 👤 Autor: ${video.author || 'Desconocido'}
+│║◈ Link: ${video.url}
+╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤`,
+        footer: "𝙰𝚉𝚄𝚁𝙰 𝚄𝙻𝚃𝚁𝙰 2.0",
+        buttons: [
+            {
+                buttonId: `.play5 ${video.url}`,
+                buttonText: { displayText: "🎼 AUDIO 🎼" },
+                type: 1
+            },
+            {
+                buttonId: `.play6 ${video.url}`,
+                buttonText: { displayText: "🎬 VIDEO 🎬" },
+                type: 1
+            },
+            {
+                buttonId: `.menu`,
+                buttonText: { displayText: "📘 MENÚ 📘" },
+                type: 1
+            }
+        ],
+        headerType: 4,
+        mentions: [msg.key.participant]
+    }, { quoted: msg });
+
     break;
 }
         
