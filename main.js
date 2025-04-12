@@ -245,10 +245,9 @@ case 'play8': {
     const axios = require('axios');
 
     if (!text || text.trim() === '') {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play8* bad bunny diles`
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play8* Bad Bunny - Diles`
         }, { quoted: msg });
-        break;
     }
 
     await sock.sendMessage(msg.key.remoteJid, {
@@ -261,47 +260,46 @@ case 'play8': {
         if (!video) throw new Error('No se encontraron resultados');
 
         const videoUrl = video.url;
-        const title = video.title;
         const thumbnail = video.thumbnail;
+        const title = video.title;
         const duration = video.timestamp;
         const views = video.views.toLocaleString();
-        const channel = video.author.name || 'Desconocido';
+        const author = video.author.name || 'Desconocido';
 
-        const caption = `
-╭───≪『 *AZURA ULTRA 2.0* 』≫───╮
-├ 🎼 *Título:* ${title}
-├ ⏱️ *Duración:* ${duration}
-├ 👁️ *Vistas:* ${views}
-├ 👤 *Autor:* ${channel}
-└ 🔗 *Enlace:* ${videoUrl}
-╰─────────────────────────────╯
+        const caption = `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
+│║◈ 🎼 *Título:* ${title}
+│║◈ ⏱️ *Duración:* ${duration}
+│║◈ 👁️ *Vistas:* ${views}
+│║◈ 👤 *Autor:* ${author}
+│║◈ 🔗 *Enlace:* ${videoUrl}
+╰─•┈┈┈•••✦Azura Ultra 2.0✦•••┈┈┈•─╯`;
 
-⏳ *Selecciona una opción para descargar:*`;
+        const buttons = [
+            {
+                buttonId: `${global.prefix}play1 ${text}`,
+                buttonText: { displayText: "🎵 AUDIO 🎵" },
+                type: 1,
+            },
+            {
+                buttonId: `${global.prefix}play2 ${text}`,
+                buttonText: { displayText: "🎬 VIDEO 🎬" },
+                type: 1,
+            },
+            {
+                buttonId: `${global.prefix}menu`,
+                buttonText: { displayText: "📘 MENÚ 📘" },
+                type: 1,
+            },
+        ];
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
-            caption,
+            caption: caption,
             footer: "Azura Ultra 2.0 Bot",
-            buttons: [
-                {
-                    buttonId: `${global.prefix}play5 ${videoUrl}`,
-                    buttonText: { displayText: "🎼 AUDIO" },
-                    type: 1
-                },
-                {
-                    buttonId: `${global.prefix}play6 ${videoUrl}`,
-                    buttonText: { displayText: "🎬 VIDEO" },
-                    type: 1
-                },
-                {
-                    buttonId: `${global.prefix}menu`,
-                    buttonText: { displayText: "📘 MENÚ" },
-                    type: 1
-                }
-            ],
-            viewOnce: true,
+            buttons: buttons,
             headerType: 4,
-            mentions: [msg.key.participant || msg.key.remoteJid]
+            mentions: [msg.key.participant],
+            viewOnce: true
         }, { quoted: msg });
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -309,11 +307,10 @@ case 'play8': {
         });
 
     } catch (err) {
-        console.error("❌ Error en play8:", err);
+        console.error(err);
         await sock.sendMessage(msg.key.remoteJid, {
             text: `❌ *Error:* ${err.message}`
         }, { quoted: msg });
-
         await sock.sendMessage(msg.key.remoteJid, {
             react: { text: '❌', key: msg.key }
         });
