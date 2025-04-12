@@ -398,6 +398,64 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
+// === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+try {
+  const guarPath = path.resolve('./guar.json');
+  if (fs.existsSync(guarPath)) {
+    const guarData = JSON.parse(fs.readFileSync(guarPath, 'utf-8'));
+
+    // Normalizar mensaje: sin espacios, tildes, mayúsculas ni símbolos
+    const cleanText = messageText
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w]/g, '');
+
+    for (const key of Object.keys(guarData)) {
+      const cleanKey = key
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w]/g, '');
+
+      if (cleanText === cleanKey) {
+        const item = guarData[key];
+        const buffer = Buffer.from(item.buffer, 'base64');
+
+        let payload = {};
+
+        switch (item.extension) {
+          case 'jpg':
+          case 'jpeg':
+          case 'png':
+            payload.image = buffer;
+            break;
+          case 'mp4':
+            payload.video = buffer;
+            break;
+          case 'mp3':
+          case 'ogg':
+          case 'opus':
+            payload.audio = buffer;
+            break;
+          case 'webp':
+            payload.sticker = buffer;
+            break;
+          default:
+            payload.document = buffer;
+            payload.mimetype = item.mimetype || "application/octet-stream";
+            payload.fileName = `archivo.${item.extension}`;
+            break;
+        }
+
+        await sock.sendMessage(chatId, payload, { quoted: msg });
+        return; // ← evitar que siga procesando si ya se encontró una coincidencia
+      }
+    }
+  }
+} catch (e) {
+  console.error("❌ Error al revisar guar.json:", e);
+}
+// === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+    
   // 🔗 Antilink en grupos
 // 🔗 Antilink en grupos
       if (isGroup && activos.antilink?.[chatId]) {
