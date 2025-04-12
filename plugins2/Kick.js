@@ -52,6 +52,14 @@ const handler = async (msg, { conn }) => {
     }, { quoted: msg });
   }
 
+  // ⚠️ Verificar si el objetivo también es admin
+  const isTargetAdmin = groupAdmins.some(admin => admin.id === userToKick);
+  if (isTargetAdmin) {
+    return await conn.sendMessage(msg.key.remoteJid, {
+      text: "❌ *No puedes expulsar a un administrador del grupo.*"
+    }, { quoted: msg });
+  }
+
   await conn.groupParticipantsUpdate(msg.key.remoteJid, [userToKick], "remove");
 
   return await conn.sendMessage(msg.key.remoteJid, {
