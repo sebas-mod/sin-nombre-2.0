@@ -4225,6 +4225,7 @@ case 'menu': {
 ⎔ ${global.prefix}tourl → responder a una imagen/video/musica
 ⎔ ${global.prefix}whatmusic → Responder a un audio(mp3)/video(mp4)
 ⎔ ${global.prefix}perfil 
+⎔ ${global.prefix}get
 
 ╭──────────────╮  
 │ ✦ 𝙈𝙄𝙉𝙄 𝙅𝙐𝙀𝙂𝙊𝙎 ✦ │  
