@@ -3969,6 +3969,11 @@ case 'menuowner': {
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯  
 ➠ ${global.prefix}bc  
 ➠ ${global.prefix}rest  
+➠ ${global.prefix}carga
+➠ ${global.prefix}cargabots
+➠ ${global.prefix}delsesion
+➠ ${global.prefix}delsubbots
+➠ ${global.prefix}deltmp
 ➠ ${global.prefix}modoprivado on/off  
 ➠ ${global.prefix}addmascota  
 ➠ ${global.prefix}addper  
@@ -4059,11 +4064,12 @@ Así te registras
 ➤ ${global.prefix}nivelmascota ➤ ${global.prefix}batallamascota  
 ➤ ${global.prefix}compra ➤ ${global.prefix}tiendamascotas  
 
-📌 𝗢𝗧𝗥𝗢𝗦 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦  
+📌 𝗢𝗧𝗥𝗢𝗦 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦
 ➤ ${global.prefix}addmascota ➤ ${global.prefix}addper  
 ➤ ${global.prefix}deleteuser ➤ ${global.prefix}deleteper  
 ➤ ${global.prefix}deletemascota ➤ ${global.prefix}totalper  
 ➤ ${global.prefix}tran ➤ ${global.prefix}transferir  
+➤ ${global.prefix}dame
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
 ➤ ${global.prefix}topuser ➤ ${global.prefix}topmascotas  
@@ -4137,8 +4143,7 @@ case 'menu': {
 
 ⎔ ${global.prefix}speedtest  
 ⎔ ${global.prefix}ping  
-⎔ ${global.prefix}creador  
-⎔ ${global.prefix}perfil  
+⎔ ${global.prefix}creador    
 
 ╭──────────────╮  
 │ ✦ 𝙈𝙀𝙉𝙐𝙎 𝘿𝙄𝙎𝙋𝙊𝙉𝙄𝘽𝙇𝙀𝙎 ✦ │  
@@ -4199,11 +4204,14 @@ case 'menu': {
 ⎔ ${global.prefix}tovideo
 ⎔ ${global.prefix}toimg
 ⎔ ${global.prefix}gifvideo → responde a un video.
+⎔ ${global.prefix}ff
+⎔ ${global.prefix}ff2
 
 ╭──────────────╮  
 │ ✦ 𝙎𝙏𝙄𝘾𝙆𝙀𝙍𝙎 ✦ │  
 ╰──────────────╯  
 
+⎔ ${global.prefix}s
 ⎔ ${global.prefix}newpack
 ⎔ ${global.prefix}addsticker
 ⎔ ${global.prefix}listpacks
@@ -4216,7 +4224,8 @@ case 'menu': {
 ⎔ ${global.prefix}ver → responder a un mensaje  
 ⎔ ${global.prefix}tourl → responder a una imagen/video/musica
 ⎔ ${global.prefix}whatmusic → Responder a un audio(mp3)/video(mp4)
- 
+⎔ ${global.prefix}perfil 
+
 ╭──────────────╮  
 │ ✦ 𝙈𝙄𝙉𝙄 𝙅𝙐𝙀𝙂𝙊𝙎 ✦ │  
 ╰──────────────╯  
@@ -4270,7 +4279,9 @@ case 'menugrupo': {
 
 🛠 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂𝐈Ó𝐍  
 ╭✦ ${global.prefix}setinfo  
+├✦ ${global.prefix}infogrupo
 ├✦ ${global.prefix}setname  
+├✦ ${global.prefix}setwelcome
 ├✦ ${global.prefix}setfoto  
 ├✦ ${global.prefix}welcome on/off  
 ╰────────────────
@@ -4280,7 +4291,7 @@ case 'menugrupo': {
 ├✦ ${global.prefix}quitaradmins  
 ├✦ ${global.prefix}tag  
 ├✦ ${global.prefix}tagall  
-├✦ ${global.prefix}modoadmins  
+├✦ ${global.prefix}modoadmins on o off
 ├✦ ${global.prefix}invocar  
 ├✦ ${global.prefix}todos  
 ├✦ ${global.prefix}damelink  
