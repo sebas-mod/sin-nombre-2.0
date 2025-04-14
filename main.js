@@ -2092,7 +2092,7 @@ case 'ytmp4': {
 ╰───────────────╯
 ┗ ⚠️ *¿No se reproduce?* Usa _${global.prefix}ff_
 
-⏳ *Procesado por Azura Ultra 2.0*`;
+⏳ *Procesado por Azura Ultra & Cortana*`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(filePath),
@@ -4313,7 +4313,7 @@ case 'menu': {
     await sock.sendMessage2(
   chatId,
   {
-    image: { url: "https://cdn.dorratz.com/files/1744665184252.jpg" }, 
+    image: { url: "https://cdn.dorratz.com/files/1744672917987.jpg" }, 
     caption: captionText 
   },
   msg 
@@ -11291,7 +11291,7 @@ case 'memes': {
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: meme },
-            caption: "🤣 *¡Aquí tienes un meme!*\n\n© Azura Ultra 2.0 Bot"
+            caption: "🤣 *¡Aquí tienes un meme!*\n\n© Azura Ultra & Cortana"
         }, { quoted: msg });
 
     } catch (e) {
