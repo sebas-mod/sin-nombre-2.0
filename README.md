@@ -13,8 +13,8 @@
 ✧ » ◇ « ✧ » ✦ « ✧ » ◇ « ✧  
 ≪━─━─━─━─◈─━─━─━─━≫  
 
-## 🚀 **¿Qué es Azura Ultra & Cortana 2.0?**  
-**Azura Ultra & Cortana 2.0** es un bot **multifuncional y poderoso** diseñado para mejorar la experiencia en tus grupos de WhatsApp.  
+## 🚀 **¿Qué es Azura Ultra & Cortana?**  
+**Azura Ultra & Cortana** es un bot **multifuncional y poderoso** diseñado para mejorar la experiencia en tus grupos de WhatsApp.  
 
 Incluye **sistema RPG**, herramientas de **moderación avanzada**, **minijuegos**, **descargas**, inteligencia integrada y mucho más.  
 
@@ -63,7 +63,7 @@ Incluye **sistema RPG**, herramientas de **moderación avanzada**, **minijuegos*
 ## 👑 **Creador y colaboradores**  
 
 💻 **𝐃𝐞𝐬𝐚𝐫𝐫𝐨𝐥𝐥𝐚𝐝𝐨𝐫 𝐩𝐫𝐢𝐧𝐜𝐢𝐩𝐚𝐥:**  
-- 👑 **Russell XZ** (Creador de Azura Ultra & Cortana Bot)  
+- 👑 **Russell XZ** (Creador de Azura Ultra & Cortana)  
 
 🤖 **𝐂𝐨𝐥𝐚𝐛𝐨𝐫𝐚𝐝𝐨𝐫𝐞𝐬:**  
 - 🔹 [DIEGO-OFC](https://github.com/DIEGO-OFC)  
