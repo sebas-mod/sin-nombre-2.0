@@ -6,7 +6,7 @@
 ≪━─━─━─━─◈─━─━─━─━≫  
 
 <p align="center">
-  <img src="https://i.ibb.co/HmG6JZX/2e9a0ebe897b.jpg" alt="Azura Ultra 2.0 Bot" width="500"/>
+  <img src="https://cdn.russellxz.click/7fbbb296.PNG" alt="Azura Ultra 2.0 Bot" width="500"/>
 </p>
 
 ≪━─━─━─━─◈─━─━─━─━≫  
