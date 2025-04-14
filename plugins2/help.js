@@ -21,7 +21,7 @@ const handler = async (msg, { conn }) => {
   const menu = `
 ╔⌬AZURA & CORTANA SUBBOT⌬╗
 ║   Menú por categorías  
-╚═─────────────────═╝
+╚═──────────────────═╝
 
 〔 👇Has Que Tus Amigos Sean *SUBBOTS* Tambien Diles que envien estos comandos👇 〕
 ⟢ ${usedPrefix}serbot / qr
@@ -93,7 +93,7 @@ const handler = async (msg, { conn }) => {
 ▣ ${usedPrefix}pong ↷
   Medir latencia del bot
 
-═⌬ © Azura Ultra Subbot ⌬═`;
+═⌬ © Azura Ultra & cortana Subbot ⌬═`;
 
   // Mensaje principal con sendMessage2
   await conn.sendMessage2(
