@@ -289,16 +289,18 @@ ${global.prefix}guar → Guarda archivos con una clave.
 ${global.prefix}g → Recupera archivos guardados.  
 ${global.prefix}kill → Elimina un archivo guardado.  
 
-💡 *Azura Ultra 2.0 sigue mejorando. Pronto más funciones.*  
+💡 *Azura Ultra & Cortana sigue mejorando. Pronto más funciones.*  
 ⚙️ *Desarrollado por Russell xz* 🚀`;
 
         // Enviar el menú con video como GIF
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740372045635.mp4" }, 
-            gifPlayback: true, // Esto hace que se reproduzca como GIF
-            caption: listaMensaje 
-        }, { quoted: msg });
-
+        await sock.sendMessage2(
+  chatId,
+  {
+    image: { url: "https://cdn.dorratz.com/files/1744666582539.jpg" }, 
+    caption: listaMensaje 
+  },
+  msg
+)
     } catch (error) {
         console.error("❌ Error al enviar el menú2:", error);
         await sock.sendMessage(msg.key.remoteJid, { 
@@ -3978,7 +3980,7 @@ case 'allmenu': {
 
         // Construir menú
         let commandList = `╔════════════════════╗  
-║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏  ║  
+║  𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼  ║  
 ╚════════════════════╝  
         📜 *Menú Completo*  
 ━━━━━━━━━━━━━━━━━━━  
@@ -3995,20 +3997,18 @@ case 'allmenu': {
         commandList += `━━━━━━━━━━━━━━━━━━━  
 👨‍💻 𝘿𝙚𝙨𝙖𝙧𝙧𝙤𝙡𝙡𝙖𝙙𝙤 𝙥𝙤𝙧 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 𝙓𝙕  
 ╭────────────────╮  
-│ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟐.𝟎 𝘽𝙊𝙏 │  
+│ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼 │  
 ╰────────────────╯`;
 
         // Enviar usando sendMessage2
         await sock.sendMessage2(
-            chatId,
-            {
-                video: { url: "https://cdn.dorratz.com/files/1741471441432.mp4" },
-                caption: commandList,
-                gifPlayback: true
-            },
-            msg
-        );
-
+  chatId,
+  {
+    image: { url: "https://cdn.dorratz.com/files/1744666819010.jpg" }, 
+    caption: commandList 
+  },
+  msg 
+);
     } catch (error) {
         console.error("Error en comando allmenu:", error);
         await sock.sendMessage2(
@@ -4342,7 +4342,7 @@ case 'menugrupo': {
 
     const chatId = msg.key.remoteJid;
     const captionText = `╔══════════════════╗  
-║   𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎   ║  
+║  𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 &  𝐂𝐎𝐑𝐓𝐀𝐍𝐀   ║  
 ║   🎭 𝙼𝙴𝙽𝚄 𝙳𝙴 𝙶ℝ𝚄𝙿𝙾 🎭   ║  
 ╚══════════════════╝  
 
@@ -4375,22 +4375,20 @@ case 'menugrupo': {
 
 📌 𝐌Á𝐒 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𝐏𝐑Ó𝐗𝐈𝐌𝐀𝐌𝐄𝐍𝐓𝐄...
 
-⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 𝟐.𝟎 𝐁𝐎𝐓 ⟣`;
+⟢ 𝐀𝐙𝐔𝐑𝐀 𝐔𝐋𝐓𝐑𝐀 & 𝐂𝐎𝐑𝐓𝐀𝐍𝐀 ⟣`;
 
     const videoResponse = await axios.get("https://cdn.dorratz.com/files/1741471817068.mp4", { 
       responseType: 'arraybuffer' 
     });
 
     await sock.sendMessage2(
-      chatId,
-      {
-        video: videoResponse.data,
-        caption: captionText,
-        gifPlayback: true,
-        mimetype: "video/mp4"
-      },
-      msg
-    );
+  chatId,
+  {
+    image: { url: "https://cdn.dorratz.com/files/1744666186448.jpg" }, 
+    caption: captionText 
+  },
+  msg
+)
 
   } catch (error) {
     console.error("Error en menugrupo:", error);
