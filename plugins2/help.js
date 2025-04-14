@@ -93,7 +93,7 @@ const handler = async (msg, { conn }) => {
 ▣ ${usedPrefix}pong ↷
   Medir latencia del bot
 
-═⌬ © Azura Ultra & cortana Subbot ⌬═`;
+═⌬Azura Ultra & cortana Subbot⌬═`;
 
   // Mensaje principal con sendMessage2
   await conn.sendMessage2(
