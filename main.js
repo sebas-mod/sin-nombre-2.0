@@ -14234,15 +14234,14 @@ case 'info':
 │ 📌 Usa *${global.prefix}menu2* para ver los comandos de multimedia y guardado.  
 ╰──────────────────╯`;
 
-    await sock.sendMessage2(
-      msg.key.remoteJid,
-      {
-        video: { url: "https://cdn.dorratz.com/files/1740372626884.mp4" },
-        gifPlayback: true,
-        caption: infoMessage
-      },
-      msg
-    );
+    await sock.sendMessage2(msg.key.remoteJid,
+  {
+    image: { url: "https://cdn.dorratz.com/files/1744671222036.jpg" }, 
+    caption: infoMessage 
+  },
+  msg 
+);
+    
 
   } catch (error) {
     console.error("Error en comando info:", error);
