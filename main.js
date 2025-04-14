@@ -240,6 +240,75 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
+case "menuaudio": {
+    try {
+        // Reacción antes de enviar el menú
+        await sock.sendMessage(msg.key.remoteJid, {
+            react: { text: "📂", key: msg.key } 
+        });
+
+        // Verificar si el archivo guar.json existe
+        if (!fs.existsSync("./guar.json")) {
+            return sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ *Error:* No hay multimedia guardado aún. Usa `.guar` para guardar algo primero." },
+                { quoted: msg }
+            );
+        }
+
+        // Leer archivo guar.json
+        let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
+        
+        let listaMensaje = `┏━━━━━━━━━━━━━━━┓
+┃  📂 *MENÚ DE MULTIMEDIA*  
+┃  🔑 *Palabras Clave Guardadas*  
+┗━━━━━━━━━━━━━━━┛
+
+📌 *¿Cómo recuperar un archivo guardado?*  
+Usa el comando:  
+➡️ _${global.prefix}g palabra_clave_  
+( *o puedes solo escribirlas tambien y bot las envia tambien* ) 
+
+📂 *Lista de palabras clave guardadas:*  
+━━━━━━━━━━━━━━━━━━━\n`;
+
+        let claves = Object.keys(guarData);
+        
+        if (claves.length === 0) {
+            listaMensaje += "🚫 *No hay palabras clave guardadas.*\n";
+        } else {
+            claves.forEach((clave, index) => {
+                listaMensaje += `*${index + 1}.* ${clave}\n`;
+            });
+        }
+
+        listaMensaje += `\n━━━━━━━━━━━━━━━━━━━  
+📥 *Otros Comandos de Multimedia*  
+
+${global.prefix}guar → Guarda archivos con una clave.  
+${global.prefix}g → Recupera archivos guardados.  
+${global.prefix}kill → Elimina un archivo guardado.  
+
+💡 *Azura Ultra 2.0 sigue mejorando. Pronto más funciones.*  
+⚙️ *Desarrollado por Russell xz* 🚀`;
+
+        // Enviar el menú con video como GIF
+        await sock.sendMessage(msg.key.remoteJid, { 
+            video: { url: "https://cdn.dorratz.com/files/1740372045635.mp4" }, 
+            gifPlayback: true, // Esto hace que se reproduzca como GIF
+            caption: listaMensaje 
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error("❌ Error al enviar el menú2:", error);
+        await sock.sendMessage(msg.key.remoteJid, { 
+            text: "❌ *Ocurrió un error al mostrar el menú2. Inténtalo de nuevo.*" 
+        }, { quoted: msg });
+    }
+    break;
+}    
+
+      
 case 'play8': {
     const yts = require('yt-search');
 
@@ -4150,7 +4219,7 @@ case 'menu': {
 ╰──────────────╯  
 ⎔ ${global.prefix}allmenu  
 ⎔ ${global.prefix}menugrupo  
-⎔ ${global.prefix}menu2  
+⎔ ${global.prefix}menuaudio  
 ⎔ ${global.prefix}menurpg  
 ⎔ ${global.prefix}info  
 ⎔ ${global.prefix}menuowner  
@@ -14194,72 +14263,6 @@ case 'info':
   break;
         
         
-case "menu2": {
-    try {
-        // Reacción antes de enviar el menú
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: "📂", key: msg.key } 
-        });
-
-        // Verificar si el archivo guar.json existe
-        if (!fs.existsSync("./guar.json")) {
-            return sock.sendMessage(
-                msg.key.remoteJid,
-                { text: "❌ *Error:* No hay multimedia guardado aún. Usa `.guar` para guardar algo primero." },
-                { quoted: msg }
-            );
-        }
-
-        // Leer archivo guar.json
-        let guarData = JSON.parse(fs.readFileSync("./guar.json", "utf-8"));
-        
-        let listaMensaje = `┏━━━━━━━━━━━━━━━┓
-┃  📂 *MENÚ DE MULTIMEDIA*  
-┃  🔑 *Palabras Clave Guardadas*  
-┗━━━━━━━━━━━━━━━┛
-
-📌 *¿Cómo recuperar un archivo guardado?*  
-Usa el comando:  
-➡️ _${global.prefix}g palabra_clave_  
-
-📂 *Lista de palabras clave guardadas:*  
-━━━━━━━━━━━━━━━━━━━\n`;
-
-        let claves = Object.keys(guarData);
-        
-        if (claves.length === 0) {
-            listaMensaje += "🚫 *No hay palabras clave guardadas.*\n";
-        } else {
-            claves.forEach((clave, index) => {
-                listaMensaje += `*${index + 1}.* ${clave}\n`;
-            });
-        }
-
-        listaMensaje += `\n━━━━━━━━━━━━━━━━━━━  
-📥 *Otros Comandos de Multimedia*  
-
-${global.prefix}guar → Guarda archivos con una clave.  
-${global.prefix}g → Recupera archivos guardados.  
-${global.prefix}kill → Elimina un archivo guardado.  
-
-💡 *Azura Ultra 2.0 sigue mejorando. Pronto más funciones.*  
-⚙️ *Desarrollado por Russell xz* 🚀`;
-
-        // Enviar el menú con video como GIF
-        await sock.sendMessage(msg.key.remoteJid, { 
-            video: { url: "https://cdn.dorratz.com/files/1740372045635.mp4" }, 
-            gifPlayback: true, // Esto hace que se reproduzca como GIF
-            caption: listaMensaje 
-        }, { quoted: msg });
-
-    } catch (error) {
-        console.error("❌ Error al enviar el menú2:", error);
-        await sock.sendMessage(msg.key.remoteJid, { 
-            text: "❌ *Ocurrió un error al mostrar el menú2. Inténtalo de nuevo.*" 
-        }, { quoted: msg });
-    }
-    break;
-}    
 
 case "ping":
     try {
