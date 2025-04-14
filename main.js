@@ -368,7 +368,7 @@ case 'play8': {
 │║◈ 👤 Autor: ${video.author || 'Desconocido'}
 │║◈ Link: ${video.url}
 ╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤`,
-        footer: "𝙰𝚉𝚄𝚁𝙰 𝚄𝙻𝚃𝚁𝙰 2.0",
+        footer: "𝙰𝚉𝚄𝚁𝙰 𝚄𝙻𝚃𝚁𝙰 & 𝙲𝙾𝚁𝚃𝙰𝙽𝙰",
         buttons: [
             {
                 buttonId: `.play5 ${video.url}`,
@@ -1136,7 +1136,7 @@ case 'play2': {
         // 2. BANNER: Enviamos la vista previa con la info
         const captionPreview = `
 ╔═════════════════╗
-║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝗹𝗍𝗋𝗮 2.0 𝗕𝗼𝘁 ✦
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝗹𝗍𝗋𝗮 & 𝘾𝙤𝙧𝙩𝙖𝙣𝙖 ✦
 ╚═════════════════╝
 
 📀 *𝙄𝗻𝗳𝗼 𝗱𝗲𝗹 𝘃𝗶𝗱𝗲𝗼:*  
@@ -1155,9 +1155,9 @@ case 'play2': {
 ┣ 🎥 *Video:* _${global.prefix}play6 ${text}_
 ┗ ⚠️ *¿No se reproduce?* Usa _${global.prefix}ff_
 
-⏳ *Procesado por Azura Ultra 2.0*
+⏳ *Procesado por Azura Ultra & Cortana Bot*
 ═════════════════════  
-        𖥔 Azura Ultra 2.0 Bot 𖥔
+   𖥔 Azura Ultra & Cortana 𖥔
 ═════════════════════`;
         
         await sock.sendMessage(msg.key.remoteJid, {
@@ -1927,7 +1927,7 @@ case 'play': {
 
         const infoMessage = `
 ╔══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼 ✦
 ╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙖𝙪𝙙𝙞𝙤:*  
@@ -1946,9 +1946,9 @@ case 'play': {
 ┗ 🎥 *Video:* _${global.prefix}play6 ${text}_
 
 ⏳ *Espera un momento...*  
-⚙️ *Azura Ultra 2.0 está procesando tu música...*
+⚙️ *Azura Ultra & Cortana está procesando tu música...*
 ═══════════════════  
-     𖥔 Azura Ultra 2.0 Bot 𖥔`;
+     𖥔 Azura Ultra & Cortana 𖥔`;
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: thumbnail },
@@ -2349,7 +2349,7 @@ case 'play3': {
 ⧁ 𝙋𝙊𝙋𝙐𝙇𝘼𝙍𝙄𝘿𝘼𝘿: ${result.popularity}
 ⧁ 𝙀𝙉𝙇𝘼𝘾𝙀: ${url}
 
-🎶 *Azura Ultra 2.0 Bot enviando tu música...*`.trim();
+🎶 *Azura Ultra & Cortana esta enviando tu música...*`.trim();
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: img },
@@ -2483,7 +2483,7 @@ case 'play5': {
 
         const infoMessage = `
 ╔══════════════════╗
-║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   
+║  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼 ✦   
 ╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
@@ -2505,7 +2505,7 @@ case 'play5': {
 ⚙️ *Azura Ultra 2.0 está procesando tu música...*
 
 ═════════════════════  
-         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 & 𝘾𝙤𝙧𝙩𝙖𝙣𝙖 𖥔
 ═════════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -2662,7 +2662,7 @@ case 'play6': {
 
         const infoMessage = `
 ╔══════════════════╗
-║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝗕𝗢𝗧 ✦   ║
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼  ✦   ║
 ╚══════════════════╝
 
 📀 *𝙄𝙣𝙛𝙤 𝙙𝙚𝙡 𝙫𝙞𝙙𝙚𝙤:*  
@@ -2684,7 +2684,7 @@ case 'play6': {
 ⚙️ *Azura Ultra 2.0 está procesando tu video...*
 
 ═════════════════════  
-         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 𝟮.𝟬 𝗕𝗼𝘁 𖥔
+         𖥔 𝗔𝘇𝘂𝗋𝗮 𝗨𝗹𝘁𝗋𝗮 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼 𖥔
 ═════════════════════`;
 
         await sock.sendMessage(msg.key.remoteJid, {
@@ -4026,7 +4026,7 @@ case 'menuowner': {
 
     const chatId = msg.key.remoteJid;
     const captionText = `╔═══════════════╗  
-║     𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 𝟮.𝟬 𝘽𝙊𝙏     ║  
+║     𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼    ║  
 ╚═══════════════╝  
 
             𝐌𝐄𝐍𝐔 𝐎𝐖𝐍𝐄𝐑  
@@ -4057,23 +4057,21 @@ case 'menuowner': {
 
       𝗗𝗲𝘀𝗮𝗿𝗿𝗼𝗹𝗹𝗮𝗱𝗼 𝗽𝗼𝗿: ʳᵘˢˢᵉˡˡ ˣᶻ  
 
-         𝙖𝙯𝙪𝙧𝙖 𝙪𝙡𝙩𝙧𝙖 𝟮.𝟬 𝙗𝙤𝙩`;
+         𝙖𝙯𝙪𝙧𝙖 𝙪𝙡𝙩𝙧𝙖 & 𝘾𝙤𝙧𝙩𝙖𝙣𝙖`;
 
     const videoResponse = await axios.get(
       "https://cdn.dorratz.com/files/1741471185939.mp4",
       { responseType: 'arraybuffer' }
     );
 
-    await sock.sendMessage2(
-      chatId,
-      {
-        video: videoResponse.data,
-        caption: captionText,
-        gifPlayback: true,
-        mimetype: "video/mp4"
-      },
-      msg
-    );
+await sock.sendMessage2(
+  chatId,
+  {
+    image: { url: "https://cdn.dorratz.com/files/1744667309694.jpg" }, 
+    caption: captionText 
+  },
+  msg 
+);
 
   } catch (error) {
     console.error("Error en menuowner:", error);
@@ -4093,7 +4091,7 @@ case 'menurpg': {
 
     const chatId = msg.key.remoteJid;
     const menuText = `╔═════════════════╗  
-║   𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏   ║  
+║   𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼 ║  
 ╚═════════════════╝  
 
 ✦ 𝐁𝐈𝐄𝐍𝐕𝐄𝐍𝐈𝐃𝐎 𝐀𝐋 𝐌𝐄𝐍𝐔 𝐑𝐏𝐆 ✦  
@@ -4147,22 +4145,20 @@ Así te registras
 𝗗𝗘𝗦𝗔𝗥𝗥𝗢𝗟𝗟𝗔𝗗𝗢 𝗣𝗢𝗥: russell xz  
 
 ╭────────────────╮  
-│ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 2.0 𝘽𝙊𝙏 │  
+│ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼 │  
 ╰────────────────╯`;
 
     const videoUrl = "https://cdn.dorratz.com/files/1741474416069.mp4";
     const videoBuffer = (await axios.get(videoUrl, { responseType: 'arraybuffer' })).data;
 
-    await sock.sendMessage2(
-      chatId,
-      {
-        video: videoBuffer,
-        caption: menuText,
-        gifPlayback: true,
-        mimetype: "video/mp4"
-      },
-      msg
-    );
+await sock.sendMessage2(
+  chatId,
+  {
+    image: { url: "https://cdn.dorratz.com/files/1744667713683.jpg" }, 
+    caption: menuText
+  },
+  msg 
+);
 
   } catch (error) {
     console.error("Error en menurpg:", error);
@@ -5181,7 +5177,7 @@ case 'todos': {
     const extraMsg = args.join(" ");
 
     let finalMsg = "━〔 *📢 INVOCACIÓN 📢* 〕━➫\n";
-    finalMsg += "٩(͡๏̯͡๏)۶ Por Azura Ultra 2.0 Bot ٩(͡๏̯͡๏)۶\n";
+    finalMsg += "٩(͡๏̯͡๏)۶ Por Azura Ultra & Cortana ٩(͡๏̯͡๏)۶\n";
     if (extraMsg.trim().length > 0) {
       finalMsg += `\n❑ Mensaje: ${extraMsg}\n\n`;
     } else {
@@ -5427,7 +5423,7 @@ case 'cofre': {
         let rpgData = JSON.parse(fs.readFileSync(rpgFile, "utf-8"));
         if (!rpgData.usuarios[userId]) {
             return sock.sendMessage(msg.key.remoteJid, { 
-                text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
+                text: `❌ *No tienes una cuenta registrada en el gremio Azura Ultra & Cortana.*\n📜 Usa \`${global.prefix}rpg <nombre> <edad>\` para registrarte.` 
             }, { quoted: msg });
         }
         let usuario = rpgData.usuarios[userId];
@@ -11181,7 +11177,7 @@ case 'verdad': {
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: 'https://cdn.dorratz.com/files/1740781671173.jpg' },
-            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘝𝘌𝘙𝘋𝘈𝘋*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${verdad}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱\n\n© Azura Ultra 2.0 Bot`
+            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘝𝘌𝘙𝘋𝘈𝘋*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${verdad}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱\n\n© Azura Ultra & Cortana`
         }, { quoted: msg });
 
         // ✅ Reacción de éxito
@@ -11213,7 +11209,7 @@ case 'reto': {
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: { url: 'https://cdn.dorratz.com/files/1740781675920.jpg' },
-            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘙𝘌𝘛𝘖*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${reto}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱\n\n© Azura Ultra 2.0 Bot`
+            caption: `𝘏𝘢𝘴 𝘦𝘴𝘤𝘰𝘨𝘪𝘥𝘰 *𝘙𝘌𝘛𝘖*\n\n╱╲❀╱╲╱╲❀╱╲╱╲❀╱╲\n◆ ${reto}\n╲╱❀╲╱╲╱❀╲╱╲╱❀╲╱\n\n© Azura Ultra & Cortana`
         }, { quoted: msg });
 
     } catch (e) {
@@ -11544,7 +11540,7 @@ case 'ia': {
         const respuestaGPT4 = data.data.message;
 
         await sock.sendMessage(msg.key.remoteJid, { 
-            text: `✨ *GPT-4 responde a @${userId.replace("@s.whatsapp.net", "")}:*\n\n${respuestaGPT4}\n\n🔹 *Powered by Azura Ultra 2.0 Bot* 🤖`,
+            text: `✨ *GPT-4 responde a @${userId.replace("@s.whatsapp.net", "")}:*\n\n${respuestaGPT4}\n\n🔹 *Powered by Azura Ultra & Cortana* 🤖`,
             mentions: [userId] 
         }, { quoted: msg });
 
