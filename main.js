@@ -293,8 +293,7 @@ ${global.prefix}kill → Elimina un archivo guardado.
 ⚙️ *Desarrollado por Russell xz* 🚀`;
 
         // Enviar el menú con video como GIF
-        await sock.sendMessage2(
-  chatId,
+        await sock.sendMessage2(msg.key.remoteJid,
   {
     image: { url: "https://cdn.dorratz.com/files/1744666582539.jpg" }, 
     caption: listaMensaje 
