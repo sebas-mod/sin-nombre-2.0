@@ -19,7 +19,7 @@ const handler = async (msg, { conn }) => {
   });
 
   const menu = `
-╔═⌬AZURA ULTRA SUBBOT⌬═╗
+╔⌬AZURA & CORTANA SUBBOT⌬╗
 ║   Menú por categorías  
 ╚═─────────────────═╝
 
@@ -99,7 +99,7 @@ const handler = async (msg, { conn }) => {
   await conn.sendMessage2(
     msg.key.remoteJid,
     {
-      image: { url: `https://cdn.russellxz.click/07af8428.PNG` },
+      image: { url: `https://cdn.russellxz.click/d06910d4.PNG` },
       caption: menu
     },
     msg
