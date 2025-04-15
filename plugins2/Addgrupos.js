@@ -14,7 +14,7 @@ const handler = async (msg, { conn }) => {
   const groupID = msg.key.remoteJid;
   if (!groupID.endsWith("@g.us")) {
     return await conn.sendMessage(groupID, {
-      text: "⚠️ Este comando solo funciona dentro de un grupo."
+      text: "⚠️ Este comando solo funciona dentro de un grupo. y es para que subbots responda en ese grupo donde uses este comando💠"
     }, { quoted: msg });
   }
 
