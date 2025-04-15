@@ -14847,14 +14847,16 @@ case 'guar': {
     }
 
     const saveKey = args.join(' ').trim().toLowerCase(); // Clave en minúsculas
-    if (!saveKey.match(/[a-zA-Z0-9]/)) {
+    // Validar que la palabra clave tenga al menos una letra o número real
+const soloSimbolosOEmojis = /^[\p{Emoji}\p{Punctuation}\p{Symbol}\s]+$/u.test(saveKey);
+
+if (soloSimbolosOEmojis) {
   return sock.sendMessage(
     msg.key.remoteJid,
-    { text: "❌ *Error:* La palabra clave no puede ser solo emojis o símbolos. Usa letras o números." },
+    { text: "❌ *Error:* La palabra clave no puede estar compuesta solo por emojis o símbolos. Usa letras o números." },
     { quoted: msg }
   );
 }
-
     // Validar que no tenga emojis ni caracteres especiales raros
     const emojiRegex = /([\u2700-\u27BF]|[\u1F600-\u1F6FF]|[\u1F300-\u1F5FF]|[\u1F1E0-\u1F1FF])/g;
     if (emojiRegex.test(saveKey)) {
