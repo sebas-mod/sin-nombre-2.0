@@ -37,7 +37,7 @@ const handler = async (msg, { conn }) => {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
   await conn.sendMessage(groupID, {
-    text: `✅ Grupo eliminado de la lista.`
+    text: `✅ Grupo eliminado de la lista. ya no respondera en este grupo el subbots💠`
   }, { quoted: msg });
 };
 
