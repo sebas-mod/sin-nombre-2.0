@@ -24,7 +24,7 @@ const handler = async (msg, { conn, text }) => {
 
   if (!target) {
     return await conn.sendMessage(msg.key.remoteJid, {
-      text: "⚠️ Cita el mensaje del usuario o escribe su número."
+      text: "⚠️ Cita el mensaje del usuario o escribe su número. que quieres agregar a la lista para que el subbots le responda en privado💠"
     }, { quoted: msg });
   }
 
