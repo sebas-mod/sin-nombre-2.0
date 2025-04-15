@@ -14847,13 +14847,13 @@ case 'guar': {
     }
 
     const saveKey = args.join(' ').trim().toLowerCase(); // Clave en minúsculas
-    if (!saveKey) {
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "⚠️ *Aviso:* Escribe una palabra clave para guardar este multimedia. 📝" },
-            { quoted: msg }
-        );
-    }
+    if (!/[a-zA-Z0-9]/.test(saveKey)) {
+  return sock.sendMessage(
+    msg.key.remoteJid,
+    { text: "❌ *Error:* La palabra clave no puede ser solo emojis. Usa letras o números." },
+    { quoted: msg }
+  );
+}
 
     // Validar que no tenga emojis ni caracteres especiales raros
     const emojiRegex = /([\u2700-\u27BF]|[\u1F600-\u1F6FF]|[\u1F300-\u1F5FF]|[\u1F1E0-\u1F1FF])/g;
