@@ -14847,25 +14847,14 @@ case 'guar': {
     }
 
     const saveKey = args.join(' ').trim().toLowerCase(); // Clave en minúsculas
-    // Validar que la palabra clave tenga al menos una letra o número real
-const soloSimbolosOEmojis = /^[\p{Emoji}\p{Punctuation}\p{Symbol}\s]+$/u.test(saveKey);
-
-if (soloSimbolosOEmojis) {
+    // Verifica que haya al menos una letra o número en la palabra clave
+if (!/[a-zA-Z0-9]/.test(saveKey)) {
   return sock.sendMessage(
     msg.key.remoteJid,
-    { text: "❌ *Error:* La palabra clave no puede estar compuesta solo por emojis o símbolos. Usa letras o números." },
+    { text: "❌ *Error:* La palabra clave debe incluir al menos una letra o número, no solo emojis o símbolos." },
     { quoted: msg }
   );
 }
-    // Validar que no tenga emojis ni caracteres especiales raros
-    const emojiRegex = /([\u2700-\u27BF]|[\u1F600-\u1F6FF]|[\u1F300-\u1F5FF]|[\u1F1E0-\u1F1FF])/g;
-    if (emojiRegex.test(saveKey)) {
-        return sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "🚫 *Error:* La palabra clave no puede contener emojis. Usa solo letras y palabras normales." },
-            { quoted: msg }
-        );
-    }
 
     // Verificar si el archivo guar.json existe, si no, crearlo
     if (!fs.existsSync("./guar.json")) {
