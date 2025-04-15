@@ -49,7 +49,7 @@ const handler = async (msg, { conn }) => {
 
     const metadata = {
       packname: `✨ Lo Mandó Hacer: ${senderName} ✨`,
-      author: `🤖 Bot Creador: Azura Ultra 2.0 Subbot\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻\n${fechaCreacion}`
+      author: `🤖 Bot Creador: Azura Ultra & Cortana Subbot\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻\n${fechaCreacion}`
     };
 
     const sticker = mediaType === 'image'
@@ -149,7 +149,7 @@ async function addExif(webpBuffer, metadata) {
   fs.writeFileSync(tmpIn, webpBuffer);
 
   const json = {
-    "sticker-pack-id": "azura-ultra-2.0",
+    "sticker-pack-id": "azura-ultra&cortana",
     "sticker-pack-name": metadata.packname,
     "sticker-pack-publisher": metadata.author,
     "emojis": metadata.categories || [""]
