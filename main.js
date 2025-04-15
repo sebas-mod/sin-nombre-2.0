@@ -14847,10 +14847,10 @@ case 'guar': {
     }
 
     const saveKey = args.join(' ').trim().toLowerCase(); // Clave en minúsculas
-    if (!/[a-zA-Z0-9]/.test(saveKey)) {
+    if (!saveKey.match(/[a-zA-Z0-9]/)) {
   return sock.sendMessage(
     msg.key.remoteJid,
-    { text: "❌ *Error:* La palabra clave no puede ser solo emojis. Usa letras o números." },
+    { text: "❌ *Error:* La palabra clave no puede ser solo emojis o símbolos. Usa letras o números." },
     { quoted: msg }
   );
 }
