@@ -13914,7 +13914,7 @@ case "s":
         // 🌟 Formato llamativo para la metadata del sticker 🌟
         let metadata = {
             packname: `✨ Lo Mandó Hacer: ${senderName} ✨`,
-            author: `🤖 Bot Creador: Azura Ultra 2.0\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz💻\n${fechaCreacion}`
+            author: `🤖 Bot Creador: Azura Ultra & Cortana\n🛠️ Desarrollado por: 𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz💻\n${fechaCreacion}`
         };
 
         let stickerBuffer;
@@ -15094,7 +15094,7 @@ case "ig":
         }
 
         // 📜 Construcción del mensaje con marca de agua
-        const caption = `🎬 *Video de Instagram*\n\n> 🍧Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra 2.0 Bot`;
+        const caption = `🎬 *Video de Instagram*\n\n> 🍧Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra & Cortana`;
 
         // 📩 Enviar cada video descargado con la marca de agua
         for (let item of data) {
@@ -15161,7 +15161,7 @@ case "tt":
         
         // 📢 Agregar la API utilizada y marca de agua con buen formato
         mensaje += `───────\n🍧 *API utilizada:* https://api.dorratz.com\n`;
-        mensaje += `© Azura Ultra 2.0 Bot`;
+        mensaje += `© Azura Ultra & Cortana`;
 
         // 📩 Enviar el video con la información
         await sock.sendMessage(msg.key.remoteJid, {
@@ -15214,7 +15214,7 @@ case "fb":
         }
 
         // 📜 Construcción del mensaje con resoluciones disponibles
-        const message = `Resoluciones disponibles:\n${results.map((res) => `- ${res.resolution}`).join('\n')}\n\n🔥 Enviado en 720p\n\n> 🍧 Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra 2.0 Bot`;
+        const message = `Resoluciones disponibles:\n${results.map((res) => `- ${res.resolution}`).join('\n')}\n\n🔥 Enviado en 720p\n\n> 🍧 Solicitud procesada por api.dorratz.com\n\n───────\n© Azura Ultra & Cortana`;
 
         // 📩 Enviar el video con la marca de agua
         await sock.sendMessage(msg.key.remoteJid, {
