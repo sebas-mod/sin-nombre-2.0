@@ -55,7 +55,7 @@ const handler = async (msg, { conn, text }) => {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
   await conn.sendMessage(msg.key.remoteJid, {
-    text: `✅ Usuario *${target}* agregado a tu lista.`
+    text: `✅ Usuario *${target}* agregado a tu lista a hora el subbots le respondera a los comandos💠.`
   }, { quoted: msg });
 };
 
