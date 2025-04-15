@@ -52,7 +52,7 @@ const handler = async (msg, { conn, text }) => {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
   await conn.sendMessage(msg.key.remoteJid, {
-    text: `✅ Usuario *${target}* eliminado de tu lista.`
+    text: `✅ Usuario *${target}* eliminado de tu lista.ya no le respondera a los comando a este usuario que eliminastes de tu lista💠`
   }, { quoted: msg });
 };
 
