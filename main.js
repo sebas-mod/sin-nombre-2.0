@@ -937,16 +937,17 @@ case 'tourl': {
 
     const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
+    const m = {
+        reply: (text) => sock.sendMessage(msg.key.remoteJid, { text }, { quoted: msg }),
+        react: (emoji) => sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } })
+    };
+
     if (!quotedMsg) {
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: '⚠️ *Responde a una imagen, video, sticker, nota de voz o audio para subirlo.*'
-        }, { quoted: msg });
+        await m.reply('⚠️ *Responde a una imagen, video, sticker, nota de voz o audio para subirlo.*');
         break;
     }
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: '☁️', key: msg.key }
-    });
+    await m.react('☁️');
 
     try {
         let typeDetected = null;
@@ -984,9 +985,8 @@ case 'tourl': {
 
         await new Promise(resolve => writeStream.on('finish', resolve));
 
-        // Verificar tamaño
         const stats = fs.statSync(rawPath);
-        const maxSize = 200 * 1024 * 1024; // 200MB
+        const maxSize = 200 * 1024 * 1024;
         if (stats.size > maxSize) {
             fs.unlinkSync(rawPath);
             throw new Error('⚠️ El archivo excede el límite de 200MB.');
@@ -994,7 +994,6 @@ case 'tourl': {
 
         let finalPath = rawPath;
 
-        // Convertir a MP3 si es nota de voz o audio
         const isAudioToConvert = typeDetected === 'audio' && (rawExt === 'ogg' || rawExt === 'm4a' || rawExt === 'mpeg');
         if (isAudioToConvert) {
             finalPath = path.join(tmpDir, `${Date.now()}_converted.mp3`);
@@ -1006,13 +1005,11 @@ case 'tourl': {
                     .on('error', reject)
                     .save(finalPath);
             });
-            fs.unlinkSync(rawPath); // eliminar el archivo original
+            fs.unlinkSync(rawPath);
         }
 
-        // Subir el archivo
         const form = new FormData();
         form.append('file', fs.createReadStream(finalPath));
-        form.append('expiry', 3600);
 
         const res = await axios.post('https://cdn.russellxz.click/upload.php', form, {
             headers: form.getHeaders()
@@ -1022,27 +1019,17 @@ case 'tourl': {
 
         if (!res.data || !res.data.url) throw new Error('❌ No se pudo subir el archivo.');
 
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ *Archivo subido exitosamente:*\n${res.data.url}`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '✅', key: msg.key }
-        });
+        await m.reply(`✅ *Archivo subido exitosamente:*\n${res.data.url}`);
+        await m.react('✅');
 
     } catch (err) {
-        console.error("❌ Error en tourl:", err);
-        await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ *Error:* ${err.message}`
-        }, { quoted: msg });
-
-        await sock.sendMessage(msg.key.remoteJid, {
-            react: { text: '❌', key: msg.key }
-        });
+        await m.reply(`❌ *Error:* ${err.message}`);
+        await m.react('❌');
     }
 
     break;
-}
+              }
+
         
 case 'carga': {
   if (!isOwner) {
