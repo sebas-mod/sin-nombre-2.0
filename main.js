@@ -4122,7 +4122,9 @@ Así te registras
 ➤ ${global.prefix}deleteuser ➤ ${global.prefix}deleteper  
 ➤ ${global.prefix}deletemascota ➤ ${global.prefix}totalper  
 ➤ ${global.prefix}tran ➤ ${global.prefix}transferir  
-➤ ${global.prefix}dame
+➤ ${global.prefix}dame ➤ ${global.prefix}dep
+➤ ${global.prefix}bal ➤ ${global.prefix}saldo
+➤ ${global.prefix}retirar ➤ ${global.prefix}depositar
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
 ➤ ${global.prefix}topuser ➤ ${global.prefix}topmascotas  
