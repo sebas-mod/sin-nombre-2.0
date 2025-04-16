@@ -4107,6 +4107,7 @@ Así te registras
 ➤ ${global.prefix}vender ➤ ${global.prefix}quitarventa  
 ➤ ${global.prefix}batallaanime ➤ ${global.prefix}comprar  
 ➤ ${global.prefix}tiendaper ➤ ${global.prefix}alaventa  
+➤ ${global.prefix}verper
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗠𝗔𝗦𝗖𝗢𝗧𝗔𝗦  
 ➤ ${global.prefix}daragua ➤ ${global.prefix}darcariño  
@@ -4116,6 +4117,7 @@ Así te registras
 ➤ ${global.prefix}mascota ➤ ${global.prefix}curar  
 ➤ ${global.prefix}nivelmascota ➤ ${global.prefix}batallamascota  
 ➤ ${global.prefix}compra ➤ ${global.prefix}tiendamascotas  
+➤ ${global.prefix}vermascotas
 
 📌 𝗢𝗧𝗥𝗢𝗦 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦
 ➤ ${global.prefix}addmascota ➤ ${global.prefix}addper  
