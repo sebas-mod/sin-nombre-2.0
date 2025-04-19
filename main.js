@@ -4051,6 +4051,8 @@ case 'menuowner': {
 ➠ ${global.prefix}addlista  
 ➠ ${global.prefix}deletelista
 ➠ ${global.prefix}setprefix
+➠ ${global.prefix}re
+➠ ${global.prefix}unre
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯  
 
       𝗗𝗲𝘀𝗮𝗿𝗿𝗼𝗹𝗹𝗮𝗱𝗼 𝗽𝗼𝗿: ʳᵘˢˢᵉˡˡ ˣᶻ  
@@ -4138,6 +4140,7 @@ Así te registras
 ➤ ${global.prefix}dame ➤ ${global.prefix}dep
 ➤ ${global.prefix}bal ➤ ${global.prefix}saldo
 ➤ ${global.prefix}retirar ➤ ${global.prefix}depositar
+➤ ${global.prefix}retirar
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
 ➤ ${global.prefix}topuser ➤ ${global.prefix}topmascotas  
