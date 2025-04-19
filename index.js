@@ -460,26 +460,41 @@ try {
 // Validar comandos restringidos por grupo (re.json)
 try {
   const rePath = path.resolve("./re.json");
-  if (fs.existsSync(rePath)) {
-    const reData = JSON.parse(fs.readFileSync(rePath));
-    const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+  const cachePath = path.resolve("./restriccion_cache.json");
 
-    const comandosRestringidos = reData[chatId] || [];
+  if (!fs.existsSync(cachePath)) fs.writeFileSync(cachePath, JSON.stringify({}, null, 2));
 
-    const senderClean = sender.replace(/[^0-9]/g, "");
-    const isOwner = global.owner.some(([id]) => id === senderClean);
-    const fromMe = msg.key.fromMe;
+  const reData = fs.existsSync(rePath) ? JSON.parse(fs.readFileSync(rePath)) : {};
+  const cacheData = JSON.parse(fs.readFileSync(cachePath));
 
-    if (comandosRestringidos.includes(commandOnly) && !isOwner && !fromMe) {
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+  const comandosRestringidos = reData[chatId] || [];
+
+  const senderClean = sender.replace(/[^0-9]/g, "");
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+  const isFromMe = msg.key.fromMe;
+
+  if (comandosRestringidos.includes(commandOnly) && !isOwner && !isFromMe) {
+    const key = `${chatId}:${senderClean}:${commandOnly}`;
+    cacheData[key] = (cacheData[key] || 0) + 1;
+
+    if (cacheData[key] < 5) {
       await sock.sendMessage(chatId, {
         text: `🚫 *Este comando está restringido en este grupo.*\n⚠️ Solo el owner o el bot pueden usarlo.`,
         quoted: msg
       });
-      return;
+    } else if (cacheData[key] === 5) {
+      await sock.sendMessage(chatId, {
+        text: `❌ *Has intentado usar este comando demasiadas veces.*\n🤖 Ahora el bot te ignorará respecto a *${commandOnly}*.`,
+        quoted: msg
+      });
     }
+
+    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+    return;
   }
 } catch (e) {
-  console.error("❌ Error leyendo re.json:", e);
+  console.error("❌ Error procesando comando restringido:", e);
 }
 // === FIN LÓGICA DE COMANDOS RESTRINGIDOS ===    
     
