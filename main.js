@@ -29,11 +29,18 @@ if (!fs.existsSync(filePath)) {
   fs.writeFileSync(filePath, JSON.stringify(estructuraInicial, null, 2));
   console.log("✅ Archivo activossubbots.json creado correctamente.");
 }
-// Crear re.json si no existe
+//retrimgir👇
 const rePath = path.resolve("./re.json");
-if (!fs.existsSync(rePath)) {
-  fs.writeFileSync(rePath, JSON.stringify([], null, 2));
+let comandosRestringidos = {};
+if (fs.existsSync(rePath)) {
+  try {
+    comandosRestringidos = JSON.parse(fs.readFileSync(rePath, "utf-8"));
+  } catch (e) {
+    console.error("❌ Error al leer re.json:", e);
+    comandosRestringidos = {};
+  }
 }
+//retringir 👆
 global.zrapi = `ex-9bf9dc0318`;
 global.generatingCode = false;
 
