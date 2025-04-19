@@ -457,8 +457,29 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+// === INICIO LÓGICA DE COMANDOS RESTRINGIDOS ===
+try {
+  const rePath = path.resolve("./re.json");
+  let comandosRestringidos = [];
+  if (fs.existsSync(rePath)) {
+    comandosRestringidos = JSON.parse(fs.readFileSync(rePath));
+  }
+
+  const isBot = fromMe || sender === botNumber;
+  const isOwnerUser = global.owner.some(([num]) => num === sender);
+  const comandoSolicitado = messageText.slice(global.prefix.length).split(" ")[0]?.toLowerCase();
+
+  if (comandosRestringidos.includes(comandoSolicitado) && !isOwnerUser && !isBot) {
+    await sock.sendMessage(chatId, {
+      text: `🚫 El comando *${comandoSolicitado}* está restringido.\n🛡️ Solo el bot o el owner pueden usarlo.`,
+    }, { quoted: msg });
+    return;
+  }
+} catch (e) {
+  console.error("❌ Error al verificar comandos restringidos:", e);
+}
+// === FIN LÓGICA DE COMANDOS RESTRINGIDOS ===    
     
-  // 🔗 Antilink en grupos
 // 🔗 Antilink en grupos
       if (isGroup && activos.antilink?.[chatId]) {
         if (messageText.includes("https://chat.whatsapp.com/")) {
