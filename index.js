@@ -457,26 +457,29 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
-// === INICIO LÓGICA DE COMANDOS RESTRINGIDOS ===
+// Validar comandos restringidos por grupo (re.json)
 try {
   const rePath = path.resolve("./re.json");
-  let comandosRestringidos = [];
   if (fs.existsSync(rePath)) {
-    comandosRestringidos = JSON.parse(fs.readFileSync(rePath));
-  }
+    const reData = JSON.parse(fs.readFileSync(rePath));
+    const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
 
-  const isBot = fromMe || sender === botNumber;
-  const isOwnerUser = global.owner.some(([num]) => num === sender);
-  const comandoSolicitado = messageText.slice(global.prefix.length).split(" ")[0]?.toLowerCase();
+    const comandosRestringidos = reData[chatId] || [];
 
-  if (comandosRestringidos.includes(comandoSolicitado) && !isOwnerUser && !isBot) {
-    await sock.sendMessage(chatId, {
-      text: `🚫 El comando *${comandoSolicitado}* está restringido.\n🛡️ Solo el bot o el owner pueden usarlo.`,
-    }, { quoted: msg });
-    return;
+    const senderClean = sender.replace(/[^0-9]/g, "");
+    const isOwner = global.owner.some(([id]) => id === senderClean);
+    const fromMe = msg.key.fromMe;
+
+    if (comandosRestringidos.includes(commandOnly) && !isOwner && !fromMe) {
+      await sock.sendMessage(chatId, {
+        text: `🚫 *Este comando está restringido en este grupo.*\n⚠️ Solo el owner o el bot pueden usarlo.`,
+        quoted: msg
+      });
+      return;
+    }
   }
 } catch (e) {
-  console.error("❌ Error al verificar comandos restringidos:", e);
+  console.error("❌ Error leyendo re.json:", e);
 }
 // === FIN LÓGICA DE COMANDOS RESTRINGIDOS ===    
     
