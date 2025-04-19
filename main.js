@@ -29,7 +29,11 @@ if (!fs.existsSync(filePath)) {
   fs.writeFileSync(filePath, JSON.stringify(estructuraInicial, null, 2));
   console.log("✅ Archivo activossubbots.json creado correctamente.");
 }
-
+// Crear re.json si no existe
+const rePath = path.resolve("./re.json");
+if (!fs.existsSync(rePath)) {
+  fs.writeFileSync(rePath, JSON.stringify([], null, 2));
+}
 global.zrapi = `ex-9bf9dc0318`;
 global.generatingCode = false;
 
