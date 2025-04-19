@@ -2,55 +2,42 @@ const fs = require("fs");
 const path = require("path");
 
 const handler = async (msg, { conn, args }) => {
+  const chatId = msg.key.remoteJid;
   const sender = msg.key.participant || msg.key.remoteJid;
   const senderClean = sender.replace(/[^0-9]/g, "");
-  const isBot = msg.key.fromMe;
-  const isOwner = global.owner.some(([num]) => num === senderClean);
 
-  if (!isOwner && !isBot) {
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: "❌", key: msg.key }
-    });
-    return conn.sendMessage(msg.key.remoteJid, {
-      text: "🚫 Solo el owner o el mismo bot pueden restringir comandos."
-    }, { quoted: msg });
-  }
+  const isFromMe = msg.key.fromMe;
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+  if (!isOwner && !isFromMe) return conn.sendMessage(chatId, {
+    text: "❌ Solo el owner o el mismo bot puede restringir comandos."
+  }, { quoted: msg });
 
-  const cmd = args[0]?.toLowerCase();
-  if (!cmd) {
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: "⚠️", key: msg.key }
-    });
-    return conn.sendMessage(msg.key.remoteJid, {
-      text: "⚠️ Usa el comando así:\n\n📌 *re play*"
-    }, { quoted: msg });
-  }
-
-  await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "⏳", key: msg.key }
-  });
+  if (!args[0]) return conn.sendMessage(chatId, {
+    text: "⚠️ Usa: *re [comando]* para restringirlo en este grupo."
+  }, { quoted: msg });
 
   const filePath = path.resolve("./re.json");
-  let data = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath)) : [];
+  if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
 
-  if (data.includes(cmd)) {
-    await conn.sendMessage(msg.key.remoteJid, {
-      react: { text: "⚠️", key: msg.key }
-    });
-    return conn.sendMessage(msg.key.remoteJid, {
-      text: `⚠️ El comando *${cmd}* ya está restringido.`
+  const data = JSON.parse(fs.readFileSync(filePath));
+  const comando = args[0].toLowerCase();
+
+  if (!data[chatId]) data[chatId] = [];
+  if (data[chatId].includes(comando)) {
+    return conn.sendMessage(chatId, {
+      text: `⚠️ El comando *${comando}* ya está restringido en este grupo.`
     }, { quoted: msg });
   }
 
-  data.push(cmd);
+  data[chatId].push(comando);
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
-  await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "✅", key: msg.key }
+  await conn.sendMessage(chatId, {
+    react: { text: "🔒", key: msg.key }
   });
 
-  await conn.sendMessage(msg.key.remoteJid, {
-    text: `✅ El comando *${cmd}* ha sido restringido.`
+  return conn.sendMessage(chatId, {
+    text: `✅ El comando *${comando}* ha sido restringido en este grupo.`
   }, { quoted: msg });
 };
 
