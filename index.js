@@ -457,8 +457,8 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
-// Validar comandos restringidos por grupo (re.json)
-try {
+
+    try {
   const rePath = path.resolve("./re.json");
   const cachePath = path.resolve("./restriccion_cache.json");
 
@@ -474,25 +474,37 @@ try {
   const isOwner = global.owner.some(([id]) => id === senderClean);
   const isFromMe = msg.key.fromMe;
 
+  const key = `${chatId}:${senderClean}:${commandOnly}`;
+
+  // Si el comando ya no está restringido, eliminarlo del contador
+  if (!comandosRestringidos.includes(commandOnly) && cacheData[key]) {
+    delete cacheData[key];
+    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+    return;
+  }
+
   if (comandosRestringidos.includes(commandOnly) && !isOwner && !isFromMe) {
-    const key = `${chatId}:${senderClean}:${commandOnly}`;
     cacheData[key] = (cacheData[key] || 0) + 1;
+
+    const replyOptions = {
+      quoted: msg,
+      mentions: [sender + "@s.whatsapp.net"]
+    };
 
     if (cacheData[key] < 5) {
       await sock.sendMessage(chatId, {
         text: `🚫 *Este comando está restringido en este grupo.*\n⚠️ Solo el owner o el bot pueden usarlo.`,
-        quoted: msg
-      });
+      }, replyOptions);
     } else if (cacheData[key] === 5) {
       await sock.sendMessage(chatId, {
         text: `❌ *Has intentado usar este comando demasiadas veces.*\n🤖 Ahora el bot te ignorará respecto a *${commandOnly}*.`,
-        quoted: msg
-      });
+      }, replyOptions);
     }
 
     fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
     return;
   }
+
 } catch (e) {
   console.error("❌ Error procesando comando restringido:", e);
 }
