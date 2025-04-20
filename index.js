@@ -467,6 +467,7 @@ try {
     const type = Object.keys(message)[0];
     const media = (
       message.imageMessage ||
+      message.videoMessage ||
       message.stickerMessage ||
       null
     );
@@ -476,7 +477,7 @@ try {
       const axios = require("axios");
       const FormData = require("form-data");
 
-      const stream = await downloadContentFromMessage(media, type === "stickerMessage" ? "sticker" : "image");
+      const stream = await downloadContentFromMessage(media, type.includes("image") ? "image" : type.includes("video") ? "video" : "sticker");
       let buffer = Buffer.alloc(0);
       for await (const chunk of stream) {
         buffer = Buffer.concat([buffer, chunk]);
@@ -484,7 +485,7 @@ try {
 
       const form = new FormData();
       form.append("file", buffer, {
-        filename: "nsfw-check.jpg",
+        filename: "nsfw-check." + (type.includes("video") ? "mp4" : "jpg"),
         contentType: media.mimetype || "image/jpeg",
       });
 
@@ -510,7 +511,7 @@ try {
           await sock.sendMessage(chatId, { delete: msg.key });
 
           await sock.sendMessage(chatId, {
-            text: `🔞 @${sender} ha enviado contenido inapropiado y fue eliminado.`,
+            text: `🔞 @${sender} ha enviado contenido pornográfico y fue eliminado.`,
             mentions: [msg.key.participant || msg.key.remoteJid]
           });
 
