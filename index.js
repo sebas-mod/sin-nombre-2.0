@@ -561,25 +561,29 @@ try {
     const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
     const isCommand = text.startsWith(global.prefix || ".");
 
-    // Solo ignorar si es del bot y no es comando
+    // Si es del bot y no es comando, no guardar
     if (fromMe && !isCommand) return;
 
     const senderClean = senderId.replace(/[^0-9]/g, '');
     const isOwner = global.owner.some(([id]) => id === senderClean);
 
-    if (!fromMe) {
-      if (isOwner) return;
+    // Evitar guardar mensajes de admin/owner, pero permitir que sigan ejecutando comandos
+    let skipSave = false;
 
+    if (!fromMe) {
+      if (isOwner) skipSave = true;
       if (isGroup) {
         try {
           const meta = await sock.groupMetadata(chatId);
           const isAdmin = meta.participants.find(p => p.id === senderId)?.admin;
-          if (isAdmin) return;
+          if (isAdmin) skipSave = true;
         } catch (e) {
           console.log("⚠️ No se pudo verificar admin:", e.message);
         }
       }
     }
+
+    if (skipSave) return; // Solo salta el guardado, no bloquea el mensaje
 
     const guardado = {
       chatId,
