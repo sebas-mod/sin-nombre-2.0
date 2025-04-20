@@ -458,44 +458,26 @@ try {
 try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
   const antipornoActivo = activos.antiporno?.[chatId];
-
   if (isGroup && antipornoActivo && !fromMe) {
-    const message = msg.message;
-    const type = Object.keys(message)[0];
+    const type = Object.keys(msg.message)[0];
     const media = (
-      message.imageMessage ||
-      message.stickerMessage ||
+      msg.message.imageMessage ||
+      msg.message.stickerMessage ||
       null
     );
 
     if (media) {
       const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
-      const axios = require("axios");
-      const FormData = require("form-data");
+      const { default: NyckelChecker } = require("./lib/scrape/nsfw");
+      const checker = new NyckelChecker();
 
       const stream = await downloadContentFromMessage(media, type === "stickerMessage" ? "sticker" : "image");
       let buffer = Buffer.alloc(0);
-      for await (const chunk of stream) {
-        buffer = Buffer.concat([buffer, chunk]);
-      }
+      for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-      const form = new FormData();
-      form.append("file", buffer, {
-        filename: "nsfw-check.jpg",
-        contentType: media.mimetype || "image/jpeg",
-      });
+      const result = await checker.response(buffer);
 
-      const upload = await axios.post("https://cdn.russellxz.click/upload.php", form, {
-        headers: form.getHeaders(),
-      });
-
-      const urlSubida = upload.data?.url;
-      if (!urlSubida) return;
-
-      const evalRes = await axios.get(`https://test-detecter-ns.onrender.com/eval?imagen=${encodeURIComponent(urlSubida)}`);
-      const result = evalRes.data?.result;
-
-      if (result?.esNSFW === true && result?.confianza >= 0.8) {
+      if (result.status && result.result?.NSFW) {
         const senderClean = sender.replace(/[^0-9]/g, "");
         const isOwner = global.owner.some(([id]) => id === senderClean);
 
@@ -504,31 +486,29 @@ try {
         const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
         if (!isOwner && !isAdmin) {
-          // Eliminar contenido
           await sock.sendMessage(chatId, { delete: msg.key });
 
-          // Cargar archivo de advertencias
-          const warnPath = "./warns.json";
-          if (!fs.existsSync(warnPath)) {
-            fs.writeFileSync(warnPath, JSON.stringify({}));
-          }
-          const warns = JSON.parse(fs.readFileSync(warnPath, "utf-8"));
+          const warnsPath = "./warns.json";
+          const warns = fs.existsSync(warnsPath)
+            ? JSON.parse(fs.readFileSync(warnsPath))
+            : {};
+
           warns[senderClean] = (warns[senderClean] || 0) + 1;
 
           if (warns[senderClean] >= 4) {
             delete warns[senderClean];
-            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
+            fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
 
             await sock.sendMessage(chatId, {
-              text: `🔞 @${sender} ha sido eliminado por enviar contenido explícito *4 veces consecutivas*.`,
+              text: `🔞 @${sender} fue eliminado por enviar contenido explícito 4 veces.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
 
             await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
           } else {
-            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
+            fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
             await sock.sendMessage(chatId, {
-              text: `⚠️ @${sender}, este contenido fue detectado como xxx +🔞. Advertencia ${warns[senderClean]}/4.`,
+              text: `⚠️ @${sender}, este contenido fue detectado como +18. Advertencia ${warns[senderClean]}/4.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
           }
