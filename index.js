@@ -470,7 +470,7 @@ try {
     if (media) {
       const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
       const fs = require("fs");
-      const NyckelChecker = require("./nsfw.js"); // Ruta corregida ✅
+      const NyckelChecker = require("./nsfw"); // Ruta corregida ✅
 
       const stream = await downloadContentFromMessage(media, type === "stickerMessage" ? "sticker" : "image");
       let buffer = Buffer.alloc(0);
