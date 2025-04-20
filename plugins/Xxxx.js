@@ -1,7 +1,9 @@
+const fs = require("fs");
+const path = require("path");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const axios = require("axios");
 const cheerio = require("cheerio");
-const { Blob, FormData } = require("formdata-node");
+const FormData = require("form-data");
 
 const handler = async (msg, { conn }) => {
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -22,74 +24,58 @@ const handler = async (msg, { conn }) => {
 
   try {
     const stream = await downloadContentFromMessage(media, type);
-    let buffer = Buffer.alloc(0);
-    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+    const tmpFile = `./tmp_${Date.now()}.png`;
+    const write = fs.createWriteStream(tmpFile);
 
-    // Clase local para analizar NSFW con Nyckel
-    class NyckelChecker {
-      constructor() {
-        this.creator = "Deus";
-        this.base = "https://www.nyckel.com";
-        this.invokeEndpoint = "/v1/functions";
-        this.identifierPath = "/pretrained-classifiers/nsfw-identifier";
-        this.headers = {
-          authority: "www.nyckel.com",
-          origin: "https://www.nyckel.com",
-          referer: "https://www.nyckel.com/pretrained-classifiers/nsfw-identifier/",
-          "user-agent": "Postify/1.0.0",
+    for await (const chunk of stream) write.write(chunk);
+    write.end();
+
+    await new Promise((res) => write.on("finish", res));
+
+    // Obtener function ID de Nyckel
+    const getFunctionId = async () => {
+      const res = await axios.get("https://www.nyckel.com/pretrained-classifiers/nsfw-identifier");
+      const $ = cheerio.load(res.data);
+      const script = $('script[src*="embed-image.js"]').attr("src");
+      return script?.match(/[?&]id=([^&]+)/)?.[1];
+    };
+
+    const fid = await getFunctionId();
+    if (!fid) throw new Error("No se pudo obtener el ID de función de Nyckel.");
+
+    // Subir imagen
+    const form = new FormData();
+    form.append("file", fs.createReadStream(tmpFile), "image.png");
+
+    const response = await axios.post(
+      `https://www.nyckel.com/v1/functions/${fid}/invoke`,
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          "user-agent": "Azura Ultra Bot",
           "x-requested-with": "XMLHttpRequest"
-        };
+        }
       }
+    );
 
-      async getFunctionId() {
-        const res = await axios.get(this.base + this.identifierPath, { headers: this.headers });
-        const $ = cheerio.load(res.data);
-        const script = $('script[src*="embed-image.js"]').attr("src");
-        const fid = script?.match(/[?&]id=([^&]+)/)?.[1];
-        if (!fid) throw new Error("Function ID not found.");
-        return fid;
-      }
-
-      async response(buffer) {
-        const functionId = await this.getFunctionId();
-        const blob = new Blob([buffer], { type: "image/png" });
-        const form = new FormData();
-        form.append("file", blob, "image.png");
-
-        const boundary = form._boundary;
-        const invokeUrl = `${this.base}${this.invokeEndpoint}/${functionId}/invoke`;
-
-        const res = await axios.post(invokeUrl, form, {
-          headers: {
-            ...this.headers,
-            "Content-Type": `multipart/form-data; boundary=${boundary}`
-          }
-        });
-
-        const { labelName, confidence } = res.data;
-        const result = {
-          NSFW: labelName.toLowerCase().includes("nsfw"),
-          percentage: (confidence * 100).toFixed(2) + "%",
-          safe: !labelName.toLowerCase().includes("nsfw"),
-          response: labelName.toLowerCase().includes("nsfw")
-            ? "Esta imagen fue detectada como NSFW (contenido explícito)."
-            : "Esta imagen no fue detectada como NSFW."
-        };
-        return result;
-      }
-    }
-
-    const checker = new NyckelChecker();
-    const resultado = await checker.response(buffer);
+    const { labelName, confidence } = response.data;
+    const porcentaje = (confidence * 100).toFixed(2);
+    const esNSFW = labelName.toLowerCase().includes("nsfw");
+    const mensaje = esNSFW
+      ? "🔞 *Esta imagen fue detectada como NSFW.*"
+      : "✅ *La imagen no fue detectada como contenido NSFW.*";
 
     await conn.sendMessage(msg.key.remoteJid, {
-      text: `🔎 *Resultado de análisis NSFW:*\n\n📊 Porcentaje: *${resultado.percentage}*\n🔞 Detectado como NSFW: *${resultado.NSFW ? "Sí" : "No"}*\n📋 Mensaje: ${resultado.response}`,
+      text: `*Resultado:*\n📊 Confianza: *${porcentaje}%*\n${mensaje}`,
       quoted: msg
     });
+
+    fs.unlinkSync(tmpFile);
   } catch (e) {
     console.error("❌ Error en comando xxx:", e);
     await conn.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al analizar la imagen. Intenta nuevamente.",
+      text: "❌ Ocurrió un error al analizar la imagen. Intenta con otra.",
     }, { quoted: msg });
   }
 };
