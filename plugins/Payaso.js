@@ -1,8 +1,6 @@
 const axios = require("axios");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const FormData = require("form-data");
-const fs = require("fs");
-const path = require("path");
 
 const handler = async (msg, { conn }) => {
   const chat = msg.key.remoteJid;
@@ -44,15 +42,17 @@ const handler = async (msg, { conn }) => {
     // Aplicar efecto con la API
     const apiUrl = `https://api.neoxr.eu/api/effect?style=clown&image=${encodeURIComponent(imageUrl)}&apikey=russellxz`;
     const result = await axios.get(apiUrl);
-    const imgUrl = result.data?.data;
-
-    if (!imgUrl) {
+    const finalUrl = result.data?.data;
+    if (!finalUrl) {
       return conn.sendMessage(chat, { text: "❌ No se pudo aplicar el efecto payaso." }, { quoted: msg });
     }
 
-    // Enviar imagen final
+    // Descargar la imagen procesada y enviarla como buffer
+    const imageRes = await axios.get(finalUrl, { responseType: "arraybuffer" });
+    const finalBuffer = Buffer.from(imageRes.data);
+
     await conn.sendMessage(chat, {
-      image: { url: imgUrl },
+      image: finalBuffer,
       caption: "🤡 *Aquí tienes tu versión payasa.*\n\n© azura ultra & cortana"
     }, { quoted: msg });
 
