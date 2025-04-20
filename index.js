@@ -597,6 +597,7 @@ try {
 
   // DETECTAR MENSAJE ELIMINADO
   // === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
+// === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
 if (msg.message?.protocolMessage?.type === 0) {
   const deletedId = msg.message.protocolMessage.key.id;
   const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant;
@@ -606,20 +607,21 @@ if (msg.message?.protocolMessage?.type === 0) {
   const antideleteGroupActive = activos.antidelete?.[chatId] === true;
   const antideletePrivActive = activos.antideletepri === true;
 
+  if (!(isGroup ? antideleteGroupActive : antideletePrivActive)) return;
+
   const jsonPath = isGroup ? './antidelete.json' : './antideletepri.json';
   if (!fs.existsSync(jsonPath)) return;
 
   const data = JSON.parse(fs.readFileSync(jsonPath));
   const deletedData = data[deletedId];
-
   if (!deletedData) return;
 
-  // Verificar que fue el mismo usuario que lo eliminó
+  // Solo si fue el mismo usuario quien borró el mensaje
   if (deletedData.sender !== whoDeleted) return;
 
   const senderNumber = whoDeleted.split("@")[0];
 
-  // No reenviar si lo eliminó un admin del grupo
+  // No reenviar si fue borrado por un admin
   if (isGroup) {
     const meta = await sock.groupMetadata(chatId);
     const isAdmin = meta.participants.find(p => p.id === whoDeleted)?.admin;
@@ -627,18 +629,36 @@ if (msg.message?.protocolMessage?.type === 0) {
   }
 
   if (deletedData.media) {
-    await sock.sendMessage(chatId, {
-      [deletedData.type.replace("Message", "")]: Buffer.from(deletedData.media, "base64"),
-      mimetype: deletedData.mimetype,
-      caption: `📦 Mensaje eliminado por @${senderNumber}`,
-      mentions: [whoDeleted]
-    }, { quoted: msg });
-  } else {
+    const mimetype = deletedData.mimetype || 'application/octet-stream';
+    const mediaBuffer = Buffer.from(deletedData.media, "base64");
+
+    const type = deletedData.type.replace("Message", "");
+    const sendOpts = { quoted: msg };
+
+    sendOpts[type] = mediaBuffer;
+    sendOpts.mimetype = mimetype;
+
+    if (type === "sticker") {
+      const sent = await sock.sendMessage(chatId, sendOpts);
+      await sock.sendMessage(chatId, {
+        text: `📌 El sticker fue eliminado por @${senderNumber}`,
+        mentions: [whoDeleted],
+        quoted: sent
+      });
+    } else {
+      sendOpts.caption = `📦 Mensaje eliminado por @${senderNumber}`;
+      sendOpts.mentions = [whoDeleted];
+      await sock.sendMessage(chatId, sendOpts, { quoted: msg });
+    }
+
+  } else if (deletedData.text) {
     await sock.sendMessage(chatId, {
       text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
       mentions: [whoDeleted]
     }, { quoted: msg });
   }
+}
+// === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
 }
 // === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
 } catch (e) {
