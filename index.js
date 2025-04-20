@@ -556,21 +556,6 @@ try {
     const content = msg.message[type];
     const idMsg = msg.key.id;
     const senderId = msg.key.participant || msg.key.remoteJid;
-    const senderClean = (senderId || '').replace(/[^0-9]/g, '');
-    const botNumber = sock.user.id.split(':')[0];
-    const isFromMe = msg.key.fromMe;
-
-    // Si el mensaje viene del bot, de un admin o del owner, no lo guardamos
-    if (isFromMe) return;
-
-    // En grupo, ignorar admins y owner
-    if (isGroup) {
-      const metadata = await sock.groupMetadata(chatId);
-      const participante = metadata.participants.find(p => p.id === senderId);
-      const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
-      const isOwner = global.owner.some(([id]) => id === senderClean);
-      if (isAdmin || isOwner) return;
-    }
 
     const guardado = {
       chatId,
@@ -609,13 +594,14 @@ try {
   console.error("❌ Error al guardar mensaje antidelete:", e);
 }
 // === FIN GUARDADO ANTIDELETE ===
+
+
 // === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
 if (msg.message?.protocolMessage?.type === 0) {
   try {
     const deletedId = msg.message.protocolMessage.key.id;
     const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant || msg.key.remoteJid;
     const isGroup = chatId.endsWith('@g.us');
-    const botNumber = sock.user.id.split(":")[0];
 
     const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
     const activos2 = fs.existsSync('./activos2.json') ? JSON.parse(fs.readFileSync('./activos2.json', 'utf-8')) : {};
@@ -632,29 +618,26 @@ if (msg.message?.protocolMessage?.type === 0) {
 
     const senderClean = (deletedData.sender || '').replace(/[^0-9]/g, '');
     const whoDeletedClean = (whoDeleted || '').replace(/[^0-9]/g, '');
+    if (senderClean !== whoDeletedClean) return;
 
-    if (whoDeletedClean === botNumber || senderClean !== whoDeletedClean) return;
-
-    // Ignorar si quien borró el mensaje es admin o owner
-    const isOwner = global.owner.some(([id]) => id === senderClean);
-    if (isOwner) return;
+    const senderNumber = whoDeletedClean;
 
     if (isGroup) {
       const meta = await sock.groupMetadata(chatId);
-      const isAdmin = meta.participants.find(p => p.id === `${senderClean}@s.whatsapp.net`)?.admin;
+      const isAdmin = meta.participants.find(p => p.id === `${senderNumber}@s.whatsapp.net`)?.admin;
       if (isAdmin) return;
     }
-
-    const senderNumber = senderClean;
-    const mentionTag = [`${senderNumber}@s.whatsapp.net`];
 
     if (deletedData.media) {
       const mimetype = deletedData.mimetype || 'application/octet-stream';
       const buffer = Buffer.from(deletedData.media, "base64");
       const type = deletedData.type.replace("Message", "");
       const sendOpts = { quoted: msg };
+
       sendOpts[type] = buffer;
       sendOpts.mimetype = mimetype;
+
+      const mentionTag = [`${senderNumber}@s.whatsapp.net`];
 
       if (type === "sticker") {
         const sent = await sock.sendMessage(chatId, sendOpts);
@@ -678,7 +661,7 @@ if (msg.message?.protocolMessage?.type === 0) {
     } else if (deletedData.text) {
       await sock.sendMessage(chatId, {
         text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
-        mentions: mentionTag
+        mentions: [`${senderNumber}@s.whatsapp.net`]
       }, { quoted: msg });
     }
   } catch (err) {
@@ -698,7 +681,7 @@ setInterval(() => {
     }
   }
 }, 1000 * 60 * 45);
-// === FIN LIMPIEZA ===    
+// === FIN LIMPIEZA ===
     
     //restringir comandos
     try {
