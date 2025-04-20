@@ -540,26 +540,21 @@ try {
   console.error("❌ Error en lógica antiporno:", e);
 }
 // === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
-// === INICIO LÓGICA ANTIDELETE BOT PRINCIPAL ===
+// === INICIO GUARDADO ANTIDELETE ===
 try {
-  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
+  const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
   const isGroup = chatId.endsWith('@g.us');
   const isAntideletePriv = activos.antideletepri === true;
   const isAntideleteGroup = activos.antidelete?.[chatId] === true;
+  const filePath = isGroup ? './antidelete.json' : './antideletepri.json';
 
-  const archivoAntidelete = isGroup ? './antidelete.json' : './antideletepri.json';
-  if (!fs.existsSync(archivoAntidelete)) {
-    fs.writeFileSync(archivoAntidelete, JSON.stringify({}, null, 2));
-  }
+  if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
+    if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
 
-  const antideleteData = JSON.parse(fs.readFileSync(archivoAntidelete, 'utf-8'));
-
-  // GUARDAR MENSAJES
-  if (!fromMe && ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv))) {
-    const idMsg = msg.key.id;
-    const senderId = msg.key.participant || msg.key.remoteJid;
     const type = Object.keys(msg.message || {})[0];
     const content = msg.message[type];
+    const idMsg = msg.key.id;
+    const senderId = msg.key.participant || msg.key.remoteJid;
 
     const guardado = {
       chatId,
@@ -576,110 +571,96 @@ try {
       guardado.mimetype = data.mimetype;
     };
 
-    if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
-      await saveBase64(type.replace('Message', ''), content);
+    if (msg.message?.viewOnceMessageV2) {
+      const innerMsg = msg.message.viewOnceMessageV2.message;
+      const viewType = Object.keys(innerMsg)[0];
+      const viewContent = innerMsg[viewType];
+      await saveBase64(viewType.replace("Message", ""), viewContent);
+      guardado.type = viewType;
+    } else if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
+      const mediaType = type.replace('Message', '');
+      await saveBase64(mediaType, content);
     } else if (type === 'conversation' || type === 'extendedTextMessage') {
       guardado.text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-    } else if (
-      content?.viewOnce &&
-      (content.imageMessage || content.videoMessage || content.audioMessage)
-    ) {
-      const innerType = content.imageMessage ? "image" : content.videoMessage ? "video" : "audio";
-      const mediaData = content[innerType + "Message"];
-      guardado.type = innerType + "Message";
-      await saveBase64(innerType, mediaData);
-      guardado.mimetype = mediaData.mimetype;
     }
 
-    antideleteData[idMsg] = guardado;
-    fs.writeFileSync(archivoAntidelete, JSON.stringify(antideleteData, null, 2));
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    data[idMsg] = guardado;
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
   }
-
-  // DETECTAR MENSAJE ELIMINADO
-  // === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
+} catch (e) {
+  console.error("❌ Error al guardar mensaje antidelete:", e);
+}
+// === FIN GUARDADO ANTIDELETE ===
 // === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
 if (msg.message?.protocolMessage?.type === 0) {
-  const deletedId = msg.message.protocolMessage.key.id;
-  const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant;
-  const isGroup = chatId.endsWith('@g.us');
+  try {
+    const deletedId = msg.message.protocolMessage.key.id;
+    const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant;
+    const isGroup = chatId.endsWith('@g.us');
 
-  const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
-  const antideleteGroupActive = activos.antidelete?.[chatId] === true;
-  const antideletePrivActive = activos.antideletepri === true;
+    const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
+    const isAntideleteGroup = activos.antidelete?.[chatId] === true;
+    const isAntideletePriv = activos.antideletepri === true;
+    const filePath = isGroup ? './antidelete.json' : './antideletepri.json';
 
-  if (!(isGroup ? antideleteGroupActive : antideletePrivActive)) return;
+    if (!(isGroup ? isAntideleteGroup : isAntideletePriv)) return;
+    if (!fs.existsSync(filePath)) return;
 
-  const jsonPath = isGroup ? './antidelete.json' : './antideletepri.json';
-  if (!fs.existsSync(jsonPath)) return;
+    const data = JSON.parse(fs.readFileSync(filePath));
+    const deletedData = data[deletedId];
+    if (!deletedData || deletedData.sender !== whoDeleted) return;
 
-  const data = JSON.parse(fs.readFileSync(jsonPath));
-  const deletedData = data[deletedId];
-  if (!deletedData) return;
+    const senderNumber = whoDeleted.split("@")[0];
 
-  // Solo si fue el mismo usuario quien borró el mensaje
-  if (deletedData.sender !== whoDeleted) return;
+    if (isGroup) {
+      const meta = await sock.groupMetadata(chatId);
+      const isAdmin = meta.participants.find(p => p.id === whoDeleted)?.admin;
+      if (isAdmin) return;
+    }
 
-  const senderNumber = whoDeleted.split("@")[0];
+    if (deletedData.media) {
+      const mimetype = deletedData.mimetype || 'application/octet-stream';
+      const buffer = Buffer.from(deletedData.media, "base64");
+      const type = deletedData.type.replace("Message", "");
+      const sendOpts = { quoted: msg };
 
-  // No reenviar si fue borrado por un admin
-  if (isGroup) {
-    const meta = await sock.groupMetadata(chatId);
-    const isAdmin = meta.participants.find(p => p.id === whoDeleted)?.admin;
-    if (isAdmin) return;
-  }
+      sendOpts[type] = buffer;
+      sendOpts.mimetype = mimetype;
 
-  if (deletedData.media) {
-    const mimetype = deletedData.mimetype || 'application/octet-stream';
-    const mediaBuffer = Buffer.from(deletedData.media, "base64");
-
-    const type = deletedData.type.replace("Message", "");
-    const sendOpts = { quoted: msg };
-
-    sendOpts[type] = mediaBuffer;
-    sendOpts.mimetype = mimetype;
-
-    if (type === "sticker") {
-      const sent = await sock.sendMessage(chatId, sendOpts);
+      if (type === "sticker") {
+        const sent = await sock.sendMessage(chatId, sendOpts);
+        await sock.sendMessage(chatId, {
+          text: `📌 El sticker fue eliminado por @${senderNumber}`,
+          mentions: [whoDeleted],
+          quoted: sent
+        });
+      } else {
+        sendOpts.caption = `📦 Mensaje eliminado por @${senderNumber}`;
+        sendOpts.mentions = [whoDeleted];
+        await sock.sendMessage(chatId, sendOpts, { quoted: msg });
+      }
+    } else if (deletedData.text) {
       await sock.sendMessage(chatId, {
-        text: `📌 El sticker fue eliminado por @${senderNumber}`,
-        mentions: [whoDeleted],
-        quoted: sent
-      });
-    } else {
-      sendOpts.caption = `📦 Mensaje eliminado por @${senderNumber}`;
-      sendOpts.mentions = [whoDeleted];
-      await sock.sendMessage(chatId, sendOpts, { quoted: msg });
+        text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
+        mentions: [whoDeleted]
+      }, { quoted: msg });
     }
-
-  } else if (deletedData.text) {
-    await sock.sendMessage(chatId, {
-      text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
-      mentions: [whoDeleted]
-    }, { quoted: msg });
+  } catch (err) {
+    console.error("❌ Error en lógica antidelete:", err);
   }
 }
 // === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
-}
-// === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
-} catch (e) {
-  console.error("❌ Error en lógica antidelete:", e);
-}
-// === FIN LÓGICA ANTIDELETE BOT PRINCIPAL ===
-
-// ELIMINAR MENSAJES GUARDADOS CADA 45 MINUTOS
 setInterval(() => {
-  const now = Date.now();
-  const nuevaData = {};
-  for (const [key, value] of Object.entries(antideleteData)) {
-    if (now - value.timestamp < 1000 * 60 * 45) {
-      nuevaData[key] = value;
+  const cleanFiles = ['./antidelete.json', './antideletepri.json'];
+  for (const file of cleanFiles) {
+    if (fs.existsSync(file)) {
+      fs.writeFileSync(file, JSON.stringify({}, null, 2));
+      console.log(`🧹 Archivo ${file} limpiado automáticamente.`);
     }
   }
-  antideleteData = nuevaData;
-  fs.writeFileSync(antideletePath, JSON.stringify(nuevaData, null, 2));
-}, 1000 * 60 * 45);
-// === FIN LÓGICA ANTIDELETE ===
-
+}, 1000 * 60 * 45); // Cada 45 minutos
+    
     
     //restringir comandos
     try {
