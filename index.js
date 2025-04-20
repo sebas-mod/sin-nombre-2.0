@@ -453,7 +453,6 @@ try {
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 
-    
 // === INICIO LÓGICA ANTIPORNO BOT PRINCIPAL ===
 try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
@@ -471,7 +470,7 @@ try {
     if (media) {
       const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
       const fs = require("fs");
-      const NyckelChecker = require("./nsfw"); // << Aquí el nuevo módulo en raíz
+      const NyckelChecker = require("./nsfw.js"); // Ruta corregida ✅
 
       const stream = await downloadContentFromMessage(media, type === "stickerMessage" ? "sticker" : "image");
       let buffer = Buffer.alloc(0);
