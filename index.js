@@ -554,10 +554,6 @@ try {
 
     const type = Object.keys(msg.message || {})[0];
     const content = msg.message[type];
-
-    // Ignorar mensajes de una sola vista
-    if (msg.message?.viewOnceMessage || msg.message?.viewOnceMessageV2) return;
-
     const idMsg = msg.key.id;
     const senderId = msg.key.participant || msg.key.remoteJid;
 
@@ -576,7 +572,14 @@ try {
       guardado.mimetype = data.mimetype;
     };
 
-    if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
+    if (msg.message?.viewOnceMessageV2) {
+      const inner = msg.message.viewOnceMessageV2.message;
+      const viewType = Object.keys(inner)[0];
+      const viewData = inner[viewType];
+      const mediaType = viewType.replace("Message", "");
+      guardado.type = viewType;
+      await saveBase64(mediaType, viewData);
+    } else if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
       const mediaType = type.replace('Message', '');
       await saveBase64(mediaType, content);
     } else if (type === 'conversation' || type === 'extendedTextMessage') {
