@@ -458,26 +458,31 @@ try {
 try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
   const antipornoActivo = activos.antiporno?.[chatId];
+
   if (isGroup && antipornoActivo && !fromMe) {
-    const type = Object.keys(msg.message)[0];
+    const message = msg.message;
+    const type = Object.keys(message)[0];
     const media = (
-      msg.message.imageMessage ||
-      msg.message.stickerMessage ||
+      message.imageMessage ||
+      message.stickerMessage ||
       null
     );
 
     if (media) {
       const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
-      const NyckelChecker = require("./lib/scrape/nsfw");
-      const checker = new NyckelChecker();
+      const fs = require("fs");
+      const NyckelChecker = require("./nsfw"); // << Aquí el nuevo módulo en raíz
 
       const stream = await downloadContentFromMessage(media, type === "stickerMessage" ? "sticker" : "image");
       let buffer = Buffer.alloc(0);
-      for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
 
-      const result = await checker.response(buffer);
+      const nsfw = new NyckelChecker();
+      const result = await nsfw.response(buffer);
 
-      if (result.status && result.result?.NSFW) {
+      if (result?.status && result.result?.NSFW === true) {
         const senderClean = sender.replace(/[^0-9]/g, "");
         const isOwner = global.owner.some(([id]) => id === senderClean);
 
@@ -486,29 +491,31 @@ try {
         const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
         if (!isOwner && !isAdmin) {
+          // Eliminar contenido
           await sock.sendMessage(chatId, { delete: msg.key });
 
-          const warnsPath = "./warns.json";
-          const warns = fs.existsSync(warnsPath)
-            ? JSON.parse(fs.readFileSync(warnsPath))
-            : {};
-
+          // Cargar archivo de advertencias
+          const warnPath = "./warns.json";
+          if (!fs.existsSync(warnPath)) {
+            fs.writeFileSync(warnPath, JSON.stringify({}));
+          }
+          const warns = JSON.parse(fs.readFileSync(warnPath, "utf-8"));
           warns[senderClean] = (warns[senderClean] || 0) + 1;
 
           if (warns[senderClean] >= 4) {
             delete warns[senderClean];
-            fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
+            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
 
             await sock.sendMessage(chatId, {
-              text: `🔞 @${sender} fue eliminado por enviar contenido explícito 4 veces.`,
+              text: `🔞 @${sender} ha sido eliminado por enviar contenido explícito *4 veces consecutivas*.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
 
             await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
           } else {
-            fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
+            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
             await sock.sendMessage(chatId, {
-              text: `⚠️ @${sender}, este contenido fue detectado como +18. Advertencia ${warns[senderClean]}/4.`,
+              text: `⚠️ @${sender}, este contenido fue detectado como +18.\nAdvertencia ${warns[senderClean]}/4.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
           }
@@ -519,7 +526,7 @@ try {
 } catch (e) {
   console.error("❌ Error en lógica antiporno:", e);
 }
-// === FIN LÓGICA ANTIPORNO BOT PRINCIPAl
+// === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
 // === INICIO GUARDADO ANTIDELETE ===
 try {
   const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
