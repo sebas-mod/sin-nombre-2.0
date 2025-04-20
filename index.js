@@ -528,7 +528,7 @@ try {
           } else {
             fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
             await sock.sendMessage(chatId, {
-              text: `⚠️ @${sender}, este contenido fue detectado como NSFW. Advertencia ${warns[senderClean]}/4.`,
+              text: `⚠️ @${sender}, este contenido fue detectado como xxx +🔞. Advertencia ${warns[senderClean]}/4.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
           }
