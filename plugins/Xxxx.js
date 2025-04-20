@@ -33,9 +33,8 @@ class Checker {
 
   response = async (buffer) => {
     const functionData = await this.#getFunctionId();
-    if (!functionData.status) {
-      return { creator: this.creator, status: false, msg: functionData.error };
-    }
+    if (!functionData.status) return { creator: this.creator, status: false, msg: functionData.error };
+
     try {
       const blob = new Blob([buffer], { type: "image/png" });
       const form = new FormData();
@@ -51,36 +50,25 @@ class Checker {
       });
 
       let { labelName, confidence } = response.data;
-      if (confidence > .97) {
-        const cap = Math.random() * (.992 - .97) + .97;
+      if (confidence > 0.97) {
+        const cap = Math.random() * (0.992 - 0.97) + 0.97;
         confidence = Math.min(confidence, cap);
       }
 
       const percentage = (confidence * 100).toFixed(2) + "%";
 
-      if (labelName === "Porn") {
-        return {
-          creator: this.creator,
-          status: true,
-          result: {
-            NSFW: true,
-            percentage,
-            safe: false,
-            response: "This image was detected as NSFW. Please be careful when sharing."
-          }
-        };
-      } else {
-        return {
-          creator: this.creator,
-          status: true,
-          result: {
-            NSFW: false,
-            percentage,
-            safe: true,
-            response: "This image was not detected as NSFW."
-          }
-        };
-      }
+      return {
+        creator: this.creator,
+        status: true,
+        result: {
+          NSFW: labelName === "Porn",
+          percentage,
+          safe: labelName !== "Porn",
+          response: labelName === "Porn"
+            ? "This image was detected as NSFW. Please be careful when sharing."
+            : "This image was not detected as NSFW."
+        }
+      };
     } catch (err) {
       return { creator: this.creator, status: false, msg: err.message };
     }
@@ -88,38 +76,40 @@ class Checker {
 }
 
 const handler = async (msg, { conn }) => {
-  const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   const sender = msg.key.participant || msg.key.remoteJid;
 
   await conn.sendMessage(msg.key.remoteJid, {
     react: { text: "🔍", key: msg.key }
   });
 
-  if (!quotedMsg || (!quotedMsg.imageMessage && !quotedMsg.stickerMessage)) {
+  if (!quoted || (!quoted.imageMessage && !quoted.stickerMessage)) {
     return conn.sendMessage(msg.key.remoteJid, {
-      text: "❌ *Responde a una imagen o sticker para analizar contenido NSFW (xxx).*"
+      text: "❌ *Responde a una imagen o sticker para analizar contenido NSFW.*"
     }, { quoted: msg });
   }
 
-  const media = quotedMsg.imageMessage || quotedMsg.stickerMessage;
-  const mediaType = quotedMsg.imageMessage ? "image" : "sticker";
+  const media = quoted.imageMessage || quoted.stickerMessage;
+  const mediaType = quoted.imageMessage ? "image" : "sticker";
 
   try {
     const stream = await downloadContentFromMessage(media, mediaType);
     let buffer = Buffer.alloc(0);
-    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
 
     const checker = new Checker();
     const result = await checker.response(buffer);
 
-    if (!result?.status) throw new Error("Error al analizar la imagen");
+    if (!result?.status) throw new Error("No se pudo analizar la imagen.");
 
     const status = result.result?.NSFW ? "🔞 *NSFW detectado*" : "✅ *Imagen segura*";
     const porcentaje = result.result?.percentage || "0%";
-    const response = result.result?.response || "";
+    const respuesta = result.result?.response || "";
 
     await conn.sendMessage(msg.key.remoteJid, {
-      text: `${status}\n📊 *Confianza:* ${porcentaje}\n\n${response}`,
+      text: `${status}\n📊 *Confianza:* ${porcentaje}\n\n${respuesta}`,
       quoted: msg
     });
 
