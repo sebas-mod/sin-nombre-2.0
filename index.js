@@ -1138,7 +1138,6 @@ if (isGroup && !isFromSelf) {
       const isOwner = global.owner.some(([id]) => id === senderNum);
 
       if (!isAdmin && !isOwner && !isBot) {
-        console.log(`⛔ ${senderNum} ignorado por MODOADMINS en ${from}`);
         return;
       }
     }
