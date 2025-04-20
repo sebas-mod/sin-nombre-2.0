@@ -556,8 +556,9 @@ try {
     const content = msg.message[type];
     const idMsg = msg.key.id;
 
-    const isFromMe = msg.key.fromMe;
-    const senderId = isFromMe ? sock.user.id : msg.key.remoteJid;
+    // CAMBIO: Detectar correctamente el senderId incluso en privado
+    const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net";
+    const senderId = msg.key.participant || (msg.key.fromMe ? botNumber : msg.key.remoteJid);
 
     const guardado = {
       chatId,
