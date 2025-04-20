@@ -507,33 +507,34 @@ try {
         const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
         if (!isOwner && !isAdmin) {
-          // Eliminar el contenido
+          // Eliminar contenido
           await sock.sendMessage(chatId, { delete: msg.key });
 
-          // Cargar o crear archivo de advertencias
-          const warnsPath = "./warns.json";
-          if (!fs.existsSync(warnsPath)) fs.writeFileSync(warnsPath, "{}");
-          const warns = JSON.parse(fs.readFileSync(warnsPath, "utf-8"));
-
-          // Inicializar advertencia si no existe
-          if (!warns[senderClean]) warns[senderClean] = 0;
-          warns[senderClean]++;
+          // Cargar archivo de advertencias
+          const warnPath = "./warns.json";
+          if (!fs.existsSync(warnPath)) {
+            fs.writeFileSync(warnPath, JSON.stringify({}));
+          }
+          const warns = JSON.parse(fs.readFileSync(warnPath, "utf-8"));
+          warns[senderClean] = (warns[senderClean] || 0) + 1;
 
           if (warns[senderClean] >= 4) {
+            delete warns[senderClean];
+            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
+
             await sock.sendMessage(chatId, {
-              text: `🚫 @${sender} ha sido eliminado por enviar *contenido inapropiado* repetidamente.`,
+              text: `🔞 @${sender} ha sido eliminado por enviar contenido explícito *4 veces consecutivas*.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
+
             await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
-            delete warns[senderClean]; // reset contador
           } else {
+            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
             await sock.sendMessage(chatId, {
-              text: `🔞 @${sender} ha enviado contenido explícito.\n⚠️ Advertencia ${warns[senderClean]}/3. A la cuarta será expulsado.`,
+              text: `⚠️ @${sender}, este contenido fue detectado como NSFW. Advertencia ${warns[senderClean]}/4.`,
               mentions: [msg.key.participant || msg.key.remoteJid]
             });
           }
-
-          fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
         }
       }
     }
