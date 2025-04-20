@@ -555,7 +555,9 @@ try {
     const type = Object.keys(msg.message || {})[0];
     const content = msg.message[type];
     const idMsg = msg.key.id;
-    const senderId = msg.key.participant || msg.key.remoteJid;
+
+    const isFromMe = msg.key.fromMe;
+    const senderId = isFromMe ? sock.user.id : msg.key.remoteJid;
 
     const guardado = {
       chatId,
@@ -594,8 +596,6 @@ try {
   console.error("❌ Error al guardar mensaje antidelete:", e);
 }
 // === FIN GUARDADO ANTIDELETE ===
-
-
 // === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
 if (msg.message?.protocolMessage?.type === 0) {
   try {
