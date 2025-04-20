@@ -596,40 +596,51 @@ try {
   }
 
   // DETECTAR MENSAJE ELIMINADO
-  if (msg.message?.protocolMessage?.type === 0) {
-    const deletedId = msg.message.protocolMessage.key.id;
-    const deletedFrom = msg.message.protocolMessage.key.participant;
-    const whoDeleted = msg.key.participant;
+  // === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
+if (msg.message?.protocolMessage?.type === 0) {
+  const deletedId = msg.message.protocolMessage.key.id;
+  const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant;
+  const isGroup = chatId.endsWith('@g.us');
 
-    const isAntidelete = (isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv);
+  const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
+  const antideleteGroupActive = activos.antidelete?.[chatId] === true;
+  const antideletePrivActive = activos.antideletepri === true;
 
-    if (isAntidelete && deletedFrom === whoDeleted) {
-      const deletedData = antideleteData[deletedId];
-      if (!deletedData) return;
+  const jsonPath = isGroup ? './antidelete.json' : './antideletepri.json';
+  if (!fs.existsSync(jsonPath)) return;
 
-      const senderNumber = whoDeleted.split("@")[0];
+  const data = JSON.parse(fs.readFileSync(jsonPath));
+  const deletedData = data[deletedId];
 
-      if (isGroup) {
-        const meta = await sock.groupMetadata(chatId);
-        const isAdmin = meta.participants.find(p => p.id === whoDeleted)?.admin;
-        if (isAdmin) return; // No reenviar si lo eliminó un admin
-      }
+  if (!deletedData) return;
 
-      if (deletedData.media) {
-        await sock.sendMessage(chatId, {
-          [deletedData.type.replace("Message", "")]: Buffer.from(deletedData.media, "base64"),
-          mimetype: deletedData.mimetype,
-          caption: `📦 Mensaje eliminado por @${senderNumber}`,
-          mentions: [whoDeleted]
-        }, { quoted: msg });
-      } else {
-        await sock.sendMessage(chatId, {
-          text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
-          mentions: [whoDeleted]
-        }, { quoted: msg });
-      }
-    }
+  // Verificar que fue el mismo usuario que lo eliminó
+  if (deletedData.sender !== whoDeleted) return;
+
+  const senderNumber = whoDeleted.split("@")[0];
+
+  // No reenviar si lo eliminó un admin del grupo
+  if (isGroup) {
+    const meta = await sock.groupMetadata(chatId);
+    const isAdmin = meta.participants.find(p => p.id === whoDeleted)?.admin;
+    if (isAdmin) return;
   }
+
+  if (deletedData.media) {
+    await sock.sendMessage(chatId, {
+      [deletedData.type.replace("Message", "")]: Buffer.from(deletedData.media, "base64"),
+      mimetype: deletedData.mimetype,
+      caption: `📦 Mensaje eliminado por @${senderNumber}`,
+      mentions: [whoDeleted]
+    }, { quoted: msg });
+  } else {
+    await sock.sendMessage(chatId, {
+      text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
+      mentions: [whoDeleted]
+    }, { quoted: msg });
+  }
+}
+// === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
 } catch (e) {
   console.error("❌ Error en lógica antidelete:", e);
 }
