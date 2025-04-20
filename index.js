@@ -556,34 +556,21 @@ try {
     const content = msg.message[type];
     const idMsg = msg.key.id;
     const senderId = msg.key.participant || msg.key.remoteJid;
+    const senderClean = (senderId || '').replace(/[^0-9]/g, '');
+    const botNumber = sock.user.id.split(':')[0];
+    const isFromMe = msg.key.fromMe;
 
-    const fromMe = msg.key.fromMe;
-    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-    const isCommand = text.startsWith(global.prefix || ".");
+    // Si el mensaje viene del bot, de un admin o del owner, no lo guardamos
+    if (isFromMe) return;
 
-    // Si es del bot y no es comando, no guardar
-    if (fromMe && !isCommand) return;
-
-    const senderClean = senderId.replace(/[^0-9]/g, '');
-    const isOwner = global.owner.some(([id]) => id === senderClean);
-
-    // Evitar guardar mensajes de admin/owner, pero permitir que sigan ejecutando comandos
-    let skipSave = false;
-
-    if (!fromMe) {
-      if (isOwner) skipSave = true;
-      if (isGroup) {
-        try {
-          const meta = await sock.groupMetadata(chatId);
-          const isAdmin = meta.participants.find(p => p.id === senderId)?.admin;
-          if (isAdmin) skipSave = true;
-        } catch (e) {
-          console.log("⚠️ No se pudo verificar admin:", e.message);
-        }
-      }
+    // En grupo, ignorar admins y owner
+    if (isGroup) {
+      const metadata = await sock.groupMetadata(chatId);
+      const participante = metadata.participants.find(p => p.id === senderId);
+      const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
+      const isOwner = global.owner.some(([id]) => id === senderClean);
+      if (isAdmin || isOwner) return;
     }
-
-    if (skipSave) return; // Solo salta el guardado, no bloquea el mensaje
 
     const guardado = {
       chatId,
