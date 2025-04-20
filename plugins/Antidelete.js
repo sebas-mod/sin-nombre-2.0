@@ -7,6 +7,7 @@ const handler = async (msg, { conn, args }) => {
   const senderClean = senderId.replace(/[^0-9]/g, "");
   const isOwner = global.owner.some(([id]) => id === senderClean);
   const isGroup = chatId.endsWith("@g.us");
+  const isFromMe = msg.key.fromMe;
 
   if (!isGroup) {
     return conn.sendMessage(chatId, {
@@ -17,9 +18,9 @@ const handler = async (msg, { conn, args }) => {
   const metadata = await conn.groupMetadata(chatId);
   const isAdmin = metadata.participants.find(p => p.id === senderId)?.admin;
 
-  if (!isAdmin && !isOwner) {
+  if (!isAdmin && !isOwner && !isFromMe) {
     return conn.sendMessage(chatId, {
-      text: "🚫 Solo los administradores del grupo o el owner del bot pueden usar este comando."
+      text: "🚫 Solo los administradores del grupo, el owner del bot o el mismo bot pueden usar este comando."
     }, { quoted: msg });
   }
 
