@@ -553,6 +553,10 @@ try {
 
     const type = Object.keys(msg.message || {})[0];
     const content = msg.message[type];
+
+    // Ignorar mensajes de una sola vista
+    if (msg.message?.viewOnceMessage || msg.message?.viewOnceMessageV2) return;
+
     const idMsg = msg.key.id;
     const senderId = msg.key.participant || msg.key.remoteJid;
 
@@ -571,13 +575,7 @@ try {
       guardado.mimetype = data.mimetype;
     };
 
-    if (msg.message?.viewOnceMessageV2) {
-      const innerMsg = msg.message.viewOnceMessageV2.message;
-      const viewType = Object.keys(innerMsg)[0];
-      const viewContent = innerMsg[viewType];
-      await saveBase64(viewType.replace("Message", ""), viewContent);
-      guardado.type = viewType;
-    } else if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
+    if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
       const mediaType = type.replace('Message', '');
       await saveBase64(mediaType, content);
     } else if (type === 'conversation' || type === 'extendedTextMessage') {
@@ -592,6 +590,8 @@ try {
   console.error("❌ Error al guardar mensaje antidelete:", e);
 }
 // === FIN GUARDADO ANTIDELETE ===
+
+
 // === INICIO DETECCIÓN DE MENSAJE ELIMINADO ===
 if (msg.message?.protocolMessage?.type === 0) {
   try {
@@ -651,6 +651,9 @@ if (msg.message?.protocolMessage?.type === 0) {
   }
 }
 // === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
+
+
+// === INICIO LIMPIEZA AUTOMÁTICA CADA 45 MIN ===
 setInterval(() => {
   const cleanFiles = ['./antidelete.json', './antideletepri.json'];
   for (const file of cleanFiles) {
@@ -660,6 +663,7 @@ setInterval(() => {
     }
   }
 }, 1000 * 60 * 45); // Cada 45 minutos
+// === FIN LIMPIEZA ===
     
     
     //restringir comandos
