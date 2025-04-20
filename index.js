@@ -457,6 +457,8 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+
+    
 // === INICIO LÓGICA ANTIPORNO BOT PRINCIPAL ===
 try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
@@ -543,6 +545,106 @@ try {
   console.error("❌ Error en lógica antiporno:", e);
 }
 // === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
+// === INICIO LÓGICA ANTIDELETE ===
+const antideletePath = './antidelete.json';
+if (!fs.existsSync(antideletePath)) {
+  fs.writeFileSync(antideletePath, JSON.stringify({}, null, 2));
+}
+
+let antideleteData = JSON.parse(fs.readFileSync(antideletePath, 'utf-8'));
+
+// GUARDAR MENSAJES
+if (!msg.key.fromMe) {
+  const isGroup = chatId.endsWith('@g.us');
+  const isAntideletePriv = activos.antideletepri === true;
+  const isAntideleteGroup = activos.antidelete?.[chatId] === true;
+
+  if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
+    const idMsg = msg.key.id;
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const type = Object.keys(msg.message || {})[0];
+
+    const guardado = {
+      chatId,
+      sender: senderId,
+      type,
+      timestamp: Date.now()
+    };
+
+    const saveBase64 = async (mediaType, data) => {
+      const stream = await downloadContentFromMessage(data, mediaType);
+      let buffer = Buffer.alloc(0);
+      for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+      guardado.media = buffer.toString("base64");
+      guardado.mimetype = data.mimetype;
+    };
+
+    const content = msg.message[type];
+    if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
+      const mediaType = type.replace('Message', '');
+      await saveBase64(mediaType, content);
+    } else if (type === 'conversation' || type === 'extendedTextMessage') {
+      guardado.text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+    }
+
+    antideleteData[idMsg] = guardado;
+    fs.writeFileSync(antideletePath, JSON.stringify(antideleteData, null, 2));
+  }
+}
+
+// DETECTAR MENSAJE ELIMINADO
+if (msg.message?.protocolMessage?.type === 0) {
+  const deletedId = msg.message.protocolMessage.key.id;
+  const deletedFrom = msg.message.protocolMessage.key.participant;
+  const whoDeleted = msg.key.participant;
+
+  const isGroup = chatId.endsWith('@g.us');
+  const isAntideletePriv = activos.antideletepri === true;
+  const isAntideleteGroup = activos.antidelete?.[chatId] === true;
+
+  if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
+    const deletedData = antideleteData[deletedId];
+
+    if (deletedData && deletedData.sender === whoDeleted) {
+      const senderNumber = whoDeleted.split("@")[0];
+
+      if (isGroup) {
+        const meta = await sock.groupMetadata(chatId);
+        const isAdmin = meta.participants.find(p => p.id === senderNumber + "@s.whatsapp.net")?.admin;
+        if (isAdmin) return;
+      }
+
+      if (deletedData.media) {
+        await sock.sendMessage(chatId, {
+          [deletedData.type.replace("Message", "")]: Buffer.from(deletedData.media, "base64"),
+          mimetype: deletedData.mimetype,
+          caption: `📦 Mensaje eliminado por @${senderNumber}`,
+          mentions: [whoDeleted]
+        }, { quoted: msg });
+      } else {
+        await sock.sendMessage(chatId, {
+          text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
+          mentions: [whoDeleted]
+        }, { quoted: msg });
+      }
+    }
+  }
+}
+
+// ELIMINAR MENSAJES GUARDADOS CADA 45 MINUTOS
+setInterval(() => {
+  const now = Date.now();
+  const nuevaData = {};
+  for (const [key, value] of Object.entries(antideleteData)) {
+    if (now - value.timestamp < 1000 * 60 * 45) {
+      nuevaData[key] = value;
+    }
+  }
+  antideleteData = nuevaData;
+  fs.writeFileSync(antideletePath, JSON.stringify(nuevaData, null, 2));
+}, 1000 * 60 * 45);
+// === FIN LÓGICA ANTIDELETE ===
+
     
     //restringir comandos
     try {
