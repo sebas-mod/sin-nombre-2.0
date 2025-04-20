@@ -540,6 +540,20 @@ try {
   console.error("❌ Error en lógica antiporno:", e);
 }
 // === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
+
+
+
+// === INICIO LIMPIEZA AUTOMÁTICA CADA 45 MIN ===
+setInterval(() => {
+  const cleanFiles = ['./antidelete.json', './antideletepri.json'];
+  for (const file of cleanFiles) {
+    if (fs.existsSync(file)) {
+      fs.writeFileSync(file, JSON.stringify({}, null, 2));
+      console.log(`🧹 Archivo ${file} limpiado automáticamente.`);
+    }
+  }
+}, 1000 * 60 * 45);
+// === FIN LIMPIEZA ===
 // === INICIO GUARDADO ANTIDELETE ===
 try {
   const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
@@ -555,14 +569,25 @@ try {
     const type = Object.keys(msg.message || {})[0];
     const content = msg.message[type];
     const idMsg = msg.key.id;
-    const senderId = msg.key.participant || msg.key.remoteJid;
+    const senderJid = msg.key.participant || msg.key.remoteJid;
+    const senderClean = senderJid.replace(/[^0-9]/g, '');
+    const botNumber = sock.user.id.split(":")[0];
+    const isFromMe = msg.key.fromMe;
+    const isOwner = global.owner.some(([id]) => id === senderClean);
 
-    // Ignorar mensajes del bot
-    if (msg.key.fromMe) return;
+    // Ignorar mensajes del bot o del owner
+    if (isFromMe || isOwner) return;
+
+    if (isGroup) {
+      const meta = await sock.groupMetadata(chatId);
+      const participant = meta.participants.find(p => p.id === senderJid);
+      const isAdmin = participant?.admin === 'admin' || participant?.admin === 'superadmin';
+      if (isAdmin) return;
+    }
 
     const guardado = {
       chatId,
-      sender: senderId,
+      sender: senderJid,
       type,
       timestamp: Date.now()
     };
@@ -605,6 +630,7 @@ if (msg.message?.protocolMessage?.type === 0) {
     const deletedId = msg.message.protocolMessage.key.id;
     const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant || msg.key.remoteJid;
     const isGroup = chatId.endsWith('@g.us');
+    const botNumber = sock.user.id.split(":")[0];
 
     const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
     const activos2 = fs.existsSync('./activos2.json') ? JSON.parse(fs.readFileSync('./activos2.json', 'utf-8')) : {};
@@ -622,19 +648,20 @@ if (msg.message?.protocolMessage?.type === 0) {
     const senderClean = (deletedData.sender || '').replace(/[^0-9]/g, '');
     const whoDeletedClean = (whoDeleted || '').replace(/[^0-9]/g, '');
 
-    // ❌ Si el que eliminó fue el mismo bot, no hacer nada
-    const botNumber = sock.user.id.split(':')[0];
-    if (whoDeletedClean === botNumber) return;
+    if (whoDeletedClean === botNumber || senderClean !== whoDeletedClean) return;
 
-    if (senderClean !== whoDeletedClean) return;
-
-    const senderNumber = whoDeletedClean;
+    // Ignorar si quien borró el mensaje es admin o owner
+    const isOwner = global.owner.some(([id]) => id === senderClean);
+    if (isOwner) return;
 
     if (isGroup) {
       const meta = await sock.groupMetadata(chatId);
-      const isAdmin = meta.participants.find(p => p.id === `${senderNumber}@s.whatsapp.net`)?.admin;
+      const isAdmin = meta.participants.find(p => p.id === `${senderClean}@s.whatsapp.net`)?.admin;
       if (isAdmin) return;
     }
+
+    const senderNumber = senderClean;
+    const mentionTag = [`${senderNumber}@s.whatsapp.net`];
 
     if (deletedData.media) {
       const mimetype = deletedData.mimetype || 'application/octet-stream';
@@ -643,7 +670,6 @@ if (msg.message?.protocolMessage?.type === 0) {
       const sendOpts = { quoted: msg };
       sendOpts[type] = buffer;
       sendOpts.mimetype = mimetype;
-      const mentionTag = [`${senderNumber}@s.whatsapp.net`];
 
       if (type === "sticker") {
         const sent = await sock.sendMessage(chatId, sendOpts);
@@ -667,7 +693,7 @@ if (msg.message?.protocolMessage?.type === 0) {
     } else if (deletedData.text) {
       await sock.sendMessage(chatId, {
         text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
-        mentions: [`${senderNumber}@s.whatsapp.net`]
+        mentions: mentionTag
       }, { quoted: msg });
     }
   } catch (err) {
@@ -687,8 +713,7 @@ setInterval(() => {
     }
   }
 }, 1000 * 60 * 45);
-// === FIN LIMPIEZA ===
-    
+// === FIN LIMPIEZA ===    
     
     //restringir comandos
     try {
