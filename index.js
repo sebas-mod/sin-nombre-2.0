@@ -557,6 +557,9 @@ try {
     const idMsg = msg.key.id;
     const senderId = msg.key.participant || msg.key.remoteJid;
 
+    // Ignorar mensajes del bot
+    if (msg.key.fromMe) return;
+
     const guardado = {
       chatId,
       sender: senderId,
@@ -618,6 +621,11 @@ if (msg.message?.protocolMessage?.type === 0) {
 
     const senderClean = (deletedData.sender || '').replace(/[^0-9]/g, '');
     const whoDeletedClean = (whoDeleted || '').replace(/[^0-9]/g, '');
+
+    // Si el que eliminó fue el mismo bot, no hacer nada
+    const botNumber = sock.user.id.split(':')[0];
+    if (whoDeletedClean === botNumber) return;
+
     if (senderClean !== whoDeletedClean) return;
 
     const senderNumber = whoDeletedClean;
@@ -633,10 +641,8 @@ if (msg.message?.protocolMessage?.type === 0) {
       const buffer = Buffer.from(deletedData.media, "base64");
       const type = deletedData.type.replace("Message", "");
       const sendOpts = { quoted: msg };
-
       sendOpts[type] = buffer;
       sendOpts.mimetype = mimetype;
-
       const mentionTag = [`${senderNumber}@s.whatsapp.net`];
 
       if (type === "sticker") {
