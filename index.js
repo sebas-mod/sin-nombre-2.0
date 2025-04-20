@@ -468,7 +468,7 @@ try {
 
     if (media) {
       const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
-      const { default: NyckelChecker } = require("./lib/scrape/nsfw");
+      const NyckelChecker = require("./lib/scrape/nsfw");
       const checker = new NyckelChecker();
 
       const stream = await downloadContentFromMessage(media, type === "stickerMessage" ? "sticker" : "image");
