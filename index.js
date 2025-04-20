@@ -549,13 +549,6 @@ try {
   const isAntideletePriv = activos2.antideletepri === true;
   const filePath = isGroup ? './antidelete.json' : './antideletepri.json';
 
-  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-  const isFromMe = msg.key.fromMe;
-  const isCommand = messageText.startsWith(global.prefix || '.');
-
-  // Evitar guardar mensajes del bot que no sean comandos
-  if (isFromMe && !isCommand) return;
-
   if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
     if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
 
@@ -563,16 +556,29 @@ try {
     const content = msg.message[type];
     const idMsg = msg.key.id;
     const senderId = msg.key.participant || msg.key.remoteJid;
+
+    const fromMe = msg.key.fromMe;
+    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+    const isCommand = text.startsWith(global.prefix || ".");
+
+    // Solo ignorar si es del bot y no es comando
+    if (fromMe && !isCommand) return;
+
     const senderClean = senderId.replace(/[^0-9]/g, '');
     const isOwner = global.owner.some(([id]) => id === senderClean);
 
-    if (isOwner) return;
+    if (!fromMe) {
+      if (isOwner) return;
 
-    if (isGroup) {
-      const meta = await sock.groupMetadata(chatId);
-      const participant = meta.participants.find(p => p.id === senderId);
-      const isAdmin = participant?.admin === 'admin' || participant?.admin === 'superadmin';
-      if (isAdmin) return;
+      if (isGroup) {
+        try {
+          const meta = await sock.groupMetadata(chatId);
+          const isAdmin = meta.participants.find(p => p.id === senderId)?.admin;
+          if (isAdmin) return;
+        } catch (e) {
+          console.log("⚠️ No se pudo verificar admin:", e.message);
+        }
+      }
     }
 
     const guardado = {
