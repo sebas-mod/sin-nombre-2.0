@@ -540,24 +540,26 @@ try {
   console.error("❌ Error en lógica antiporno:", e);
 }
 // === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
-// === INICIO LÓGICA ANTIDELETE ===
-const antideletePath = './antidelete.json';
-if (!fs.existsSync(antideletePath)) {
-  fs.writeFileSync(antideletePath, JSON.stringify({}, null, 2));
-}
-
-let antideleteData = JSON.parse(fs.readFileSync(antideletePath, 'utf-8'));
-
-// GUARDAR MENSAJES
-if (!msg.key.fromMe) {
+// === INICIO LÓGICA ANTIDELETE BOT PRINCIPAL ===
+try {
+  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
   const isGroup = chatId.endsWith('@g.us');
   const isAntideletePriv = activos.antideletepri === true;
   const isAntideleteGroup = activos.antidelete?.[chatId] === true;
 
-  if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
+  const archivoAntidelete = isGroup ? './antidelete.json' : './antideletepri.json';
+  if (!fs.existsSync(archivoAntidelete)) {
+    fs.writeFileSync(archivoAntidelete, JSON.stringify({}, null, 2));
+  }
+
+  const antideleteData = JSON.parse(fs.readFileSync(archivoAntidelete, 'utf-8'));
+
+  // GUARDAR MENSAJES
+  if (!fromMe && ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv))) {
     const idMsg = msg.key.id;
     const senderId = msg.key.participant || msg.key.remoteJid;
     const type = Object.keys(msg.message || {})[0];
+    const content = msg.message[type];
 
     const guardado = {
       chatId,
@@ -574,39 +576,43 @@ if (!msg.key.fromMe) {
       guardado.mimetype = data.mimetype;
     };
 
-    const content = msg.message[type];
     if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
-      const mediaType = type.replace('Message', '');
-      await saveBase64(mediaType, content);
+      await saveBase64(type.replace('Message', ''), content);
     } else if (type === 'conversation' || type === 'extendedTextMessage') {
       guardado.text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+    } else if (
+      content?.viewOnce &&
+      (content.imageMessage || content.videoMessage || content.audioMessage)
+    ) {
+      const innerType = content.imageMessage ? "image" : content.videoMessage ? "video" : "audio";
+      const mediaData = content[innerType + "Message"];
+      guardado.type = innerType + "Message";
+      await saveBase64(innerType, mediaData);
+      guardado.mimetype = mediaData.mimetype;
     }
 
     antideleteData[idMsg] = guardado;
-    fs.writeFileSync(antideletePath, JSON.stringify(antideleteData, null, 2));
+    fs.writeFileSync(archivoAntidelete, JSON.stringify(antideleteData, null, 2));
   }
-}
 
-// DETECTAR MENSAJE ELIMINADO
-if (msg.message?.protocolMessage?.type === 0) {
-  const deletedId = msg.message.protocolMessage.key.id;
-  const deletedFrom = msg.message.protocolMessage.key.participant;
-  const whoDeleted = msg.key.participant;
+  // DETECTAR MENSAJE ELIMINADO
+  if (msg.message?.protocolMessage?.type === 0) {
+    const deletedId = msg.message.protocolMessage.key.id;
+    const deletedFrom = msg.message.protocolMessage.key.participant;
+    const whoDeleted = msg.key.participant;
 
-  const isGroup = chatId.endsWith('@g.us');
-  const isAntideletePriv = activos.antideletepri === true;
-  const isAntideleteGroup = activos.antidelete?.[chatId] === true;
+    const isAntidelete = (isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv);
 
-  if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
-    const deletedData = antideleteData[deletedId];
+    if (isAntidelete && deletedFrom === whoDeleted) {
+      const deletedData = antideleteData[deletedId];
+      if (!deletedData) return;
 
-    if (deletedData && deletedData.sender === whoDeleted) {
       const senderNumber = whoDeleted.split("@")[0];
 
       if (isGroup) {
         const meta = await sock.groupMetadata(chatId);
-        const isAdmin = meta.participants.find(p => p.id === senderNumber + "@s.whatsapp.net")?.admin;
-        if (isAdmin) return;
+        const isAdmin = meta.participants.find(p => p.id === whoDeleted)?.admin;
+        if (isAdmin) return; // No reenviar si lo eliminó un admin
       }
 
       if (deletedData.media) {
@@ -624,7 +630,10 @@ if (msg.message?.protocolMessage?.type === 0) {
       }
     }
   }
+} catch (e) {
+  console.error("❌ Error en lógica antidelete:", e);
 }
+// === FIN LÓGICA ANTIDELETE BOT PRINCIPAL ===
 
 // ELIMINAR MENSAJES GUARDADOS CADA 45 MINUTOS
 setInterval(() => {
