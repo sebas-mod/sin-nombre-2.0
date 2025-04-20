@@ -597,7 +597,7 @@ try {
 if (msg.message?.protocolMessage?.type === 0) {
   try {
     const deletedId = msg.message.protocolMessage.key.id;
-    const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant;
+    const whoDeleted = msg.message.protocolMessage.key.participant || msg.key.participant || msg.key.remoteJid;
     const isGroup = chatId.endsWith('@g.us');
 
     const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
@@ -611,13 +611,18 @@ if (msg.message?.protocolMessage?.type === 0) {
 
     const data = JSON.parse(fs.readFileSync(filePath));
     const deletedData = data[deletedId];
-    if (!deletedData || deletedData.sender !== whoDeleted) return;
+    if (!deletedData) return;
 
-    const senderNumber = whoDeleted.split("@")[0];
+    // Comparar número limpio
+    const senderClean = (deletedData.sender || '').replace(/[^0-9]/g, '');
+    const whoDeletedClean = (whoDeleted || '').replace(/[^0-9]/g, '');
+    if (senderClean !== whoDeletedClean) return;
+
+    const senderNumber = whoDeletedClean;
 
     if (isGroup) {
       const meta = await sock.groupMetadata(chatId);
-      const isAdmin = meta.participants.find(p => p.id === whoDeleted)?.admin;
+      const isAdmin = meta.participants.find(p => p.id === `${senderNumber}@s.whatsapp.net`)?.admin;
       if (isAdmin) return;
     }
 
@@ -634,18 +639,18 @@ if (msg.message?.protocolMessage?.type === 0) {
         const sent = await sock.sendMessage(chatId, sendOpts);
         await sock.sendMessage(chatId, {
           text: `📌 El sticker fue eliminado por @${senderNumber}`,
-          mentions: [whoDeleted],
+          mentions: [`${senderNumber}@s.whatsapp.net`],
           quoted: sent
         });
       } else {
         sendOpts.caption = `📦 Mensaje eliminado por @${senderNumber}`;
-        sendOpts.mentions = [whoDeleted];
+        sendOpts.mentions = [`${senderNumber}@s.whatsapp.net`];
         await sock.sendMessage(chatId, sendOpts, { quoted: msg });
       }
     } else if (deletedData.text) {
       await sock.sendMessage(chatId, {
         text: `📝 *Mensaje eliminado:* ${deletedData.text}\n👤 *Usuario:* @${senderNumber}`,
-        mentions: [whoDeleted]
+        mentions: [`${senderNumber}@s.whatsapp.net`]
       }, { quoted: msg });
     }
   } catch (err) {
@@ -664,7 +669,7 @@ setInterval(() => {
       console.log(`🧹 Archivo ${file} limpiado automáticamente.`);
     }
   }
-}, 1000 * 60 * 45); // Cada 45 minutos
+}, 1000 * 60 * 45);
 // === FIN LIMPIEZA ===
     
     
