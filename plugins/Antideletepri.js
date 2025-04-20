@@ -26,7 +26,7 @@ const handler = async (msg, { conn, args }) => {
     }, { quoted: msg });
   }
 
-  const activosPath = path.resolve("activos.json");
+  const activosPath = path.resolve("activos2.json");
   let activos = {};
   if (fs.existsSync(activosPath)) {
     activos = JSON.parse(fs.readFileSync(activosPath, "utf-8"));
