@@ -457,7 +457,53 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+// === INICIO LÓGICA ANTIPORNO ===
+if (isGroup && !fromMe && msg.message) {
+  const activosPath = path.resolve("./activos.json");
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+  const antipornoActivo = activos.antiporno?.[chatId];
 
+  const sticker = msg.message?.stickerMessage;
+  const image = msg.message?.imageMessage;
+
+  if (antipornoActivo && (sticker || image)) {
+    try {
+      const mediaType = sticker ? "sticker" : "image";
+      const fileStream = await downloadContentFromMessage(sticker || image, mediaType);
+      let mediaBuffer = Buffer.alloc(0);
+      for await (const chunk of fileStream) {
+        mediaBuffer = Buffer.concat([mediaBuffer, chunk]);
+      }
+
+      const uploadUrl = "https://cdn.russellxz.click/upload.php"; // Usa tu propio uploader si deseas
+      const axiosRes = await axios.post(uploadUrl, mediaBuffer, {
+        headers: { "Content-Type": "application/octet-stream" }
+      });
+
+      const imageUrl = axiosRes.data?.url;
+      if (!imageUrl) throw new Error("No se pudo subir el archivo para escaneo.");
+
+      const scanUrl = `https://test-detecter-ns.onrender.com/eval?imagen=${encodeURIComponent(imageUrl)}`;
+      const res = await axios.get(scanUrl);
+      const resultado = res.data?.result;
+
+      if (resultado?.esNSFW && resultado?.confianza > 0.8) {
+        await sock.sendMessage(chatId, {
+          text: `❌ @${sender} ha enviado contenido *NSFW* y será eliminado del grupo.\n\n🔞 *Detección:* ${resultado.etiqueta}\n📊 *Confianza:* ${resultado.porcentaje}`,
+          mentions: [msg.key.participant]
+        });
+        await sock.sendMessage(chatId, { delete: msg.key });
+        await sock.groupParticipantsUpdate(chatId, [msg.key.participant], "remove");
+      }
+    } catch (err) {
+      console.error("❌ Error en lógica antiporno:", err.message);
+    }
+  }
+}
+// === FIN LÓGICA ANTIPORNO ===
+    
+    
+    //restringir comandos
     try {
   const rePath = path.resolve("./re.json");
   const cachePath = path.resolve("./restriccion_cache.json");
