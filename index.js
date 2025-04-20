@@ -622,7 +622,7 @@ if (msg.message?.protocolMessage?.type === 0) {
     const senderClean = (deletedData.sender || '').replace(/[^0-9]/g, '');
     const whoDeletedClean = (whoDeleted || '').replace(/[^0-9]/g, '');
 
-    // Si el que eliminó fue el mismo bot, no hacer nada
+    // ❌ Si el que eliminó fue el mismo bot, no hacer nada
     const botNumber = sock.user.id.split(':')[0];
     if (whoDeletedClean === botNumber) return;
 
