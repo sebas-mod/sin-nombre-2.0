@@ -1,82 +1,134 @@
-const fs = require("fs");
-const path = require("path");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 const axios = require("axios");
 const cheerio = require("cheerio");
-const FormData = require("form-data");
+const { Blob, FormData } = require("formdata-node");
+
+class Checker {
+  constructor() {
+    this.creator = "Deus";
+    this.base = "https://www.nyckel.com";
+    this.invokeEndpoint = "/v1/functions";
+    this.identifierPath = "/pretrained-classifiers/nsfw-identifier";
+    this.headers = {
+      authority: "www.nyckel.com",
+      origin: "https://www.nyckel.com",
+      referer: "https://www.nyckel.com/pretrained-classifiers/nsfw-identifier/",
+      "user-agent": "Postify/1.0.0",
+      "x-requested-with": "XMLHttpRequest"
+    };
+  }
+
+  #getFunctionId = async () => {
+    try {
+      const res = await axios.get(this.base + this.identifierPath, { headers: this.headers });
+      const $ = cheerio.load(res.data);
+      const script = $('script[src*="embed-image.js"]').attr("src");
+      const fid = script?.match(/[?&]id=([^&]+)/)?.[1];
+      if (!fid) throw new Error("Function ID not found.");
+      return { creator: this.creator, status: true, id: fid };
+    } catch (err) {
+      return { creator: this.creator, status: false, msg: err.message };
+    }
+  }
+
+  response = async (buffer) => {
+    const functionData = await this.#getFunctionId();
+    if (!functionData.status) {
+      return { creator: this.creator, status: false, msg: functionData.error };
+    }
+    try {
+      const blob = new Blob([buffer], { type: "image/png" });
+      const form = new FormData();
+      form.append("file", blob, "image.png");
+      const boundary = form._boundary;
+      const invokeUrl = `${this.base}${this.invokeEndpoint}/${functionData.id}/invoke`;
+
+      const response = await axios.post(invokeUrl, form, {
+        headers: {
+          ...this.headers,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`
+        }
+      });
+
+      let { labelName, confidence } = response.data;
+      if (confidence > .97) {
+        const cap = Math.random() * (.992 - .97) + .97;
+        confidence = Math.min(confidence, cap);
+      }
+
+      const percentage = (confidence * 100).toFixed(2) + "%";
+
+      if (labelName === "Porn") {
+        return {
+          creator: this.creator,
+          status: true,
+          result: {
+            NSFW: true,
+            percentage,
+            safe: false,
+            response: "This image was detected as NSFW. Please be careful when sharing."
+          }
+        };
+      } else {
+        return {
+          creator: this.creator,
+          status: true,
+          result: {
+            NSFW: false,
+            percentage,
+            safe: true,
+            response: "This image was not detected as NSFW."
+          }
+        };
+      }
+    } catch (err) {
+      return { creator: this.creator, status: false, msg: err.message };
+    }
+  }
+}
 
 const handler = async (msg, { conn }) => {
-  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   const sender = msg.key.participant || msg.key.remoteJid;
 
   await conn.sendMessage(msg.key.remoteJid, {
-    react: { text: "🔎", key: msg.key }
+    react: { text: "🔍", key: msg.key }
   });
 
-  if (!quoted || (!quoted.imageMessage && !quoted.stickerMessage)) {
+  if (!quotedMsg || (!quotedMsg.imageMessage && !quotedMsg.stickerMessage)) {
     return conn.sendMessage(msg.key.remoteJid, {
-      text: "❌ *Debes responder a una imagen o sticker para analizar si es NSFW (xxx).*"
+      text: "❌ *Responde a una imagen o sticker para analizar contenido NSFW (xxx).*"
     }, { quoted: msg });
   }
 
-  const type = quoted.imageMessage ? "image" : "sticker";
-  const media = quoted.imageMessage || quoted.stickerMessage;
+  const media = quotedMsg.imageMessage || quotedMsg.stickerMessage;
+  const mediaType = quotedMsg.imageMessage ? "image" : "sticker";
 
   try {
-    const stream = await downloadContentFromMessage(media, type);
-    const tmpFile = `./tmp_${Date.now()}.png`;
-    const write = fs.createWriteStream(tmpFile);
+    const stream = await downloadContentFromMessage(media, mediaType);
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-    for await (const chunk of stream) write.write(chunk);
-    write.end();
+    const checker = new Checker();
+    const result = await checker.response(buffer);
 
-    await new Promise((res) => write.on("finish", res));
+    if (!result?.status) throw new Error("Error al analizar la imagen");
 
-    // Obtener function ID de Nyckel
-    const getFunctionId = async () => {
-      const res = await axios.get("https://www.nyckel.com/pretrained-classifiers/nsfw-identifier");
-      const $ = cheerio.load(res.data);
-      const script = $('script[src*="embed-image.js"]').attr("src");
-      return script?.match(/[?&]id=([^&]+)/)?.[1];
-    };
-
-    const fid = await getFunctionId();
-    if (!fid) throw new Error("No se pudo obtener el ID de función de Nyckel.");
-
-    // Subir imagen
-    const form = new FormData();
-    form.append("file", fs.createReadStream(tmpFile), "image.png");
-
-    const response = await axios.post(
-      `https://www.nyckel.com/v1/functions/${fid}/invoke`,
-      form,
-      {
-        headers: {
-          ...form.getHeaders(),
-          "user-agent": "Azura Ultra Bot",
-          "x-requested-with": "XMLHttpRequest"
-        }
-      }
-    );
-
-    const { labelName, confidence } = response.data;
-    const porcentaje = (confidence * 100).toFixed(2);
-    const esNSFW = labelName.toLowerCase().includes("nsfw");
-    const mensaje = esNSFW
-      ? "🔞 *Esta imagen fue detectada como NSFW.*"
-      : "✅ *La imagen no fue detectada como contenido NSFW.*";
+    const status = result.result?.NSFW ? "🔞 *NSFW detectado*" : "✅ *Imagen segura*";
+    const porcentaje = result.result?.percentage || "0%";
+    const response = result.result?.response || "";
 
     await conn.sendMessage(msg.key.remoteJid, {
-      text: `*Resultado:*\n📊 Confianza: *${porcentaje}%*\n${mensaje}`,
+      text: `${status}\n📊 *Confianza:* ${porcentaje}\n\n${response}`,
       quoted: msg
     });
 
-    fs.unlinkSync(tmpFile);
   } catch (e) {
     console.error("❌ Error en comando xxx:", e);
     await conn.sendMessage(msg.key.remoteJid, {
-      text: "❌ Ocurrió un error al analizar la imagen. Intenta con otra.",
-    }, { quoted: msg });
+      text: "❌ Error al analizar la imagen. Intenta con otra.",
+      quoted: msg
+    });
   }
 };
 
