@@ -54,7 +54,7 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
     const { handleCommand } = require("./main"); 
     // Carga de credenciales y estado de autenticación
     const { state, saveCreds } = await useMultiFileAuthState("./sessions");
-  
+  const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
   //lista
 function isAllowedUser(sender) {
   const listaFile = "./lista.json";
