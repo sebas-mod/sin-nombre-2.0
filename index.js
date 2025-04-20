@@ -457,99 +457,72 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
-// === INICIO LÓGICA ANTIPORNO COMPLETA (IMAGEN, STICKER, VIDEO) ===
-if (isGroup && activos.antiporno?.[chatId]) {
-  try {
-    const msgContent = msg.message;
-    const senderId = msg.key.participant || msg.key.remoteJid;
-    const senderNum = senderId.replace(/[^0-9]/g, "");
-    const isOwner = global.owner.some(([id]) => id === senderNum);
-    let isAdmin = false;
+// === INICIO LÓGICA ANTIPORNO BOT PRINCIPAL ===
+try {
+  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
+  const antipornoActivo = activos.antiporno?.[chatId];
 
-    try {
-      const metadata = await sock.groupMetadata(chatId);
-      const participant = metadata.participants.find(p => p.id === senderId);
-      isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
-    } catch {}
+  if (isGroup && antipornoActivo && !fromMe) {
+    const message = msg.message;
+    const type = Object.keys(message)[0];
+    const media = (
+      message.imageMessage ||
+      message.stickerMessage ||
+      null
+    );
 
-    if (isOwner || isAdmin) return;
+    if (media) {
+      const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
+      const axios = require("axios");
+      const FormData = require("form-data");
 
-    let mediaType = null;
-    let mediaMsg = null;
-    let tempInput = "";
-    let tempOutput = "";
+      const stream = await downloadContentFromMessage(media, type === "stickerMessage" ? "sticker" : "image");
+      let buffer = Buffer.alloc(0);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
 
-    if (msgContent?.imageMessage) {
-      mediaType = "image";
-      mediaMsg = msgContent.imageMessage;
-    } else if (msgContent?.stickerMessage) {
-      mediaType = "sticker";
-      mediaMsg = msgContent.stickerMessage;
-    } else if (msgContent?.videoMessage) {
-      mediaType = "video";
-      mediaMsg = msgContent.videoMessage;
-    }
-
-    if (!mediaType) return;
-
-    const stream = await downloadContentFromMessage(mediaMsg, mediaType);
-    let buffer = Buffer.alloc(0);
-    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-
-    // Procesar según tipo
-    if (mediaType === "video") {
-      tempInput = `./tmp/${Date.now()}_in.mp4`;
-      tempOutput = `./tmp/${Date.now()}_out.webp`;
-      fs.writeFileSync(tempInput, buffer);
-
-      await new Promise((resolve, reject) => {
-        ffmpeg(tempInput)
-          .duration(60)
-          .outputOptions([
-            "-vf", "scale=320:320:force_original_aspect_ratio=decrease,fps=10",
-            "-loop", "0"
-          ])
-          .toFormat("webp")
-          .save(tempOutput)
-          .on("end", resolve)
-          .on("error", reject);
+      const form = new FormData();
+      form.append("file", buffer, {
+        filename: "nsfw-check.jpg",
+        contentType: media.mimetype || "image/jpeg",
       });
-    } else {
-      tempOutput = `./tmp/${Date.now()}_${mediaType}.webp`;
-      fs.writeFileSync(tempOutput, buffer);
-    }
 
-    const form = new FormData();
-    form.append("file", fs.createReadStream(tempOutput));
-    const upload = await axios.post("https://cdn.russellxz.click/upload.php", form, {
-      headers: form.getHeaders(),
-    });
-
-    const imageURL = upload.data?.url;
-    if (!imageURL) throw new Error("No se pudo subir el archivo para análisis.");
-
-    const detect = await axios.get(`https://test-detecter-ns.onrender.com/eval?imagen=${encodeURIComponent(imageURL)}`);
-    const nsfw = detect.data?.result?.esNSFW;
-    const porcentaje = detect.data?.result?.porcentaje || "0%";
-
-    if (nsfw) {
-      await sock.sendMessage(chatId, { delete: msg.key });
-      await sock.sendMessage(chatId, {
-        text: `🚫 *Contenido explícito detectado* (${porcentaje})\nEl usuario @${senderNum} ha sido expulsado.`,
-        mentions: [senderId]
+      const upload = await axios.post("https://cdn.russellxz.click/upload.php", form, {
+        headers: form.getHeaders(),
       });
-      await sock.groupParticipantsUpdate(chatId, [senderId], "remove");
+
+      const urlSubida = upload.data?.url;
+      if (!urlSubida) return;
+
+      const evalRes = await axios.get(`https://test-detecter-ns.onrender.com/eval?imagen=${encodeURIComponent(urlSubida)}`);
+      const result = evalRes.data?.result;
+
+      if (result?.esNSFW === true && result?.confianza >= 0.8) {
+        const senderClean = sender.replace(/[^0-9]/g, "");
+        const isOwner = global.owner.some(([id]) => id === senderClean);
+
+        const metadata = await sock.groupMetadata(chatId);
+        const participante = metadata.participants.find(p => p.id.includes(sender));
+        const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
+
+        if (!isOwner && !isAdmin) {
+          await sock.sendMessage(chatId, { delete: msg.key });
+
+          await sock.sendMessage(chatId, {
+            text: `🔞 @${sender} ha enviado contenido inapropiado y fue eliminado.`,
+            mentions: [msg.key.participant || msg.key.remoteJid]
+          });
+
+          await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+        }
+      }
     }
-
-    // Limpiar archivos
-    if (fs.existsSync(tempInput)) fs.unlinkSync(tempInput);
-    if (fs.existsSync(tempOutput)) fs.unlinkSync(tempOutput);
-
-  } catch (err) {
-    console.error("❌ Error en lógica antiporno:", err);
   }
+} catch (e) {
+  console.error("❌ Error en lógica antiporno:", e);
 }
-// === FIN LÓGICA ANTIPORNO COMPLETA ===
+// === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
     
     //restringir comandos
     try {
