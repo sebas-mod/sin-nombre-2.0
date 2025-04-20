@@ -23,9 +23,16 @@ const handler = async (msg, { conn, args }) => {
   }
 
   if (msg.command === "antideletepri") {
+    // Solo privado
+    if (isGroup) {
+      return conn.sendMessage(chatId, {
+        text: "❌ Este comando solo se usa en chats privados."
+      }, { quoted: msg });
+    }
+
     if (!isOwner && !isFromMe) {
       return conn.sendMessage(chatId, {
-        text: "🚫 Solo el owner o el bot pueden usar este comando en privado."
+        text: "🚫 Solo el owner o el mismo bot pueden usar este comando."
       }, { quoted: msg });
     }
 
@@ -41,7 +48,8 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg });
     }
 
-  } else {
+  } else if (msg.command === "antidelete") {
+    // Solo grupo
     if (!isGroup) {
       return conn.sendMessage(chatId, {
         text: "❌ Este comando solo puede usarse en grupos."
