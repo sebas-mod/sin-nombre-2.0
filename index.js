@@ -507,14 +507,33 @@ try {
         const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
         if (!isOwner && !isAdmin) {
+          // Eliminar el contenido
           await sock.sendMessage(chatId, { delete: msg.key });
 
-          await sock.sendMessage(chatId, {
-            text: `🔞 @${sender} ha enviado contenido inapropiado y fue eliminado.`,
-            mentions: [msg.key.participant || msg.key.remoteJid]
-          });
+          // Cargar o crear archivo de advertencias
+          const warnsPath = "./warns.json";
+          if (!fs.existsSync(warnsPath)) fs.writeFileSync(warnsPath, "{}");
+          const warns = JSON.parse(fs.readFileSync(warnsPath, "utf-8"));
 
-          await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+          // Inicializar advertencia si no existe
+          if (!warns[senderClean]) warns[senderClean] = 0;
+          warns[senderClean]++;
+
+          if (warns[senderClean] >= 4) {
+            await sock.sendMessage(chatId, {
+              text: `🚫 @${sender} ha sido eliminado por enviar *contenido inapropiado* repetidamente.`,
+              mentions: [msg.key.participant || msg.key.remoteJid]
+            });
+            await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+            delete warns[senderClean]; // reset contador
+          } else {
+            await sock.sendMessage(chatId, {
+              text: `🔞 @${sender} ha enviado contenido explícito.\n⚠️ Advertencia ${warns[senderClean]}/3. A la cuarta será expulsado.`,
+              mentions: [msg.key.participant || msg.key.remoteJid]
+            });
+          }
+
+          fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
         }
       }
     }
