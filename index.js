@@ -543,9 +543,10 @@ try {
 // === INICIO GUARDADO ANTIDELETE ===
 try {
   const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
+  const activos2 = fs.existsSync('./activos2.json') ? JSON.parse(fs.readFileSync('./activos2.json', 'utf-8')) : {};
   const isGroup = chatId.endsWith('@g.us');
-  const isAntideletePriv = activos.antideletepri === true;
   const isAntideleteGroup = activos.antidelete?.[chatId] === true;
+  const isAntideletePriv = activos2.antideletepri === true;
   const filePath = isGroup ? './antidelete.json' : './antideletepri.json';
 
   if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
@@ -600,8 +601,9 @@ if (msg.message?.protocolMessage?.type === 0) {
     const isGroup = chatId.endsWith('@g.us');
 
     const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
+    const activos2 = fs.existsSync('./activos2.json') ? JSON.parse(fs.readFileSync('./activos2.json', 'utf-8')) : {};
     const isAntideleteGroup = activos.antidelete?.[chatId] === true;
-    const isAntideletePriv = activos.antideletepri === true;
+    const isAntideletePriv = activos2.antideletepri === true;
     const filePath = isGroup ? './antidelete.json' : './antideletepri.json';
 
     if (!(isGroup ? isAntideleteGroup : isAntideletePriv)) return;
