@@ -499,14 +499,23 @@ try {
       const result = evalRes.data?.result;
 
       if (result?.esNSFW === true && result?.confianza >= 0.8) {
-        await sock.sendMessage(chatId, { delete: msg.key });
+        const senderClean = sender.replace(/[^0-9]/g, "");
+        const isOwner = global.owner.some(([id]) => id === senderClean);
 
-        await sock.sendMessage(chatId, {
-          text: `🔞 @${sender} ha enviado contenido inapropiado y fue eliminado.`,
-          mentions: [msg.key.participant || msg.key.remoteJid]
-        });
+        const metadata = await sock.groupMetadata(chatId);
+        const participante = metadata.participants.find(p => p.id.includes(sender));
+        const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
-        await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+        if (!isOwner && !isAdmin) {
+          await sock.sendMessage(chatId, { delete: msg.key });
+
+          await sock.sendMessage(chatId, {
+            text: `🔞 @${sender} ha enviado contenido inapropiado y fue eliminado.`,
+            mentions: [msg.key.participant || msg.key.remoteJid]
+          });
+
+          await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+        }
       }
     }
   }
@@ -514,7 +523,6 @@ try {
   console.error("❌ Error en lógica antiporno:", e);
 }
 // === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
-    
     
     //restringir comandos
     try {
