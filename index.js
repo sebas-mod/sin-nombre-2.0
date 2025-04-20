@@ -383,11 +383,6 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
     let messageType = Object.keys(msg.message || {})[0];
 
-    if (msg.message?.protocolMessage?.type === 0) {
-      console.log(chalk.red(`🗑️ Un mensaje fue eliminado por ${sender}`));
-      return;
-    }
-
     const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json")) : {};
     const lista = fs.existsSync("./lista.json") ? JSON.parse(fs.readFileSync("./lista.json")) : [];
     const isAllowedUser = (num) => lista.includes(num);
