@@ -9,7 +9,7 @@ const handler = async (msg, { conn }) => {
   const url = urls[Math.floor(Math.random() * urls.length)];
 
   await conn.sendMessage(msg.key.remoteJid, {
-    image: { url },
+    image: { url: url },
     caption: "🥵 Aquí tienes mi Pack 😏"
   }, { quoted: msg });
 };
