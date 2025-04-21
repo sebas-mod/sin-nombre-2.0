@@ -4234,6 +4234,7 @@ case 'menu': {
 ⎔ ${global.prefix}visión 
 ⎔ ${global.prefix}simi
 ⎔ ${global.prefix}visión2
+⎔ ${global.prefix}chat on o off
 
 ╭──────────────╮  
 │ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
@@ -4298,6 +4299,8 @@ case 'menu': {
 ⎔ ${global.prefix}get
 ⎔ ${global.prefix}xxx
 ⎔ ${global.prefix}carga
+⎔ ${global.prefix}addco
+⎔ ${global.prefix}delco
 
 ╭──────────────╮  
 │ ✦ 𝙈𝙄𝙉𝙄 𝙅𝙐𝙀𝙂𝙊𝙎 ✦ │  
