@@ -463,6 +463,7 @@ try {
   if (msg.message?.stickerMessage) {
     const fileSha = msg.message.stickerMessage.fileSha256?.toString("base64");
     const comandosData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+
     const cmd = comandosData[fileSha];
     if (!cmd) return;
 
@@ -470,36 +471,34 @@ try {
     const chatId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
 
-    const quoted = msg.message?.contextInfo?.quotedMessage ||
-                   msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-
-    const quotedParticipant = msg.message?.contextInfo?.participant ||
-                              msg.message?.extendedTextMessage?.contextInfo?.participant;
+    const quotedMessage = msg.message?.contextInfo?.quotedMessage;
+    const quotedParticipant = msg.message?.contextInfo?.participant;
 
     const fakeMessage = {
       ...msg,
-      body: messageText,
-      text: messageText,
-      command: messageText,
       message: {
-        conversation: messageText,
-        ...(quoted && {
-          extendedTextMessage: {
-            text: messageText,
-            contextInfo: {
-              quotedMessage: quoted,
-              participant: quotedParticipant
-            }
+        extendedTextMessage: {
+          text: messageText,
+          contextInfo: {
+            quotedMessage: quotedMessage,
+            participant: quotedParticipant
           }
-        })
+        }
+      },
+      key: {
+        ...msg.key,
+        fromMe: false,
+        participant: sender
       }
     };
 
     const { handleCommand } = require("./main");
     const isPluginCommand = global.plugins?.some(p => p.command?.includes?.(messageText));
 
+    // Ejecutar desde main.js (case)
     await handleCommand(sock, fakeMessage, messageText, [], sender);
 
+    // Ejecutar si es plugin
     if (isPluginCommand) {
       for (const plugin of global.plugins) {
         if (plugin.command?.includes(messageText)) {
