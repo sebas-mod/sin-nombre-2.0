@@ -1,31 +1,20 @@
 const handler = async (msg, { conn }) => {
   const urls = [
-    'https://telegra.ph/file/957fe4031132ef90b66ec.jpg',
-    'https://telegra.ph/file/c4b85bd53030cb648382f.jpg',
-    'https://telegra.ph/file/df56f8a76145df9c923ad.jpg',
-    'https://telegra.ph/file/d5d1c2c710c4b5ee8bc6c.jpg',
-    'https://telegra.ph/file/d0c0cd47e87535373ab68.jpg',
-    'https://telegra.ph/file/651a5a9dc96c97c8ef8fc.jpg',
-    'https://telegra.ph/file/f857ae461ceab18c38de2.jpg'
+    'https://telegra.ph/file/c0da7289bee2d97048feb.jpg',
+    'https://telegra.ph/file/b8564166f9cac4d843db3.jpg',
+    'https://telegra.ph/file/6e1a6dcf1c91bf62d3945.jpg',
+    'https://telegra.ph/file/0224c1ecf6b676dda3ac0.jpg',
+    'https://telegra.ph/file/b71b8f04772f1b30355f1.jpg'
   ];
+  const url = urls[Math.floor(Math.random() * urls.length)];
 
-  const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  const url = getRandom(urls);
-
-  try {
-    await conn.sendMessage(msg.key.remoteJid, {
-      image: { url },
-      caption: "🥵 Aquí tienes mi Pack 😏"
-    }, { quoted: msg });
-  } catch (e) {
-    console.error("❌ Error al enviar imagen pack:", e);
-    await conn.sendMessage(msg.key.remoteJid, {
-      text: "❌ No se pudo enviar la imagen.",
-    }, { quoted: msg });
-  }
+  await conn.sendMessage(msg.key.remoteJid, {
+    image: { url },
+    caption: "🥵 Aquí tienes mi Pack 😏"
+  }, { quoted: msg });
 };
 
-handler.command = ['pack'];
-handler.tags = ['nsfw'];
-handler.help = ['pack'];
+handler.command = ["pack2"];
+handler.tags = ["nsfw"];
+handler.help = ["pack2"];
 module.exports = handler;
