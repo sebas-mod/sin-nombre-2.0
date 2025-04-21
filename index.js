@@ -476,6 +476,22 @@ try {
       body: messageText,
       text: messageText,
       command: messageText,
+      message: {
+        conversation: messageText
+      },
+      // Mantener el quoted si viene de un mensaje citado
+      ...(msg.message?.extendedTextMessage?.contextInfo?.quotedMessage && {
+        quotedMessage: msg.message.extendedTextMessage.contextInfo.quotedMessage,
+        message: {
+          extendedTextMessage: {
+            text: messageText,
+            contextInfo: {
+              quotedMessage: msg.message.extendedTextMessage.contextInfo.quotedMessage,
+              participant: msg.message.extendedTextMessage.contextInfo.participant
+            }
+          }
+        }
+      })
     };
 
     const { handleCommand } = require("./main");
