@@ -1,4 +1,4 @@
-const Checker = require("./libs/nsfw"); // Asegúrate que nsfw.js esté en esa ruta
+const Checker = require("../libs/nsfw"); // Asegúrate que nsfw.js esté en esa ruta
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 
 const handler = async (msg, { conn }) => {
