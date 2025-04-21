@@ -24,7 +24,6 @@ module.exports = class Checker {
     };
   }
 
-  // Obtiene el ID de la función NSFW
   async #getFunctionId() {
     try {
       const res = await axios.get(this.base + this.identifierPath, {
@@ -40,17 +39,21 @@ module.exports = class Checker {
     }
   }
 
-  // Envía la imagen a la API y devuelve el resultado
-  async response(buffer) {
+  /**
+   * @param {Buffer} buffer 
+   * @param {string} mimeType - e.g. "image/jpeg", "image/png", "image/webp"
+   */
+  async response(buffer, mimeType = "image/png") {
     const functionData = await this.#getFunctionId();
     if (!functionData.status) {
       return { status: false, msg: functionData.msg };
     }
 
     try {
-      const blob = new Blob([buffer], { type: "image/png" });
+      // Usa el mimeType dinámico
+      const blob = new Blob([buffer], { type: mimeType });
       const form = new FormData();
-      form.append("file", blob, "image.png");
+      form.append("file", blob, `image.${mimeType.split("/")[1]}`);
       const boundary = form._boundary;
       const invokeUrl = `${this.base}${this.invokeEndpoint}/${functionData.id}/invoke`;
 
@@ -62,7 +65,6 @@ module.exports = class Checker {
       });
 
       let { labelName, confidence } = resp.data;
-      // Ajuste ligero a la confianza
       if (confidence > 0.97) {
         const cap = Math.random() * (0.992 - 0.97) + 0.97;
         confidence = Math.min(confidence, cap);
