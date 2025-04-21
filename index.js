@@ -41,7 +41,6 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
 }
 //nsfw 
 const Checker = require("../libs/nsfw"); // ajusta la ruta si hace falta
-const { downloadContentFromMessage } = require("@whiskeysockets/baileys"); 
   
   
     const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
