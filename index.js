@@ -455,6 +455,57 @@ try {
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 
+// === INICIO LÓGICA COMANDOS DESDE STICKER ===
+try {
+  const jsonPath = "./comandos.json";
+  if (!fs.existsSync(jsonPath)) return;
+
+  if (msg.message?.stickerMessage) {
+    const fileSha = msg.message.stickerMessage.fileSha256?.toString("base64");
+    const comandosData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+
+    const cmd = comandosData[fileSha];
+    if (!cmd) return;
+
+    const messageText = cmd.toLowerCase().trim();
+    const chatId = msg.key.remoteJid;
+
+    // Simula estructura básica para pasar a los plugins o main.js
+    const fakeMessage = {
+      ...msg,
+      body: messageText,
+      text: messageText,
+      command: messageText,
+    };
+
+    const isCaseCommand = typeof global.handleCommand === "function";
+    const isPluginCommand = global.plugins?.some(p => p.command?.includes?.(messageText));
+
+    if (isCaseCommand) {
+      await global.handleCommand(fakeMessage); // Ejecuta como si fuera un comando del main.js
+    }
+
+    if (isPluginCommand) {
+      for (const plugin of global.plugins) {
+        if (plugin.command?.includes(messageText)) {
+          if (typeof plugin.run === "function") {
+            await plugin.run({
+              msg: fakeMessage,
+              conn: sock,
+              args: [],
+              command: messageText
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+} catch (err) {
+  console.error("❌ Error al ejecutar comando desde sticker:", err);
+}
+// === FIN LÓGICA COMANDOS DESDE STICKER ===
+    
 // === INICIO LÓGICA CHATGPT POR GRUPO ===
 try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
