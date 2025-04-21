@@ -16,7 +16,6 @@ const handler = async (msg, { conn }) => {
     );
   }
 
-  // Detecta el tipo real de la imagen
   const mimeType = quoted.imageMessage?.mimetype
     || quoted.stickerMessage?.mimetype
     || "image/png";
@@ -24,13 +23,11 @@ const handler = async (msg, { conn }) => {
   const media = quoted.imageMessage || quoted.stickerMessage;
 
   try {
-    // Descarga y concatena el buffer
     const stream = await downloadContentFromMessage(media, mediaType);
     let buffer = Buffer.alloc(0);
     for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
     const checker = new Checker();
-    // Pasa el mimeType detectado
     const result = await checker.response(buffer, mimeType);
 
     if (!result.status) throw new Error(result.msg || "Error desconocido.");
