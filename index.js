@@ -469,7 +469,7 @@ try {
 
   if (isGroup && chatgptActivo && !fromMe && textMsg.length > 0) {
     const encodedText = encodeURIComponent(textMsg);
-    const sessionID = "1727468410446638"; // puedes cambiarlo si quieres usar otro
+    const sessionID = "1727468410446638"; // ID fijo o dinámico
     const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
 
     const axios = require("axios");
@@ -479,14 +479,18 @@ try {
     if (respuesta) {
       await sock.sendMessage(chatId, {
         text: respuesta,
-        quoted: msg
+        quoted: {
+          key: msg.key,
+          message: msg.message,
+          participant: sender
+        }
       });
     }
   }
 } catch (e) {
   console.error("❌ Error en lógica chatgpt grupo:", e);
 }
-// === FIN LÓGICA CHATGPT POR GRUPO ===    
+// === FIN LÓGICA CHATGPT POR GRUPO ===
     
 // === INICIO LÓGICA ANTIPORNO BOT PRINCIPAL ===
 try {
