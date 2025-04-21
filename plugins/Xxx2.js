@@ -102,7 +102,7 @@ const handler = async (msg, { conn }) => {
   }
 };
 
-handler.command = ["xxx2"];
+handler.command = ["xxx"];
 handler.tags = ["tools"];
-handler.help = ["xxx2 <responde a un video, imagen o sticker>"];
+handler.help = ["xxx <responde a un video, imagen o sticker>"];
 module.exports = handler;
