@@ -8,15 +8,24 @@ const handler = async (msg, { conn }) => {
     'https://telegra.ph/file/651a5a9dc96c97c8ef8fc.jpg',
     'https://telegra.ph/file/f857ae461ceab18c38de2.jpg'
   ];
-  const url = urls[Math.floor(Math.random() * urls.length)];
 
-  await conn.sendMessage(msg.key.remoteJid, {
-    image: { url },
-    caption: "🥵 Aquí tienes mi Pack 😏"
-  }, { quoted: msg });
+  const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const url = getRandom(urls);
+
+  try {
+    await conn.sendMessage(msg.key.remoteJid, {
+      image: { url },
+      caption: "🥵 Aquí tienes mi Pack 😏"
+    }, { quoted: msg });
+  } catch (e) {
+    console.error("❌ Error al enviar imagen pack:", e);
+    await conn.sendMessage(msg.key.remoteJid, {
+      text: "❌ No se pudo enviar la imagen.",
+    }, { quoted: msg });
+  }
 };
 
 handler.command = ['pack'];
 handler.tags = ['nsfw'];
 handler.help = ['pack'];
-module.exports = handler
+module.exports = handler;
