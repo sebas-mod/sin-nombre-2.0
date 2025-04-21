@@ -8,10 +8,10 @@ const handler = async (msg, { conn }) => {
   ];
   const url = urls[Math.floor(Math.random() * urls.length)];
 
-  await conn.sendMessage(msg.key.remoteJid, {
-    image: { url: url },
-    caption: "🥵 Aquí tienes mi Pack 😏"
-  }, { quoted: msg });
+  conn.sendMessage(msg.key.remoteJid, {
+      image: { url: url },
+      caption: `🥵`
+    }, { quoted: msg });
 };
 
 handler.command = ["pack2"];
