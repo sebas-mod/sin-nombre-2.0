@@ -457,19 +457,20 @@ try {
 
 // === INICIO LÓGICA CHATGPT POR GRUPO ===
 try {
-  const activosPath = "./activos.json";
-  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
   const isGroup = msg.key.remoteJid.endsWith("@g.us");
   const chatId = msg.key.remoteJid;
-  const sender = msg.key.participant || msg.key.remoteJid;
-  const textMsg = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-
   const chatgptActivo = activos.chatgpt?.[chatId];
   const fromMe = msg.key.fromMe;
 
-  if (isGroup && chatgptActivo && !fromMe && textMsg.length > 0) {
-    const encodedText = encodeURIComponent(textMsg);
-    const sessionID = "1727468410446638"; // ID fijo o dinámico
+  const messageText = msg.message?.conversation || 
+                      msg.message?.extendedTextMessage?.text || 
+                      msg.message?.imageMessage?.caption || 
+                      msg.message?.videoMessage?.caption || "";
+
+  if (isGroup && chatgptActivo && !fromMe && messageText.length > 0) {
+    const encodedText = encodeURIComponent(messageText);
+    const sessionID = "1727468410446638"; // ID de sesión
     const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
 
     const axios = require("axios");
@@ -479,16 +480,11 @@ try {
     if (respuesta) {
       await sock.sendMessage(chatId, {
         text: respuesta,
-        quoted: {
-          key: msg.key,
-          message: msg.message,
-          participant: sender
-        }
-      });
+      }, { quoted: msg }); // <-- Aquí se cita correctamente el mensaje del usuario
     }
   }
 } catch (e) {
-  console.error("❌ Error en lógica chatgpt grupo:", e);
+  console.error("❌ Error en lógica ChatGPT por grupo:", e);
 }
 // === FIN LÓGICA CHATGPT POR GRUPO ===
     
