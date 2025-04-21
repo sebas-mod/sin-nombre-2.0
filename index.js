@@ -805,7 +805,7 @@ setInterval(() => {
   for (const file of cleanFiles) {
     if (fs.existsSync(file)) {
       fs.writeFileSync(file, JSON.stringify({}, null, 2));
-      console.log(`🧹 Archivo ${file} limpiado automáticamente.`);
+    //  console.log(`🧹 Archivo ${file} limpiado automáticamente.`);
     }
   }
 }, 1000 * 60 * 45);
