@@ -5,7 +5,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const text = args.join(' ');
     const chatId = msg.key.remoteJid;
     if (!text) {
-        return conn.reply(chatId, `✳️ Ingresa tu pregunta\nEjemplo: *${usedPrefix + command}* ¿quién inventó WhatsApp?`, m);
+        return conn.reply(chatId, `✳️ Ingresa tu pregunta\nEjemplo: *${usedPrefix + command}* ¿quién inventó WhatsApp?`, msg);
     }
 
     try {
