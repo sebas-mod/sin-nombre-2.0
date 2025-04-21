@@ -40,10 +40,6 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
   };
 }
 //nsfw 
- const fs = require("fs");
-const path = require("path");
-const os = require("os");
-const ffmpeg = require("fluent-ffmpeg");
 const Checker = require("../libs/nsfw"); // ajusta la ruta si hace falta
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys"); 
   
