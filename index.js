@@ -469,8 +469,8 @@ try {
 
     const messageText = cmd.toLowerCase().trim();
     const chatId = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
 
-    // Simula estructura básica para pasar a los plugins o main.js
     const fakeMessage = {
       ...msg,
       body: messageText,
@@ -478,13 +478,13 @@ try {
       command: messageText,
     };
 
-    const isCaseCommand = typeof global.handleCommand === "function";
+    const { handleCommand } = require("./main");
     const isPluginCommand = global.plugins?.some(p => p.command?.includes?.(messageText));
 
-    if (isCaseCommand) {
-      await global.handleCommand(fakeMessage); // Ejecuta como si fuera un comando del main.js
-    }
+    // Ejecutar desde main.js (case)
+    await handleCommand(sock, fakeMessage, messageText, [], sender);
 
+    // Ejecutar si es plugin
     if (isPluginCommand) {
       for (const plugin of global.plugins) {
         if (plugin.command?.includes(messageText)) {
