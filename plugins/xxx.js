@@ -1,4 +1,4 @@
-// commands/xxx.js (o donde tengas tu handler)
+// plugins/xxx.js
 const Checker = require("../libs/nsfw");
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 
@@ -6,7 +6,6 @@ const handler = async (msg, { conn }) => {
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   const chatId = msg.key.remoteJid;
 
-  // Reacción de búsqueda
   await conn.sendMessage(chatId, { react: { text: "🔍", key: msg.key } });
 
   if (!quoted || (!quoted.imageMessage && !quoted.stickerMessage)) {
@@ -17,18 +16,23 @@ const handler = async (msg, { conn }) => {
     );
   }
 
+  // Detecta el mimeType original
+  const mimeType =
+    quoted.imageMessage?.mimetype ||
+    quoted.stickerMessage?.mimetype ||
+    "image/png";
+
   const mediaType = quoted.imageMessage ? "image" : "sticker";
   const media = quoted.imageMessage || quoted.stickerMessage;
 
   try {
-    // Descarga el stream y concatena en un buffer
     const stream = await downloadContentFromMessage(media, mediaType);
     let buffer = Buffer.alloc(0);
     for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-    // Llama al Checker
     const checker = new Checker();
-    const result = await checker.response(buffer);
+    // Pasa el mimeType al response
+    const result = await checker.response(buffer, mimeType);
 
     if (!result.status) {
       throw new Error(result.msg || "Error desconocido al analizar.");
@@ -37,12 +41,9 @@ const handler = async (msg, { conn }) => {
     const { NSFW, percentage, response } = result.result;
     const estado = NSFW ? "🔞 *NSFW detectado*" : "✅ *Contenido seguro*";
 
-    // Envía el resultado
     await conn.sendMessage(
       chatId,
-      {
-        text: `${estado}\n📊 *Confianza:* ${percentage}\n\n${response}`
-      },
+      { text: `${estado}\n📊 *Confianza:* ${percentage}\n\n${response}` },
       { quoted: msg }
     );
   } catch (err) {
