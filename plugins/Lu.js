@@ -1,59 +1,62 @@
 const axios = require('axios');
 const fetch = require('node-fetch');
 
-const handler = async (m, { conn, text, usedPrefix, command }) => {
+const handler = async (m, { conn, args, usedPrefix, command }) => {
+    const text = args.join(' ');
+    
     if (!text) {
-        return conn.reply(m.chat, `✳️ Por favor proporciona una consulta\nEjemplo: *${usedPrefix}${command}* ¿quién ganó el mundial 2022?`, m);
+        return conn.reply(m.chat, `✳️ Ingresa tu pregunta\nEjemplo: *${usedPrefix + command}* ¿quién inventó WhatsApp?`, m);
     }
 
-    await conn.sendMessage(m.chat, { react: { text: '⏳', key: m.key } });
-
     try {
-        const username = m.pushName || 'Usuario';
-        const txtDefault = await fetch('https://raw.githubusercontent.com/elrebelde21/LoliBot-MD/main/src/text-chatgpt.txt').then(v => v.text());
-        const syms1 = conn.chat.sAutorespond ? conn.chat.sAutorespond : txtDefault;
+        await conn.sendMessage(m.chat, { react: { text: '⏳', key: m.key } });
 
+        const name = m.pushName || 'Usuario';
+        const prompt = await getPrompt();
         let result = '';
 
         try {
-            result = await luminsesi(text, username, syms1);
+            result = await luminaiQuery(text, name, prompt);
             result = cleanResponse(result);
         } catch (e) {
-            console.error('Error en Luminai:', e);
-        }
-
-        if (!result || result.trim().length === 0) {
+            console.error('Error Luminai:', e);
             try {
-                result = await perplexityIA(text, syms1);
+                result = await perplexityQuery(text, prompt);
             } catch (e) {
-                console.error('Error en Perplexity:', e);
+                console.error('Error Perplexity:', e);
+                throw new Error('No se obtuvo respuesta de los servicios');
             }
         }
 
-        if (!result || result.trim().length === 0) {
-            throw new Error('No se pudo obtener una respuesta de los servicios de IA');
-        }
-
-        const formattedResponse = `╭━〔 *LUMINAI RESPONSE* 〕━⬣
-│  🔍 *Consulta:* ${text}
-│  👤 *Usuario:* ${username}
+        const responseMsg = `╭━〔 *RESPUESTA IA* 〕━⬣
+│  ✦ *Pregunta:* ${text}
+│  ✦ *Usuario:* ${name}
 ╰━━━━━━━━━━━━⬣
 
 ${result}
 
-╭━〔 *FUENTES* 〕━⬣
-│  🔗 *Powered by:* Luminai AI
+╭━〔 *FUENTE* 〕━⬣
+│  ✦ *Powered by Luminai AI*
 ╰━━━━━━━━━━━━⬣`;
 
-        await conn.reply(m.chat, formattedResponse, m);
+        await conn.reply(m.chat, responseMsg, m);
         await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
 
     } catch (error) {
-        console.error('Error general:', error);
-        await conn.reply(m.chat, `❌ Ocurrió un error: ${error.message}`, m);
+        console.error(error);
+        await conn.reply(m.chat, `❌ Error: ${error.message}`, m);
         await conn.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
     }
 };
+
+async function getPrompt() {
+    try {
+        const res = await fetch('https://raw.githubusercontent.com/elrebelde21/LoliBot-MD/main/src/text-chatgpt.txt');
+        return await res.text();
+    } catch {
+        return 'Eres un asistente inteligente';
+    }
+}
 
 function cleanResponse(text) {
     if (!text) return '';
@@ -64,24 +67,28 @@ function cleanResponse(text) {
         .trim();
 }
 
-async function luminsesi(q, username, logic) {
-    const response = await axios.post("https://luminai.my.id", {
+async function luminaiQuery(q, user, prompt) {
+    const { data } = await axios.post('https://luminai.my.id', {
         content: q,
-        user: username,
-        prompt: logic,
+        user: user,
+        prompt: prompt,
         webSearchMode: true
     });
-    return response.data.result;
+    return data.result;
 }
 
-async function perplexityIA(q, logic) {
-    const response = await axios.get(`https://api.perplexity.ai/simplified?query=${encodeURIComponent(q)}&context=${encodeURIComponent(logic)}`);
-    return response.data.response;
+async function perplexityQuery(q, prompt) {
+    const { data } = await axios.get('https://api.perplexity.ai/chat', {
+        params: {
+            query: encodeURIComponent(q),
+            context: encodeURIComponent(prompt)
+        }
+    });
+    return data.response;
 }
 
-handler.command = ['luminai', 'ai', 'ask'];
-handler.tags = ['ai'];
 handler.help = ['luminai <pregunta>'];
+handler.command = ['luminai', 'ia', 'ai', 'ask'];
+handler.tags = ['ai'];
 handler.register = true;
-
 module.exports = handler;
