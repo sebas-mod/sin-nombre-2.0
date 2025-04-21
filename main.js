@@ -4052,6 +4052,7 @@ case 'menuowner': {
 ➠ ${global.prefix}deletelista
 ➠ ${global.prefix}setprefix
 ➠ ${global.prefix}re
+➠ ${global.prefix}antideletepri on o off
 ➠ ${global.prefix}unre
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯  
 
@@ -4295,6 +4296,8 @@ case 'menu': {
 ⎔ ${global.prefix}whatmusic → Responder a un audio(mp3)/video(mp4)
 ⎔ ${global.prefix}perfil 
 ⎔ ${global.prefix}get
+⎔ ${global.prefix}xxx
+⎔ ${global.prefix}carga
 
 ╭──────────────╮  
 │ ✦ 𝙈𝙄𝙉𝙄 𝙅𝙐𝙀𝙂𝙊𝙎 ✦ │  
@@ -4351,6 +4354,8 @@ case 'menugrupo': {
 ├✦ ${global.prefix}infogrupo
 ├✦ ${global.prefix}setname  
 ├✦ ${global.prefix}setwelcome
+├✦ ${global.prefix}antiporno on o off
+├✦ ${global.prefix}antidelete on o off
 ├✦ ${global.prefix}setfoto  
 ├✦ ${global.prefix}welcome on/off  
 ╰────────────────
