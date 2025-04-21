@@ -4,14 +4,17 @@ const fetch = require('node-fetch');
 const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const text = args.join(' ');
     const chatId = msg.key.remoteJid;
+    
     if (!text) {
-        return conn.reply(chatId, `✳️ Ingresa tu pregunta\nEjemplo: *${usedPrefix + command}* ¿quién inventó WhatsApp?`, msg);
+        return conn.sendMessage(chatId, { 
+            text: `✳️ Ingresa tu pregunta\nEjemplo: *${usedPrefix + command}* ¿quién inventó WhatsApp?` 
+        }, { quoted: msg });
     }
 
     try {
         await conn.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
 
-        const name = 'Usuario';
+        const name = msg.pushName || 'Usuario';
         const prompt = await getPrompt();
         let result = '';
 
@@ -39,12 +42,18 @@ ${result}
 │  ✦ *Powered by Luminai AI*
 ╰━━━━━━━━━━━━⬣`;
 
-        await conn.reply(chatId, responseMsg, msg);
+        await conn.sendMessage(chatId, { 
+            text: responseMsg 
+        }, { quoted: msg });
+        
         await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
 
     } catch (error) {
         console.error(error);
-        await conn.reply(chatId, `❌ Error: ${error.message}`, msg);
+        await conn.sendMessage(chatId, { 
+            text: `❌ Error: ${error.message}` 
+        }, { quoted: msg });
+        
         await conn.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
     }
 };
