@@ -1,4 +1,4 @@
-const Checker = require("../libs/nsfw"); // Asegúrate que nsfw.js esté en esa ruta
+const Checker = require("../libs/nsfw"); // asegúrate que esté en lib/nsfw.js
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 
 const handler = async (msg, { conn }) => {
@@ -15,8 +15,8 @@ const handler = async (msg, { conn }) => {
     }, { quoted: msg });
   }
 
-  const media = quoted.imageMessage || quoted.stickerMessage;
   const mediaType = quoted.imageMessage ? "image" : "sticker";
+  const media = quoted.imageMessage || quoted.stickerMessage;
 
   try {
     const stream = await downloadContentFromMessage(media, mediaType);
@@ -37,7 +37,6 @@ const handler = async (msg, { conn }) => {
       text: `${estado}\n📊 *Confianza:* ${percentage}\n\n${response}`,
       quoted: msg
     });
-
   } catch (err) {
     console.error("❌ Error en comando xxx:", err);
     await conn.sendMessage(chatId, {
