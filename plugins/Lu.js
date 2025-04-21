@@ -9,7 +9,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     }
 
     try {
-        await conn.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
+        await conn.sendMessage(chatId, { react: { text: '⏳', key: msg.key } });
 
         const name = 'Usuario';
         const prompt = await getPrompt();
@@ -39,13 +39,13 @@ ${result}
 │  ✦ *Powered by Luminai AI*
 ╰━━━━━━━━━━━━⬣`;
 
-        await conn.reply(chatId, responseMsg, m);
-        await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+        await conn.reply(chatId, responseMsg, msg);
+        await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
 
     } catch (error) {
         console.error(error);
-        await conn.reply(chatId, `❌ Error: ${error.message}`, m);
-        await conn.sendMessage(chatId, { react: { text: '❌', key: m.key } });
+        await conn.reply(chatId, `❌ Error: ${error.message}`, msg);
+        await conn.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
     }
 };
 
