@@ -8,8 +8,7 @@ const handler = async (msg, { conn, command }) => {
 
     await conn.sendMessage(msg.key.remoteJid, {
       image: { url },
-      caption: `_${command}_`,
-      viewOnce: true
+      caption: `_${command}_`
     }, { quoted: msg });
   } catch (e) {
     console.error("❌ Error en comando imagenlesbians:", e);
