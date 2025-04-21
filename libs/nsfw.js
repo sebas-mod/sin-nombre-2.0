@@ -8,6 +8,8 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 const { Blob, FormData } = require("formdata-node");
+const { FormDataEncoder } = require("form-data-encoder");
+const { Readable } = require("stream");
 
 module.exports = class Checker {
   constructor() {
@@ -25,10 +27,12 @@ module.exports = class Checker {
 
   async #getFunctionId() {
     try {
-      const res = await axios.get(this.base + this.identifierPath, { headers: this.headers });
+      const res = await axios.get(this.base + this.identifierPath, {
+        headers: this.headers
+      });
       const $ = cheerio.load(res.data);
-      const scriptSrc = $('script[src*="embed-image.js"]').attr("src");
-      const fid = scriptSrc?.match(/[?&]id=([^&]+)/)?.[1];
+      const src = $('script[src*="embed-image.js"]').attr("src");
+      const fid = src?.match(/[?&]id=([^&]+)/)?.[1];
       if (!fid) throw new Error("Function ID no encontrado.");
       return { status: true, id: fid };
     } catch (err) {
@@ -38,27 +42,35 @@ module.exports = class Checker {
 
   /**
    * @param {Buffer} buffer
-   * @param {string} mimeType e.g. "image/jpeg", "image/png", "image/webp", "image/bmp"
+   * @param {string} mimeType "image/png"|"image/jpeg"|"image/webp"|"image/bmp"
    */
   async response(buffer, mimeType = "image/png") {
     const fn = await this.#getFunctionId();
     if (!fn.status) return { status: false, msg: fn.msg };
 
-    // Determina la extensión adecuada
-    let ext = mimeType.split("/")[1].toLowerCase();
+    // Extensión según mimeType
+    let ext = mimeType.split("/")[1];
     if (ext === "jpeg") ext = "jpg";
     const filename = `image.${ext}`;
 
-    // Crea el blob y el formData
+    // Prepara FormData
     const blob = new Blob([buffer], { type: mimeType });
     const form = new FormData();
     form.append("file", blob, filename);
 
-    // Usa el stream y headers de formdata-node
+    // Usa form-data-encoder para multipart/form-data correcto 0
+    const encoder = new FormDataEncoder(form);
+    const bodyStream = Readable.from(encoder.encode());
+
     const resp = await axios.post(
       `${this.base}${this.invokeEndpoint}/${fn.id}/invoke`,
-      form.stream,           // stream legible
-      { headers: { ...this.headers, ...form.headers } }
+      bodyStream,
+      {
+        headers: {
+          ...this.headers,
+          ...encoder.headers
+        }
+      }
     );
 
     let { labelName, confidence } = resp.data;
@@ -71,12 +83,20 @@ module.exports = class Checker {
     if (labelName === "Porn") {
       return {
         status: true,
-        result: { NSFW: true, percentage: pct, response: "🔞 *NSFW detectado. Ten cuidado al compartir.*" }
+        result: {
+          NSFW: true,
+          percentage: pct,
+          response: "🔞 *NSFW detectado. Ten cuidado al compartir.*"
+        }
       };
     } else {
       return {
         status: true,
-        result: { NSFW: false, percentage: pct, response: "✅ *Contenido seguro.*" }
+        result: {
+          NSFW: false,
+          percentage: pct,
+          response: "✅ *Contenido seguro.*"
+        }
       };
     }
   }
