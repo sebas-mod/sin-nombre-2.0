@@ -1,5 +1,5 @@
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
-const Checker = require("../lib/nsfw"); // Asegúrate que nsfw.js esté en lib/
+const Checker = require("../libs/nsfw"); // Asegúrate que nsfw.js esté en lib/
 
 const handler = async (msg, { conn }) => {
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
