@@ -669,15 +669,21 @@ try {
 // === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
 // === INICIO GUARDADO ANTIDELETE ===
 try {
-  const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
-  const activos2 = fs.existsSync('./activos2.json') ? JSON.parse(fs.readFileSync('./activos2.json', 'utf-8')) : {};
+  const activos = fs.existsSync('./activos.json')
+    ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8'))
+    : {};
+  const activos2 = fs.existsSync('./activos2.json')
+    ? JSON.parse(fs.readFileSync('./activos2.json', 'utf-8'))
+    : {};
   const isGroup = chatId.endsWith('@g.us');
   const isAntideleteGroup = activos.antidelete?.[chatId] === true;
   const isAntideletePriv = activos2.antideletepri === true;
   const filePath = isGroup ? './antidelete.json' : './antideletepri.json';
 
   if ((isGroup && isAntideleteGroup) || (!isGroup && isAntideletePriv)) {
-    if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify({}, null, 2));
+    }
 
     const type = Object.keys(msg.message || {})[0];
     const content = msg.message[type];
@@ -686,6 +692,14 @@ try {
     // CAMBIO: Detectar correctamente el senderId incluso en privado
     const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net";
     const senderId = msg.key.participant || (msg.key.fromMe ? botNumber : msg.key.remoteJid);
+
+    // Si es multimedia y supera 10 MB, no guardamos NADA
+    if (
+      ['imageMessage','videoMessage','audioMessage','documentMessage','stickerMessage'].includes(type) &&
+      content.fileLength > 10 * 1024 * 1024
+    ) {
+      return; // Sale sin guardar
+    }
 
     const guardado = {
       chatId,
@@ -697,7 +711,9 @@ try {
     const saveBase64 = async (mediaType, data) => {
       const stream = await downloadContentFromMessage(data, mediaType);
       let buffer = Buffer.alloc(0);
-      for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
       guardado.media = buffer.toString("base64");
       guardado.mimetype = data.mimetype;
     };
@@ -709,9 +725,11 @@ try {
       const mediaType = viewType.replace("Message", "");
       guardado.type = viewType;
       await saveBase64(mediaType, viewData);
-    } else if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'].includes(type)) {
+
+    } else if (['imageMessage','videoMessage','audioMessage','documentMessage','stickerMessage'].includes(type)) {
       const mediaType = type.replace('Message', '');
       await saveBase64(mediaType, content);
+
     } else if (type === 'conversation' || type === 'extendedTextMessage') {
       guardado.text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
     }
