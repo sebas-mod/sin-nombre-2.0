@@ -319,7 +319,47 @@ ${global.prefix}kill → Elimina un archivo guardado.
     }
     break;
 }    
+case 'pack2': {
+  const chatId = msg.key.remoteJid;
 
+  // URLs de ejemplo
+  const urls = [
+    'https://telegra.ph/file/c0da7289bee2d97048feb.jpg',
+    'https://telegra.ph/file/b8564166f9cac4d843db3.jpg',
+    'https://telegra.ph/file/6e1a6dcf1c91bf62d3945.jpg',
+    'https://telegra.ph/file/0224c1ecf6b676dda3ac0.jpg',
+    'https://telegra.ph/file/b71b8f04772f1b30355f1.jpg'
+  ];
+
+  // Función para elegir una URL al azar
+  const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const imageUrl = getRandom(urls);
+
+  try {
+    // Reacción de carga
+    await sock.sendMessage(chatId, {
+      react: { text: '🔄', key: msg.key }
+    });
+
+    // Enviar la imagen
+    await sock.sendMessage(chatId, {
+      image: { url: imageUrl },
+      caption: '🥵 Aquí tienes más pack 😏'
+    }, { quoted: msg });
+
+    // Reacción de éxito
+    await sock.sendMessage(chatId, {
+      react: { text: '✅', key: msg.key }
+    });
+
+  } catch (err) {
+    console.error('❌ Error en comando pack2:', err);
+    await sock.sendMessage(chatId, {
+      text: '❌ Ocurrió un error al enviar la imagen.'
+    }, { quoted: msg });
+  }
+}
+break;
       
 case 'play8': {
     const yts = require('yt-search');
