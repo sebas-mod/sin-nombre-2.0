@@ -471,8 +471,10 @@ try {
     const chatId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
 
-    const quotedMessage = msg.message?.contextInfo?.quotedMessage;
-    const quotedParticipant = msg.message?.contextInfo?.participant;
+    // Obtener información del mensaje citado (si hay)
+    const contextInfo = msg.message?.stickerMessage?.contextInfo || {};
+    const quotedMsg = contextInfo.quotedMessage || null;
+    const quotedParticipant = contextInfo.participant || null;
 
     const fakeMessage = {
       ...msg,
@@ -480,8 +482,10 @@ try {
         extendedTextMessage: {
           text: messageText,
           contextInfo: {
-            quotedMessage: quotedMessage,
-            participant: quotedParticipant
+            quotedMessage: quotedMsg,
+            participant: quotedParticipant,
+            stanzaId: contextInfo.stanzaId || "",
+            remoteJid: contextInfo.remoteJid || chatId
           }
         }
       },
