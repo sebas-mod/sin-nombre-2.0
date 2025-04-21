@@ -16,27 +16,24 @@ const handler = async (msg, { conn }) => {
     );
   }
 
-  // Detecta el mimeType original
-  const mimeType =
-    quoted.imageMessage?.mimetype ||
-    quoted.stickerMessage?.mimetype ||
-    "image/png";
-
+  // Detecta el tipo real de la imagen
+  const mimeType = quoted.imageMessage?.mimetype
+    || quoted.stickerMessage?.mimetype
+    || "image/png";
   const mediaType = quoted.imageMessage ? "image" : "sticker";
   const media = quoted.imageMessage || quoted.stickerMessage;
 
   try {
+    // Descarga y concatena el buffer
     const stream = await downloadContentFromMessage(media, mediaType);
     let buffer = Buffer.alloc(0);
     for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
     const checker = new Checker();
-    // Pasa el mimeType al response
+    // Pasa el mimeType detectado
     const result = await checker.response(buffer, mimeType);
 
-    if (!result.status) {
-      throw new Error(result.msg || "Error desconocido al analizar.");
-    }
+    if (!result.status) throw new Error(result.msg || "Error desconocido.");
 
     const { NSFW, percentage, response } = result.result;
     const estado = NSFW ? "🔞 *NSFW detectado*" : "✅ *Contenido seguro*";
