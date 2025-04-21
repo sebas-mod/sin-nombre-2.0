@@ -40,15 +40,6 @@ let canalNombre = ["AZURA ULTRA CHANNEL 👾"]
   };
 }
 //nsfw 
-// === REQUIRES AL PRINCIPIO ===
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
-const ffmpeg = require("fluent-ffmpeg");
-const Checker = require("../libs/nsfw");
-const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
-
-// ...
   
   
     const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
