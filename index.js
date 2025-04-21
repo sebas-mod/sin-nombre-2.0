@@ -454,6 +454,40 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+
+// === INICIO LÓGICA CHATGPT POR GRUPO ===
+try {
+  const activosPath = "./activos.json";
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+  const isGroup = msg.key.remoteJid.endsWith("@g.us");
+  const chatId = msg.key.remoteJid;
+  const sender = msg.key.participant || msg.key.remoteJid;
+  const textMsg = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+
+  const chatgptActivo = activos.chatgpt?.[chatId];
+  const fromMe = msg.key.fromMe;
+
+  if (isGroup && chatgptActivo && !fromMe && textMsg.length > 0) {
+    const encodedText = encodeURIComponent(textMsg);
+    const sessionID = "1727468410446638"; // puedes cambiarlo si quieres usar otro
+    const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
+
+    const axios = require("axios");
+    const res = await axios.get(apiUrl);
+    const respuesta = res.data?.data?.message;
+
+    if (respuesta) {
+      await sock.sendMessage(chatId, {
+        text: respuesta,
+        quoted: msg
+      });
+    }
+  }
+} catch (e) {
+  console.error("❌ Error en lógica chatgpt grupo:", e);
+}
+// === FIN LÓGICA CHATGPT POR GRUPO ===    
+    
 // === INICIO LÓGICA ANTIPORNO BOT PRINCIPAL ===
 try {
   const Checker = require("./libs/nsfw");
