@@ -468,6 +468,10 @@ try {
     if (!cmd) return;
 
     const messageText = cmd.toLowerCase().trim();
+    const parts = messageText.split(" ");
+    const mainCommand = parts[0];
+    const args = parts.slice(1);
+
     const chatId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
 
@@ -489,6 +493,9 @@ try {
           }
         }
       },
+      body: messageText,
+      text: messageText,
+      command: mainCommand,
       key: {
         ...msg.key,
         fromMe: false,
@@ -497,21 +504,21 @@ try {
     };
 
     const { handleCommand } = require("./main");
-    const isPluginCommand = global.plugins?.some(p => p.command?.includes?.(messageText));
+    const isPluginCommand = global.plugins?.some(p => p.command?.includes?.(mainCommand));
 
     // Ejecutar desde main.js (case)
-    await handleCommand(sock, fakeMessage, messageText, [], sender);
+    await handleCommand(sock, fakeMessage, mainCommand, args, sender);
 
     // Ejecutar si es plugin
     if (isPluginCommand) {
       for (const plugin of global.plugins) {
-        if (plugin.command?.includes(messageText)) {
+        if (plugin.command?.includes(mainCommand)) {
           if (typeof plugin.run === "function") {
             await plugin.run({
               msg: fakeMessage,
               conn: sock,
-              args: [],
-              command: messageText
+              args,
+              command: mainCommand
             });
             break;
           }
