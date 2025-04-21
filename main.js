@@ -443,7 +443,39 @@ case 'play8': {
 
     break;
 }
-        
+        case 'nsfwneko': {
+  const chatId = msg.key.remoteJid;
+
+  // Reacción de carga
+  await sock.sendMessage(chatId, {
+    react: { text: '🔄', key: msg.key }
+  });
+
+  try {
+    const axios = require('axios');
+    // Llamada a la API
+    const res = await axios.get('https://api.waifu.pics/nsfw/neko');
+    const imageUrl = res.data.url;
+
+    // Enviar la imagen
+    await sock.sendMessage(chatId, {
+      image: { url: imageUrl },
+      caption: '🖤 Aquí tienes tu Neko NSFW 🖤'
+    }, { quoted: msg });
+
+    // Reacción de éxito
+    await sock.sendMessage(chatId, {
+      react: { text: '✅', key: msg.key }
+    });
+
+  } catch (err) {
+    console.error('❌ Error en comando neko:', err);
+    await sock.sendMessage(chatId, {
+      text: '❌ No pude obtener un Neko en este momento. Intenta más tarde.'
+    }, { quoted: msg });
+  }
+}
+break;
 case "modoadmins": {
   try {
     const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
