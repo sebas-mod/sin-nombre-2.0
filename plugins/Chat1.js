@@ -3,7 +3,6 @@ const axios = require("axios");
 const handler = async (msg, { conn, text }) => {
   const chatId = msg.key.remoteJid;
 
-  // Reacción mientras responde
   await conn.sendMessage(chatId, {
     react: { text: "💬", key: msg.key }
   });
@@ -23,7 +22,7 @@ const handler = async (msg, { conn, text }) => {
     const response = await axios.get("https://api.neoxr.eu/api/chat", {
       params: {
         url_handle: "karl-marx",
-        message: encodeURIComponent(JSON.stringify(payload)),
+        message: JSON.stringify(payload),
         apikey: "russellxz"
       }
     });
