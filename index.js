@@ -468,9 +468,11 @@ try {
                       msg.message?.imageMessage?.caption || 
                       msg.message?.videoMessage?.caption || "";
 
-  // Verificar que no sea comando (tenga prefijo)
   if (isGroup && chatgptActivo && !fromMe && messageText.length > 0) {
-    if (global.allowedPrefixes.some(prefix => messageText.startsWith(prefix))) return;
+    // Ignorar si empieza con un prefijo
+    const prefijos = global.allowedPrefixes || [".", "#", "/", "!", ","]; 
+    const startsWithPrefix = prefijos.some(prefix => messageText.startsWith(prefix));
+    if (startsWithPrefix) return;
 
     const encodedText = encodeURIComponent(messageText);
     const sessionID = "1727468410446638"; // ID de sesión
@@ -483,7 +485,7 @@ try {
     if (respuesta) {
       await sock.sendMessage(chatId, {
         text: respuesta,
-      }, { quoted: msg }); // Cita el mensaje original
+      }, { quoted: msg }); // Cita el mensaje del usuario
     }
   }
 } catch (e) {
