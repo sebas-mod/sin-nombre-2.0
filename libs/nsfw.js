@@ -11,14 +11,13 @@ const { Blob, FormData } = require("formdata-node");
 
 module.exports = class Checker {
   constructor() {
-    this.creator = "Deus";
     this.base = "https://www.nyckel.com";
     this.invokeEndpoint = "/v1/functions";
     this.identifierPath = "/pretrained-classifiers/nsfw-identifier";
     this.headers = {
       authority: "www.nyckel.com",
-      origin: "https://www.nyckel.com",
-      referer: "https://www.nyckel.com/pretrained-classifiers/nsfw-identifier/",
+      origin: this.base,
+      referer: `${this.base}${this.identifierPath}`,
       "user-agent": "Postify/1.0.0",
       "x-requested-with": "XMLHttpRequest"
     };
@@ -26,12 +25,10 @@ module.exports = class Checker {
 
   async #getFunctionId() {
     try {
-      const res = await axios.get(this.base + this.identifierPath, {
-        headers: this.headers
-      });
+      const res = await axios.get(this.base + this.identifierPath, { headers: this.headers });
       const $ = cheerio.load(res.data);
-      const script = $('script[src*="embed-image.js"]').attr("src");
-      const fid = script?.match(/[?&]id=([^&]+)/)?.[1];
+      const scriptSrc = $('script[src*="embed-image.js"]').attr("src");
+      const fid = scriptSrc?.match(/[?&]id=([^&]+)/)?.[1];
       if (!fid) throw new Error("Function ID no encontrado.");
       return { status: true, id: fid };
     } catch (err) {
@@ -40,57 +37,47 @@ module.exports = class Checker {
   }
 
   /**
-   * @param {Buffer} buffer 
-   * @param {string} mimeType - e.g. "image/jpeg", "image/png", "image/webp"
+   * @param {Buffer} buffer
+   * @param {string} mimeType e.g. "image/jpeg", "image/png", "image/webp", "image/bmp"
    */
   async response(buffer, mimeType = "image/png") {
-    const functionData = await this.#getFunctionId();
-    if (!functionData.status) {
-      return { status: false, msg: functionData.msg };
+    const fn = await this.#getFunctionId();
+    if (!fn.status) return { status: false, msg: fn.msg };
+
+    // Determina la extensión adecuada
+    let ext = mimeType.split("/")[1].toLowerCase();
+    if (ext === "jpeg") ext = "jpg";
+    const filename = `image.${ext}`;
+
+    // Crea el blob y el formData
+    const blob = new Blob([buffer], { type: mimeType });
+    const form = new FormData();
+    form.append("file", blob, filename);
+
+    // Usa el stream y headers de formdata-node
+    const resp = await axios.post(
+      `${this.base}${this.invokeEndpoint}/${fn.id}/invoke`,
+      form.stream,           // stream legible
+      { headers: { ...this.headers, ...form.headers } }
+    );
+
+    let { labelName, confidence } = resp.data;
+    if (confidence > 0.97) {
+      const cap = Math.random() * (0.992 - 0.97) + 0.97;
+      confidence = Math.min(confidence, cap);
     }
 
-    try {
-      // Usa el mimeType dinámico
-      const blob = new Blob([buffer], { type: mimeType });
-      const form = new FormData();
-      form.append("file", blob, `image.${mimeType.split("/")[1]}`);
-      const boundary = form._boundary;
-      const invokeUrl = `${this.base}${this.invokeEndpoint}/${functionData.id}/invoke`;
-
-      const resp = await axios.post(invokeUrl, form, {
-        headers: {
-          ...this.headers,
-          "Content-Type": `multipart/form-data; boundary=${boundary}`
-        }
-      });
-
-      let { labelName, confidence } = resp.data;
-      if (confidence > 0.97) {
-        const cap = Math.random() * (0.992 - 0.97) + 0.97;
-        confidence = Math.min(confidence, cap);
-      }
-
-      if (labelName === "Porn") {
-        return {
-          status: true,
-          result: {
-            NSFW: true,
-            percentage: (confidence * 100).toFixed(2) + "%",
-            response: "🔞 *Esta imagen fue detectada como NSFW. Ten cuidado al compartirla.*"
-          }
-        };
-      } else {
-        return {
-          status: true,
-          result: {
-            NSFW: false,
-            percentage: (confidence * 100).toFixed(2) + "%",
-            response: "✅ *Esta imagen fue analizada y es segura.*"
-          }
-        };
-      }
-    } catch (err) {
-      return { status: false, msg: err.message };
+    const pct = (confidence * 100).toFixed(2) + "%";
+    if (labelName === "Porn") {
+      return {
+        status: true,
+        result: { NSFW: true, percentage: pct, response: "🔞 *NSFW detectado. Ten cuidado al compartir.*" }
+      };
+    } else {
+      return {
+        status: true,
+        result: { NSFW: false, percentage: pct, response: "✅ *Contenido seguro.*" }
+      };
     }
   }
 };
