@@ -9,7 +9,7 @@ const handler = async (msg, { conn, command }) => {
 
     await conn.sendMessage(msg.key.remoteJid, {
       image: { url },
-      caption: `_${command}_`
+      caption: "🥵"
     }, { quoted: msg });
   } catch (e) {
     console.error("❌ Error en comando imagenlesbians:", e);
