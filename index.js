@@ -455,123 +455,108 @@ try {
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 // === INICIO LÓGICA ANTIPORNO BOT PRINCIPAL ===
-    try {
-      const chatId  = msg.key.remoteJid;
-      const fromMe  = msg.key.fromMe;
-      const isGroup = chatId?.endsWith("@g.us");
-      if (!isGroup || fromMe) continue; // sólo grupos y no propios
+try {
+  const Checker = require("./libs/nsfw");
+  const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
+  const ffmpeg = require("fluent-ffmpeg");
+  const os = require("os");
+  const path = require("path");
 
-      // 1) Verificar si antiporno está activo en este grupo
-      const activosPath     = "./activos.json";
-      const activos         = fs.existsSync(activosPath)
-        ? JSON.parse(fs.readFileSync(activosPath, "utf-8"))
-        : {};
-      const antipornoActivo = activos.antiporno?.[chatId];
-      if (!antipornoActivo) continue;
+  const activos = fs.existsSync("./activos.json")
+    ? JSON.parse(fs.readFileSync("./activos.json", "utf-8"))
+    : {};
+  const antipornoActivo = activos.antiporno?.[chatId];
 
-      // 2) Obtener remitente y chequear admin/owner
-      const sender       = msg.key.participant || msg.key.remoteJid;
-      const senderClean  = sender.replace(/[^0-9]/g, "");
-      const isOwner      = global.owner.some(([id]) => id === senderClean);
-      const metadata     = await conn.groupMetadata(chatId);
-      const participante = metadata.participants.find(p => p.id.includes(senderClean));
-      const isAdmin      = participante?.admin === "admin" || participante?.admin === "superadmin";
-      if (isOwner || isAdmin) continue; // ignora admins y owner
+  if (isGroup && antipornoActivo && !fromMe) {
+    const message = msg.message;
+    const type = Object.keys(message)[0];
+    const media =
+      message.imageMessage || message.stickerMessage || message.videoMessage || null;
 
-      // 3) Detectar media: imagen, sticker o video
-      const imageMsg   = msg.message?.imageMessage;
-      const stickerMsg = msg.message?.stickerMessage;
-      const videoMsg   = msg.message?.videoMessage;
-      if (!imageMsg && !stickerMsg && !videoMsg) continue;
+    if (media) {
+      let buffer;
+      let mimeType = media?.mimetype || "image/png";
 
-      // 4) Descargar y preparar buffer + mimeType
-      let buffer   = Buffer.alloc(0);
-      let mimeType;
-
-      if (videoMsg) {
-        // — Video: extraer un frame y convertir a WebP
-        const stream = await downloadContentFromMessage(videoMsg, "video");
+      if (message.videoMessage) {
+        // Convertir video a una imagen WebP (frame estático)
+        const stream = await downloadContentFromMessage(media, "video");
+        buffer = Buffer.alloc(0);
         for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-        const tmpId   = msg.key.id.replace(/[^a-zA-Z0-9]/g, "");
-        const inPath  = path.join(os.tmpdir(), `${tmpId}.mp4`);
-        const outPath = path.join(os.tmpdir(), `${tmpId}.webp`);
-        await fs.promises.writeFile(inPath, buffer);
+        const tmpId = msg.key.id.replace(/[^a-zA-Z0-9]/g, "");
+        const inputPath = path.join(os.tmpdir(), `${tmpId}.mp4`);
+        const outputPath = path.join(os.tmpdir(), `${tmpId}.webp`);
+        fs.writeFileSync(inputPath, buffer);
 
-        await new Promise((res, rej) => {
-          ffmpeg(inPath)
+        await new Promise((resolve, reject) => {
+          ffmpeg(inputPath)
             .outputOptions([
               "-vframes 1",
               "-vf scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:-1:-1:color=white@0.0",
               "-vcodec libwebp",
               "-qscale 80"
             ])
-            .save(outPath)
-            .on("end", res)
-            .on("error", rej);
+            .save(outputPath)
+            .on("end", resolve)
+            .on("error", reject);
         });
 
-        buffer   = await fs.promises.readFile(outPath);
+        buffer = fs.readFileSync(outputPath);
         mimeType = "image/webp";
-
-        // Limpia temporales
-        fs.unlink(inPath,  ()=>{});
-        fs.unlink(outPath, ()=>{});
+        fs.unlinkSync(inputPath);
+        fs.unlinkSync(outputPath);
       } else {
-        // — Imagen o sticker: descargar directo
-        const mediaMsg = imageMsg || stickerMsg;
-        const mType    = imageMsg ? "image" : "sticker";
-        mimeType       = mediaMsg.mimetype || (imageMsg ? "image/jpeg" : "image/webp");
-        const stream   = await downloadContentFromMessage(mediaMsg, mType);
+        const mediaType = message.imageMessage ? "image" : "sticker";
+        const stream = await downloadContentFromMessage(media, mediaType);
+        buffer = Buffer.alloc(0);
         for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
       }
 
-      // 5) Analizar con Checker (libs/nsfw.js)
+      // Analizar con Checker NSFW
       const checker = new Checker();
-      const result  = await checker.response(buffer, mimeType);
-      if (!result.status) throw new Error(result.msg || "Error al analizar NSFW");
+      const result = await checker.response(buffer, mimeType);
 
-      // 6) Si es NSFW: eliminar, advertir/expulsar
-      if (result.result.NSFW) {
-        // eliminar mensaje
-        await conn.sendMessage(chatId, { delete: msg.key });
+      if (result?.status && result.result?.NSFW === true) {
+        const senderClean = sender.replace(/[^0-9]/g, "");
+        const isOwner = global.owner.some(([id]) => id === senderClean);
 
-        // gestionar warns
-        const warnsPath = "./warns.json";
-        const warns     = fs.existsSync(warnsPath)
-          ? JSON.parse(fs.readFileSync(warnsPath, "utf-8"))
-          : {};
-        warns[senderClean] = (warns[senderClean] || 0) + 1;
+        const metadata = await sock.groupMetadata(chatId);
+        const participante = metadata.participants.find(p => p.id.includes(sender));
+        const isAdmin = participante?.admin === "admin" || participante?.admin === "superadmin";
 
-        if (warns[senderClean] >= 4) {
-          // expulsar
-          delete warns[senderClean];
-          fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
-          await conn.sendMessage(
-            chatId,
-            {
-              text: `🔞 @${senderClean} ha sido eliminado por 4 infracciones NSFW.`,
-              mentions: [sender]
-            }
-          );
-          await conn.groupParticipantsUpdate(chatId, [sender], "remove");
-        } else {
-          // advertir
-          fs.writeFileSync(warnsPath, JSON.stringify(warns, null, 2));
-          await conn.sendMessage(
-            chatId,
-            {
-              text: `⚠️ @${senderClean}, contenido NSFW detectado. Advertencia ${warns[senderClean]}/4.`,
-              mentions: [sender]
-            }
-          );
+        if (!isOwner && !isAdmin) {
+          // Eliminar mensaje
+          await sock.sendMessage(chatId, { delete: msg.key });
+
+          // Registrar advertencia
+          const warnPath = "./warns.json";
+          if (!fs.existsSync(warnPath)) fs.writeFileSync(warnPath, JSON.stringify({}));
+          const warns = JSON.parse(fs.readFileSync(warnPath, "utf-8"));
+          warns[senderClean] = (warns[senderClean] || 0) + 1;
+
+          if (warns[senderClean] >= 4) {
+            delete warns[senderClean];
+            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
+            await sock.sendMessage(chatId, {
+              text: `🔞 @${sender} fue eliminado por enviar contenido +🔞 4 veces.`,
+              mentions: [msg.key.participant || msg.key.remoteJid]
+            });
+            await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+          } else {
+            fs.writeFileSync(warnPath, JSON.stringify(warns, null, 2));
+            await sock.sendMessage(chatId, {
+              text: `⚠️ @${sender}, tu contenido fue marcado como +🔞 Advertencia ${warns[senderClean]}/4.`,
+              mentions: [msg.key.participant || msg.key.remoteJid]
+            });
+          }
         }
       }
-    } catch (e) {
-      console.error("❌ Error en lógica antiporno:", e);
     }
-    // === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
-
+  }
+} catch (e) {
+  console.error("❌ Error en lógica antiporno:", e);
+}
+// === FIN LÓGICA ANTIPORNO BOT PRINCIPAL ===
 // === INICIO GUARDADO ANTIDELETE ===
 try {
   const activos = fs.existsSync('./activos.json') ? JSON.parse(fs.readFileSync('./activos.json', 'utf-8')) : {};
