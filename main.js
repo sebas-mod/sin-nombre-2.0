@@ -319,6 +319,39 @@ ${global.prefix}kill → Elimina un archivo guardado.
     }
     break;
 }    
+       case 'nsfwwaifu': {
+  const chatId = msg.key.remoteJid;
+
+  // Reacción de carga
+  await sock.sendMessage(chatId, {
+    react: { text: '🔄', key: msg.key }
+  });
+
+  try {
+    const axios = require('axios');
+    // Llamada a la API
+    const res = await axios.get('https://api.waifu.pics/nsfw/waifu');
+    const imageUrl = res.data.url;
+
+    // Enviar la imagen
+    await sock.sendMessage(chatId, {
+      image: { url: imageUrl },
+      caption: '💖 Aquí tienes tu Waifu NSFW 💖'
+    }, { quoted: msg });
+
+    // Reacción de éxito
+    await sock.sendMessage(chatId, {
+      react: { text: '✅', key: msg.key }
+    });
+
+  } catch (err) {
+    console.error('❌ Error en comando nsfwwaifu:', err);
+    await sock.sendMessage(chatId, {
+      text: '❌ No pude obtener una Waifu en este momento. Intenta más tarde.'
+    }, { quoted: msg });
+  }
+}
+break; 
 case 'pack2': {
   const chatId = msg.key.remoteJid;
 
