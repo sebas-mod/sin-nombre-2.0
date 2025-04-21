@@ -11,7 +11,7 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
     try {
         await conn.sendMessage(m.chat, { react: { text: '⏳', key: m.key } });
 
-        const name = m.pushName || 'Usuario';
+        const name = 'Usuario';
         const prompt = await getPrompt();
         let result = '';
 
