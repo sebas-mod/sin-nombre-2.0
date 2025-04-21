@@ -5,7 +5,6 @@ const handler = async (msg, { conn }) => {
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   const chatId = msg.key.remoteJid;
 
-  // Reacción de carga
   await conn.sendMessage(chatId, {
     react: { text: "🔍", key: msg.key }
   });
@@ -17,10 +16,9 @@ const handler = async (msg, { conn }) => {
   }
 
   const mediaType = quoted.imageMessage ? "image" : "sticker";
-  const media = quoted[mediaType + "Message"];
+  const media = quoted.imageMessage || quoted.stickerMessage;
 
   try {
-    // Descargar el buffer directamente sin ffmpeg
     const stream = await downloadContentFromMessage(media, mediaType);
     let buffer = Buffer.alloc(0);
     for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
@@ -51,5 +49,4 @@ const handler = async (msg, { conn }) => {
 handler.command = ["xxx"];
 handler.tags = ["tools"];
 handler.help = ["xxx <responde a una imagen o sticker>"];
-
 module.exports = handler;
