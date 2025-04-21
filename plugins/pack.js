@@ -16,7 +16,7 @@ const handler = async (msg, { conn }) => {
   }, { quoted: msg });
 };
 
-handler.command = ["pack"];
-handler.tags = ["nsfw"];
-handler.help = ["pack"];
-module.exports = handler;
+handler.command = ['pack'];
+handler.tags = ['nsfw'];
+handler.help = ['pack'];
+module.exports = handler
