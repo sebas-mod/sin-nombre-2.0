@@ -468,7 +468,10 @@ try {
                       msg.message?.imageMessage?.caption || 
                       msg.message?.videoMessage?.caption || "";
 
+  // Verificar que no sea comando (tenga prefijo)
   if (isGroup && chatgptActivo && !fromMe && messageText.length > 0) {
+    if (global.allowedPrefixes.some(prefix => messageText.startsWith(prefix))) return;
+
     const encodedText = encodeURIComponent(messageText);
     const sessionID = "1727468410446638"; // ID de sesión
     const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
@@ -480,7 +483,7 @@ try {
     if (respuesta) {
       await sock.sendMessage(chatId, {
         text: respuesta,
-      }, { quoted: msg }); // <-- Aquí se cita correctamente el mensaje del usuario
+      }, { quoted: msg }); // Cita el mensaje original
     }
   }
 } catch (e) {
