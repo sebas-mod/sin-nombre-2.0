@@ -1,14 +1,11 @@
-const fs = require("fs");
-const path = require("path");
-const { exec } = require("child_process");
-const { promisify } = require("util");
-const Checker = require("../libs/nsfw"); // Ruta de tu función
+const Checker = require("../libs/nsfw"); // asegúrate que nsfw.js esté en lib/
 const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 
 const handler = async (msg, { conn }) => {
   const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   const chatId = msg.key.remoteJid;
 
+  // Reacción de carga
   await conn.sendMessage(chatId, {
     react: { text: "🔍", key: msg.key }
   });
@@ -20,26 +17,20 @@ const handler = async (msg, { conn }) => {
   }
 
   const mediaType = quoted.imageMessage ? "image" : "sticker";
-  const media = quoted[`${mediaType}Message`];
-  const stream = await downloadContentFromMessage(media, mediaType);
-  let buffer = Buffer.alloc(0);
-  for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-
-  const tmp = path.join(__dirname, "../tmp");
-  if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
-
-  const inputPath = path.join(tmp, `nsfw_${Date.now()}.webp`);
-  const outputPath = inputPath.replace(".webp", ".png");
-  fs.writeFileSync(inputPath, buffer);
+  const media = quoted[mediaType + "Message"];
 
   try {
-    await promisify(exec)(`ffmpeg -i "${inputPath}" "${outputPath}"`);
-    const finalBuffer = fs.readFileSync(outputPath);
+    // Descargar el buffer directamente sin ffmpeg
+    const stream = await downloadContentFromMessage(media, mediaType);
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-    const check = new Checker();
-    const result = await check.response(finalBuffer);
+    const checker = new Checker();
+    const result = await checker.response(buffer);
 
-    if (!result?.status) throw new Error(result?.msg || "No se pudo analizar.");
+    if (!result?.status) {
+      throw new Error(result?.msg || "No se pudo analizar la imagen.");
+    }
 
     const { NSFW, percentage, response } = result.result;
     const estado = NSFW ? "🔞 *NSFW detectado*" : "✅ *Contenido seguro*";
@@ -51,17 +42,14 @@ const handler = async (msg, { conn }) => {
   } catch (err) {
     console.error("❌ Error en comando xxx:", err);
     await conn.sendMessage(chatId, {
-      text: "❌ *Ocurrió un error al analizar el archivo.*",
+      text: `❌ *Error al analizar el archivo:* ${err.message}`,
       quoted: msg
     });
-  } finally {
-    if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-    if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
   }
 };
 
 handler.command = ["xxx"];
 handler.tags = ["tools"];
-handler.help = ["xxx <responde a imagen o sticker>"];
+handler.help = ["xxx <responde a una imagen o sticker>"];
 
 module.exports = handler;
