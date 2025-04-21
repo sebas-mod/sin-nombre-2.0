@@ -1,7 +1,7 @@
 const axios = require('axios');
 const fetch = require('node-fetch');
 
-const handler = async (m, { conn, args, usedPrefix, command }) => {
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const text = args.join(' ');
     
     if (!text) {
