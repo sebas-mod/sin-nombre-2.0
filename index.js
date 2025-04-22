@@ -452,7 +452,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     strikes: 0
   };
 
-  // LIMPIEZA AUTOMÁTICA de lista negra si ya pasaron 15s
+  // LIMPIEZA AUTOMÁTICA de lista negra si pasaron 15s
   if (global.antisBlackList[chatId]?.includes(user)) {
     const timePassed = now - userData.last;
     if (timePassed > 15000) {
@@ -467,7 +467,6 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
       userData.last = now;
       global.antisSpam[chatId][user] = userData;
     } else {
-      // Está en lista negra => eliminar y sumar strike
       userData.strikes++;
       await sock.sendMessage(chatId, {
         delete: {
@@ -492,32 +491,29 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     }
   }
 
-  // Si pasaron más de 15s desde el último sticker, reiniciar
-  if (now - userData.last > 15000) {
+  // Si fue advertido y pasaron 15s sin romper la regla
+  if (userData.warned && now - userData.last > 15000 && !global.antisBlackList[chatId]?.includes(user)) {
     userData.count = 1;
     userData.last = now;
     userData.warned = false;
     userData.strikes = 0;
+    global.antisSpam[chatId][user] = userData;
 
-    // Si estaba en lista negra, limpiarlo
-    if (global.antisBlackList[chatId]?.includes(user)) {
-      global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
-      await sock.sendMessage(chatId, {
-        text: `✅ @${user.split("@")[0]} ya puedes volver a enviar stickers.`,
-        mentions: [user]
-      });
-    }
-  } else {
-    userData.count++;
-    userData.last = now;
+    await sock.sendMessage(chatId, {
+      text: `✅ @${user.split("@")[0]} ya puedes volver a enviar stickers.`,
+      mentions: [user]
+    });
   }
 
+  // Actualizar contador y tiempo
+  userData.count++;
+  userData.last = now;
   global.antisSpam[chatId][user] = userData;
 
   // Al 5° sticker => advertencia
   if (userData.count === 5 && !userData.warned) {
     await sock.sendMessage(chatId, {
-      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers. Debes esperar *15 segundos* antes de enviar más.\n\nSi envías *3 stickers más*, serás eliminado del grupo.`,
+      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers.\nDebes esperar *15 segundos* o si envías *3 stickers más*, serás eliminado automáticamente.`,
       mentions: [user]
     });
     userData.warned = true;
