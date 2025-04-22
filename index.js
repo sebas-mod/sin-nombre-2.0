@@ -434,67 +434,84 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-// === INICIO LÓGICA ANTIS STICKERS ===
+// === INICIO LÓGICA ANTIS STICKERS PERSONALIZADA ===
 const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
 if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
-  console.log("📎 Se detectó un sticker en el grupo.");
-
   const user = msg.key.participant || msg.key.remoteJid;
   const now = Date.now();
+
   if (!global.antisSpam) global.antisSpam = {};
   if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
-  const userData = global.antisSpam[chatId][user] || { count: 0, last: now, messages: [] };
 
-  if (now - userData.last > 6000) {
+  const userData = global.antisSpam[chatId][user] || { count: 0, firstTime: now, messages: [], advertido: false };
+
+  // Reset si pasaron más de 10 segundos desde el primer sticker
+  if (now - userData.firstTime > 10000) {
     userData.count = 1;
-    userData.last = now;
+    userData.firstTime = now;
     userData.messages = [msg.key];
+    userData.advertido = false;
   } else {
     userData.count++;
-    userData.last = now;
     userData.messages.push(msg.key);
   }
 
+  // Guardar temporal en memoria
   global.antisSpam[chatId][user] = userData;
 
-  if (userData.count >= 3) {
-    for (const key of userData.messages) {
-      await sock.sendMessage(chatId, {
-        delete: {
-          remoteJid: chatId,
-          fromMe: false,
-          id: key.id,
-          participant: user
-        }
-      });
-    }
-
+  // Si envía más de 6 stickers en 7 segundos
+  if (userData.count > 6 && (now - userData.firstTime <= 7000)) {
     const avisosPath = "./avisos.json";
     let avisos = fs.existsSync(avisosPath) ? JSON.parse(fs.readFileSync(avisosPath, "utf-8")) : {};
     if (!avisos[chatId]) avisos[chatId] = {};
     if (!avisos[chatId][user]) avisos[chatId][user] = 0;
-    avisos[chatId][user]++;
-    fs.writeFileSync(avisosPath, JSON.stringify(avisos, null, 2));
 
-    const veces = avisos[chatId][user];
-    if (veces >= 2) {
-      await sock.sendMessage(chatId, {
-        text: "❌ Usuario eliminado por enviar stickers de forma excesiva.",
-        mentions: [user]
-      });
-      await sock.groupParticipantsUpdate(chatId, [user], "remove");
-    } else {
-      await sock.sendMessage(chatId, {
-        text: "⚠️ *Advertencia 1/2*\nHas enviado más de *3 stickers en menos de 6 segundos.*\n\nSi lo haces otra vez, *serás eliminado automáticamente del grupo.*",
-        mentions: [user]
-      });
+    // Eliminar sticker actual
+    await sock.sendMessage(chatId, {
+      delete: {
+        remoteJid: chatId,
+        fromMe: false,
+        id: msg.key.id,
+        participant: user
+      }
+    });
+
+    // Si aún no fue advertido esta ronda
+    if (!userData.advertido) {
+      avisos[chatId][user]++;
+      fs.writeFileSync(avisosPath, JSON.stringify(avisos, null, 2));
+
+      if (avisos[chatId][user] >= 2) {
+        await sock.sendMessage(chatId, {
+          text: `❌ @${user.split("@")[0]} fue eliminado por abusar de los stickers.`,
+          mentions: [user]
+        });
+        await sock.groupParticipantsUpdate(chatId, [user], "remove");
+        delete global.antisSpam[chatId][user];
+      } else {
+        await sock.sendMessage(chatId, {
+          text: `⚠️ *Advertencia 1/2*\n@${user.split("@")[0]} estás enviando demasiados stickers en poco tiempo.\nSi lo haces de nuevo, *serás eliminado del grupo.*`,
+          mentions: [user]
+        });
+        userData.advertido = true;
+      }
     }
+  }
 
-    delete global.antisSpam[chatId][user];
+  // Si ya fue advertido y sigue mandando stickers => eliminar directamente
+  if (userData.advertido && userData.count > 6) {
+    await sock.sendMessage(chatId, {
+      delete: {
+        remoteJid: chatId,
+        fromMe: false,
+        id: msg.key.id,
+        participant: user
+      }
+    });
   }
 }
-// === FIN LÓGICA ANTIS STICKERS ===
+// === FIN LÓGICA ANTIS STICKERS PERSONALIZADA ===
     
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
