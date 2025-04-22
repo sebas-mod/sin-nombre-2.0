@@ -572,6 +572,7 @@ try {
 
 // === INICIO LÓGICA ANTIS STICKERS ===
 try {
+  const fs = require("fs");
   const chatId = msg.key.remoteJid;
   const senderId = msg.key.participant || msg.key.remoteJid;
   const isGroup = chatId.endsWith("@g.us");
@@ -580,7 +581,13 @@ try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
   const antisActivo = activos.antis?.[chatId];
 
-  if (isGroup && antisActivo && !fromMe && msg.message?.stickerMessage) {
+  // Detección de stickerMessage incluso si es mensaje efímero
+  const stickerMsg = msg.message?.stickerMessage || 
+                     msg.message?.ephemeralMessage?.message?.stickerMessage;
+
+  if (isGroup && antisActivo && !fromMe && stickerMsg) {
+    console.log(`🟡 Detectado sticker en ${chatId} de ${senderId}`);
+
     const user = senderId;
     const now = Date.now();
 
@@ -602,7 +609,6 @@ try {
     global.antisSpam[chatId][user] = userData;
 
     if (userData.count >= 3) {
-      // Eliminar los stickers
       for (const key of userData.messages) {
         await sock.sendMessage(chatId, {
           delete: {
@@ -614,7 +620,6 @@ try {
         });
       }
 
-      // Manejo de avisos persistentes
       const avisosPath = "./avisos.json";
       let avisos = fs.existsSync(avisosPath) ? JSON.parse(fs.readFileSync(avisosPath, "utf-8")) : {};
       if (!avisos[chatId]) avisos[chatId] = {};
@@ -631,16 +636,14 @@ try {
           text: `❌ Usuario eliminado por enviar stickers de forma excesiva repetidamente.`,
           mentions: [user]
         });
-
         await sock.groupParticipantsUpdate(chatId, [user], "remove");
       } else {
         await sock.sendMessage(chatId, {
-          text: `⚠️ *Advertencia 1/2*\nHas enviado más de *3 stickers en menos de 6 segundos.*\n\nSi vuelves a hacerlo *serás eliminado automáticamente del grupo.*`,
+          text: `⚠️ *Advertencia 1/2*\nHas enviado más de *3 stickers en menos de 6 segundos.*\n\nSi lo haces otra vez, *serás eliminado automáticamente del grupo.*`,
           mentions: [user]
         });
       }
 
-      // Reinicia el contador de spam (no la advertencia)
       delete global.antisSpam[chatId][user];
     }
   }
