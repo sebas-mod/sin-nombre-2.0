@@ -619,7 +619,7 @@ try {
     "";
 
   if (isGroup && lumiActivo && !fromMe && text.length > 0) {
-    const name = msg.pushName || "Usuario";
+    const name = '[XEX]';
     const prompt = await getPrompt();
     let result = '';
 
