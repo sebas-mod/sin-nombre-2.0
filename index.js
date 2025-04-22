@@ -434,7 +434,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-// === INICIO LÓGICA ANTIS STICKERS PERSONALIZADA ===
+// === INICIO LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA) ===
 const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
 if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
@@ -443,31 +443,12 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
 
   if (!global.antisSpam) global.antisSpam = {};
   if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
+  if (!global.antisBlackList) global.antisBlackList = {};
 
-  const userData = global.antisSpam[chatId][user] || { count: 0, firstTime: now, messages: [], advertido: false };
+  const userData = global.antisSpam[chatId][user] || { count: 0, last: now, timeout: null, warned: false };
 
-  // Reset si pasaron más de 10 segundos desde el primer sticker
-  if (now - userData.firstTime > 10000) {
-    userData.count = 1;
-    userData.firstTime = now;
-    userData.messages = [msg.key];
-    userData.advertido = false;
-  } else {
-    userData.count++;
-    userData.messages.push(msg.key);
-  }
-
-  // Guardar temporal en memoria
-  global.antisSpam[chatId][user] = userData;
-
-  // Si envía más de 6 stickers en 7 segundos
-  if (userData.count > 6 && (now - userData.firstTime <= 7000)) {
-    const avisosPath = "./avisos.json";
-    let avisos = fs.existsSync(avisosPath) ? JSON.parse(fs.readFileSync(avisosPath, "utf-8")) : {};
-    if (!avisos[chatId]) avisos[chatId] = {};
-    if (!avisos[chatId][user]) avisos[chatId][user] = 0;
-
-    // Eliminar sticker actual
+  // Si está en lista negra => eliminar el sticker automáticamente
+  if (global.antisBlackList[chatId]?.includes(user)) {
     await sock.sendMessage(chatId, {
       delete: {
         remoteJid: chatId,
@@ -476,31 +457,47 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
         participant: user
       }
     });
-
-    // Si aún no fue advertido esta ronda
-    if (!userData.advertido) {
-      avisos[chatId][user]++;
-      fs.writeFileSync(avisosPath, JSON.stringify(avisos, null, 2));
-
-      if (avisos[chatId][user] >= 2) {
-        await sock.sendMessage(chatId, {
-          text: `❌ @${user.split("@")[0]} fue eliminado por abusar de los stickers.`,
-          mentions: [user]
-        });
-        await sock.groupParticipantsUpdate(chatId, [user], "remove");
-        delete global.antisSpam[chatId][user];
-      } else {
-        await sock.sendMessage(chatId, {
-          text: `⚠️ *Advertencia 1/2*\n@${user.split("@")[0]} estás enviando demasiados stickers en poco tiempo.\nSi lo haces de nuevo, *serás eliminado del grupo.*`,
-          mentions: [user]
-        });
-        userData.advertido = true;
-      }
-    }
+    return;
   }
 
-  // Si ya fue advertido y sigue mandando stickers => eliminar directamente
-  if (userData.advertido && userData.count > 6) {
+  // Si pasaron más de 10s desde el último sticker
+  if (now - userData.last > 10000) {
+    userData.count = 1;
+    userData.last = now;
+    userData.warned = false;
+
+    if (global.antisBlackList[chatId]?.includes(user)) {
+      // Quitar de lista negra y avisar
+      global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
+      await sock.sendMessage(chatId, {
+        text: `✅ @${user.split("@")[0]} ya puedes volver a enviar stickers.`,
+        mentions: [user]
+      });
+    }
+  } else {
+    userData.count++;
+    userData.last = now;
+  }
+
+  // Guardar el estado
+  global.antisSpam[chatId][user] = userData;
+
+  // Si llegó a 5 stickers => advertencia
+  if (userData.count === 5 && !userData.warned) {
+    await sock.sendMessage(chatId, {
+      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers. Debes esperar *10 segundos* para volver a enviar más o tus stickers serán eliminados.`,
+      mentions: [user]
+    });
+    userData.warned = true;
+  }
+
+  // Si envía el 6° antes de 10s => entra a lista negra + eliminar
+  if (userData.count > 5 && now - userData.last < 10000) {
+    if (!global.antisBlackList[chatId]) global.antisBlackList[chatId] = [];
+    if (!global.antisBlackList[chatId].includes(user)) {
+      global.antisBlackList[chatId].push(user);
+    }
+
     await sock.sendMessage(chatId, {
       delete: {
         remoteJid: chatId,
@@ -511,7 +508,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     });
   }
 }
-// === FIN LÓGICA ANTIS STICKERS PERSONALIZADA ===
+// === FIN LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA) ===
     
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
