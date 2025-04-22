@@ -434,15 +434,13 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-
-// === INICIO LÓGICA ANTIS STICKERS ===
+// === INICIO LÓGICA ANTIS STICKERS (15s, 3 strikes, sin notificación de desbloqueo) ===
 const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
 if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   const user = msg.key.participant || msg.key.remoteJid;
   const now = Date.now();
 
-  // Iniciar estructuras globales si no existen
   if (!global.antisSpam) global.antisSpam = {};
   if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
   if (!global.antisBlackList) global.antisBlackList = {};
@@ -456,33 +454,26 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
 
   const timePassed = now - userData.last;
 
-  // === Si pasaron más de 15 segundos desde el último sticker ===
+  // Reiniciar si pasaron más de 15 segundos
   if (timePassed > 15000) {
-    // Reiniciar estado completo
     userData.count = 1;
     userData.last = now;
     userData.warned = false;
     userData.strikes = 0;
 
-    // Sacarlo de lista negra si estaba
+    // Limpiar de lista negra si estaba
     if (global.antisBlackList[chatId]?.includes(user)) {
       global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
     }
 
-    // Notificar desbloqueo cada vez
-    await sock.sendMessage(chatId, {
-      text: `✅ @${user.split("@")[0]} ya han pasado los *15 segundos*, puedes volver a enviar stickers.`,
-      mentions: [user]
-    });
   } else {
     userData.count++;
     userData.last = now;
   }
 
-  // Guardar el nuevo estado
   global.antisSpam[chatId][user] = userData;
 
-  // === Al llegar al 5° sticker en menos de 15s ===
+  // Al 5° sticker => advertencia
   if (userData.count === 5) {
     await sock.sendMessage(chatId, {
       text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers. Debes esperar *15 segundos* o si envías *3 stickers más*, serás eliminado automáticamente.`,
@@ -493,15 +484,13 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     global.antisSpam[chatId][user] = userData;
   }
 
-  // === Si se pasa de 5 y no ha respetado los 15 segundos ===
+  // Si se pasa de 5 y aún no respetó los 15s => eliminar y sumar strike
   if (userData.count > 5 && timePassed < 15000) {
-    // Añadir a lista negra si aún no está
     if (!global.antisBlackList[chatId]) global.antisBlackList[chatId] = [];
     if (!global.antisBlackList[chatId].includes(user)) {
       global.antisBlackList[chatId].push(user);
     }
 
-    // Eliminar el sticker
     await sock.sendMessage(chatId, {
       delete: {
         remoteJid: chatId,
@@ -511,7 +500,6 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
       }
     });
 
-    // Sumar strike y expulsar si llega a 3
     userData.strikes++;
     global.antisSpam[chatId][user] = userData;
 
