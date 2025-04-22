@@ -4483,6 +4483,7 @@ case 'menugrupo': {
 🛡 𝐒𝐄𝐆𝐔𝐑𝐈𝐃𝐀𝐃  
 ╭✦ ${global.prefix}antilink on/off  
 ├✦ ${global.prefix}antiarabe on/off  
+├✦ ${global.prefix}antidelete on/off
 ├✦ ${global.prefix}kick  
 ╰✦ ${global.prefix}add
 
