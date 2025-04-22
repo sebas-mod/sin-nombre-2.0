@@ -413,6 +413,27 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
   try {
     const msg = messageUpsert.messages[0];
     if (!msg) return;
+    
+    const chatId = msg.key.remoteJid;
+    const isGroup = chatId.endsWith("@g.us");
+    const sender = msg.key.participant
+      ? msg.key.participant.replace(/[^0-9]/g, "")
+      : msg.key.remoteJid.replace(/[^0-9]/g, "");
+    const botNumber = sock.user.id.split(":")[0];
+    const fromMe = msg.key.fromMe || sender === botNumber;
+    let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+    let messageType = Object.keys(msg.message || {})[0];
+
+    const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json")) : {};
+    const lista = fs.existsSync("./lista.json") ? JSON.parse(fs.readFileSync("./lista.json")) : [];
+    const isAllowedUser = (num) => lista.includes(num);
+
+    console.log(chalk.yellow(`\n📩 Nuevo mensaje recibido`));
+    console.log(chalk.green(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${chalk.bold(sender)}`));
+    console.log(chalk.cyan(`💬 Tipo: ${messageType}`));
+    console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
+    console.log(chalk.gray("──────────────────────────"));
+
 // === INICIO LÓGICA ANTIS STICKERS ===
 const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
@@ -474,26 +495,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
-    const chatId = msg.key.remoteJid;
-    const isGroup = chatId.endsWith("@g.us");
-    const sender = msg.key.participant
-      ? msg.key.participant.replace(/[^0-9]/g, "")
-      : msg.key.remoteJid.replace(/[^0-9]/g, "");
-    const botNumber = sock.user.id.split(":")[0];
-    const fromMe = msg.key.fromMe || sender === botNumber;
-    let messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-    let messageType = Object.keys(msg.message || {})[0];
-
-    const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json")) : {};
-    const lista = fs.existsSync("./lista.json") ? JSON.parse(fs.readFileSync("./lista.json")) : [];
-    const isAllowedUser = (num) => lista.includes(num);
-
-    console.log(chalk.yellow(`\n📩 Nuevo mensaje recibido`));
-    console.log(chalk.green(`📨 De: ${fromMe ? "[Tú]" : "[Usuario]"} ${chalk.bold(sender)}`));
-    console.log(chalk.cyan(`💬 Tipo: ${messageType}`));
-    console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
-    console.log(chalk.gray("──────────────────────────"));
-
+    
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
   const guarPath = path.resolve('./guar.json');
