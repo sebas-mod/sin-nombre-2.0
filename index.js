@@ -434,7 +434,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-// === INICIO LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA) ===
+// === INICIO LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA AUTO) ===
 const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
 if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
@@ -445,53 +445,57 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
   if (!global.antisBlackList) global.antisBlackList = {};
 
-  const userData = global.antisSpam[chatId][user] || { count: 0, last: now, timeout: null, warned: false };
+  const userData = global.antisSpam[chatId][user] || { count: 0, last: now, warned: false };
 
-  // Si está en lista negra => eliminar el sticker automáticamente
+  // LIMPIEZA AUTOMÁTICA de lista negra si ya pasaron 10s
   if (global.antisBlackList[chatId]?.includes(user)) {
-    await sock.sendMessage(chatId, {
-      delete: {
-        remoteJid: chatId,
-        fromMe: false,
-        id: msg.key.id,
-        participant: user
-      }
-    });
-    return;
+    const timePassed = now - userData.last;
+    if (timePassed > 10000) {
+      global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
+      await sock.sendMessage(chatId, {
+        text: `✅ @${user.split("@")[0]} ya ha pasado el tiempo de espera, puedes volver a enviar stickers.`,
+        mentions: [user]
+      });
+      userData.count = 1;
+      userData.warned = false;
+      userData.last = now;
+      global.antisSpam[chatId][user] = userData;
+    } else {
+      // Si sigue en lista negra => eliminar stickers automáticamente
+      await sock.sendMessage(chatId, {
+        delete: {
+          remoteJid: chatId,
+          fromMe: false,
+          id: msg.key.id,
+          participant: user
+        }
+      });
+      return;
+    }
   }
 
-  // Si pasaron más de 10s desde el último sticker
+  // Si pasaron más de 10 segundos desde el último sticker, reiniciar
   if (now - userData.last > 10000) {
     userData.count = 1;
     userData.last = now;
     userData.warned = false;
-
-    if (global.antisBlackList[chatId]?.includes(user)) {
-      // Quitar de lista negra y avisar
-      global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
-      await sock.sendMessage(chatId, {
-        text: `✅ @${user.split("@")[0]} ya puedes volver a enviar stickers.`,
-        mentions: [user]
-      });
-    }
   } else {
     userData.count++;
     userData.last = now;
   }
 
-  // Guardar el estado
   global.antisSpam[chatId][user] = userData;
 
-  // Si llegó a 5 stickers => advertencia
+  // Si llega a 5 stickers => advertencia
   if (userData.count === 5 && !userData.warned) {
     await sock.sendMessage(chatId, {
-      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers. Debes esperar *10 segundos* para volver a enviar más o tus stickers serán eliminados.`,
+      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers. Debes esperar *10 segundos* antes de enviar más o tus stickers serán eliminados.`,
       mentions: [user]
     });
     userData.warned = true;
   }
 
-  // Si envía el 6° antes de 10s => entra a lista negra + eliminar
+  // Si rompe la regla (manda el 6° antes de los 10s) => entra a lista negra y se borra el sticker
   if (userData.count > 5 && now - userData.last < 10000) {
     if (!global.antisBlackList[chatId]) global.antisBlackList[chatId] = [];
     if (!global.antisBlackList[chatId].includes(user)) {
@@ -508,7 +512,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     });
   }
 }
-// === FIN LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA) ===
+// === FIN LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA AUTO) ===
     
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
