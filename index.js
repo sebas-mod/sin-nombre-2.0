@@ -67,6 +67,16 @@ async function luminaiQuery(q, user, prompt) {
   });
   return data.result;
 }
+
+async function perplexityQuery(q, prompt) {
+  const { data } = await axios.get('https://api.perplexity.ai/chat', {
+    params: {
+      query: encodeURIComponent(q),
+      context: encodeURIComponent(prompt)
+    }
+  });
+  return data.response;
+}
   //lumi
   const axios = require("axios");
 const fetch = require("node-fetch");
@@ -593,43 +603,7 @@ try {
 }
 // === FIN LÓGICA CHATGPT POR GRUPO ===
 
- // === INICIO LÓGICA LUMI AI POR GRUPO ===
-try {
-  const fs = require("fs");
-  const axios = require("axios");
-  const fetch = require("node-fetch");
-
-  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
-  const isGroup = msg.key.remoteJid.endsWith("@g.us");
-  const chatId = msg.key.remoteJid;
-  const lumiActivo = activos.lumi?.[chatId];
-  const fromMe = msg.key.fromMe;
-
-  const messageText =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.imageMessage?.caption ||
-    msg.message?.videoMessage?.caption ||
-    "";
-
-  if (isGroup && lumiActivo && !fromMe && messageText.length > 0) {
-    const userName = msg.pushName || "Usuario";
-    const prompt = await getPrompt();
-    const response = await luminaiQuery(messageText, userName, prompt);
-    const respuesta = cleanResponse(response);
-
-    if (respuesta) {
-      await sock.sendMessage(chatId, {
-        text: respuesta,
-      }, { quoted: msg });
-    }
-  }
-} catch (e) {
-  console.error("❌ Error en lógica Lumi AI por grupo:", e);
-}
-
-    
-    // === INICIO LÓGICA LUMI AI POR GRUPO ===
+// === INICIO LÓGICA LUMI AI POR GRUPO ===
 try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
   const isGroup = msg.key.remoteJid.endsWith("@g.us");
@@ -637,29 +611,40 @@ try {
   const lumiActivo = activos.lumi?.[chatId];
   const fromMe = msg.key.fromMe;
 
-  const messageText =
+  const text =
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
     msg.message?.imageMessage?.caption ||
     msg.message?.videoMessage?.caption ||
     "";
 
-  if (isGroup && lumiActivo && !fromMe && messageText.length > 0) {
-    const userName = msg.pushName || "Usuario";
+  if (isGroup && lumiActivo && !fromMe && text.length > 0) {
+    const name = msg.pushName || "Usuario";
     const prompt = await getPrompt();
-    const response = await luminaiQuery(messageText, userName, prompt);
-    const respuesta = cleanResponse(response);
+    let result = '';
 
-    if (respuesta) {
+    try {
+      result = await luminaiQuery(text, name, prompt);
+      result = cleanResponse(result);
+    } catch (e) {
+      console.error('Error Luminai:', e);
+      try {
+        result = await perplexityQuery(text, prompt);
+      } catch (e) {
+        console.error('Error Perplexity:', e);
+        result = '❌ No se obtuvo respuesta de los servicios';
+      }
+    }
+
+    if (result) {
       await sock.sendMessage(chatId, {
-        text: respuesta,
+        text: result
       }, { quoted: msg });
     }
   }
-} catch (e) {
-  console.error("❌ Error en lógica Lumi AI por grupo:", e);
+} catch (error) {
+  console.error("❌ Error en lógica Lumi AI automática:", error);
 }
-    console.log("✅ Ejecutando lógica Lumi:", msg.key.id);
 // === FIN LÓGICA LUMI AI POR GRUPO ===
 // === INICIO LÓGICA ANTIPORNO BOT PRINCIPAL ===
 try {
