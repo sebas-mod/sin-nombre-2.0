@@ -68,7 +68,9 @@ async function luminaiQuery(q, user, prompt) {
   return data.result;
 }
   //lumi
-  
+  const axios = require("axios");
+const fetch = require("node-fetch");
+
     const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require("@whiskeysockets/baileys");
     const chalk = require("chalk");
     const yargs = require('yargs/yargs')
