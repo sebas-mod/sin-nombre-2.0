@@ -4340,6 +4340,8 @@ case 'menu': {
 ⎔ ${global.prefix}simi
 ⎔ ${global.prefix}visión2
 ⎔ ${global.prefix}chat on o off
+⎔ ${global.prefix}lumi on o off
+⎔ ${global.prefix}luminai
 
 ╭──────────────╮  
 │ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
