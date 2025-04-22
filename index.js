@@ -413,7 +413,67 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
   try {
     const msg = messageUpsert.messages[0];
     if (!msg) return;
+// === INICIO LÓGICA ANTIS STICKERS ===
+const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
+if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
+  console.log("📎 Se detectó un sticker en el grupo.");
+
+  const user = msg.key.participant || msg.key.remoteJid;
+  const now = Date.now();
+  if (!global.antisSpam) global.antisSpam = {};
+  if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
+  const userData = global.antisSpam[chatId][user] || { count: 0, last: now, messages: [] };
+
+  if (now - userData.last > 6000) {
+    userData.count = 1;
+    userData.last = now;
+    userData.messages = [msg.key];
+  } else {
+    userData.count++;
+    userData.last = now;
+    userData.messages.push(msg.key);
+  }
+
+  global.antisSpam[chatId][user] = userData;
+
+  if (userData.count >= 3) {
+    for (const key of userData.messages) {
+      await sock.sendMessage(chatId, {
+        delete: {
+          remoteJid: chatId,
+          fromMe: false,
+          id: key.id,
+          participant: user
+        }
+      });
+    }
+
+    const avisosPath = "./avisos.json";
+    let avisos = fs.existsSync(avisosPath) ? JSON.parse(fs.readFileSync(avisosPath, "utf-8")) : {};
+    if (!avisos[chatId]) avisos[chatId] = {};
+    if (!avisos[chatId][user]) avisos[chatId][user] = 0;
+    avisos[chatId][user]++;
+    fs.writeFileSync(avisosPath, JSON.stringify(avisos, null, 2));
+
+    const veces = avisos[chatId][user];
+    if (veces >= 2) {
+      await sock.sendMessage(chatId, {
+        text: "❌ Usuario eliminado por enviar stickers de forma excesiva.",
+        mentions: [user]
+      });
+      await sock.groupParticipantsUpdate(chatId, [user], "remove");
+    } else {
+      await sock.sendMessage(chatId, {
+        text: "⚠️ *Advertencia 1/2*\nHas enviado más de *3 stickers en menos de 6 segundos.*\n\nSi lo haces otra vez, *serás eliminado automáticamente del grupo.*",
+        mentions: [user]
+      });
+    }
+
+    delete global.antisSpam[chatId][user];
+  }
+}
+// === FIN LÓGICA ANTIS STICKERS ===
     const chatId = msg.key.remoteJid;
     const isGroup = chatId.endsWith("@g.us");
     const sender = msg.key.participant
@@ -569,68 +629,6 @@ try {
   console.error("❌ Error al ejecutar comando desde sticker:", err);
 }
 // === FIN LÓGICA COMANDOS DESDE STICKER ===
-
-// === INICIO LÓGICA ANTIS STICKERS ===
-const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
-
-if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
-  console.log("📎 Se detectó un sticker en el grupo.");
-
-  const user = msg.key.participant || msg.key.remoteJid;
-  const now = Date.now();
-  if (!global.antisSpam) global.antisSpam = {};
-  if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
-  const userData = global.antisSpam[chatId][user] || { count: 0, last: now, messages: [] };
-
-  if (now - userData.last > 6000) {
-    userData.count = 1;
-    userData.last = now;
-    userData.messages = [msg.key];
-  } else {
-    userData.count++;
-    userData.last = now;
-    userData.messages.push(msg.key);
-  }
-
-  global.antisSpam[chatId][user] = userData;
-
-  if (userData.count >= 3) {
-    for (const key of userData.messages) {
-      await sock.sendMessage(chatId, {
-        delete: {
-          remoteJid: chatId,
-          fromMe: false,
-          id: key.id,
-          participant: user
-        }
-      });
-    }
-
-    const avisosPath = "./avisos.json";
-    let avisos = fs.existsSync(avisosPath) ? JSON.parse(fs.readFileSync(avisosPath, "utf-8")) : {};
-    if (!avisos[chatId]) avisos[chatId] = {};
-    if (!avisos[chatId][user]) avisos[chatId][user] = 0;
-    avisos[chatId][user]++;
-    fs.writeFileSync(avisosPath, JSON.stringify(avisos, null, 2));
-
-    const veces = avisos[chatId][user];
-    if (veces >= 2) {
-      await sock.sendMessage(chatId, {
-        text: "❌ Usuario eliminado por enviar stickers de forma excesiva.",
-        mentions: [user]
-      });
-      await sock.groupParticipantsUpdate(chatId, [user], "remove");
-    } else {
-      await sock.sendMessage(chatId, {
-        text: "⚠️ *Advertencia 1/2*\nHas enviado más de *3 stickers en menos de 6 segundos.*\n\nSi lo haces otra vez, *serás eliminado automáticamente del grupo.*",
-        mentions: [user]
-      });
-    }
-
-    delete global.antisSpam[chatId][user];
-  }
-}
-// === FIN LÓGICA ANTIS STICKERS ===
     
 // === INICIO LÓGICA CHATGPT POR GRUPO ===
 try {
