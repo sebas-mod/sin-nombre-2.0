@@ -434,7 +434,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-// === INICIO LÓGICA ANTIS STICKERS (15s, 3 strikes y kick) ===
+// === INICIO LÓGICA ANTIS STICKERS (15s, 3 strikes, limpieza y notificación) ===
 const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
 if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
@@ -444,6 +444,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   if (!global.antisSpam) global.antisSpam = {};
   if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
   if (!global.antisBlackList) global.antisBlackList = {};
+  if (!global.antisUnlockNotified) global.antisUnlockNotified = {};
 
   const userData = global.antisSpam[chatId][user] || {
     count: 0,
@@ -452,68 +453,83 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     strikes: 0
   };
 
-  // LIMPIEZA AUTOMÁTICA de lista negra si pasaron 15s
-  if (global.antisBlackList[chatId]?.includes(user)) {
-    const timePassed = now - userData.last;
-    if (timePassed > 15000) {
+  const timePassed = now - userData.last;
+
+  // Si pasaron 15s y fue advertido o estaba en lista negra, limpiar y notificar
+  const isInBlacklist = global.antisBlackList[chatId]?.includes(user);
+  const shouldUnlock = (userData.warned || isInBlacklist) && timePassed > 15000;
+
+  if (shouldUnlock && !global.antisUnlockNotified[chatId]?.includes(user)) {
+    // limpiar lista negra
+    if (isInBlacklist) {
       global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
-      await sock.sendMessage(chatId, {
-        text: `✅ @${user.split("@")[0]} ya ha pasado el tiempo de espera. Puedes volver a enviar stickers.`,
-        mentions: [user]
-      });
-      userData.count = 1;
-      userData.warned = false;
-      userData.strikes = 0;
-      userData.last = now;
-      global.antisSpam[chatId][user] = userData;
-    } else {
-      userData.strikes++;
-      await sock.sendMessage(chatId, {
-        delete: {
-          remoteJid: chatId,
-          fromMe: false,
-          id: msg.key.id,
-          participant: user
-        }
-      });
-
-      if (userData.strikes >= 3) {
-        await sock.sendMessage(chatId, {
-          text: `❌ @${user.split("@")[0]} fue eliminado por ignorar el aviso y abusar de los stickers.`,
-          mentions: [user]
-        });
-        await sock.groupParticipantsUpdate(chatId, [user], "remove");
-        delete global.antisSpam[chatId][user];
-      } else {
-        global.antisSpam[chatId][user] = userData;
-      }
-      return;
     }
-  }
 
-  // Si fue advertido y pasaron 15s sin romper la regla
-  if (userData.warned && now - userData.last > 15000 && !global.antisBlackList[chatId]?.includes(user)) {
+    // notificar solo una vez
+    if (!global.antisUnlockNotified[chatId]) global.antisUnlockNotified[chatId] = [];
+    global.antisUnlockNotified[chatId].push(user);
+
+    // reset
     userData.count = 1;
-    userData.last = now;
     userData.warned = false;
     userData.strikes = 0;
+    userData.last = now;
     global.antisSpam[chatId][user] = userData;
 
     await sock.sendMessage(chatId, {
-      text: `✅ @${user.split("@")[0]} ya puedes volver a enviar stickers.`,
+      text: `✅ @${user.split("@")[0]} ya han pasado los *15 segundos*, puedes volver a enviar stickers.`,
       mentions: [user]
     });
   }
 
-  // Actualizar contador y tiempo
-  userData.count++;
-  userData.last = now;
+  // Si está en lista negra y aún no ha esperado los 15s => eliminar y contar strike
+  if (isInBlacklist && timePassed <= 15000) {
+    userData.strikes++;
+    await sock.sendMessage(chatId, {
+      delete: {
+        remoteJid: chatId,
+        fromMe: false,
+        id: msg.key.id,
+        participant: user
+      }
+    });
+
+    if (userData.strikes >= 3) {
+      await sock.sendMessage(chatId, {
+        text: `❌ @${user.split("@")[0]} fue eliminado por ignorar el aviso y abusar de los stickers.`,
+        mentions: [user]
+      });
+      await sock.groupParticipantsUpdate(chatId, [user], "remove");
+      delete global.antisSpam[chatId][user];
+    } else {
+      global.antisSpam[chatId][user] = userData;
+    }
+    return;
+  }
+
+  // contador de stickers en tiempo válido
+  if (timePassed > 15000) {
+    userData.count = 1;
+    userData.last = now;
+    userData.warned = false;
+    userData.strikes = 0;
+
+    // limpiar unlockNotified para futuro
+    if (global.antisUnlockNotified[chatId]) {
+      global.antisUnlockNotified[chatId] = global.antisUnlockNotified[chatId].filter(u => u !== user);
+    }
+
+  } else {
+    userData.count++;
+    userData.last = now;
+  }
+
   global.antisSpam[chatId][user] = userData;
 
   // Al 5° sticker => advertencia
   if (userData.count === 5 && !userData.warned) {
     await sock.sendMessage(chatId, {
-      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers.\nDebes esperar *15 segundos* o si envías *3 stickers más*, serás eliminado automáticamente.`,
+      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers.\nDebes esperar *15 segundos* o si envías *3 stickers más*, serás eliminado del grupo.`,
       mentions: [user]
     });
     userData.warned = true;
@@ -521,7 +537,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 
   // Si manda el 6° antes de los 15s => entra a lista negra y se elimina
-  if (userData.count > 5 && now - userData.last < 15000) {
+  if (userData.count > 5 && timePassed < 15000) {
     if (!global.antisBlackList[chatId]) global.antisBlackList[chatId] = [];
     if (!global.antisBlackList[chatId].includes(user)) {
       global.antisBlackList[chatId].push(user);
@@ -540,7 +556,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     });
   }
 }
-// === FIN LÓGICA ANTIS STICKERS (15s, 3 strikes y kick) ===
+// === FIN LÓGICA ANTIS STICKERS (15s, 3 strikes, limpieza y notificación) ===
     
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
