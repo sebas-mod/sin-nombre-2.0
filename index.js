@@ -434,7 +434,7 @@ sock.ev.on("messages.upsert", async (messageUpsert) => {
     console.log(chalk.cyan(`💬 Mensaje: ${chalk.bold(messageText || "📂 (Mensaje multimedia)")}`));
     console.log(chalk.gray("──────────────────────────"));
 
-// === INICIO LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA AUTO) ===
+// === INICIO LÓGICA ANTIS STICKERS (15s, 3 strikes y kick) ===
 const stickerMsg = msg.message?.stickerMessage || msg.message?.ephemeralMessage?.message?.stickerMessage;
 
 if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
@@ -445,23 +445,30 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   if (!global.antisSpam[chatId]) global.antisSpam[chatId] = {};
   if (!global.antisBlackList) global.antisBlackList = {};
 
-  const userData = global.antisSpam[chatId][user] || { count: 0, last: now, warned: false };
+  const userData = global.antisSpam[chatId][user] || {
+    count: 0,
+    last: now,
+    warned: false,
+    strikes: 0
+  };
 
-  // LIMPIEZA AUTOMÁTICA de lista negra si ya pasaron 10s
+  // LIMPIEZA AUTOMÁTICA de lista negra si ya pasaron 15s
   if (global.antisBlackList[chatId]?.includes(user)) {
     const timePassed = now - userData.last;
-    if (timePassed > 10000) {
+    if (timePassed > 15000) {
       global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
       await sock.sendMessage(chatId, {
-        text: `✅ @${user.split("@")[0]} ya ha pasado el tiempo de espera, puedes volver a enviar stickers.`,
+        text: `✅ @${user.split("@")[0]} ya ha pasado el tiempo de espera. Puedes volver a enviar stickers.`,
         mentions: [user]
       });
       userData.count = 1;
       userData.warned = false;
+      userData.strikes = 0;
       userData.last = now;
       global.antisSpam[chatId][user] = userData;
     } else {
-      // Si sigue en lista negra => eliminar stickers automáticamente
+      // Está en lista negra => eliminar y sumar strike
+      userData.strikes++;
       await sock.sendMessage(chatId, {
         delete: {
           remoteJid: chatId,
@@ -470,15 +477,36 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
           participant: user
         }
       });
+
+      if (userData.strikes >= 3) {
+        await sock.sendMessage(chatId, {
+          text: `❌ @${user.split("@")[0]} fue eliminado por ignorar el aviso y abusar de los stickers.`,
+          mentions: [user]
+        });
+        await sock.groupParticipantsUpdate(chatId, [user], "remove");
+        delete global.antisSpam[chatId][user];
+      } else {
+        global.antisSpam[chatId][user] = userData;
+      }
       return;
     }
   }
 
-  // Si pasaron más de 10 segundos desde el último sticker, reiniciar
-  if (now - userData.last > 10000) {
+  // Si pasaron más de 15s desde el último sticker, reiniciar
+  if (now - userData.last > 15000) {
     userData.count = 1;
     userData.last = now;
     userData.warned = false;
+    userData.strikes = 0;
+
+    // Si estaba en lista negra, limpiarlo
+    if (global.antisBlackList[chatId]?.includes(user)) {
+      global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(u => u !== user);
+      await sock.sendMessage(chatId, {
+        text: `✅ @${user.split("@")[0]} ya puedes volver a enviar stickers.`,
+        mentions: [user]
+      });
+    }
   } else {
     userData.count++;
     userData.last = now;
@@ -486,21 +514,25 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
 
   global.antisSpam[chatId][user] = userData;
 
-  // Si llega a 5 stickers => advertencia
+  // Al 5° sticker => advertencia
   if (userData.count === 5 && !userData.warned) {
     await sock.sendMessage(chatId, {
-      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers. Debes esperar *10 segundos* antes de enviar más o tus stickers serán eliminados.`,
+      text: `⚠️ @${user.split("@")[0]} has enviado 5 stickers. Debes esperar *15 segundos* antes de enviar más.\n\nSi envías *3 stickers más*, serás eliminado del grupo.`,
       mentions: [user]
     });
     userData.warned = true;
+    global.antisSpam[chatId][user] = userData;
   }
 
-  // Si rompe la regla (manda el 6° antes de los 10s) => entra a lista negra y se borra el sticker
-  if (userData.count > 5 && now - userData.last < 10000) {
+  // Si manda el 6° antes de los 15s => entra a lista negra y se elimina
+  if (userData.count > 5 && now - userData.last < 15000) {
     if (!global.antisBlackList[chatId]) global.antisBlackList[chatId] = [];
     if (!global.antisBlackList[chatId].includes(user)) {
       global.antisBlackList[chatId].push(user);
     }
+
+    userData.strikes = 1;
+    global.antisSpam[chatId][user] = userData;
 
     await sock.sendMessage(chatId, {
       delete: {
@@ -512,7 +544,7 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
     });
   }
 }
-// === FIN LÓGICA ANTIS STICKERS (COOLDOWN + LISTA NEGRA AUTO) ===
+// === FIN LÓGICA ANTIS STICKERS (15s, 3 strikes y kick) ===
     
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
