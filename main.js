@@ -4246,7 +4246,7 @@ Así te registras
 ➤ ${global.prefix}dame ➤ ${global.prefix}dep
 ➤ ${global.prefix}bal ➤ ${global.prefix}saldo
 ➤ ${global.prefix}retirar ➤ ${global.prefix}depositar
-➤ ${global.prefix}retirar
+➤ ${global.prefix}retirar ➤ ${global.prefix}delrpg
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
 ➤ ${global.prefix}topuser ➤ ${global.prefix}topmascotas  
@@ -4463,11 +4463,13 @@ case 'menugrupo': {
 ╭✦ ${global.prefix}setinfo  
 ├✦ ${global.prefix}infogrupo
 ├✦ ${global.prefix}setname  
+├✦ ${global.prefix}delwelcome
 ├✦ ${global.prefix}setwelcome
 ├✦ ${global.prefix}antiporno on o off
 ├✦ ${global.prefix}antidelete on o off
 ├✦ ${global.prefix}setfoto  
 ├✦ ${global.prefix}welcome on/off  
+├✦ ${global.prefix}despedidas on/off
 ╰────────────────
 
 🔱 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐂𝐈Ó𝐍  
