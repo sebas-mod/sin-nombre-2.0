@@ -317,8 +317,10 @@ if (fs.existsSync(welcomePath)) {
       "Hasta pronto, y gracias por haber compartido momentos inolvidables con Azura Ultra 2.0 Bot 👋💖."
     ];
 
-    // Procesar según la acción: "add" (entrada) o "remove" (salida)
-if (update.action === "add") {
+// Procesar según la acción: "add" (entrada) o "remove" (salida)
+
+// Si alguien entra y la bienvenida está activa
+if (update.action === "add" && welcomeActivo) {
   for (const participant of update.participants) {
     const mention = `@${participant.split("@")[0]}`;
     const customMessage = customWelcomes[update.id];
@@ -374,8 +376,8 @@ if (update.action === "add") {
       }
     }
   }
-} else if (update.action === "remove") {
-  // Tu lógica de despedida sigue igual
+} else if (update.action === "remove" && despedidasActivo) {
+  // Si alguien se va y despedidas está activado
   for (const participant of update.participants) {
     const mention = `@${participant.split("@")[0]}`;
     const mensajeTexto = farewellTexts[Math.floor(Math.random() * farewellTexts.length)];
