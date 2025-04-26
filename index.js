@@ -281,7 +281,10 @@ sock.ev.on("group-participants.update", async (update) => {
     // **************** FIN LÓGICA ANTIARABE ****************
 
     // **************** LÓGICA BIENVENIDA/DESPEDIDA ****************
-if (!activos.welcome || !activos.welcome[update.id]) return;
+const welcomeActivo = activos.welcome?.[update.id];
+const despedidasActivo = activos.despedidas?.[update.id];
+
+if (!welcomeActivo && !despedidasActivo) return;
 
 const welcomePath = "./welcome.json";
 let customWelcomes = {};
