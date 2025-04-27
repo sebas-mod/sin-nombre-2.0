@@ -1194,44 +1194,6 @@ try {
   console.error("❌ Error al ejecutar comando desde sticker:", err);
 }
 // === FIN LÓGICA COMANDOS DESDE STICKER ===    
-// === INICIO BLOQUEO AUTOMÁTICO COMANDOS +18 (MODO CALIENTE) ===
-try {
-  const comandosHot = ["videoxxx", "pornololi", "nsfwneko", "nsfwwaifu", "waifu", "neko"];
-
-  const activosPath = path.resolve("./activos.json");
-  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
-
-  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-
-  const prefixes = global.allowedPrefixes || ["."];
-  const usedPrefix = prefixes.find(p => messageText.startsWith(p)) || null;
-  const commandOnly = usedPrefix ? messageText.slice(usedPrefix.length).trim().split(" ")[0].toLowerCase() : "";
-
-  const senderClean = sender.replace(/[^0-9]/g, "");
-  const isOwner = global.owner.some(([id]) => id === senderClean);
-  const isFromMe = msg.key.fromMe;
-
-  const calienteActivo = activos.modocaliente?.[chatId];
-
-  if (comandosHot.includes(commandOnly) && !calienteActivo && !isOwner && !isFromMe) {
-    const mensajesBloqueo = [
-      "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active con .modocaliente on o off.",
-      "❌ Qué desesperación, aguántese. El modo caliente no está activado con .modocaliente on o off.",
-      "🛑 Este comando +18 está apagado. Primero active el modo caliente, ansioso con .modocaliente on o off.",
-      "🚷 Caliente frustrado detectado. Modo +18 desactivado, regresa luego con .modocaliente on o off."
-    ];
-    const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
-
-    await sock.sendMessage(chatId, {
-      text: textoBloqueo
-    }, { quoted: msg });
-    return;
-  }
-
-} catch (e) {
-  console.error("❌ Error procesando modo caliente:", e);
-}
-// === FIN BLOQUEO AUTOMÁTICO COMANDOS +18 ===
 // === INICIO BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
 try {
   const comandosRpg = [
@@ -1253,29 +1215,67 @@ try {
 
   const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
 
-  const prefixes = global.allowedPrefixes || ["."];
-  const usedPrefix = prefixes.find(p => messageText.startsWith(p)) || null;
-  const commandOnly = usedPrefix ? messageText.slice(usedPrefix.length).trim().split(" ")[0].toLowerCase() : "";
+  // NUEVO: Validar prefijo actual
+  if (!messageText.startsWith(global.prefix)) return;
+
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
 
   const rpgActivo = activos.rpgazura?.[chatId];
 
   if (comandosRpg.includes(commandOnly) && !rpgActivo) {
     const mensajesBloqueo = [
-      "🚫 Este comando RPG está desactivado en este grupo. Habla con un admin para activarlo usando .rpgazura on o off.",
-      "🛑 El mundo RPG está apagado. Pide a un admin que active el modo RPG primero usando .rpgazura on o off.",
-      "❌ Comandos RPG no disponibles. Solicita a un administrador su activación usando .rpgazura on o off.",
-      "🚷 Sistema RPG desactivado. Consulta a los administradores si quieres jugar usando .rpgazura on o off."
+      "🚫 Este comando RPG está desactivado en este grupo. Usa .rpgazura on o off.",
+      "🛑 El mundo RPG está apagado. Usa .rpgazura on o off.",
+      "❌ Comandos RPG no disponibles. Usa .rpgazura on o off.",
+      "🚷 Sistema RPG desactivado. Usa .rpgazura on o off."
     ];
     const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
 
     await sock.sendMessage(chatId, { text: textoBloqueo }, { quoted: msg });
-    return; // Detener ejecución del comando
+    return;
   }
 
 } catch (e) {
   console.error("❌ Error procesando bloqueo de comandos RPG:", e);
 }
 // === FIN BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
+// === INICIO BLOQUEO AUTOMÁTICO COMANDOS +18 (MODO CALIENTE) ===
+try {
+  const comandosHot = ["videoxxx", "pornololi", "nsfwneko", "nsfwwaifu", "waifu", "neko"];
+
+  const activosPath = path.resolve("./activos.json");
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+
+  // NUEVO: Validar prefijo actual
+  if (!messageText.startsWith(global.prefix)) return;
+
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const senderClean = sender.replace(/[^0-9]/g, "");
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+  const isFromMe = msg.key.fromMe;
+
+  const calienteActivo = activos.modocaliente?.[chatId];
+
+  if (comandosHot.includes(commandOnly) && !calienteActivo && !isOwner && !isFromMe) {
+    const mensajesBloqueo = [
+      "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active con .modocaliente on o off.",
+      "❌ Qué desesperación, aguántese. El modo caliente no está activado con .modocaliente on o off.",
+      "🛑 Este comando +18 está apagado. Primero active el modo caliente con .modocaliente on o off.",
+      "🚷 Caliente frustrado detectado. El modo +18 está desactivado en este grupo."
+    ];
+    const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
+
+    await sock.sendMessage(chatId, { text: textoBloqueo }, { quoted: msg });
+    return;
+  }
+
+} catch (e) {
+  console.error("❌ Error procesando bloqueo de modo caliente:", e);
+}
+// === FIN BLOQUEO AUTOMÁTICO COMANDOS +18 ===    
     
     // ✅ Procesar comando
     if (messageText.startsWith(global.prefix)) {
