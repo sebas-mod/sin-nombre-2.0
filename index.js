@@ -519,7 +519,36 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
+// === INICIO CONTADOR DE MENSAJES POR GRUPO ===
+try {
+  const fs = require("fs");
+  const path = require("path");
 
+  const conteoPath = path.resolve("./conteo.json");
+  if (!fs.existsSync(conteoPath)) {
+    fs.writeFileSync(conteoPath, JSON.stringify({}, null, 2));
+  }
+
+  const conteoData = JSON.parse(fs.readFileSync(conteoPath, "utf-8"));
+
+  const chatId = msg.key.remoteJid;
+  const senderId = msg.key.participant || msg.key.remoteJid;
+  const isGroup = chatId.endsWith("@g.us");
+  const fromMe = msg.key.fromMe;
+
+  if (isGroup && !fromMe) {
+    if (!conteoData[chatId]) conteoData[chatId] = {}; // Si no hay datos para este grupo, inicializar
+    if (!conteoData[chatId][senderId]) conteoData[chatId][senderId] = 0; // Si no hay datos para este usuario, inicializar
+
+    conteoData[chatId][senderId] += 1; // Sumar +1 mensaje
+
+    fs.writeFileSync(conteoPath, JSON.stringify(conteoData, null, 2));
+  }
+
+} catch (error) {
+  console.error("❌ Error en contador de mensajes:", error);
+}
+// === FIN CONTADOR DE MENSAJES POR GRUPO ===
 // === INICIO BLOQUEO AUTOMÁTICO COMANDOS +18 (MODO CALIENTE) ===
 try {
   const comandosHot = ["videoxxx", "pornololi", "nsfwneko", "nsfwwaifu", "waifu", "neko"];
