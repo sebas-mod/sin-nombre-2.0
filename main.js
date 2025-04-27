@@ -4418,7 +4418,15 @@ case 'menu': {
 ⎔ ${global.prefix}ship  
 ⎔ ${global.prefix}parejas  
 
-
+╭──────────────╮  
+│ ✦ COMANDO +18 ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}videoxxx
+⎔ ${global.prefix}pornololi
+⎔ ${global.prefix}nsfwneko
+⎔ ${global.prefix}Nsfwwaifu
+⎔ ${global.prefix}Waifu
+⎔ ${global.prefix}Neko
 
 ╭─────────────────╮  
  ✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝙇𝙏𝙍𝘼 & 𝘾𝙊𝙍𝙏𝘼𝙉𝘼 𝙀𝙎𝙏Á 𝙀𝙉 𝘾𝙊𝙉𝙎𝙏𝘼𝙉𝙏𝙀 𝘿𝙀𝙎𝘼𝙍𝙍𝙊𝙇𝙇𝙊. 
