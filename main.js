@@ -4247,6 +4247,7 @@ Así te registras
 ➤ ${global.prefix}bal ➤ ${global.prefix}saldo
 ➤ ${global.prefix}retirar ➤ ${global.prefix}depositar
 ➤ ${global.prefix}retirar ➤ ${global.prefix}delrpg
+➤ ${global.prefix}rpgazura on o off
 
 📌 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦 𝗗𝗘 𝗧𝗢𝗣  
 ➤ ${global.prefix}topuser ➤ ${global.prefix}topmascotas  
