@@ -29,7 +29,7 @@ const handler = async (msg, { conn, args }) => {
 
   if (!args[0]) {
     await conn.sendMessage(chatId, {
-      text: "⚙️ Usa: *cerrar 10s*, *cerrar 10m* o *cerrar 10h* para cerrar el grupo automáticamente."
+      text: "⚙️ Usa: *cerrar 10s*, *cerrar 10m* o *cerrar 1h* para programar el cierre automático."
     }, { quoted: msg });
     return;
   }
@@ -37,7 +37,7 @@ const handler = async (msg, { conn, args }) => {
   const match = args[0].match(/^(\d+)([smh])$/i);
   if (!match) {
     await conn.sendMessage(chatId, {
-      text: "❌ Formato incorrecto. Usa: *cerrar 10s*, *cerrar 10m* o *cerrar 10h*."
+      text: "❌ Formato incorrecto. Usa: *cerrar 10s*, *cerrar 10m* o *cerrar 1h*."
     }, { quoted: msg });
     return;
   }
@@ -68,10 +68,8 @@ const handler = async (msg, { conn, args }) => {
   tiempoData[chatId] = ahora + milliseconds;
   fs.writeFileSync(tiempoPath, JSON.stringify(tiempoData, null, 2));
 
-  await conn.groupSettingUpdate(chatId, "announcement"); // Cierra el grupo (solo admins pueden escribir)
-
   await conn.sendMessage(chatId, {
-    text: `🔒 Grupo cerrado automáticamente durante *${amount}${unit}*.`
+    text: `⏳ Grupo programado para cerrarse automáticamente en *${amount}${unit}*.`
   }, { quoted: msg });
 
   await conn.sendMessage(chatId, {
