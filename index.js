@@ -616,81 +616,7 @@ try {
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 
-// === INICIO LÓGICA COMANDOS DESDE STICKER ===
-try {
-  const jsonPath = "./comandos.json";
-  if (!fs.existsSync(jsonPath)) return;
 
-  if (msg.message?.stickerMessage) {
-    const fileSha = msg.message.stickerMessage.fileSha256?.toString("base64");
-    const comandosData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
-
-    const cmd = comandosData[fileSha];
-    if (!cmd) return;
-
-    const messageText = cmd.toLowerCase().trim();
-    const parts = messageText.split(" ");
-    const mainCommand = parts[0];
-    const args = parts.slice(1);
-
-    const chatId = msg.key.remoteJid;
-    const sender = msg.key.participant || msg.key.remoteJid;
-
-    // Obtener información del mensaje citado (si hay)
-    const contextInfo = msg.message?.stickerMessage?.contextInfo || {};
-    const quotedMsg = contextInfo.quotedMessage || null;
-    const quotedParticipant = contextInfo.participant || null;
-
-    const fakeMessage = {
-      ...msg,
-      message: {
-        extendedTextMessage: {
-          text: messageText,
-          contextInfo: {
-            quotedMessage: quotedMsg,
-            participant: quotedParticipant,
-            stanzaId: contextInfo.stanzaId || "",
-            remoteJid: contextInfo.remoteJid || chatId
-          }
-        }
-      },
-      body: messageText,
-      text: messageText,
-      command: mainCommand,
-      key: {
-        ...msg.key,
-        fromMe: false,
-        participant: sender
-      }
-    };
-
-    const { handleCommand } = require("./main");
-    const isPluginCommand = global.plugins?.some(p => p.command?.includes?.(mainCommand));
-
-    // Ejecutar desde main.js (case)
-    await handleCommand(sock, fakeMessage, mainCommand, args, sender);
-
-    // Ejecutar si es plugin
-    if (isPluginCommand) {
-      for (const plugin of global.plugins) {
-        if (plugin.command?.includes(mainCommand)) {
-          if (typeof plugin.run === "function") {
-            await plugin.run({
-              msg: fakeMessage,
-              conn: sock,
-              args,
-              command: mainCommand
-            });
-            break;
-          }
-        }
-      }
-    }
-  }
-} catch (err) {
-  console.error("❌ Error al ejecutar comando desde sticker:", err);
-}
-// === FIN LÓGICA COMANDOS DESDE STICKER ===
     
 // === INICIO LÓGICA CHATGPT POR GRUPO ===
 try {
@@ -1143,6 +1069,81 @@ setInterval(() => {
       if (!isGroup && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     }
 
+// === INICIO LÓGICA COMANDOS DESDE STICKER ===
+try {
+  const jsonPath = "./comandos.json";
+  if (!fs.existsSync(jsonPath)) return;
+
+  if (msg.message?.stickerMessage) {
+    const fileSha = msg.message.stickerMessage.fileSha256?.toString("base64");
+    const comandosData = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+
+    const cmd = comandosData[fileSha];
+    if (!cmd) return;
+
+    const messageText = cmd.toLowerCase().trim();
+    const parts = messageText.split(" ");
+    const mainCommand = parts[0];
+    const args = parts.slice(1);
+
+    const chatId = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
+
+    // Obtener información del mensaje citado (si hay)
+    const contextInfo = msg.message?.stickerMessage?.contextInfo || {};
+    const quotedMsg = contextInfo.quotedMessage || null;
+    const quotedParticipant = contextInfo.participant || null;
+
+    const fakeMessage = {
+      ...msg,
+      message: {
+        extendedTextMessage: {
+          text: messageText,
+          contextInfo: {
+            quotedMessage: quotedMsg,
+            participant: quotedParticipant,
+            stanzaId: contextInfo.stanzaId || "",
+            remoteJid: contextInfo.remoteJid || chatId
+          }
+        }
+      },
+      body: messageText,
+      text: messageText,
+      command: mainCommand,
+      key: {
+        ...msg.key,
+        fromMe: false,
+        participant: sender
+      }
+    };
+
+    const { handleCommand } = require("./main");
+    const isPluginCommand = global.plugins?.some(p => p.command?.includes?.(mainCommand));
+
+    // Ejecutar desde main.js (case)
+    await handleCommand(sock, fakeMessage, mainCommand, args, sender);
+
+    // Ejecutar si es plugin
+    if (isPluginCommand) {
+      for (const plugin of global.plugins) {
+        if (plugin.command?.includes(mainCommand)) {
+          if (typeof plugin.run === "function") {
+            await plugin.run({
+              msg: fakeMessage,
+              conn: sock,
+              args,
+              command: mainCommand
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+} catch (err) {
+  console.error("❌ Error al ejecutar comando desde sticker:", err);
+}
+// === FIN LÓGICA COMANDOS DESDE STICKER ===    
     // ✅ Procesar comando
     if (messageText.startsWith(global.prefix)) {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
