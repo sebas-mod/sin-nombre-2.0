@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 
+global.listaFantasmas = {}; // Necesario para guardar los fantasmas detectados
+
 const handler = async (msg, { conn }) => {
   const chatId = msg.key.remoteJid;
   const senderId = msg.key.participant || msg.key.remoteJid;
@@ -22,17 +24,7 @@ const handler = async (msg, { conn }) => {
 
   if (!isAdmin && !isOwner && !isFromMe) {
     await conn.sendMessage(chatId, {
-      text: "🚫 Solo los administradores del grupo o el owner pueden usar este comando."
-    }, { quoted: msg });
-    return;
-  }
-
-  const quotedMessage = msg.message?.extendedTextMessage?.contextInfo;
-  const mentionedJids = quotedMessage?.mentionedJid || [];
-
-  if (mentionedJids.length === 0) {
-    await conn.sendMessage(chatId, {
-      text: "⚠️ Responde al mensaje que contiene las menciones de los fantasmas para expulsarlos."
+      text: "🚫 Solo administradores o owners pueden usar este comando."
     }, { quoted: msg });
     return;
   }
@@ -46,30 +38,31 @@ const handler = async (msg, { conn }) => {
 
   const groupConteo = conteoData[chatId] || {};
 
-  const expulsar = mentionedJids.filter(jid => !groupConteo[jid]);
+  const fantasmas = metadata.participants.filter(p => {
+    const id = p.id;
+    return !groupConteo[id]; // Solo los que no tienen mensajes registrados
+  });
 
-  if (expulsar.length === 0) {
+  if (fantasmas.length === 0) {
     await conn.sendMessage(chatId, {
-      text: "✅ No hay fantasmas válidos para eliminar. Todos han participado."
+      text: "✅ No hay fantasmas en este grupo. ¡Todos han enviado mensajes!"
     }, { quoted: msg });
     return;
   }
 
-  try {
-    for (const jid of expulsar) {
-      await conn.groupParticipantsUpdate(chatId, [jid], "remove");
-    }
+  global.listaFantasmas[chatId] = fantasmas.map(u => u.id); // Guardar lista para usar luego en .okfan
 
-    await conn.sendMessage(chatId, {
-      text: `✅ Eliminados ${expulsar.length} fantasmas que no participaron.`
-    }, { quoted: msg });
+  let texto = `⚠️ *Se detectaron ${fantasmas.length} usuarios fantasmas.*\n`;
+  texto += `Para eliminar a estos usuarios escribe el comando *okfan*.\n\n`;
 
-  } catch (error) {
-    console.error("❌ Error eliminando fantasmas:", error);
-    await conn.sendMessage(chatId, {
-      text: "❌ Error al intentar eliminar a los fantasmas."
-    }, { quoted: msg });
+  for (const usuario of fantasmas) {
+    texto += `@${usuario.id.split("@")[0]}\n`;
   }
+
+  await conn.sendMessage(chatId, {
+    text: texto,
+    mentions: fantasmas.map(u => u.id)
+  }, { quoted: msg });
 };
 
 handler.command = ["fankick"];
