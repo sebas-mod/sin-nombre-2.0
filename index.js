@@ -519,6 +519,68 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
+
+// Función para revisar y actualizar grupos cada 5 segundos
+setInterval(async () => {
+  try {
+    const ahora = Date.now();
+
+    // === REVISAR CIERRE AUTOMÁTICO ===
+    const tiempoCerrarPath = path.resolve("./tiempo1.json");
+    if (fs.existsSync(tiempoCerrarPath)) {
+      const tiempoCerrar = JSON.parse(fs.readFileSync(tiempoCerrarPath, "utf-8"));
+
+      for (const groupId of Object.keys(tiempoCerrar)) {
+        const tiempoLimite = tiempoCerrar[groupId];
+        if (ahora >= tiempoLimite) {
+          console.log(`⏰ Se cumplió el tiempo para CERRAR el grupo: ${groupId}`);
+
+          try {
+            await sock.groupSettingUpdate(groupId, "announcement"); // Cerrar grupo
+            await sock.sendMessage(groupId, {
+              text: "🔒 El grupo ha sido cerrado automáticamente. Solo admins pueden escribir."
+            });
+          } catch (error) {
+            console.error(`❌ Error cerrando grupo ${groupId}:`, error);
+          }
+
+          delete tiempoCerrar[groupId];
+          fs.writeFileSync(tiempoCerrarPath, JSON.stringify(tiempoCerrar, null, 2));
+        }
+      }
+    }
+
+    // === REVISAR APERTURA AUTOMÁTICA ===
+    const tiempoAbrirPath = path.resolve("./tiempo2.json");
+    if (fs.existsSync(tiempoAbrirPath)) {
+      const tiempoAbrir = JSON.parse(fs.readFileSync(tiempoAbrirPath, "utf-8"));
+
+      for (const groupId of Object.keys(tiempoAbrir)) {
+        const tiempoLimite = tiempoAbrir[groupId];
+        if (ahora >= tiempoLimite) {
+          console.log(`⏰ Se cumplió el tiempo para ABRIR el grupo: ${groupId}`);
+
+          try {
+            await sock.groupSettingUpdate(groupId, "not_announcement"); // Abrir grupo
+            await sock.sendMessage(groupId, {
+              text: "🔓 El grupo ha sido abierto automáticamente. ¡Todos pueden escribir!"
+            });
+          } catch (error) {
+            console.error(`❌ Error abriendo grupo ${groupId}:`, error);
+          }
+
+          delete tiempoAbrir[groupId];
+          fs.writeFileSync(tiempoAbrirPath, JSON.stringify(tiempoAbrir, null, 2));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error("❌ Error en la revisión automática de grupos:", error);
+  }
+}, 5000); // Revisa cada 5 segundos
+//ok de abria onkkkkkk
+    
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
   const fs = require("fs");
