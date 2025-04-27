@@ -538,10 +538,10 @@ try {
 
   if (comandosHot.includes(commandOnly) && !calienteActivo && !isOwner && !isFromMe) {
     const mensajesBloqueo = [
-      "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active.",
-      "❌ Qué desesperación, aguántese. El modo caliente no está activado.",
-      "🛑 Este comando +18 está apagado. Primero active el modo caliente, ansioso.",
-      "🚷 Caliente frustrado detectado. Modo +18 desactivado, regresa luego."
+      "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active con .modocaliente on o off.",
+      "❌ Qué desesperación, aguántese. El modo caliente no está activado con .modocaliente on o off.",
+      "🛑 Este comando +18 está apagado. Primero active el modo caliente, ansioso con .modocaliente on o off.",
+      "🚷 Caliente frustrado detectado. Modo +18 desactivado, regresa luego con .modocaliente on o off."
     ];
     const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
 
@@ -555,6 +555,47 @@ try {
   console.error("❌ Error procesando modo caliente:", e);
 }
 // === FIN BLOQUEO AUTOMÁTICO COMANDOS +18 ===
+// === INICIO BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
+try {
+  const comandosRpg = [
+    "rpg", "nivel", "picar", "minar", "minar2", "work", "crime", "robar", "cofre",
+    "claim", "batallauser", "hospital", "hosp", "luchar", "poder", "volar",
+    "otromundo", "otrouniverso", "mododios", "mododiablo", "podermaximo",
+    "enemigos", "nivelper", "per", "bolasdeldragon", "vender", "quitarventa",
+    "batallaanime", "comprar", "tiendaper", "alaventa", "verper", "daragua",
+    "darcariño", "darcomida", "presumir", "cazar", "entrenar", "pasear",
+    "supermascota", "mascota", "curar", "nivelmascota", "batallamascota",
+    "compra", "tiendamascotas", "vermascotas", "addmascota", "addper",
+    "deleteuser", "deleteper", "deletemascota", "totalper", "tran", "transferir",
+    "dame", "dep", "bal", "saldo", "retirar", "depositar", "delrpg", "topuser",
+    "topmascotas", "topper"
+  ];
+
+  const activosPath = path.resolve("./activos.json");
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const calienteActivo = activos.rpgazura?.[chatId];
+
+  if (comandosRpg.includes(commandOnly) && !calienteActivo) {
+    const mensajesBloqueo = [
+      "🚫 Este comando RPG está desactivado en este grupo. Habla con un admin para activarlo con .rpgazura on o off.",
+      "🛑 El mundo RPG está apagado. Pide a un admin que active el modo RPG primero con .rpgazura on o off.",
+      "❌ Comandos RPG no disponibles. Solicita a un administrador su activación con .rpgazura on o off.",
+      "🚷 Sistema RPG desactivado. Consulta a los administradores si quieres jugar con .rpgazura on o off."
+    ];
+    const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
+
+    await sock.sendMessage(chatId, { text: textoBloqueo }, { quoted: msg });
+    return; // Detener ejecución del comando
+  }
+
+} catch (e) {
+  console.error("❌ Error procesando bloqueo de comandos RPG:", e);
+}
+// === FIN BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
     
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
