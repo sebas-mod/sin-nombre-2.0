@@ -1202,7 +1202,10 @@ try {
   const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
 
   const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const prefixes = global.allowedPrefixes || ["."];
+  const usedPrefix = prefixes.find(p => messageText.startsWith(p)) || null;
+  const commandOnly = usedPrefix ? messageText.slice(usedPrefix.length).trim().split(" ")[0].toLowerCase() : "";
 
   const senderClean = sender.replace(/[^0-9]/g, "");
   const isOwner = global.owner.some(([id]) => id === senderClean);
@@ -1249,16 +1252,19 @@ try {
   const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
 
   const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
 
-  const calienteActivo = activos.rpgazura?.[chatId];
+  const prefixes = global.allowedPrefixes || ["."];
+  const usedPrefix = prefixes.find(p => messageText.startsWith(p)) || null;
+  const commandOnly = usedPrefix ? messageText.slice(usedPrefix.length).trim().split(" ")[0].toLowerCase() : "";
 
-  if (comandosRpg.includes(commandOnly) && !calienteActivo) {
+  const rpgActivo = activos.rpgazura?.[chatId];
+
+  if (comandosRpg.includes(commandOnly) && !rpgActivo) {
     const mensajesBloqueo = [
-      "🚫 Este comando RPG está desactivado en este grupo. Habla con un admin para activarlo con .rpgazura on o off.",
-      "🛑 El mundo RPG está apagado. Pide a un admin que active el modo RPG primero con .rpgazura on o off.",
-      "❌ Comandos RPG no disponibles. Solicita a un administrador su activación con .rpgazura on o off.",
-      "🚷 Sistema RPG desactivado. Consulta a los administradores si quieres jugar con .rpgazura on o off."
+      "🚫 Este comando RPG está desactivado en este grupo. Habla con un admin para activarlo usando .rpgazura on o off.",
+      "🛑 El mundo RPG está apagado. Pide a un admin que active el modo RPG primero usando .rpgazura on o off.",
+      "❌ Comandos RPG no disponibles. Solicita a un administrador su activación usando .rpgazura on o off.",
+      "🚷 Sistema RPG desactivado. Consulta a los administradores si quieres jugar usando .rpgazura on o off."
     ];
     const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
 
