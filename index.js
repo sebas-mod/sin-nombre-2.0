@@ -532,7 +532,7 @@ try {
 
   const calienteActivo = activos.modocaliente?.[m.chat];
 
-  if (comandosProhibidos.includes(command.toLowerCase()) && !calienteActivo) {
+  if (comandosProhibidos.includes(command) && !calienteActivo) {
     const mensajesBloqueo = [
       "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active.",
       "❌ Qué desesperación, aguántese. El modo caliente no está activado.",
@@ -541,7 +541,7 @@ try {
     ];
     const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
     await sock.sendMessage(m.chat, { text: textoBloqueo }, { quoted: m });
-    return; // No sigue procesando ese comando
+    return; // Detiene todo
   }
 } catch (e) {
   console.error("❌ Error en bloqueo de modo caliente:", e);
