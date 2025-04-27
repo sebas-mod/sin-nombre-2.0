@@ -520,19 +520,23 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
 }
 // === FIN LÓGICA ANTIS STICKERS ===
 
-// === BLOQUEO AUTOMÁTICO COMANDOS +18 (modo caliente) ===
+// === INICIO BLOQUEO AUTOMÁTICO COMANDOS +18 (MODO CALIENTE) ===
 try {
-  const comandosProhibidos = ["videoxxx", "pornololi", "nsfwneko", "nsfwwaifu", "waifu", "neko"];
-  const activosPath = "./activos.json";
-  let activos = {};
+  const comandosHot = ["videoxxx", "pornololi", "nsfwneko", "nsfwwaifu", "waifu", "neko"];
 
-  if (fs.existsSync(activosPath)) {
-    activos = JSON.parse(fs.readFileSync(activosPath, "utf-8"));
-  }
+  const activosPath = path.resolve("./activos.json");
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
 
-  const calienteActivo = activos.modocaliente?.[m.chat];
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
 
-  if (comandosProhibidos.includes(command) && !calienteActivo) {
+  const senderClean = sender.replace(/[^0-9]/g, "");
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+  const isFromMe = msg.key.fromMe;
+
+  const calienteActivo = activos.modocaliente?.[chatId];
+
+  if (comandosHot.includes(commandOnly) && !calienteActivo && !isOwner && !isFromMe) {
     const mensajesBloqueo = [
       "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active.",
       "❌ Qué desesperación, aguántese. El modo caliente no está activado.",
@@ -540,11 +544,15 @@ try {
       "🚷 Caliente frustrado detectado. Modo +18 desactivado, regresa luego."
     ];
     const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
-    await sock.sendMessage(m.chat, { text: textoBloqueo }, { quoted: m });
-    return; // Detiene todo
+
+    await sock.sendMessage(chatId, {
+      text: textoBloqueo
+    }, { quoted: msg });
+    return;
   }
+
 } catch (e) {
-  console.error("❌ Error en bloqueo de modo caliente:", e);
+  console.error("❌ Error procesando modo caliente:", e);
 }
 // === FIN BLOQUEO AUTOMÁTICO COMANDOS +18 ===
     
