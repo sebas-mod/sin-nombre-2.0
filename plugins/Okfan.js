@@ -35,14 +35,22 @@ const handler = async (msg, { conn }) => {
 
   try {
     for (const jid of fantasmas) {
+      await conn.sendMessage(chatId, {
+        text: `🚷 Eliminando fantasma @${jid.split("@")[0]}...`,
+        mentions: [jid]
+      });
+
       await conn.groupParticipantsUpdate(chatId, [jid], "remove");
+
+      // Retraso de 2 segundos antes de pasar al siguiente
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     await conn.sendMessage(chatId, {
       text: `✅ Eliminados ${fantasmas.length} fantasmas del grupo.`,
     }, { quoted: msg });
 
-    // Limpiar después de eliminar
+    // Limpiar la lista de fantasmas después de eliminar
     delete global.listaFantasmas[chatId];
 
   } catch (error) {
