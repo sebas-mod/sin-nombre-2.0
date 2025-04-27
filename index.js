@@ -207,8 +207,6 @@ setInterval(async () => {
 }, 1000 * 60 * 60); // ← 1 hora en milisegundos
 
 //sessions/jadibts
-
-
             // Función para verificar si un usuario es administrador en un grupo
             async function isAdmin(sock, chatId, sender) {
                 try {
@@ -223,6 +221,67 @@ setInterval(async () => {
                 }
             }
 
+// Función para revisar y actualizar grupos cada 5 segundos
+setInterval(async () => {
+  try {
+    const ahora = Date.now();
+
+    // === REVISAR CIERRE AUTOMÁTICO ===
+    const tiempoCerrarPath = path.resolve("./tiempo1.json");
+    if (fs.existsSync(tiempoCerrarPath)) {
+      const tiempoCerrar = JSON.parse(fs.readFileSync(tiempoCerrarPath, "utf-8"));
+
+      for (const groupId of Object.keys(tiempoCerrar)) {
+        const tiempoLimite = tiempoCerrar[groupId];
+        if (ahora >= tiempoLimite) {
+          console.log(`⏰ Se cumplió el tiempo para CERRAR el grupo: ${groupId}`);
+
+          try {
+            await sock.groupSettingUpdate(groupId, "announcement"); // Cerrar grupo
+            await sock.sendMessage(groupId, {
+              text: "🔒 El grupo ha sido cerrado automáticamente. Solo admins pueden escribir."
+            });
+          } catch (error) {
+            console.error(`❌ Error cerrando grupo ${groupId}:`, error);
+          }
+
+          delete tiempoCerrar[groupId];
+          fs.writeFileSync(tiempoCerrarPath, JSON.stringify(tiempoCerrar, null, 2));
+        }
+      }
+    }
+
+    // === REVISAR APERTURA AUTOMÁTICA ===
+    const tiempoAbrirPath = path.resolve("./tiempo2.json");
+    if (fs.existsSync(tiempoAbrirPath)) {
+      const tiempoAbrir = JSON.parse(fs.readFileSync(tiempoAbrirPath, "utf-8"));
+
+      for (const groupId of Object.keys(tiempoAbrir)) {
+        const tiempoLimite = tiempoAbrir[groupId];
+        if (ahora >= tiempoLimite) {
+          console.log(`⏰ Se cumplió el tiempo para ABRIR el grupo: ${groupId}`);
+
+          try {
+            await sock.groupSettingUpdate(groupId, "not_announcement"); // Abrir grupo
+            await sock.sendMessage(groupId, {
+              text: "🔓 El grupo ha sido abierto automáticamente. ¡Todos pueden escribir!"
+            });
+          } catch (error) {
+            console.error(`❌ Error abriendo grupo ${groupId}:`, error);
+          }
+
+          delete tiempoAbrir[groupId];
+          fs.writeFileSync(tiempoAbrirPath, JSON.stringify(tiempoAbrir, null, 2));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error("❌ Error en la revisión automática de grupos:", error);
+  }
+}, 5000); // Revisa cada 5 segundos
+//ok de abria onkkkkkk
+          
 // Listener para detectar cambios en los participantes de un grupo (bienvenida y despedida)
 sock.ev.on("group-participants.update", async (update) => {
   try {
@@ -519,67 +578,6 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
-
-// Función para revisar y actualizar grupos cada 5 segundos
-setInterval(async () => {
-  try {
-    const ahora = Date.now();
-
-    // === REVISAR CIERRE AUTOMÁTICO ===
-    const tiempoCerrarPath = path.resolve("./tiempo1.json");
-    if (fs.existsSync(tiempoCerrarPath)) {
-      const tiempoCerrar = JSON.parse(fs.readFileSync(tiempoCerrarPath, "utf-8"));
-
-      for (const groupId of Object.keys(tiempoCerrar)) {
-        const tiempoLimite = tiempoCerrar[groupId];
-        if (ahora >= tiempoLimite) {
-          console.log(`⏰ Se cumplió el tiempo para CERRAR el grupo: ${groupId}`);
-
-          try {
-            await sock.groupSettingUpdate(groupId, "announcement"); // Cerrar grupo
-            await sock.sendMessage(groupId, {
-              text: "🔒 El grupo ha sido cerrado automáticamente. Solo admins pueden escribir."
-            });
-          } catch (error) {
-            console.error(`❌ Error cerrando grupo ${groupId}:`, error);
-          }
-
-          delete tiempoCerrar[groupId];
-          fs.writeFileSync(tiempoCerrarPath, JSON.stringify(tiempoCerrar, null, 2));
-        }
-      }
-    }
-
-    // === REVISAR APERTURA AUTOMÁTICA ===
-    const tiempoAbrirPath = path.resolve("./tiempo2.json");
-    if (fs.existsSync(tiempoAbrirPath)) {
-      const tiempoAbrir = JSON.parse(fs.readFileSync(tiempoAbrirPath, "utf-8"));
-
-      for (const groupId of Object.keys(tiempoAbrir)) {
-        const tiempoLimite = tiempoAbrir[groupId];
-        if (ahora >= tiempoLimite) {
-          console.log(`⏰ Se cumplió el tiempo para ABRIR el grupo: ${groupId}`);
-
-          try {
-            await sock.groupSettingUpdate(groupId, "not_announcement"); // Abrir grupo
-            await sock.sendMessage(groupId, {
-              text: "🔓 El grupo ha sido abierto automáticamente. ¡Todos pueden escribir!"
-            });
-          } catch (error) {
-            console.error(`❌ Error abriendo grupo ${groupId}:`, error);
-          }
-
-          delete tiempoAbrir[groupId];
-          fs.writeFileSync(tiempoAbrirPath, JSON.stringify(tiempoAbrir, null, 2));
-        }
-      }
-    }
-
-  } catch (error) {
-    console.error("❌ Error en la revisión automática de grupos:", error);
-  }
-}, 5000); // Revisa cada 5 segundos
-//ok de abria onkkkkkk
     
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
@@ -610,84 +608,7 @@ try {
 } catch (error) {
   console.error("❌ Error en contador de mensajes:", error);
 }
-// === FIN CONTADOR DE MENSAJES POR GRUPO ===
-// === INICIO BLOQUEO AUTOMÁTICO COMANDOS +18 (MODO CALIENTE) ===
-try {
-  const comandosHot = ["videoxxx", "pornololi", "nsfwneko", "nsfwwaifu", "waifu", "neko"];
-
-  const activosPath = path.resolve("./activos.json");
-  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
-
-  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
-
-  const senderClean = sender.replace(/[^0-9]/g, "");
-  const isOwner = global.owner.some(([id]) => id === senderClean);
-  const isFromMe = msg.key.fromMe;
-
-  const calienteActivo = activos.modocaliente?.[chatId];
-
-  if (comandosHot.includes(commandOnly) && !calienteActivo && !isOwner && !isFromMe) {
-    const mensajesBloqueo = [
-      "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active con .modocaliente on o off.",
-      "❌ Qué desesperación, aguántese. El modo caliente no está activado con .modocaliente on o off.",
-      "🛑 Este comando +18 está apagado. Primero active el modo caliente, ansioso con .modocaliente on o off.",
-      "🚷 Caliente frustrado detectado. Modo +18 desactivado, regresa luego con .modocaliente on o off."
-    ];
-    const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
-
-    await sock.sendMessage(chatId, {
-      text: textoBloqueo
-    }, { quoted: msg });
-    return;
-  }
-
-} catch (e) {
-  console.error("❌ Error procesando modo caliente:", e);
-}
-// === FIN BLOQUEO AUTOMÁTICO COMANDOS +18 ===
-// === INICIO BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
-try {
-  const comandosRpg = [
-    "rpg", "nivel", "picar", "minar", "minar2", "work", "crime", "robar", "cofre",
-    "claim", "batallauser", "hospital", "hosp", "luchar", "poder", "volar",
-    "otromundo", "otrouniverso", "mododios", "mododiablo", "podermaximo",
-    "enemigos", "nivelper", "per", "bolasdeldragon", "vender", "quitarventa",
-    "batallaanime", "comprar", "tiendaper", "alaventa", "verper", "daragua",
-    "darcariño", "darcomida", "presumir", "cazar", "entrenar", "pasear",
-    "supermascota", "mascota", "curar", "nivelmascota", "batallamascota",
-    "compra", "tiendamascotas", "vermascotas", "addmascota", "addper",
-    "deleteuser", "deleteper", "deletemascota", "totalper", "tran", "transferir",
-    "dame", "dep", "bal", "saldo", "retirar", "depositar", "delrpg", "topuser",
-    "topmascotas", "topper"
-  ];
-
-  const activosPath = path.resolve("./activos.json");
-  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
-
-  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
-
-  const calienteActivo = activos.rpgazura?.[chatId];
-
-  if (comandosRpg.includes(commandOnly) && !calienteActivo) {
-    const mensajesBloqueo = [
-      "🚫 Este comando RPG está desactivado en este grupo. Habla con un admin para activarlo con .rpgazura on o off.",
-      "🛑 El mundo RPG está apagado. Pide a un admin que active el modo RPG primero con .rpgazura on o off.",
-      "❌ Comandos RPG no disponibles. Solicita a un administrador su activación con .rpgazura on o off.",
-      "🚷 Sistema RPG desactivado. Consulta a los administradores si quieres jugar con .rpgazura on o off."
-    ];
-    const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
-
-    await sock.sendMessage(chatId, { text: textoBloqueo }, { quoted: msg });
-    return; // Detener ejecución del comando
-  }
-
-} catch (e) {
-  console.error("❌ Error procesando bloqueo de comandos RPG:", e);
-}
-// === FIN BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
-    
+// === FIN CONTADOR DE MENSAJES POR GRUPO ===    
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
   const guarPath = path.resolve('./guar.json');
@@ -747,9 +668,6 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
-
-
-    
 // === INICIO LÓGICA CHATGPT POR GRUPO ===
 try {
   const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
@@ -1276,6 +1194,83 @@ try {
   console.error("❌ Error al ejecutar comando desde sticker:", err);
 }
 // === FIN LÓGICA COMANDOS DESDE STICKER ===    
+// === INICIO BLOQUEO AUTOMÁTICO COMANDOS +18 (MODO CALIENTE) ===
+try {
+  const comandosHot = ["videoxxx", "pornololi", "nsfwneko", "nsfwwaifu", "waifu", "neko"];
+
+  const activosPath = path.resolve("./activos.json");
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const senderClean = sender.replace(/[^0-9]/g, "");
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+  const isFromMe = msg.key.fromMe;
+
+  const calienteActivo = activos.modocaliente?.[chatId];
+
+  if (comandosHot.includes(commandOnly) && !calienteActivo && !isOwner && !isFromMe) {
+    const mensajesBloqueo = [
+      "🚫 Velo pajiso, este comando +18 está desactivado. Pídele a un admin que lo active con .modocaliente on o off.",
+      "❌ Qué desesperación, aguántese. El modo caliente no está activado con .modocaliente on o off.",
+      "🛑 Este comando +18 está apagado. Primero active el modo caliente, ansioso con .modocaliente on o off.",
+      "🚷 Caliente frustrado detectado. Modo +18 desactivado, regresa luego con .modocaliente on o off."
+    ];
+    const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
+
+    await sock.sendMessage(chatId, {
+      text: textoBloqueo
+    }, { quoted: msg });
+    return;
+  }
+
+} catch (e) {
+  console.error("❌ Error procesando modo caliente:", e);
+}
+// === FIN BLOQUEO AUTOMÁTICO COMANDOS +18 ===
+// === INICIO BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
+try {
+  const comandosRpg = [
+    "rpg", "nivel", "picar", "minar", "minar2", "work", "crime", "robar", "cofre",
+    "claim", "batallauser", "hospital", "hosp", "luchar", "poder", "volar",
+    "otromundo", "otrouniverso", "mododios", "mododiablo", "podermaximo",
+    "enemigos", "nivelper", "per", "bolasdeldragon", "vender", "quitarventa",
+    "batallaanime", "comprar", "tiendaper", "alaventa", "verper", "daragua",
+    "darcariño", "darcomida", "presumir", "cazar", "entrenar", "pasear",
+    "supermascota", "mascota", "curar", "nivelmascota", "batallamascota",
+    "compra", "tiendamascotas", "vermascotas", "addmascota", "addper",
+    "deleteuser", "deleteper", "deletemascota", "totalper", "tran", "transferir",
+    "dame", "dep", "bal", "saldo", "retirar", "depositar", "delrpg", "topuser",
+    "topmascotas", "topper"
+  ];
+
+  const activosPath = path.resolve("./activos.json");
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const calienteActivo = activos.rpgazura?.[chatId];
+
+  if (comandosRpg.includes(commandOnly) && !calienteActivo) {
+    const mensajesBloqueo = [
+      "🚫 Este comando RPG está desactivado en este grupo. Habla con un admin para activarlo con .rpgazura on o off.",
+      "🛑 El mundo RPG está apagado. Pide a un admin que active el modo RPG primero con .rpgazura on o off.",
+      "❌ Comandos RPG no disponibles. Solicita a un administrador su activación con .rpgazura on o off.",
+      "🚷 Sistema RPG desactivado. Consulta a los administradores si quieres jugar con .rpgazura on o off."
+    ];
+    const textoBloqueo = mensajesBloqueo[Math.floor(Math.random() * mensajesBloqueo.length)];
+
+    await sock.sendMessage(chatId, { text: textoBloqueo }, { quoted: msg });
+    return; // Detener ejecución del comando
+  }
+
+} catch (e) {
+  console.error("❌ Error procesando bloqueo de comandos RPG:", e);
+}
+// === FIN BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
+    
     // ✅ Procesar comando
     if (messageText.startsWith(global.prefix)) {
       const command = messageText.slice(global.prefix.length).trim().split(" ")[0];
