@@ -595,12 +595,22 @@ try {
   const senderId = msg.key.participant || msg.key.remoteJid;
   const isGroup = chatId.endsWith("@g.us");
   const fromMe = msg.key.fromMe;
+  const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net"; // Número del bot en formato JID
 
-  if (isGroup && !fromMe) {
-    if (!conteoData[chatId]) conteoData[chatId] = {}; // Si no hay datos para este grupo, inicializar
-    if (!conteoData[chatId][senderId]) conteoData[chatId][senderId] = 0; // Si no hay datos para este usuario, inicializar
+  if (isGroup) {
+    // Si mensaje de usuario (no bot)
+    if (!fromMe) {
+      if (!conteoData[chatId]) conteoData[chatId] = {};
+      if (!conteoData[chatId][senderId]) conteoData[chatId][senderId] = 0;
+      conteoData[chatId][senderId] += 1;
+    }
 
-    conteoData[chatId][senderId] += 1; // Sumar +1 mensaje
+    // Si mensaje del propio bot
+    if (fromMe) {
+      if (!conteoData[chatId]) conteoData[chatId] = {};
+      if (!conteoData[chatId][botNumber]) conteoData[chatId][botNumber] = 0;
+      conteoData[chatId][botNumber] += 1;
+    }
 
     fs.writeFileSync(conteoPath, JSON.stringify(conteoData, null, 2));
   }
@@ -608,7 +618,7 @@ try {
 } catch (error) {
   console.error("❌ Error en contador de mensajes:", error);
 }
-// === FIN CONTADOR DE MENSAJES POR GRUPO ===    
+// === FIN CONTADOR DE MENSAJES POR GRUPO ===
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
   const guarPath = path.resolve('./guar.json');
