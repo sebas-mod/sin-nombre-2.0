@@ -4489,7 +4489,11 @@ case 'menugrupo': {
 ├✦ ${global.prefix}modoadmins on o off
 ├✦ ${global.prefix}invocar  
 ├✦ ${global.prefix}todos  
+├✦ ${global.prefix}totalmensaje
+├✦ ${global.prefix}delete
 ├✦ ${global.prefix}damelink  
+├✦ ${global.prefix}abrir/ automaticamente
+├✦ ${global.prefix}cerrar/ automaticamente
 ├✦ ${global.prefix}abrirgrupo  
 ╰✦ ${global.prefix}cerrargrupo  
 
