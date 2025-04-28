@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const handler = async (msg, { conn }) => {
   const chatId = msg.key.remoteJid;
   const senderId = msg.key.participant || msg.key.remoteJid;
@@ -34,24 +37,30 @@ const handler = async (msg, { conn }) => {
   }
 
   try {
+    let eliminados = 0;
+    let noEliminados = 0;
+
     for (const jid of fantasmas) {
-      await conn.sendMessage(chatId, {
-        text: `🚷 Eliminando fantasma @${jid.split("@")[0]}...`,
-        mentions: [jid]
-      });
+      const target = metadata.participants.find(p => p.id === jid);
+
+      // Si el usuario es admin, no intentar eliminarlo
+      if (target?.admin === "admin" || target?.admin === "superadmin") {
+        console.log(`❌ No se puede eliminar admin: ${jid}`);
+        noEliminados++;
+        continue;
+      }
 
       await conn.groupParticipantsUpdate(chatId, [jid], "remove");
+      eliminados++;
 
-      // Retraso de 2 segundos antes de pasar al siguiente
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Retraso de 2 segundos
     }
 
     await conn.sendMessage(chatId, {
-      text: `✅ Eliminados ${fantasmas.length} fantasmas del grupo.`,
+      text: `✅ Eliminados ${eliminados} fantasmas.\n❌ No eliminados (eran admins): ${noEliminados}`,
     }, { quoted: msg });
 
-    // Limpiar la lista de fantasmas después de eliminar
-    delete global.listaFantasmas[chatId];
+    delete global.listaFantasmas[chatId]; // Limpiar la lista
 
   } catch (error) {
     console.error("❌ Error eliminando fantasmas:", error);
