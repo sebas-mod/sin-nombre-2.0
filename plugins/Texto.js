@@ -146,8 +146,11 @@ const handler = async (msg, { conn, args }) => {
   // ... (todo tu código igual que lo mandaste arriba, hasta aquí)
 
   const logo = await loadImage('https://cdn.russellxz.click/a46036ec.png');
-  draw.drawImage(logo, 720, 950, 80, 80); // logo más grande
-  // Marca de agua eliminada
+const logoWidth = 140;
+const logoHeight = 140;
+const x = canvas.width - logoWidth - 40;
+const y = canvas.height - logoHeight - 40;
+draw.drawImage(logo, x, y, logoWidth, logoHeight);
 
   const fileName = `./tmp/texto-${Date.now()}.png`;
   const out = fs.createWriteStream(fileName);
