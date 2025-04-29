@@ -2,96 +2,112 @@ const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions'); // ajusta la ruta
 
 /*───────────────────────────────────────────────
-  Extrae pushName del mensaje citado (si existe)
+  Mapa de prefijos → emoji de bandera
+  (ordenado por longitud para matchear el más largo primero)
 ───────────────────────────────────────────────*/
-function getQuotedPushName(quoted) {
-  return (
-    quoted?.pushName ||                     // Baileys >6.5
-    quoted?.sender?.pushName ||             // casos anidados
-    ''                                      // sino, vacío
-  );
+const flagMap = [
+  ['598', '🇺🇾'], ['595', '🇵🇾'], ['593', '🇪🇨'], ['591', '🇧🇴'],
+  ['590', '🇧🇶'], ['509', '🇭🇹'], ['507', '🇵🇦'], ['506', '🇨🇷'],
+  ['505', '🇳🇮'], ['504', '🇭🇳'], ['503', '🇸🇻'], ['502', '🇬🇹'],
+  ['501', '🇧🇿'], ['599', '🇨🇼'], ['598', '🇺🇾'], ['597', '🇸🇷'],
+  ['596', '🇬🇫'], ['594', '🇬🇫'], ['592', '🇬🇾'], ['591', '🇧🇴'],
+  ['590', '🇬🇵'], ['549', '🇦🇷'], // móvil argentino “9” intermedio
+  ['598', '🇺🇾'], // repetidos para seguridad
+  ['598', '🇺🇾'],
+  ['598', '🇺🇾'],
+  ['598', '🇺🇾'],
+  ['58',  '🇻🇪'], ['57',  '🇨🇴'], ['56',  '🇨🇱'], ['55',  '🇧🇷'],
+  ['54',  '🇦🇷'], ['53',  '🇨🇺'], ['52',  '🇲🇽'], ['51',  '🇵🇪'],
+  ['34',  '🇪🇸'], ['1',   '🇺🇸'] // EE. UU., PR y otros NANP
+];
+
+/*───────────────────────────────────────────────
+  Devuelve número + bandera si existe mapeo
+───────────────────────────────────────────────*/
+function numberWithFlag(num) {
+  const clean = num.replace(/[^0-9]/g, '');
+  for (const [code, flag] of flagMap) {
+    if (clean.startsWith(code)) return `${num} ${flag}`;
+  }
+  return num;
 }
 
 /*───────────────────────────────────────────────
-  Devuelve un nombre “bonito”:
-  0) pushName del mensaje citado (quotedPush)
-  1) metadata del grupo (notify / name)
-  2) conn.getName()
-  3) contactos en caché
-  4) fallback explícito (sólo en .qc hola)
-  5) número puro
+  Extrae pushName del mensaje citado
 ───────────────────────────────────────────────*/
-async function getNombreBonito(jid, conn, chatId, quotedPush, fallback = '') {
-  // 0) pushName extraído del citado
-  if (quotedPush && quotedPush.trim() && !/^\d+$/.test(quotedPush))
-    return quotedPush;
+const quotedPush = q => (
+  q?.pushName || q?.sender?.pushName || ''
+);
 
-  // 1) metadata del grupo
+/*───────────────────────────────────────────────*/
+async function niceName(jid, conn, chatId, qPush, fallback = '') {
+  // 0) pushName del citado
+  if (qPush && qPush.trim() && !/^\d+$/.test(qPush)) return qPush;
+
+  // 1) metadata de grupo
   if (chatId.endsWith('@g.us')) {
     try {
       const meta = await conn.groupMetadata(chatId);
       const p = meta.participants.find(p => p.id === jid);
       const n = p?.notify || p?.name;
       if (n && n.trim() && !/^\d+$/.test(n)) return n;
-    } catch {/* ignorar */}
+    } catch {}
   }
 
   // 2) getName()
   try {
-    const gName = await conn.getName(jid);
-    if (gName && gName.trim() && !/^\d+$/.test(gName) && !gName.includes('@'))
-      return gName;
-  } catch {/* nada */ }
+    const g = await conn.getName(jid);
+    if (g && g.trim() && !/^\d+$/.test(g) && !g.includes('@')) return g;
+  } catch {}
 
-  // 3) caché de contactos
+  // 3) caché local
   const c = conn.contacts?.[jid];
   if (c?.notify && !/^\d+$/.test(c.notify)) return c.notify;
   if (c?.name   && !/^\d+$/.test(c.name))   return c.name;
 
-  // 4) fallback (.qc hola → tu pushName)
-  if (fallback && fallback.trim() && !/^\d+$/.test(fallback))
-    return fallback;
+  // 4) fallback (tu pushName en .qc hola)
+  if (fallback && fallback.trim() && !/^\d+$/.test(fallback)) return fallback;
 
-  // 5) número
-  return jid.split('@')[0];
+  // 5) número + bandera
+  return numberWithFlag(jid.split('@')[0]);
 }
 
+/*───────────────────────────────────────────────
+  Handler principal
+───────────────────────────────────────────────*/
 const handler = async (msg, { conn, args }) => {
   try {
     const chatId  = msg.key.remoteJid;
     const ctx     = msg.message?.extendedTextMessage?.contextInfo;
     const quoted  = ctx?.quotedMessage;
 
-    let targetJid    = msg.key.participant || msg.key.remoteJid;
-    let textoCitado  = '';
-    let fallbackName = msg.pushName || '';   // sólo para .qc hola
-    let quotedPush   = '';
+    let targetJid   = msg.key.participant || msg.key.remoteJid;
+    let textQuoted  = '';
+    let fallbackPN  = msg.pushName || '';
+    let qPushName   = '';
 
-    /*── cuando es un mensaje citado ──*/
     if (quoted && ctx?.participant) {
-      targetJid   = ctx.participant;
-      textoCitado = quoted.conversation ||
-                    quoted.extendedTextMessage?.text || '';
-      quotedPush  = getQuotedPushName(quoted);
-      fallbackName = '';                     // evita usar tu nombre
+      targetJid  = ctx.participant;
+      textQuoted = quoted.conversation ||
+                   quoted.extendedTextMessage?.text || '';
+      qPushName  = quotedPush(quoted);
+      fallbackPN = ''; // no usar tu nombre en caso de cita
     }
 
-    /*── texto del sticker ──*/
-    const contenido = (args.join(' ').trim() || textoCitado).trim();
-    if (!contenido)
+    const content = (args.join(' ').trim() || textQuoted).trim();
+    if (!content)
       return conn.sendMessage(chatId,
         { text: '⚠️ Escribe algo o cita un mensaje para crear el sticker.' },
         { quoted: msg });
 
-    const limpio = contenido.replace(/@[\d\-]+/g, '');
-    if (limpio.length > 35)
+    const plain = content.replace(/@[\d\-]+/g, '');
+    if (plain.length > 35)
       return conn.sendMessage(chatId,
         { text: '⚠️ El texto no puede tener más de 35 caracteres.' },
         { quoted: msg });
 
-    /*── nombre y avatar ──*/
-    const targetName = await getNombreBonito(
-      targetJid, conn, chatId, quotedPush, fallbackName
+    const displayName = await niceName(
+      targetJid, conn, chatId, qPushName, fallbackPN
     );
 
     let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
@@ -100,17 +116,13 @@ const handler = async (msg, { conn, args }) => {
     await conn.sendMessage(chatId, { react: { text: '🎨', key: msg.key } });
 
     const quoteData = {
-      type: 'quote',
-      format: 'png',
-      backgroundColor: '#000000',
-      width: 600,
-      height: 900,
-      scale: 3,
+      type: 'quote', format: 'png', backgroundColor: '#000000',
+      width: 600, height: 900, scale: 3,
       messages: [{
         entities: [],
         avatar: true,
-        from: { id: 1, name: targetName, photo: { url: avatar } },
-        text: limpio,
+        from: { id: 1, name: displayName, photo: { url: avatar } },
+        text: plain,
         replyMessage: {}
       }]
     };
@@ -129,8 +141,8 @@ const handler = async (msg, { conn, args }) => {
     await conn.sendMessage(chatId, { sticker: { url: sticker } }, { quoted: msg });
     await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
 
-  } catch (err) {
-    console.error('❌ Error en qc:', err);
+  } catch (e) {
+    console.error('❌ Error en qc:', e);
     await conn.sendMessage(msg.key.remoteJid,
       { text: '❌ Error al generar el sticker.' },
       { quoted: msg });
