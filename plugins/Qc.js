@@ -1,16 +1,32 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions'); // ajusta la ruta
 
+/* ─────────────────────────────────────────
+   Intenta extraer pushName del mensaje citado
+   ───────────────────────────────────────── */
+function getQuotedPushName(quoted) {
+  return (
+    quoted?.pushName ||                       // Baileys >6.5
+    quoted?.sender?.pushName ||               // por si viene anidado
+    quoted?.key?.pushName || ''               // rarísimo, pero por si acaso
+  );
+}
+
 /**
  * Devuelve un nombre “bonito”:
- *  - groupMetadata (notify / name)  ← NUEVO paso
+ *  - pushName de mensaje citado (ya viene limpio)  ← NUEVO
+ *  - groupMetadata (notify / name)
  *  - conn.getName()
  *  - contactos en caché
  *  - fallback explícito
  *  - número
  */
-async function getNombreBonito(jid, conn, chatId = '', fallback = '') {
-  // 1) Si estamos en grupo, mirar metadata una sola vez
+async function getNombreBonito(jid, conn, chatId = '', fallback = '', quotedPush = '') {
+  // 0) el pushName extraído es lo mejor que existe
+  if (quotedPush && quotedPush.trim() && !/^\d+$/.test(quotedPush))
+    return quotedPush;
+
+  // 1) metadata del grupo
   if (chatId.endsWith('@g.us')) {
     try {
       const meta = await conn.groupMetadata(chatId);
@@ -32,7 +48,7 @@ async function getNombreBonito(jid, conn, chatId = '', fallback = '') {
   if (c?.notify && !/^\d+$/.test(c.notify)) return c.notify;
   if (c?.name   && !/^\d+$/.test(c.name))   return c.name;
 
-  // 4) fallback recibido (pushName, etc.)
+  // 4) fallback externo (pushName propio en .qc hola)
   if (fallback && fallback.trim() && !/^\d+$/.test(fallback))
     return fallback;
 
@@ -49,18 +65,22 @@ const handler = async (msg, { conn, args }) => {
     let targetJid    = msg.key.participant || msg.key.remoteJid;
     let textoCitado  = '';
     let fallbackName = msg.pushName || '';
+    let quotedPush   = '';
 
     // ── Si citamos, cambia el objetivo ──
     if (quoted && ctx?.participant) {
       targetJid   = ctx.participant;
       textoCitado = quoted.conversation ||
                     quoted.extendedTextMessage?.text || '';
-      // pushName del citado puede no venir, así que dejamos fallbackName vacío;
-      // se obtendrá del groupMetadata en getNombreBonito.
-      fallbackName = '';
+
+      // nuevo: pushName que viene dentro del mensaje citado
+      quotedPush  = getQuotedPushName(quoted);
+
+      /* Si no hay push en el citado, dejamos fallbackName vacío
+         para evitar confusión con tu propio nombre. */
+      if (quotedPush) fallbackName = '';
     }
 
-    // texto final
     let contenido = args.join(' ').trim() || textoCitado;
     if (!contenido.trim())
       return conn.sendMessage(chatId,
@@ -74,7 +94,9 @@ const handler = async (msg, { conn, args }) => {
         { quoted: msg });
 
     // nombre y foto
-    const targetName = await getNombreBonito(targetJid, conn, chatId, fallbackName);
+    const targetName = await getNombreBonito(
+      targetJid, conn, chatId, fallbackName, quotedPush
+    );
 
     let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     try { avatar = await conn.profilePictureUrl(targetJid, 'image'); } catch {}
