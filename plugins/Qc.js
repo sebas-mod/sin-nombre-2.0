@@ -1,24 +1,14 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions');  // Ajusta tu ruta si es distinta
 
-async function getNombreBonito(jid, conn, fallbackPushName = '') {
+async function getNombreBonito(jid, conn) {
   if (!jid) return '???';
   try {
-    let name = '';
-
-    if (typeof conn.getName === 'function') {
-      name = await conn.getName(jid);
+    const name = await conn.getName(jid);
+    if (name && name.trim() && !name.includes('@')) {
+      return name;
     }
-
-    if (!name || !name.trim() || name.includes('@')) {
-      name = fallbackPushName;
-    }
-
-    if (!name || !name.trim() || name.includes('@')) {
-      name = jid.split('@')[0];
-    }
-
-    return name;
+    return jid.split('@')[0]; // fallback al número
   } catch (err) {
     return jid.split('@')[0];
   }
@@ -32,17 +22,19 @@ const handler = async (msg, { conn, args }) => {
     const context = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = context?.quotedMessage;
 
-    let targetJid = null;
-    let fallbackName = msg.pushName || '';
+    let targetJid;
+    let fallbackName;
     let textoCitado = '';
 
     if (quotedMsg && context?.participant) {
+      // Si citas a alguien
       targetJid = context.participant;
+      fallbackName = ''; // No usar tu nombre
       textoCitado = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || '';
-    }
-
-    if (!targetJid) {
+    } else {
+      // Si no citas
       targetJid = msg.key.participant || msg.key.remoteJid;
+      fallbackName = msg.pushName || '';
     }
 
     let contenido = args.join(' ').trim();
@@ -61,17 +53,18 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg });
     }
 
-    // Obtenemos el nombre bonito
-    const targetName = await getNombreBonito(targetJid, conn, fallbackName);
+    // Sacar el nombre bonito
+    const targetName = await getNombreBonito(targetJid, conn) || fallbackName || targetJid.split('@')[0];
 
-    // Obtenemos la foto de perfil
+    // Sacar la foto de perfil
     let targetPp;
     try {
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
-      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'; // Foto de respaldo
+      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'; // respaldo si no tiene foto
     }
 
+    // Reacción de "procesando"
     await conn.sendMessage(chatId, {
       react: { text: '🎨', key: msg.key }
     });
