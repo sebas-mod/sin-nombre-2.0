@@ -1,44 +1,66 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions'); // ajusta la ruta
 
-async function getNombreBonito(jid, conn, fallback = '') {
-  if (!jid) return '???';
-  try {
-    let name = await conn.getName(jid);             // 1) getName()
-    if (!name || /^\d+$/.test(name) || name.includes('@')) name = '';
+/**
+ * Devuelve un nombre “bonito”:
+ *  - groupMetadata (notify / name)  ← NUEVO paso
+ *  - conn.getName()
+ *  - contactos en caché
+ *  - fallback explícito
+ *  - número
+ */
+async function getNombreBonito(jid, conn, chatId = '', fallback = '') {
+  // 1) Si estamos en grupo, mirar metadata una sola vez
+  if (chatId.endsWith('@g.us')) {
+    try {
+      const meta = await conn.groupMetadata(chatId);
+      const p = meta.participants.find(p => p.id === jid);
+      const n = p?.notify || p?.name;
+      if (n && n.trim() && !/^\d+$/.test(n)) return n;
+    } catch {/* ignorar */}
+  }
 
-    if (!name) {                                    // 2) caché local
-      const c = conn.contacts?.[jid];
-      name = c?.notify || c?.name || '';
-    }
-    if (!name) name = fallback;                     // 3) fallback externo
-    if (!name) name = jid.split('@')[0];            // 4) número
-    return name;
-  } catch { return jid.split('@')[0]; }
+  // 2) getName()
+  try {
+    const gName = await conn.getName(jid);
+    if (gName && gName.trim() && !/^\d+$/.test(gName) && !gName.includes('@'))
+      return gName;
+  } catch {/* nada */ }
+
+  // 3) caché de contactos
+  const c = conn.contacts?.[jid];
+  if (c?.notify && !/^\d+$/.test(c.notify)) return c.notify;
+  if (c?.name   && !/^\d+$/.test(c.name))   return c.name;
+
+  // 4) fallback recibido (pushName, etc.)
+  if (fallback && fallback.trim() && !/^\d+$/.test(fallback))
+    return fallback;
+
+  // 5) número puro
+  return jid.split('@')[0];
 }
 
 const handler = async (msg, { conn, args }) => {
   try {
-    const chatId   = msg.key.remoteJid;
-    const ctx      = msg.message?.extendedTextMessage?.contextInfo;
-    const quoted   = ctx?.quotedMessage;
+    const chatId  = msg.key.remoteJid;
+    const ctx     = msg.message?.extendedTextMessage?.contextInfo;
+    const quoted  = ctx?.quotedMessage;
 
     let targetJid    = msg.key.participant || msg.key.remoteJid;
     let textoCitado  = '';
     let fallbackName = msg.pushName || '';
 
-    /*── Si citamos, cambiamos target y buscamos su 'notify' en el servidor ──*/
+    // ── Si citamos, cambia el objetivo ──
     if (quoted && ctx?.participant) {
       targetJid   = ctx.participant;
-      textoCitado = quoted.conversation || quoted.extendedTextMessage?.text || '';
-
-      // ⇩ Nueva línea: consulta en vivo para obtener el nick/notify
-      try {
-        const wa = await conn.onWhatsApp(targetJid);
-        fallbackName = wa?.[0]?.notify || '';
-      } catch { fallbackName = ''; }
+      textoCitado = quoted.conversation ||
+                    quoted.extendedTextMessage?.text || '';
+      // pushName del citado puede no venir, así que dejamos fallbackName vacío;
+      // se obtendrá del groupMetadata en getNombreBonito.
+      fallbackName = '';
     }
 
+    // texto final
     let contenido = args.join(' ').trim() || textoCitado;
     if (!contenido.trim())
       return conn.sendMessage(chatId,
@@ -51,7 +73,8 @@ const handler = async (msg, { conn, args }) => {
         { text: '⚠️ El texto no puede tener más de 35 caracteres.' },
         { quoted: msg });
 
-    const targetName = await getNombreBonito(targetJid, conn, fallbackName);
+    // nombre y foto
+    const targetName = await getNombreBonito(targetJid, conn, chatId, fallbackName);
 
     let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     try { avatar = await conn.profilePictureUrl(targetJid, 'image'); } catch {}
@@ -59,8 +82,12 @@ const handler = async (msg, { conn, args }) => {
     await conn.sendMessage(chatId, { react: { text: '🎨', key: msg.key } });
 
     const quoteData = {
-      type: "quote", format: "png", backgroundColor: "#000000",
-      width: 600, height: 900, scale: 3,
+      type: 'quote',
+      format: 'png',
+      backgroundColor: '#000000',
+      width: 600,
+      height: 900,
+      scale: 3,
       messages: [{
         entities: [],
         avatar: true,
