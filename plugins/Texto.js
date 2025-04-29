@@ -1,7 +1,6 @@
 const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
 
 const handler = async (msg, { conn, args }) => {
   const chatId = msg.key.remoteJid;
@@ -39,7 +38,8 @@ const handler = async (msg, { conn, args }) => {
 
   const displayText = texto.slice(0, 300);
   const targetJid = context?.participant || msg.key.participant || msg.key.remoteJid;
-  const targetName = await conn.getName(targetJid);
+  const contacto = conn.contacts?.[targetJid] || {};
+  const targetName = contacto.name || contacto.notify || targetJid.split('@')[0];
 
   let profilePic;
   try {
@@ -47,6 +47,11 @@ const handler = async (msg, { conn, args }) => {
   } catch {
     profilePic = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
   }
+
+  // Reacción al usar el comando
+  await conn.sendMessage(chatId, {
+    react: { text: '🖼️', key: msg.key }
+  });
 
   // Crear canvas
   const canvas = createCanvas(1080, 1080);
@@ -68,10 +73,10 @@ const handler = async (msg, { conn, args }) => {
   ctx.drawImage(avatar, 20, 20, 160, 160);
   ctx.restore();
 
-  // Nombre del usuario
+  // Nombre
   ctx.font = 'bold 40px Sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(targetName || 'Usuario', 200, 100);
+  ctx.fillText(targetName, 200, 100);
 
   // Texto principal
   ctx.font = 'bold 60px Sans-serif';
@@ -79,15 +84,16 @@ const handler = async (msg, { conn, args }) => {
   ctx.textAlign = 'center';
   ctx.fillText(displayText, canvas.width / 2, 600, 900);
 
-  // Guardar y enviar
+  // Guardar temporal y enviar
   const fileName = `./tmp/texto-${Date.now()}.png`;
   const out = fs.createWriteStream(fileName);
   const stream = canvas.createPNGStream();
   stream.pipe(out);
+
   out.on('finish', async () => {
     await conn.sendMessage(chatId, {
       image: { url: fileName },
-      caption: `🖼 Texto generado por Azura Ultra`
+      caption: `🖼 Publicación generada por Azura Ultra`
     }, { quoted: msg });
     fs.unlinkSync(fileName);
   });
