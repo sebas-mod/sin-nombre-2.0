@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // misma ruta
+const { writeExifImg } = require('../libs/fuctions');
 
 const flagMap = [
   ['598', '🇺🇾'], ['595', '🇵🇾'], ['593', '🇪🇨'], ['591', '🇧🇴'],
@@ -76,9 +76,9 @@ const handler = async (msg, { conn, args }) => {
       fallbackPN = '';
     }
 
-    const contentFull = (args.join(' ').trim() || textQuoted).trim();
+    const contentFull = (args.join(' ').trim() || '').trim();
 
-    if (!contentFull) {
+    if (!contentFull && !textQuoted) {
       return conn.sendMessage(chatId, {
         text: `✏️ Usa qc2 así:\n\n*• qc2 [texto]*\n*• qc2 [color] [texto]*\n\nColores disponibles:\nrojo, azul, morado, verde, amarillo, naranja, celeste, rosado, negro`
       }, { quoted: msg });
@@ -86,7 +86,19 @@ const handler = async (msg, { conn, args }) => {
 
     const firstWord = contentFull.split(' ')[0].toLowerCase();
     const bgColor = colors[firstWord] || colors['negro'];
-    const content = bgColor !== colors['negro'] ? contentFull.split(' ').slice(1).join(' ') : contentFull;
+
+    let content = '';
+
+    if (colors[firstWord]) {
+      const afterColor = contentFull.split(' ').slice(1).join(' ').trim();
+      if (afterColor.length > 0) {
+        content = afterColor;
+      } else {
+        content = textQuoted || ' ';
+      }
+    } else {
+      content = contentFull || textQuoted || ' ';
+    }
 
     const displayName = await niceName(targetJid, conn, chatId, qPushName, fallbackPN);
 
