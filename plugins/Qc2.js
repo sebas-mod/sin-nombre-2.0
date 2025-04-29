@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-/* ─────── mapa prefijo → bandera ─────── */
+/*──────────────── banderas ───────────────*/
 const flagMap = [
   ['598','🇺🇾'],['595','🇵🇾'],['593','🇪🇨'],['591','🇧🇴'],
   ['509','🇭🇹'],['507','🇵🇦'],['506','🇨🇷'],['505','🇳🇮'],
@@ -9,26 +9,27 @@ const flagMap = [
   ['52','🇲🇽'],['51','🇵🇪'],['58','🇻🇪'],['34','🇪🇸'],
   ['1','🇺🇸']
 ];
-const withFlag = num=>{
-  const n=num.replace(/\D/g,'');
-  for(const [p,f] of flagMap) if(n.startsWith(p)) return `${num} ${f}`;
-  return num;
+const withFlag = n=>{
+  const c=n.replace(/\D/g,'');
+  for(const [p,f] of flagMap) if(c.startsWith(p)) return `${n} ${f}`;
+  return n;
 };
 
-/* ─────── fondo por color ─────── */
-const bgColors = {
-  rojo   : '#ff3b30',
-  azul   : '#007aff',
-  morado : '#8e44ad',
-  rosado : '#ff69b4',
-  negro  : '#000000',
-  verde  : '#34c759'
+/*──────── colores ────────*/
+const colors = {
+  rojo:   '#ff3b30',
+  azul:   '#007aff',
+  morado: '#8e44ad',
+  rosado: '#ff69b4',
+  negro:  '#000000',
+  verde:  '#34c759'
 };
 
-/* ─────── helper nombre bonito (idéntico a qc) ─────── */
-async function prettyName(jid, conn, chatId, qPush='', fallback=''){
-  if(qPush && !/^\d+$/.test(qPush)) return qPush;
+/*──────── helpers nombre (idéntico a qc) ────────*/
+const qPush = q=>q?.pushName||q?.sender?.pushName||'';
 
+async function niceName(jid,conn,chatId,push='',fallback=''){
+  if(push && !/^\d+$/.test(push)) return push;
   if(chatId.endsWith('@g.us')){
     try{
       const meta=await conn.groupMetadata(chatId);
@@ -48,46 +49,47 @@ async function prettyName(jid, conn, chatId, qPush='', fallback=''){
   return withFlag(jid.split('@')[0]);
 }
 
-/* ─────── handler qc2 ─────── */
+/*──────── handler qc2 ────────*/
 const handler = async (msg,{conn,args})=>{
 try{
-  const chatId  = msg.key.remoteJid;
-  const ctxInfo = msg.message?.extendedTextMessage?.contextInfo;
-  const quoted  = ctxInfo?.quotedMessage;
+  const chat   = msg.key.remoteJid;
+  const cInfo  = msg.message?.extendedTextMessage?.contextInfo;
+  const quoted = cInfo?.quotedMessage;
 
-  /* color opcional */
+  /* color */
   const first=(args[0]||'').toLowerCase();
-  const bgHex = bgColors[first] || bgColors.negro;
-  if(bgColors[first]) args.shift();               // quitar color
+  const bgColor = colors[first] || colors.negro;
+  if(colors[first]) args.shift();
 
   /* texto */
-  let txt = args.join(' ').trim();
-  if(!txt && quoted)
-    txt = quoted.conversation || quoted.extendedTextMessage?.text || '';
-  if(!txt)
-    return conn.sendMessage(chatId,
-      {text:'⚠️ Escribe algo o cita un mensaje.'},{quoted:msg});
+  let texto=args.join(' ').trim();
+  if(!texto && quoted)
+    texto = quoted.conversation || quoted.extendedTextMessage?.text || '';
+  if(!texto)
+    return conn.sendMessage(chat,{text:'⚠️ Escribe algo o cita un mensaje.'},{quoted:msg});
 
-  /* objetivo */
-  const targetJid = quoted && ctxInfo?.participant
-        ? ctxInfo.participant
+  /* target */
+  const jidTarget = quoted && cInfo?.participant
+        ? cInfo.participant
         : msg.key.participant || msg.key.remoteJid;
-  const qPush = quoted?.pushName || '';
-  const name  = await prettyName(targetJid,conn,chatId,qPush,msg.pushName);
+
+  const name = await niceName(jidTarget,conn,chat,qPush(quoted),msg.pushName);
 
   /* avatar */
   let avatar='https://telegra.ph/file/24fa902ead26340f3df2c.png';
-  try{ avatar=await conn.profilePictureUrl(targetJid,'image'); }catch{}
+  try{ avatar=await conn.profilePictureUrl(jidTarget,'image'); }catch{}
 
-  await conn.sendMessage(chatId,{react:{text:'🎨',key:msg.key}});
+  await conn.sendMessage(chat,{react:{text:'🎨',key:msg.key}});
 
   const quoteData={
-    type:'quote',format:'png',backgroundColor:bgHex,
-    width:800,height:0,scale:3,  // height 0 = auto
+    type:'quote',format:'png',
+    backgroundColor:bgColor,
+    width:800,height:0,scale:3, // auto-alto
     messages:[{
-      entities:[],avatar:true,
+      entities:[],
+      avatar:true,
       from:{id:1,name,photo:{url:avatar}},
-      text:txt,
+      text:texto,
       replyMessage:{}
     }]
   };
@@ -99,11 +101,10 @@ try{
   );
 
   const imgBuf=Buffer.from(data.result.image,'base64');
-
-  await conn.sendMessage(chatId,
+  await conn.sendMessage(chat,
     {image:imgBuf,caption:`🖼️ qc2 (${first||'negro'})`},
     {quoted:msg});
-  await conn.sendMessage(chatId,{react:{text:'✅',key:msg.key}});
+  await conn.sendMessage(chat,{react:{text:'✅',key:msg.key}});
 
 }catch(e){
   console.error('qc2 error:',e);
