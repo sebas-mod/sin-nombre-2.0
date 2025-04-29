@@ -1150,61 +1150,7 @@ try {
 } catch (err) {
   console.error("❌ Error al ejecutar comando desde sticker:", err);
 }
-// === FIN LÓGICA COMANDOS DESDE STICKER ===    
-
-    //restringir comandos
-    try {
-  const rePath = path.resolve("./re.json");
-  const cachePath = path.resolve("./restriccion_cache.json");
-
-  if (!fs.existsSync(cachePath)) fs.writeFileSync(cachePath, JSON.stringify({}, null, 2));
-
-  const reData = fs.existsSync(rePath) ? JSON.parse(fs.readFileSync(rePath)) : {};
-  const cacheData = JSON.parse(fs.readFileSync(cachePath));
-
-  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
-  const comandosRestringidos = reData[chatId] || [];
-
-  const senderClean = sender.replace(/[^0-9]/g, "");
-  const isOwner = global.owner.some(([id]) => id === senderClean);
-  const isFromMe = msg.key.fromMe;
-
-  const key = `${chatId}:${senderClean}:${commandOnly}`;
-
-  // Si el comando ya no está restringido, eliminarlo del contador
-  if (!comandosRestringidos.includes(commandOnly) && cacheData[key]) {
-    delete cacheData[key];
-    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
-    return;
-  }
-
-  if (comandosRestringidos.includes(commandOnly) && !isOwner && !isFromMe) {
-    cacheData[key] = (cacheData[key] || 0) + 1;
-
-    const replyOptions = {
-      quoted: msg,
-      mentions: [sender + "@s.whatsapp.net"]
-    };
-
-    if (cacheData[key] < 5) {
-      await sock.sendMessage(chatId, {
-        text: `🚫 *Este comando está restringido en este grupo.*\n⚠️ Solo el owner o el bot pueden usarlo.`,
-      }, replyOptions);
-    } else if (cacheData[key] === 5) {
-      await sock.sendMessage(chatId, {
-        text: `❌ *Has intentado usar este comando demasiadas veces.*\n🤖 Ahora el bot te ignorará respecto a *${commandOnly}*.`,
-      }, replyOptions);
-    }
-
-    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
-    return;
-  }
-
-} catch (e) {
-  console.error("❌ Error procesando comando restringido:", e);
-}
-// === FIN LÓGICA DE COMANDOS RESTRINGIDOS ===    
-    
+// === FIN LÓGICA COMANDOS DESDE STICKER ===       
     
 // === INICIO BLOQUEO AUTOMÁTICO COMANDOS RPG AZURA ===
 try {
@@ -1288,6 +1234,59 @@ try {
   console.error("❌ Error procesando bloqueo de modo caliente:", e);
 }
 // === FIN BLOQUEO AUTOMÁTICO COMANDOS +18 ===    
+    //restringir comandos
+    try {
+  const rePath = path.resolve("./re.json");
+  const cachePath = path.resolve("./restriccion_cache.json");
+
+  if (!fs.existsSync(cachePath)) fs.writeFileSync(cachePath, JSON.stringify({}, null, 2));
+
+  const reData = fs.existsSync(rePath) ? JSON.parse(fs.readFileSync(rePath)) : {};
+  const cacheData = JSON.parse(fs.readFileSync(cachePath));
+
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+  const comandosRestringidos = reData[chatId] || [];
+
+  const senderClean = sender.replace(/[^0-9]/g, "");
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+  const isFromMe = msg.key.fromMe;
+
+  const key = `${chatId}:${senderClean}:${commandOnly}`;
+
+  // Si el comando ya no está restringido, eliminarlo del contador
+  if (!comandosRestringidos.includes(commandOnly) && cacheData[key]) {
+    delete cacheData[key];
+    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+    return;
+  }
+
+  if (comandosRestringidos.includes(commandOnly) && !isOwner && !isFromMe) {
+    cacheData[key] = (cacheData[key] || 0) + 1;
+
+    const replyOptions = {
+      quoted: msg,
+      mentions: [sender + "@s.whatsapp.net"]
+    };
+
+    if (cacheData[key] < 5) {
+      await sock.sendMessage(chatId, {
+        text: `🚫 *Este comando está restringido en este grupo.*\n⚠️ Solo el owner o el bot pueden usarlo.`,
+      }, replyOptions);
+    } else if (cacheData[key] === 5) {
+      await sock.sendMessage(chatId, {
+        text: `❌ *Has intentado usar este comando demasiadas veces.*\n🤖 Ahora el bot te ignorará respecto a *${commandOnly}*.`,
+      }, replyOptions);
+    }
+
+    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+    return;
+  }
+
+} catch (e) {
+  console.error("❌ Error procesando comando restringido:", e);
+}
+// === FIN LÓGICA DE COMANDOS RESTRINGIDOS ===    
+
     
     // ✅ Procesar comando
     if (messageText.startsWith(global.prefix)) {
