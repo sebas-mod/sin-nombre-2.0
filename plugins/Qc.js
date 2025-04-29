@@ -112,45 +112,28 @@ const handler = async (msg, { conn, args }) => {
     // quotedMsg si existe
     const quotedMsg = context?.quotedMessage;
 
-    // DEBUG (opcional): para ver qué recibes
-    console.log('--- Mensaje completo ---');
-    console.log(JSON.stringify(msg, null, 2));
-
     let targetJid = null;
     let textoCitado = '';
 
     // Si hay mensaje citado
     if (quotedMsg) {
-      // El logs te mostró que "quotedParticipant: undefined"
-      // y "participant" sale en "contextInfo.participant" con "50765000000@s.whatsapp.net"
-      // así que usemos `context?.participant` si no es del bot
+      textoCitado = quotedMsg.conversation || '';
 
-      textoCitado = quotedMsg.conversation || ''; // o la forma que uses para extraer
-      // (Acá revisa si es conversation, extendedTextMessage, etc.)
-
-      // Con tu log, viste:
-      // "participant": "50765000000@s.whatsapp.net"
-      // => Ése es el JID real del usuario que escribió el mensaje
-      //    (SI no es tu bot, se asume que es el autor real).
-      const quotedFromMe = !!quotedMsg.key?.fromMe; // si el citado lo escribió el bot
+      const quotedFromMe = !!context?.fromMe;
 
       if (!quotedFromMe && context.participant) {
-        // Ese JID es el autor del mensaje citado
         targetJid = context.participant;
       } else {
-        // Fallback: no hay info, usar el que manda el comando
         targetJid = msg.key.participant || msg.key.remoteJid;
       }
     } 
 
     // Si no hay quotedMsg
     if (!targetJid) {
-      // Normal: si no se cita nada
       targetJid = msg.key.participant || msg.key.remoteJid;
     }
 
     // En privado, si fromMe es true (el bot)
-    // y remoteJid es @s.whatsapp.net, puede que quieras forzar algo
     if (msg.key.remoteJid.endsWith('@s.whatsapp.net') && isFromBot) {
       // Forzar a usar tu propio JID de bot, si quieres
       // targetJid = conn.user.jid;
