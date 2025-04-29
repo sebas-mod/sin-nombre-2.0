@@ -1,35 +1,25 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions'); // ajusta la ruta si cambia
+const { writeExifImg } = require('../libs/fuctions'); // ajusta la ruta
 
 /*────────────────────────────────────
-  Obtiene un nombre “bonito” (contacto,
-  notify, nombre de participante, push)
-  ────────────────────────────────────*/
-async function resolveName(jid, conn, chatId, fallback = '') {
+  Obtiene un nombre “bonito”
+  ───────────────────────────────────*/
+async function resolveName(jid, conn, fallback = '') {
   try {
-    // 1) getName() de Baileys
+    // 1) getName() (trae push / contacto)
     let name = await conn.getName(jid);
     if (name && name.trim() && !name.includes('@')) return name;
 
-    // 2) contacto en caché
+    // 2) Libreta interna
     const c = conn.contacts?.[jid];
     if (c?.notify) return c.notify;
+    if (c?.name)   return c.name;
 
-    // 3) metadata de grupo ⇒ participants[].name / notify
-    if (chatId.endsWith('@g.us')) {
-      try {
-        const meta = await conn.groupMetadata(chatId);
-        const p = meta.participants.find(p => p.id === jid);
-        if (p?.name)   return p.name;
-        if (p?.notify) return p.notify;
-      } catch {/* ignorar */}
-    }
-
-    // 4) pushName que recibimos
+    // 3) Fallback que le pasamos
     if (fallback && fallback.trim() && !fallback.includes('@')) return fallback;
 
-  } catch {/* ignorar absolutamente todo */}
-  // 5) número si todo falla
+  } catch {/* ignorar */}
+  // 4) Último recurso: número
   return jid.split('@')[0];
 }
 
@@ -41,14 +31,16 @@ const handler = async (msg, { conn, args }) => {
 
     /* ── Definir objetivo y texto ── */
     let targetJid    = msg.key.participant || msg.key.remoteJid;
-    let fallbackName = msg.pushName || '';
     let textoCitado  = '';
+    let fallbackName = msg.pushName || '';
 
     if (quoted && ctx?.participant) {
-      targetJid    = ctx.participant;                     // usuario citado
-      fallbackName = '';                                  // evita tu propio nombre
+      targetJid    = ctx.participant;               // usuario citado
       textoCitado  = quoted.conversation ||
                      quoted.extendedTextMessage?.text || '';
+      // ← intentar sacar su "notify" de contactos
+      fallbackName = conn.contacts?.[targetJid]?.notify ||
+                     conn.contacts?.[targetJid]?.name   || '';
     }
 
     let contenido = args.join(' ').trim() || textoCitado;
@@ -63,8 +55,8 @@ const handler = async (msg, { conn, args }) => {
         { text: '⚠️ El texto no puede tener más de 35 caracteres.' },
         { quoted: msg });
 
-    /* ── Nombre y avatar del target ── */
-    const targetName = await resolveName(targetJid, conn, chatId, fallbackName);
+    /* ── Nombre y avatar ── */
+    const targetName = await resolveName(targetJid, conn, fallbackName);
 
     let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
     try { avatar = await conn.profilePictureUrl(targetJid, 'image'); } catch {}
