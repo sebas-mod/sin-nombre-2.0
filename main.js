@@ -4395,6 +4395,8 @@ case 'menu': {
 ⎔ ${global.prefix}addsticker
 ⎔ ${global.prefix}listpacks
 ⎔ ${global.prefix}sendpack
+⎔ ${global.prefix}qc
+⎔ ${global.prefix}qc2
 
 ╭──────────────╮  
 │ ✦ 𝙃𝙀𝙍𝙍𝘼𝙈𝙄𝙀𝙉𝙏𝘼𝙎 ✦ │  
