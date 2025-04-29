@@ -1,25 +1,36 @@
 const axios = require('axios');
 const { writeExifImg } = require('../libs/fuctions'); // ajusta la ruta
 
-/*────────────────────────────────────
-  Obtiene un nombre “bonito”
-  ───────────────────────────────────*/
+/*────────────────────────────────────────────
+  Resuelve el nombre:
+  1) conn.getName()
+  2) conn.contacts[jid].notify / .name
+  3) conn.onWhatsApp(jid)[0].notify  ← NUEVO
+  4) fallback que le pasemos
+  5) número puro
+  ───────────────────────────────────────────*/
 async function resolveName(jid, conn, fallback = '') {
   try {
-    // 1) getName() (trae push / contacto)
+    // 1) getName() (pushName / contacto guardado)
     let name = await conn.getName(jid);
     if (name && name.trim() && !name.includes('@')) return name;
 
-    // 2) Libreta interna
+    // 2) libreta local
     const c = conn.contacts?.[jid];
     if (c?.notify) return c.notify;
     if (c?.name)   return c.name;
 
-    // 3) Fallback que le pasamos
-    if (fallback && fallback.trim() && !fallback.includes('@')) return fallback;
+    // 3) consulta directa al servidor (trae 'notify')
+    const wa = await conn.onWhatsApp(jid);
+    if (Array.isArray(wa) && wa[0]?.notify)
+      return wa[0].notify;
 
-  } catch {/* ignorar */}
-  // 4) Último recurso: número
+    // 4) fallback explícito
+    if (fallback && fallback.trim() && !fallback.includes('@'))
+      return fallback;
+
+  } catch {/* ignorar errores */}
+  // 5) número si todo falla
   return jid.split('@')[0];
 }
 
@@ -29,7 +40,7 @@ const handler = async (msg, { conn, args }) => {
     const ctx     = msg.message?.extendedTextMessage?.contextInfo;
     const quoted  = ctx?.quotedMessage;
 
-    /* ── Definir objetivo y texto ── */
+    // ── definir objetivo y texto ──
     let targetJid    = msg.key.participant || msg.key.remoteJid;
     let textoCitado  = '';
     let fallbackName = msg.pushName || '';
@@ -38,7 +49,6 @@ const handler = async (msg, { conn, args }) => {
       targetJid    = ctx.participant;               // usuario citado
       textoCitado  = quoted.conversation ||
                      quoted.extendedTextMessage?.text || '';
-      // ← intentar sacar su "notify" de contactos
       fallbackName = conn.contacts?.[targetJid]?.notify ||
                      conn.contacts?.[targetJid]?.name   || '';
     }
@@ -55,7 +65,7 @@ const handler = async (msg, { conn, args }) => {
         { text: '⚠️ El texto no puede tener más de 35 caracteres.' },
         { quoted: msg });
 
-    /* ── Nombre y avatar ── */
+    // ── nombre y avatar ──
     const targetName = await resolveName(targetJid, conn, fallbackName);
 
     let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
