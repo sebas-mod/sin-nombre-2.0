@@ -143,11 +143,11 @@ const handler = async (msg, { conn, args }) => {
     draw.fillText(l, 540, startY + (i * 80));
   });
 
-  const logo = await loadImage('https://cdn.russellxz.click/e3acfde4.png');
-  draw.drawImage(logo, 750, 970, 40, 40);
-  draw.font = 'italic 26px Serif';
-  draw.textAlign = 'left';
-  draw.fillText('Azura & Cortana Bot', 800, 1000);
+  // ... (todo tu código igual que lo mandaste arriba, hasta aquí)
+
+  const logo = await loadImage('https://cdn.russellxz.click/a46036ec.png');
+  draw.drawImage(logo, 720, 950, 80, 80); // logo más grande
+  // Marca de agua eliminada
 
   const fileName = `./tmp/texto-${Date.now()}.png`;
   const out = fs.createWriteStream(fileName);
