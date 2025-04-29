@@ -4397,6 +4397,7 @@ case 'menu': {
 ⎔ ${global.prefix}sendpack
 ⎔ ${global.prefix}qc
 ⎔ ${global.prefix}qc2
+⎔ ${global.prefix}texto
 
 ╭──────────────╮  
 │ ✦ 𝙃𝙀𝙍𝙍𝘼𝙈𝙄𝙀𝙉𝙏𝘼𝙎 ✦ │  
