@@ -1,11 +1,24 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions');  // Ajusta si tu ruta es distinta
+const { writeExifImg } = require('../libs/fuctions');  // Ajusta tu ruta si es distinta
 
-async function getNombreBonito(jid, conn) {
+async function getNombreBonito(jid, conn, fallbackPushName = '') {
   if (!jid) return '???';
   try {
-    const name = await conn.getName(jid);
-    return name || jid.split('@')[0];
+    let name = '';
+
+    if (typeof conn.getName === 'function') {
+      name = await conn.getName(jid);
+    }
+
+    if (!name || !name.trim() || name.includes('@')) {
+      name = fallbackPushName;
+    }
+
+    if (!name || !name.trim() || name.includes('@')) {
+      name = jid.split('@')[0];
+    }
+
+    return name;
   } catch (err) {
     return jid.split('@')[0];
   }
@@ -13,8 +26,9 @@ async function getNombreBonito(jid, conn) {
 
 const handler = async (msg, { conn, args }) => {
   try {
-    const isFromBot = !!msg.key.fromMe;
     const chatId = msg.key.remoteJid;
+    const isFromBot = !!msg.key.fromMe;
+
     const context = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = context?.quotedMessage;
 
@@ -22,13 +36,9 @@ const handler = async (msg, { conn, args }) => {
     let fallbackName = msg.pushName || '';
     let textoCitado = '';
 
-    if (quotedMsg) {
+    if (quotedMsg && context?.participant) {
+      targetJid = context.participant;
       textoCitado = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || '';
-
-      if (context?.participant) {
-        targetJid = context.participant;
-        fallbackName = context.participant; // Forzar fallback con el JID
-      }
     }
 
     if (!targetJid) {
@@ -51,15 +61,15 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg });
     }
 
-    // Obtener nombre bonito real
-    const targetName = await getNombreBonito(targetJid, conn);
+    // Obtenemos el nombre bonito
+    const targetName = await getNombreBonito(targetJid, conn, fallbackName);
 
-    // Obtener foto de perfil
+    // Obtenemos la foto de perfil
     let targetPp;
     try {
       targetPp = await conn.profilePictureUrl(targetJid, 'image');
     } catch {
-      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'; // Foto por defecto
+      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'; // Foto de respaldo
     }
 
     await conn.sendMessage(chatId, {
