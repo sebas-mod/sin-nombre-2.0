@@ -1,4 +1,4 @@
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage, registerFont } = require('canvas');
 const fs = require('fs');
 const path = require('path');
 
@@ -7,8 +7,8 @@ const handler = async (msg, { conn, args }) => {
   const context = msg.message?.extendedTextMessage?.contextInfo;
   const quotedMsg = context?.quotedMessage;
 
+  // Mapa de colores disponibles
   const defaultColor = 'azul';
-  const inputColor = args[0]?.toLowerCase();
   const colores = {
     azul: ['#2196F3', '#E3F2FD'],
     rojo: ['#F44336', '#FFCDD2'],
@@ -20,40 +20,37 @@ const handler = async (msg, { conn, args }) => {
     gris: ['#607D8B', '#CFD8DC']
   };
 
-  const colorValido = colores[inputColor] ? inputColor : defaultColor;
-  const gradColors = colores[colorValido];
-
+  // Sacar texto
   let texto = '';
   if (quotedMsg) {
     texto = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || '';
   } else {
-    texto = colores[inputColor] ? args.slice(1).join(' ') : args.join(' ');
+    texto = colores[args[0]?.toLowerCase()] ? args.slice(1).join(' ') : args.join(' ');
   }
 
   if (!texto || texto.length === 0) {
     return conn.sendMessage(chatId, {
-      text: '⚠️ Usa el comando así:\n\n*.texto [color opcional] tu mensaje*\n\nEj: *.texto rosa Te amo*\n\nColores disponibles:\n- azul\n- rojo\n- verde\n- rosa\n- morado\n- negro\n- naranja\n- gris'
+      text: '⚠️ Usa el comando así:\n\n*.texto [color opcional] tu mensaje*\n\nColores disponibles:\n- azul\n- rojo\n- verde\n- rosa\n- morado\n- negro\n- naranja\n- gris'
     }, { quoted: msg });
   }
 
   const displayText = texto.slice(0, 300);
+  const inputColor = args[0]?.toLowerCase();
+  const gradColors = colores[inputColor] || colores[defaultColor];
+
   const targetJid = context?.participant || msg.key.participant || msg.key.remoteJid;
   const contacto = conn.contacts?.[targetJid] || {};
-  const targetName = contacto.name || contacto.notify || targetJid.split('@')[0];
+  const nombreUsuario = contacto.name || contacto.notify || targetJid.split('@')[0];
 
-  let profilePic;
+  let avatarUrl;
   try {
-    profilePic = await conn.profilePictureUrl(targetJid, 'image');
+    avatarUrl = await conn.profilePictureUrl(targetJid, 'image');
   } catch {
-    profilePic = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
+    avatarUrl = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
   }
 
-  // Reacción al usar el comando
-  await conn.sendMessage(chatId, {
-    react: { text: '🖼️', key: msg.key }
-  });
+  await conn.sendMessage(chatId, { react: { text: '🖼️', key: msg.key } });
 
-  // Crear canvas
   const canvas = createCanvas(1080, 1080);
   const ctx = canvas.getContext('2d');
 
@@ -65,7 +62,7 @@ const handler = async (msg, { conn, args }) => {
   ctx.fillRect(0, 0, 1080, 1080);
 
   // Avatar circular
-  const avatar = await loadImage(profilePic);
+  const avatar = await loadImage(avatarUrl);
   ctx.save();
   ctx.beginPath();
   ctx.arc(100, 100, 80, 0, Math.PI * 2);
@@ -73,18 +70,51 @@ const handler = async (msg, { conn, args }) => {
   ctx.drawImage(avatar, 20, 20, 160, 160);
   ctx.restore();
 
-  // Nombre
+  // Nombre del usuario
   ctx.font = 'bold 40px Sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(targetName, 200, 100);
+  ctx.fillText(nombreUsuario, 220, 100);
 
-  // Texto principal
+  // Texto principal (romper líneas si es muy largo)
   ctx.font = 'bold 60px Sans-serif';
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
-  ctx.fillText(displayText, canvas.width / 2, 600, 900);
 
-  // Guardar temporal y enviar
+  const lines = [];
+  const words = displayText.split(' ');
+  let line = '';
+
+  for (const word of words) {
+    const testLine = line + word + ' ';
+    const { width } = ctx.measureText(testLine);
+    if (width > 900) {
+      lines.push(line.trim());
+      line = word + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+  if (line.trim()) lines.push(line.trim());
+
+  const startY = 550 - (lines.length * 35);
+  lines.forEach((l, i) => {
+    ctx.fillText(l, 540, startY + (i * 80));
+  });
+
+  // Marca de agua (Azura Ultra & Cortana Bot + logo)
+  const logo = await loadImage('https://cdn.russellxz.click/e3acfde4.png');
+  const marcaTexto = "Azura Ultra & Cortana Bot";
+
+  // Dibujar logo pequeño
+  ctx.drawImage(logo, 750, 970, 40, 40);
+
+  // Dibujar texto de marca
+  ctx.font = 'italic 26px Sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left';
+  ctx.fillText(marcaTexto, 800, 1000);
+
+  // Guardar y enviar
   const fileName = `./tmp/texto-${Date.now()}.png`;
   const out = fs.createWriteStream(fileName);
   const stream = canvas.createPNGStream();
@@ -93,7 +123,7 @@ const handler = async (msg, { conn, args }) => {
   out.on('finish', async () => {
     await conn.sendMessage(chatId, {
       image: { url: fileName },
-      caption: `🖼 Publicación generada por Azura Ultra`
+      caption: `🖼 Texto generado por Azura Ultra`
     }, { quoted: msg });
     fs.unlinkSync(fileName);
   });
