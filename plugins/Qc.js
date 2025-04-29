@@ -1,114 +1,85 @@
 const axios = require('axios');
-const { writeExifImg } = require('../libs/fuctions');   // ajusta si es otra ruta
+const { writeExifImg } = require('../libs/fuctions'); // ajusta la ruta
 
-//───────────────────────────────────────────────
-async function getNombreBonito(jid, conn, fallbackPushName = '') {
+async function getNombreBonito(jid, conn, fallback = '') {
   if (!jid) return '???';
   try {
-    let name = '';
+    let name = await conn.getName(jid);             // 1) getName()
+    if (!name || /^\d+$/.test(name) || name.includes('@')) name = '';
 
-    if (typeof conn.getName === 'function') {
-      name = await conn.getName(jid);
-    }
-
-    /* 🆕 descartar strings que sean solo dígitos */
-    if (!name || !name.trim() || name.includes('@') || /^\d+$/.test(name)) {
-      name = fallbackPushName;
-    }
-
-    if (!name || !name.trim() || name.includes('@') || /^\d+$/.test(name)) {
-      /* 🆕 probar la libreta interna */
+    if (!name) {                                    // 2) caché local
       const c = conn.contacts?.[jid];
       name = c?.notify || c?.name || '';
     }
-
-    if (!name || !name.trim() || name.includes('@') || /^\d+$/.test(name)) {
-      name = jid.split('@')[0];
-    }
-
+    if (!name) name = fallback;                     // 3) fallback externo
+    if (!name) name = jid.split('@')[0];            // 4) número
     return name;
-
-  } catch {
-    return jid.split('@')[0];
-  }
+  } catch { return jid.split('@')[0]; }
 }
-//───────────────────────────────────────────────
+
 const handler = async (msg, { conn, args }) => {
   try {
     const chatId   = msg.key.remoteJid;
-    const context  = msg.message?.extendedTextMessage?.contextInfo;
-    const quotedMsg = context?.quotedMessage;
+    const ctx      = msg.message?.extendedTextMessage?.contextInfo;
+    const quoted   = ctx?.quotedMessage;
 
-    let targetJid    = null;
-    let fallbackName = msg.pushName || '';
+    let targetJid    = msg.key.participant || msg.key.remoteJid;
     let textoCitado  = '';
+    let fallbackName = msg.pushName || '';
 
-    if (quotedMsg && context?.participant) {
-      targetJid    = context.participant;
-      textoCitado  = quotedMsg.conversation ||
-                     quotedMsg.extendedTextMessage?.text || '';
+    /*── Si citamos, cambiamos target y buscamos su 'notify' en el servidor ──*/
+    if (quoted && ctx?.participant) {
+      targetJid   = ctx.participant;
+      textoCitado = quoted.conversation || quoted.extendedTextMessage?.text || '';
 
-      /* 🆕 fallback = notify del citado si existe */
-      const c = conn.contacts?.[targetJid];
-      fallbackName = c?.notify || c?.name || '';
+      // ⇩ Nueva línea: consulta en vivo para obtener el nick/notify
+      try {
+        const wa = await conn.onWhatsApp(targetJid);
+        fallbackName = wa?.[0]?.notify || '';
+      } catch { fallbackName = ''; }
     }
 
-    if (!targetJid) {
-      targetJid = msg.key.participant || msg.key.remoteJid;
-    }
-
-    let contenido = args.join(' ').trim();
-    if (!contenido) contenido = textoCitado;
-
-    if (!contenido.trim()) {
+    let contenido = args.join(' ').trim() || textoCitado;
+    if (!contenido.trim())
       return conn.sendMessage(chatId,
         { text: '⚠️ Escribe algo o cita un mensaje para crear el sticker.' },
         { quoted: msg });
-    }
 
-    const textoLimpio = contenido.replace(/@[\d\-]+/g, '').trim();
-    if (textoLimpio.length > 35) {
+    const limpio = contenido.replace(/@[\d\-]+/g, '').trim();
+    if (limpio.length > 35)
       return conn.sendMessage(chatId,
         { text: '⚠️ El texto no puede tener más de 35 caracteres.' },
         { quoted: msg });
-    }
 
-    // nombre y foto
     const targetName = await getNombreBonito(targetJid, conn, fallbackName);
 
-    let targetPp;
-    try {
-      targetPp = await conn.profilePictureUrl(targetJid, 'image');
-    } catch {
-      targetPp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
-    }
+    let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png';
+    try { avatar = await conn.profilePictureUrl(targetJid, 'image'); } catch {}
 
     await conn.sendMessage(chatId, { react: { text: '🎨', key: msg.key } });
 
     const quoteData = {
-      type: "quote",
-      format: "png",
-      backgroundColor: "#000000",
-      width: 600,
-      height: 900,
-      scale: 3,
+      type: "quote", format: "png", backgroundColor: "#000000",
+      width: 600, height: 900, scale: 3,
       messages: [{
         entities: [],
         avatar: true,
-        from: { id: 1, name: targetName, photo: { url: targetPp } },
-        text: textoLimpio,
+        from: { id: 1, name: targetName, photo: { url: avatar } },
+        text: limpio,
         replyMessage: {}
       }]
     };
 
-    const res     = await axios.post('https://bot.lyo.su/quote/generate',
-                                     quoteData,
-                                     { headers: { 'Content-Type': 'application/json' } });
-    const buffer  = Buffer.from(res.data.result.image, 'base64');
-    const sticker = await writeExifImg(buffer, {
-                      packname: "Azura Ultra 2.0 Bot",
-                      author:   "𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻"
-                    });
+    const { data } = await axios.post(
+      'https://bot.lyo.su/quote/generate',
+      quoteData,
+      { headers: { 'Content-Type': 'application/json' } });
+
+    const stickerBuf = Buffer.from(data.result.image, 'base64');
+    const sticker    = await writeExifImg(stickerBuf, {
+                       packname: 'Azura Ultra 2.0 Bot',
+                       author:   '𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻'
+                     });
 
     await conn.sendMessage(chatId, { sticker: { url: sticker } }, { quoted: msg });
     await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
