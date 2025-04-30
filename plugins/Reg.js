@@ -3,117 +3,120 @@ const fs = require("fs");
 const path = require("path");
 
 const fondoURL = "https://cdn.russellxz.click/3f64bf97.jpeg";
-const sinFotoURL = "https://cdn.russellxz.click/c354a72a.jpeg";
+const defaultAvatar = "https://cdn.russellxz.click/c354a72a.jpeg";
 const logoURL = "https://cdn.russellxz.click/a46036ec.png";
-const registroPath = "./reg.json";
+const dbPath = "./reg.json";
 
 const handler = async (msg, { conn, args }) => {
   const chatId = msg.key.remoteJid;
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const senderNum = senderId.replace(/[^0-9]/g, "");
-  const senderName = msg.pushName || "Usuario";
+  const sender = msg.key.participant || msg.key.remoteJid;
+  const senderNum = sender.replace(/[^0-9]/g, "");
+  const name = msg.pushName || "Desconocido";
 
-  const fecha = new Date();
-  const emitida = `${fecha.getDate().toString().padStart(2, "0")}/${(fecha.getMonth() + 1).toString().padStart(2, "0")}/${fecha.getFullYear()}`;
-  const vence = `${fecha.getDate().toString().padStart(2, "0")}/${(fecha.getMonth() + 1).toString().padStart(2, "0")}/${fecha.getFullYear() + 10}`;
-
-  if (!fs.existsSync(registroPath)) fs.writeFileSync(registroPath, JSON.stringify({}));
-  const regData = JSON.parse(fs.readFileSync(registroPath, "utf-8"));
-
-  if (regData[senderNum]) {
+  // Verificar si ya está registrado
+  if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
+  const db = JSON.parse(fs.readFileSync(dbPath));
+  if (db[senderNum]) {
     return conn.sendMessage(chatId, {
-      text: `⚠️ Ya estás registrado.\n\nUsa el comando *vercedula* si deseas volver a verla.`,
+      text: "✅ Ya estás registrado en Azura Ultra & Cortana. No es necesario volver a registrarte.",
     }, { quoted: msg });
   }
 
+  // Validar formato: reg nombre edad sexo fechaNacimiento
   if (args.length < 4) {
     return conn.sendMessage(chatId, {
-      text: `✳️ Uso correcto del comando:\n\n*reg nombre edad sexo fecha*\n\nEjemplo:\n*reg Russell 26 hombre 19/06/1998*`,
+      text: `✳️ Usa el comando así:\n\n*reg nombre edad sexo fecha*\n\n📌 Ejemplo:\n*reg russell 26 hombre 19/06/1998*`,
     }, { quoted: msg });
   }
 
-  const [nombre, edad, sexo, nacimiento] = args;
+  const [nombre, edad, sexo, fechaNac] = args;
+  const fechaHoy = new Date();
+  const emitida = fechaHoy.toLocaleDateString("es-ES");
+  const vence = new Date();
+  vence.setFullYear(vence.getFullYear() + 10);
+  const fechaVence = vence.toLocaleDateString("es-ES");
+
+  const metadata = await conn.groupMetadata(chatId).catch(() => null);
+  const groupName = metadata?.subject || "Grupo Desconocido";
 
   await conn.sendMessage(chatId, { react: { text: "🪪", key: msg.key } });
 
-  let avatar = sinFotoURL;
-  try {
-    avatar = await conn.profilePictureUrl(senderId, "image");
-  } catch {}
-
-  let grupoNombre = "";
-  try {
-    const metadata = await conn.groupMetadata(chatId);
-    grupoNombre = metadata.subject || chatId;
-  } catch {
-    grupoNombre = chatId;
-  }
+  // Cargar imágenes
+  const [fondo, avatarRaw, logo] = await Promise.all([
+    loadImage(fondoURL),
+    loadImage(await conn.profilePictureUrl(sender, "image").catch(() => defaultAvatar)),
+    loadImage(logoURL)
+  ]);
 
   const canvas = createCanvas(1080, 720);
   const ctx = canvas.getContext("2d");
 
-  const fondo = await loadImage(fondoURL);
+  // Fondo desenfocado
   ctx.drawImage(fondo, 0, 0, 1080, 720);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.fillRect(0, 0, 1080, 720);
 
-  ctx.fillStyle = "rgba(0,0,0,0.45)";
-  ctx.fillRect(30, 40, 1020, 640);
-  ctx.fillStyle = "#ffffff";
+  // Caja blanca con bordes
+  ctx.fillStyle = "white";
+  ctx.roundRect(60, 100, 960, 520, 30).fill();
 
-  ctx.font = "bold 42px Sans-serif";
-  ctx.fillText("CIUDADANO DE AZURA ULTRA & CORTANA", 60, 100);
+  // Cabecera azul
+  ctx.fillStyle = "#0a4682";
+  ctx.roundRect(60, 70, 960, 50, { tl: 15, tr: 15, br: 0, bl: 0 }).fill();
+  ctx.fillStyle = "white";
+  ctx.font = "bold 30px Sans";
+  ctx.fillText("CIUDADANO DE AZURA ULTRA & CORTANA", 80, 105);
 
-  ctx.font = "italic 30px Sans-serif";
-  ctx.fillText(`Registrado en: ${grupoNombre}`, 60, 150);
-
-  const foto = await loadImage(avatar);
+  // Avatar cuadrado
   ctx.save();
   ctx.beginPath();
-  ctx.arc(170, 300, 130, 0, Math.PI * 2);
-  ctx.closePath();
+  ctx.rect(90, 150, 200, 200);
   ctx.clip();
-  ctx.drawImage(foto, 40, 170, 260, 260);
+  ctx.drawImage(avatarRaw, 90, 150, 200, 200);
   ctx.restore();
 
-  ctx.font = "bold 34px Sans-serif";
-  ctx.fillText(`👤 Nombre: ${nombre}`, 320, 260);
-  ctx.fillText(`🎂 Edad: ${edad}`, 320, 310);
-  ctx.fillText(`⚧ Sexo: ${sexo}`, 320, 360);
-  ctx.fillText(`📅 Nacimiento: ${nacimiento}`, 320, 410);
-  ctx.fillText(`📞 Número: ${senderNum}`, 320, 460);
-  ctx.fillText(`🕐 Emitida: ${emitida}`, 320, 510);
-  ctx.fillText(`⌛ Vence: ${vence}`, 320, 560);
-  ctx.fillText(`🪖 Rango: Recluta`, 320, 610);
-
-  const logo = await loadImage(logoURL);
-  ctx.drawImage(logo, 930, 590, 100, 100);
-
-  const tmpFile = `./tmp/cedula-${senderNum}.jpg`;
-  const out = fs.createWriteStream(tmpFile);
-  const stream = canvas.createJPEGStream();
-  stream.pipe(out);
-
-  out.on("finish", async () => {
-    await conn.sendMessage(chatId, {
-      image: { url: tmpFile },
-      caption: `🪪 Registro exitoso, *${nombre}*. ¡Bienvenido ciudadano de Azura Ultra & Cortana!`,
-    }, { quoted: msg });
-
-    regData[senderNum] = {
-      nombre,
-      edad,
-      sexo,
-      nacimiento,
-      numero: senderNum,
-      grupo: chatId,
-      grupo_nombre: grupoNombre,
-      emitida,
-      vence,
-      rango: "Recluta"
-    };
-
-    fs.writeFileSync(registroPath, JSON.stringify(regData, null, 2));
-    fs.unlinkSync(tmpFile);
+  // Datos
+  ctx.fillStyle = "#111";
+  ctx.font = "bold 30px Sans";
+  let y = 160;
+  const data = [
+    [`👤 Nombre:`, nombre],
+    [`🎂 Edad:`, edad],
+    [`⚧️ Sexo:`, sexo],
+    [`📆 Nacimiento:`, fechaNac],
+    [`📱 Número:`, senderNum],
+    [`🗓️ Emitida:`, emitida],
+    [`⏳ Vence:`, fechaVence],
+    [`🎖️ Rango:`, "Recluta"]
+  ];
+  data.forEach(([label, value], i) => {
+    ctx.fillText(`${label} ${value}`, 320, y + i * 45);
   });
+
+  // Logo en esquina
+  ctx.drawImage(logo, 960, 560, 80, 80);
+
+  // Guardar imagen temporal
+  const tmpFile = path.join("./tmp", `reg-${Date.now()}.jpg`);
+  fs.writeFileSync(tmpFile, canvas.toBuffer("image/jpeg"));
+
+  // Enviar imagen
+  await conn.sendMessage(chatId, {
+    image: { url: tmpFile },
+    caption: `🪪 Registro completado para *${nombre}*`
+  }, { quoted: msg });
+
+  // Guardar en la base
+  db[senderNum] = {
+    nombre, edad, sexo, nacimiento: fechaNac,
+    emitida, vence: fechaVence,
+    grupo: chatId,
+    rango: "Recluta"
+  };
+  fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+
+  // Borrar temporal
+  fs.unlinkSync(tmpFile);
 };
 
 handler.command = ["reg"];
