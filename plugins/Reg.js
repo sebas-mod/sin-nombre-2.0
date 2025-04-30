@@ -1,103 +1,89 @@
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage, Image } = require('canvas');
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
 
-const fondoURL = 'https://cdn.russellxz.click/3f64bf97.jpeg';
-const sinFotoURL = 'https://cdn.russellxz.click/c354a72a.jpeg';
-const logoURL = 'https://cdn.russellxz.click/a46036ec.png';
-
-function formatearFecha(fecha = new Date()) {
-  const d = new Date(fecha);
-  return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-}
+const fondoUrl = 'https://cdn.russellxz.click/3f64bf97.jpeg';
+const sinPerfilUrl = 'https://cdn.russellxz.click/c354a72a.jpeg';
+const logoUrl = 'https://cdn.russellxz.click/a46036ec.png';
+const regPath = './reg.json';
 
 const handler = async (msg, { conn, args }) => {
   const chatId = msg.key.remoteJid;
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const pushName = msg.pushName || 'Usuario';
-  const isGroup = chatId.endsWith('@g.us');
+  const sender = msg.key.participant || msg.key.remoteJid;
+  const numero = sender.split('@')[0];
 
   if (args.length < 4) {
-    return conn.sendMessage(chatId, {
-      text: `🪪 *Registro de Cédula Digital*\n\nUsa el comando así:\n*reg nombre edad sexo fecha*\n\nEjemplo:\n*reg Russell 26 Hombre 19/06/1998*`,
+    return await conn.sendMessage(chatId, {
+      text: `⚠️ Usa el comando correctamente:\n\n*reg nombre edad sexo fecha*\n\nEjemplo:\n*reg Russell 26 hombre 19/06/1998*`,
     }, { quoted: msg });
   }
 
-  const [nombre, edad, sexo, fechaNac] = args;
-  const grupo = isGroup ? (await conn.groupMetadata(chatId)).subject : 'Chat Privado';
-  const fechaHoy = new Date();
-  const fechaEmision = formatearFecha(fechaHoy);
-  const fechaVencimiento = formatearFecha(new Date(fechaHoy.setFullYear(fechaHoy.getFullYear() + 10)));
+  const [nombre, edad, sexo, nacimiento] = args;
+  const ahora = new Date();
+  const emitida = ahora.toLocaleDateString('es-PA');
+  const vence = new Date(ahora.setFullYear(ahora.getFullYear() + 10)).toLocaleDateString('es-PA');
 
-  await conn.sendMessage(chatId, { react: { text: '🪪', key: msg.key } });
+  // Cargar imágenes
+  const fondo = await loadImage(fondoUrl);
+  let avatar;
+  try {
+    avatar = await loadImage(await conn.profilePictureUrl(sender, 'image'));
+  } catch {
+    avatar = await loadImage(sinPerfilUrl);
+  }
+  const logo = await loadImage(logoUrl);
 
-  // Crear canvas
   const canvas = createCanvas(1080, 720);
   const ctx = canvas.getContext('2d');
 
-  // Fondo desenfocado
-  const fondo = await loadImage(fondoURL);
   ctx.drawImage(fondo, 0, 0, 1080, 720);
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.fillRect(20, 20, 1040, 680);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.fillRect(50, 120, 980, 450);
 
-  // Avatar
-  let avatarURL = sinFotoURL;
-  try { avatarURL = await conn.profilePictureUrl(senderId, 'image'); } catch {}
-  const avatar = await loadImage(avatarURL);
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(160, 160, 100, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.drawImage(avatar, 60, 60, 200, 200);
-  ctx.restore();
+  ctx.fillStyle = '#0a3c6b';
+  ctx.fillRect(50, 80, 980, 50);
+  ctx.font = 'bold 32px Sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('CIUDADANO DE AZURA ULTRA & CORTANA', 60, 115);
 
-  // Logo
-  const logo = await loadImage(logoURL);
-  ctx.drawImage(logo, 900, 590, 130, 110);
+  ctx.drawImage(avatar, 80, 150, 200, 200);
 
-  // Texto
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 36px Sans-serif';
-  ctx.fillText('CIUDADANO DE AZURA ULTRA & CORTANA', 320, 80);
+  ctx.font = 'bold 28px Sans-serif';
+  ctx.fillText(`Nombre: ${nombre}`, 300, 180);
+  ctx.fillText(`Edad: ${edad}`, 300, 220);
+  ctx.fillText(`Sexo: ${sexo}`, 300, 260);
+  ctx.fillText(`Nacimiento: ${nacimiento}`, 300, 300);
+  ctx.fillText(`Número: ${numero}`, 300, 340);
+  ctx.fillText(`Emitida: ${emitida}`, 300, 380);
+  ctx.fillText(`Vence: ${vence}`, 300, 420);
 
-  ctx.font = 'italic 26px Sans-serif';
-  ctx.fillText(`Registrado en: ${grupo}`, 320, 120);
+  ctx.drawImage(logo, 930, 470, 100, 100);
 
-  ctx.font = 'bold 30px Sans-serif';
-  ctx.fillText(`Nombre: ${nombre}`, 320, 200);
-  ctx.fillText(`Edad: ${edad}`, 320, 250);
-  ctx.fillText(`Sexo: ${sexo}`, 320, 300);
-  ctx.fillText(`Nacimiento: ${fechaNac}`, 320, 350);
-  ctx.fillText(`Número: ${senderId.split('@')[0]}`, 320, 400);
-  ctx.fillText(`Emitida: ${fechaEmision}`, 320, 450);
-  ctx.fillText(`Vence: ${fechaVencimiento}`, 320, 500);
-
-  // Guardar imagen temporal
+  const file = `./tmp/reg-${numero}.png`;
   const buffer = canvas.toBuffer('image/png');
-  const fileName = `./tmp/cedula-${Date.now()}.png`;
-  fs.writeFileSync(fileName, buffer);
+  fs.writeFileSync(file, buffer);
 
-  // Enviar imagen
+  // Guardar info
+  const regData = fs.existsSync(regPath) ? JSON.parse(fs.readFileSync(regPath)) : {};
+  regData[numero] = {
+    nombre,
+    edad,
+    sexo,
+    nacimiento,
+    emitida,
+    vence,
+    imagen: buffer.toString('base64'),
+  };
+  fs.writeFileSync(regPath, JSON.stringify(regData, null, 2));
+
+  await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
   await conn.sendMessage(chatId, {
-    image: fs.readFileSync(fileName),
-    caption: `✅ Registro completado. ¡Bienvenido ciudadano!`
+    image: fs.readFileSync(file),
+    caption: `🪪 Registro completado correctamente.`,
   }, { quoted: msg });
 
-  // Guardar en JSON
-  const regPath = './reg.json';
-  let data = {};
-  if (fs.existsSync(regPath)) {
-    data = JSON.parse(fs.readFileSync(regPath));
-  }
-  data[senderId] = {
-    nombre, edad, sexo, nacimiento: fechaNac,
-    grupo, fecha: fechaEmision, vence: fechaVencimiento,
-    cedula: buffer.toString('base64')
-  };
-  fs.writeFileSync(regPath, JSON.stringify(data, null, 2));
-  fs.unlinkSync(fileName); // limpiar
+  fs.unlinkSync(file);
 };
 
 handler.command = ['reg'];
