@@ -4348,15 +4348,19 @@ case 'menu': {
 │ ✦ 𝘿𝙀𝙎𝘾𝘼𝙍𝙂𝘼 ✦ │  
 ╰──────────────╯  
 ⎔ ${global.prefix}play → título  
+⎔ ${global.prefix}playdoc → título  
 ⎔ ${global.prefix}play1 → título  
 ⎔ ${global.prefix}play2 → título  
+⎔ ${global.prefix}play2doc → título  
 ⎔ ${global.prefix}play3 spotify → titulo
 ⎔ ${global.prefix}play5 → titulo
 ⎔ ${global.prefix}play6 → titulo
 ⎔ ${global.prefix}ytmp3 → link  
+⎔ ${global.prefix}ytmp3doc → link
 ⎔ ${global.prefix}ytmp35 → link  
 ⎔ ${global.prefix}get → responder a un estado.
 ⎔ ${global.prefix}ytmp4 → link  
+⎔ ${global.prefix}ytmp4doc → link  
 ⎔ ${global.prefix}ytmp45 → link  
 ⎔ ${global.prefix}tiktok → link  
 ⎔ ${global.prefix}fb → link  
