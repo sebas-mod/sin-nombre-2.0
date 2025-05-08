@@ -4332,6 +4332,16 @@ case 'menu': {
 ⎔ ${global.prefix}menuowner  
 
 ╭──────────────╮  
+│ ✦ PARA VENTAS ✦ │  
+╰──────────────╯  
+⎔ ${global.prefix}setstock
+⎔ ${global.prefix}stock
+⎔ ${global.prefix}setnetflix
+⎔ ${global.prefix}netflix
+⎔ ${global.prefix}setpago
+⎔ ${global.prefix}pago
+
+╭──────────────╮  
 │ ✦ 𝙄𝘼 - 𝘾𝙃𝘼𝙏 𝘽𝙊𝙏 ✦ │  
 ╰──────────────╯  
 ⎔ ${global.prefix}gemini  
