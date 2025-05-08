@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
 
 const handler = async (msg, { conn, args }) => {
   const chatId = msg.key.remoteJid;
@@ -8,18 +9,22 @@ const handler = async (msg, { conn, args }) => {
   let ventas = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath)) : {};
 
   const texto = args.join(" ").trim();
-  const isImage = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+  const ctx = msg.message?.extendedTextMessage?.contextInfo;
+  const quotedImage = ctx?.quotedMessage?.imageMessage;
 
-  if (!texto && !isImage) {
+  if (!texto && !quotedImage) {
     return conn.sendMessage(chatId, {
-      text: `✏️ Usa el comando así:\n*• setstock texto aquí*\nO responde a una imagen con el comando + texto.`,
+      text: `✏️ Usa el comando así:\n\n*• setstock [texto]*\n*• Responde a una imagen con: setstock [texto]*`,
     }, { quoted: msg });
   }
 
   let imagenBase64 = null;
-  if (isImage) {
-    const quoted = msg.message.extendedTextMessage.contextInfo;
-    const buffer = await conn.downloadMediaMessage({ message: quoted.quotedMessage });
+  if (quotedImage) {
+    const stream = await downloadContentFromMessage(quotedImage, "image");
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
     imagenBase64 = buffer.toString("base64");
   }
 
