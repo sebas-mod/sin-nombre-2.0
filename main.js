@@ -4496,6 +4496,7 @@ case 'menugrupo': {
 ├✦ ${global.prefix}setfoto  
 ├✦ ${global.prefix}welcome on/off  
 ├✦ ${global.prefix}despedidas on/off
+├✦ ${global.prefix}modocaliente on/off
 ╰────────────────
 
 🔱 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐂𝐈Ó𝐍  
