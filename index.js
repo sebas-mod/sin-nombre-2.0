@@ -588,19 +588,22 @@ try {
 
   if (citado && global.cachePlay10[citado]) {
     const data = global.cachePlay10[citado];
+    const fs = require('fs');
+    const path = require('path');
+    const ffmpeg = require('fluent-ffmpeg');
+    const tmp = path.join(__dirname, 'tmp');
+    const axios = require('axios');
 
-    if (texto === '1' || texto === 'audio') {
-      await sock.sendMessage(chatId, { react: { text: '🎵', key: msg.key } });
-      await sock.sendMessage(chatId, { text: '🎶 Descargando y comprimiendo audio...' }, { quoted: msg });
+    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
+
+    // === AUDIO ===
+    if (['1', 'audio', '3', 'musicadoc'].includes(texto)) {
+      const docMode = texto === '3' || texto === 'musicadoc';
+      await sock.sendMessage(chatId, { react: { text: docMode ? '📄' : '🎵', key: msg.key } });
+      await sock.sendMessage(chatId, { text: `🎶 Descargando y comprimiendo audio...` }, { quoted: msg });
 
       const res = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(data.videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`);
       const download = await axios.get(res.data.data.url, { responseType: 'arraybuffer' });
-
-      const fs = require('fs');
-      const path = require('path');
-      const ffmpeg = require('fluent-ffmpeg');
-      const tmp = path.join(__dirname, 'tmp');
-      if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
 
       const input = path.join(tmp, `input-${Date.now()}.m4a`);
       const output = path.join(tmp, `output-${Date.now()}.mp3`);
@@ -618,17 +621,20 @@ try {
 
       const audioBuffer = fs.readFileSync(output);
       await sock.sendMessage(chatId, {
-        audio: audioBuffer,
+        [docMode ? 'document' : 'audio']: audioBuffer,
         mimetype: 'audio/mpeg',
         fileName: `${data.title}.mp3`
       }, { quoted: msg });
 
       fs.unlinkSync(input);
       fs.unlinkSync(output);
+    }
 
-    } else if (texto === '2' || texto === 'video') {
-      await sock.sendMessage(chatId, { react: { text: '🎬', key: msg.key } });
-      await sock.sendMessage(chatId, { text: '🎥 Descargando video...' }, { quoted: msg });
+    // === VIDEO ===
+    else if (['2', 'video', '4', 'videodoc'].includes(texto)) {
+      const docMode = texto === '4' || texto === 'videodoc';
+      await sock.sendMessage(chatId, { react: { text: docMode ? '📦' : '🎬', key: msg.key } });
+      await sock.sendMessage(chatId, { text: `🎥 Descargando video...` }, { quoted: msg });
 
       const calidades = ['720p', '480p', '360p'];
       let result = null;
@@ -642,21 +648,30 @@ try {
 
       if (!result) throw new Error('No se pudo descargar el video');
 
+      const filename = `${Date.now()}_${docMode ? 'doc' : 'vid'}.mp4`;
+      const filePath = path.join(tmp, filename);
       const videoBuffer = await axios.get(result, { responseType: 'arraybuffer' });
+
+      fs.writeFileSync(filePath, videoBuffer.data);
+
       await sock.sendMessage(chatId, {
-        video: Buffer.from(videoBuffer.data),
+        [docMode ? 'document' : 'video']: fs.readFileSync(filePath),
         mimetype: 'video/mp4',
         fileName: `${data.title}.mp4`,
-        caption: `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra & Cortana`
+        caption: docMode ? undefined : `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra & Cortana`
       }, { quoted: msg });
 
-    } else {
+      fs.unlinkSync(filePath);
+    }
+
+    // === AYUDA ===
+    else {
       await sock.sendMessage(chatId, {
-        text: '⚠️ *Responde con:*\n1 ó "audio" para música\n2 ó "video" para el video.'
+        text: `⚠️ *Opciones válidas:*\n\n1 o "audio" → audio normal\n3 o "musicadoc" → audio en documento\n2 o "video" → video normal\n4 o "videodoc" → video en documento`
       }, { quoted: msg });
     }
 
-    // Limpiar caché después de 5 minutos
+    // Eliminación automática del caché a los 5 minutos
     if (!data._timer) {
       data._timer = setTimeout(() => {
         delete global.cachePlay10[citado];
