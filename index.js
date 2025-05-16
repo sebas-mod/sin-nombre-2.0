@@ -591,7 +591,6 @@ try {
 
     if (texto === '1' || texto === 'audio') {
       await sock.sendMessage(chatId, { react: { text: '🎵', key: msg.key } });
-
       await sock.sendMessage(chatId, { text: '🎶 Descargando y comprimiendo audio...' }, { quoted: msg });
 
       const res = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(data.videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`);
@@ -629,7 +628,6 @@ try {
 
     } else if (texto === '2' || texto === 'video') {
       await sock.sendMessage(chatId, { react: { text: '🎬', key: msg.key } });
-
       await sock.sendMessage(chatId, { text: '🎥 Descargando video...' }, { quoted: msg });
 
       const calidades = ['720p', '480p', '360p'];
@@ -657,7 +655,12 @@ try {
       }, { quoted: msg });
     }
 
-    delete global.cachePlay10[citado];
+    // Configurar eliminación automática del caché a los 5 minutos
+    if (!data._timer) {
+      data._timer = setTimeout(() => {
+        delete global.cachePlay10[citado];
+      }, 5 * 60 * 1000); // 5 minutos
+    }
   }
 } catch (err) {
   console.error("❌ Error en respuesta play10:", err);
