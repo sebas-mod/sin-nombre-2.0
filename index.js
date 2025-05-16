@@ -251,28 +251,6 @@ setInterval(async () => {
       }
     }
 //antidelete limpieza
-setInterval(() => {
-  try {
-    const cleanFiles = ['./antidelete.json', './antideletepri.json'];
-    const maxAge = 1000 * 60 * 45;
-    for (const file of cleanFiles) {
-      if (fs.existsSync(file)) {
-        const data = JSON.parse(fs.readFileSync(file));
-        const now = Date.now();
-        const filtered = {};
-        for (const id in data) {
-          const item = data[id];
-          if (now - item.timestamp < maxAge) {
-            filtered[id] = item;
-          }
-        }
-        fs.writeFileSync(file, JSON.stringify(filtered, null, 2));
-      }
-    }
-  } catch (e) {
-    console.error("❌ Error limpiando antidelete.json:", e);
-  }
-}, 1000 * 60 * 45);
     
     // === REVISAR APERTURA AUTOMÁTICA ===
     const tiempoAbrirPath = path.resolve("./tiempo2.json");
