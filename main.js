@@ -252,10 +252,10 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
 
 case 'play10': {
-  const chatId = msg.key.remoteJid; // ✅ esta línea evita el error
+  const chatId = msg.key.remoteJid;
   const yts = require('yt-search');
   const axios = require('axios');
-  // ...
+
   if (!text) {
     await sock.sendMessage(chatId, {
       text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play10* Bad Bunny - Yonaguni`
@@ -272,29 +272,50 @@ case 'play10': {
     const video = search.videos[0];
     if (!video) throw new Error("No se encontraron resultados");
 
-    const info = `
-╭─ *AZURA ULTRA & CORTANA* ─╮
-🎧 *Título:* ${video.title}
-⏱️ *Duración:* ${video.timestamp}
-👁️ *Vistas:* ${video.views.toLocaleString()}
-📺 *Canal:* ${video.author.name}
-🔗 *Link:* ${video.url}
-╰────────────────╯
+    const videoUrl = video.url;
+    const title = video.title;
+    const duration = video.timestamp;
+    const views = video.views.toLocaleString();
+    const author = video.author.name;
+    const thumbnail = video.thumbnail;
 
-✳️ Responde este mensaje con:
-*1* o *audio* para descargar música
-*2* o *video* para descargar el video
+    const info = `
+╔═════════════════╗
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝗹𝗍𝗋𝗮 & 𝘾𝙤𝙧𝙩𝙖𝙣𝙖 ✦
+╚═════════════════╝
+
+📀 *𝙄𝗻𝗳𝗼 𝗱𝗲𝗹 𝘃𝗶𝗱𝗲𝗼:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${duration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Autor:* ${author}
+└ 🔗 *Link:* ${videoUrl}
+╰───────────────╯
+
+📥 *Opciones de Descarga si usas termux o estás en otros host que no sea Sky Ultra Plus:*  
+┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
+┣ 🎥 *Video:* _${global.prefix}play6 ${text}_
+┗ ⚠️ *¿No se reproduce?* Usa _${global.prefix}ff_
+
+⏳ *Procesado por Azura Ultra & Cortana Bot*
+═════════════════════  
+   𖥔 Azura Ultra & Cortana 𖥔
+═════════════════════
+
+✳️ *Para descargar:*
+• Responde este mensaje con *1* o *audio* para música
+• Responde con *2* o *video* para el video
 `;
 
     const sent = await sock.sendMessage(chatId, {
-      image: { url: video.thumbnail },
+      image: { url: thumbnail },
       caption: info
     }, { quoted: msg });
 
-    // Guardamos en la caché temporal por ID de mensaje
     global.cachePlay10[sent.key.id] = {
-      videoUrl: video.url,
-      title: video.title,
+      videoUrl: videoUrl,
+      title: title,
       tipo: 'youtube'
     };
 
@@ -451,121 +472,7 @@ case 'pack2': {
 }
 break;
       
-case 'play8': {
-    const yts = require('yt-search');
 
-    if (!text || text.trim() === '') {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: 'Por favor, proporciona el nombre o término de búsqueda del video.'
-        }, { quoted: msg });
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        react: { text: "⏳", key: msg.key }
-    });
-
-    const query = text;
-    let video = {};
-
-    try {
-        const yt_play = await yts(query);
-        if (!yt_play || yt_play.all.length === 0) {
-            return sock.sendMessage(msg.key.remoteJid, {
-                text: 'No se encontraron resultados para tu búsqueda.'
-            }, { quoted: msg });
-        }
-
-        const firstResult = yt_play.all[0];
-        video = {
-            url: firstResult.url,
-            title: firstResult.title,
-            thumbnail: firstResult.thumbnail || 'https://i.imgur.com/JP52fdP.jpg',
-            timestamp: firstResult.duration.seconds,
-            views: firstResult.views,
-            author: firstResult.author.name,
-        };
-    } catch {
-        return sock.sendMessage(msg.key.remoteJid, {
-            text: 'Ocurrió un error al buscar el video.'
-        }, { quoted: msg });
-    }
-
-    function secondString(seconds) {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        return [h, m, s]
-            .map(v => v < 10 ? `0${v}` : v)
-            .filter((v, i) => v !== '00' || i > 0)
-            .join(':');
-    }
-
-    await sock.sendMessage(msg.key.remoteJid, {
-        image: { url: video.thumbnail },
-        caption: `╭───≪~*╌◌ᰱ•••⃙❨͟͞P̸͟͞L̸͟A̸͟͞Y̸͟͞❩⃘•••ᰱ◌╌*~*
-│║◈ 🎼 Título: ${video.title}
-│║◈ ⏱️ Duración: ${secondString(video.timestamp || 0)}
-│║◈ 👁️ Vistas: ${video.views || 0}
-│║◈ 👤 Autor: ${video.author || 'Desconocido'}
-│║◈ Link: ${video.url}
-╰─•┈┈┈•••✦𝒟ℳ✦•••┈┈┈•─╯⟤`,
-        footer: "𝙰𝚉𝚄𝚁𝙰 𝚄𝙻𝚃𝚁𝙰 & 𝙲𝙾𝚁𝚃𝙰𝙽𝙰",
-        buttons: [
-            {
-                buttonId: `.play5 ${video.url}`,
-                buttonText: { displayText: "🎼 AUDIO 🎼" },
-                type: 1
-            },
-            {
-                buttonId: `.play6 ${video.url}`,
-                buttonText: { displayText: "🎬 VIDEO 🎬" },
-                type: 1
-            },
-            {
-                buttonId: `.menu`,
-                buttonText: { displayText: "📘 MENÚ 📘" },
-                type: 1
-            }
-        ],
-        headerType: 4,
-        mentions: [msg.key.participant]
-    }, { quoted: msg });
-
-    break;
-}
-        case 'nsfwneko': {
-  const chatId = msg.key.remoteJid;
-
-  // Reacción de carga
-  await sock.sendMessage(chatId, {
-    react: { text: '🔄', key: msg.key }
-  });
-
-  try {
-    const axios = require('axios');
-    // Llamada a la API
-    const res = await axios.get('https://api.waifu.pics/nsfw/neko');
-    const imageUrl = res.data.url;
-
-    // Enviar la imagen
-    await sock.sendMessage(chatId, {
-      image: { url: imageUrl },
-      caption: '🖤 Aquí tienes tu Neko NSFW 🖤'
-    }, { quoted: msg });
-
-    // Reacción de éxito
-    await sock.sendMessage(chatId, {
-      react: { text: '✅', key: msg.key }
-    });
-
-  } catch (err) {
-    console.error('❌ Error en comando neko:', err);
-    await sock.sendMessage(chatId, {
-      text: '❌ No pude obtener un Neko en este momento. Intenta más tarde.'
-    }, { quoted: msg });
-  }
-}
-break;
 case "modoadmins": {
   try {
     const senderNumber = (msg.key.participant || msg.key.remoteJid).replace(/[@:\-s.whatsapp.net]/g, "");
