@@ -578,7 +578,44 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
+// === INICIO AUTODESCARGAS ===
+try {
+  const activosPath = "./activos.json";
+  const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
+  const autodes = activos?.autodes?.[msg.key.remoteJid];
 
+  const texto = text || "";
+  const ytRegex = /(?:https?:\/\/)?(?:www\.)?(youtube\.com|youtu\.be)\/[^\s]+/gi;
+  const igRegex = /(?:https?:\/\/)?(?:www\.)?(instagram\.com)\/[^\s]+/gi;
+  const ttRegex = /(?:https?:\/\/)?(?:www\.)?(tiktok\.com)\/[^\s]+/gi;
+  const fbRegex = /(?:https?:\/\/)?(?:www\.)?(facebook\.com|fb\.watch)\/[^\s]+/gi;
+
+  if (autodes && texto) {
+    if (ytRegex.test(texto)) {
+      const reply = await conn.sendMessage(msg.key.remoteJid, {
+        text: `🎬 Enlace detectado de YouTube.\n\nCita este mensaje y responde con:\n*5* o *audio* para descargar el audio\n*6* o *video* para descargar el video.`
+      }, { quoted: msg });
+
+      global.cachePlay10 = global.cachePlay10 || {};
+      global.cachePlay10[reply.key.id] = {
+        videoUrl: texto,
+        title: "YouTube Download"
+      };
+    } else if (igRegex.test(texto)) {
+      msg.text = texto;
+      command = "instagram";
+    } else if (ttRegex.test(texto)) {
+      msg.text = texto;
+      command = "tiktok";
+    } else if (fbRegex.test(texto)) {
+      msg.text = texto;
+      command = "facebook";
+    }
+  }
+} catch (e) {
+  console.error("❌ Error en autodescarga:", e);
+}
+// === FIN AUTODESCARGAS ===
 // === INICIO DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 try {
   const context = msg.message?.extendedTextMessage?.contextInfo;
