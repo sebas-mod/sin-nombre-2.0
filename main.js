@@ -273,13 +273,13 @@ case 'play10': {
     if (!video) throw new Error("No se encontraron resultados");
 
     const info = `
-╭──── *AZURA ULTRA & CORTANA* ────╮
+╭─ *AZURA ULTRA & CORTANA* ─╮
 🎧 *Título:* ${video.title}
 ⏱️ *Duración:* ${video.timestamp}
 👁️ *Vistas:* ${video.views.toLocaleString()}
 📺 *Canal:* ${video.author.name}
 🔗 *Link:* ${video.url}
-╰────────────────────────────╯
+╰────────────────╯
 
 ✳️ Responde este mensaje con:
 *1* o *audio* para descargar música
