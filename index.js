@@ -581,28 +581,57 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
 // === INICIO DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 try {
   const context = msg.message?.extendedTextMessage?.contextInfo;
-  const citado = context?.quotedMessage;
+  const citado = context?.stanzaId;
+  const texto = msg.message?.conversation?.toLowerCase() || msg.message?.extendedTextMessage?.text?.toLowerCase() || "";
 
-  // Verifica si es respuesta a un mensaje del bot
-  if (citado && context.participant === sock.user.id) {
-    const texto = msg.message?.conversation?.toLowerCase() || msg.message?.extendedTextMessage?.text?.toLowerCase() || "";
+  if (citado && global.cachePlay10[citado]) {
+    const data = global.cachePlay10[citado];
 
-    if (texto === "1" || texto === "audio") {
-      await sock.sendMessage(chatId, { text: "🎵 Descargando audio..." }, { quoted: msg });
-      // Aquí puedes ejecutar lógica de descarga de audio (ej: llamar a play1)
+    if (texto === '1' || texto === 'audio') {
+      await sock.sendMessage(chatId, { text: '🎶 Descargando audio...' }, { quoted: msg });
 
-    } else if (texto === "2" || texto === "video") {
-      await sock.sendMessage(chatId, { text: "🎬 Descargando video..." }, { quoted: msg });
-      // Aquí puedes ejecutar lógica de descarga de video (ej: llamar a play2)
+      const res = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(data.videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`);
+      const dl = await axios.get(res.data.data.url, { responseType: 'arraybuffer' });
+
+      await sock.sendMessage(chatId, {
+        audio: Buffer.from(dl.data),
+        mimetype: 'audio/mpeg',
+        fileName: `${data.title}.mp3`
+      }, { quoted: msg });
+
+    } else if (texto === '2' || texto === 'video') {
+      await sock.sendMessage(chatId, { text: '🎥 Descargando video...' }, { quoted: msg });
+
+      const calidades = ['720p', '480p', '360p'];
+      let result = null;
+      for (let q of calidades) {
+        const res = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(data.videoUrl)}&type=video&quality=${q}&apikey=russellxz`);
+        if (res.data?.status && res.data?.data?.url) {
+          result = res.data.data.url;
+          break;
+        }
+      }
+
+      if (!result) throw new Error('No se pudo descargar el video');
+
+      const videoBuffer = await axios.get(result, { responseType: 'arraybuffer' });
+      await sock.sendMessage(chatId, {
+        video: Buffer.from(videoBuffer.data),
+        mimetype: 'video/mp4',
+        fileName: `${data.title}.mp4`
+      }, { quoted: msg });
 
     } else {
       await sock.sendMessage(chatId, {
-        text: "❗ Responde con:\n*1* o *audio* para descargar el audio\n*2* o *video* para descargar el video.",
+        text: '⚠️ Responde con *1* o *audio* para descargar música\n*2* o *video* para descargar el video.'
       }, { quoted: msg });
     }
+
+    delete global.cachePlay10[citado]; // Limpiar caché después de usar
+
   }
-} catch (e) {
-  console.error("❌ Error en detector de respuesta:", e);
+} catch (err) {
+  console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
