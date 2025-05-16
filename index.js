@@ -578,48 +578,96 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
-// === INICIO AUTODESCARGAS ===
+// === INICIO AUTODESCARGA POR URL ===
 try {
+  const chatId = m.key.remoteJid;
+  const isGroup = chatId.endsWith("@g.us");
+  const text = m.message?.conversation || m.message?.extendedTextMessage?.text || "";
+  const isOwner = global.owner.some(([id]) => id === m.sender.replace(/[^0-9]/g, ""));
+  const senderId = m.key.participant || m.key.remoteJid;
+
   const activosPath = "./activos.json";
   const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
-  const autodes = activos?.autodes?.[msg.key.remoteJid];
+  const autodesActivo = activos.autodes?.[chatId];
 
-  const texto =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    "";
+  if (!isGroup || !autodesActivo) return;
 
-  const ytRegex = /(?:https?:\/\/)?(?:www\.)?(youtube\.com|youtu\.be)\/[^\s]+/gi;
-  const igRegex = /(?:https?:\/\/)?(?:www\.)?(instagram\.com)\/[^\s]+/gi;
-  const ttRegex = /(?:https?:\/\/)?(?:www\.)?(tiktok\.com)\/[^\s]+/gi;
-  const fbRegex = /(?:https?:\/\/)?(?:www\.)?(facebook\.com|fb\.watch)\/[^\s]+/gi;
+  // Validar URL
+  const ytRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^\s]+)/;
+  const igRegex = /(?:instagram\.com\/[^\s]+)/;
+  const fbRegex = /(?:facebook\.com\/[^\s]+|fb\.watch\/[^\s]+)/;
+  const tkRegex = /(?:tiktok\.com\/[^\s]+)/;
 
-  if (autodes && texto) {
-    if (ytRegex.test(texto)) {
-      const reply = await conn.sendMessage(msg.key.remoteJid, {
-        text: `🎬 Enlace detectado de YouTube.\n\nCita este mensaje y responde con:\n*5* o *audio* para descargar el audio\n*6* o *video* para descargar el video.`
-      }, { quoted: msg });
+  const hasYT = ytRegex.test(text);
+  const hasIG = igRegex.test(text);
+  const hasFB = fbRegex.test(text);
+  const hasTK = tkRegex.test(text);
 
-      global.cachePlay10 = global.cachePlay10 || {};
-      global.cachePlay10[reply.key.id] = {
-        videoUrl: texto,
-        title: "YouTube Download"
-      };
-    } else if (igRegex.test(texto)) {
-      msg.text = texto;
-      command = "instagram";
-    } else if (ttRegex.test(texto)) {
-      msg.text = texto;
-      command = "tiktok";
-    } else if (fbRegex.test(texto)) {
-      msg.text = texto;
-      command = "facebook";
-    }
+  if (!hasYT && !hasIG && !hasFB && !hasTK) return;
+
+  await conn.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
+
+  // YOUTUBE
+  if (hasYT) {
+    await conn.sendMessage(chatId, {
+      text: `🎧 *Video detectado*\n\nResponde con:\n• 5 o *musicadoc* para MP3\n• 6 o *videodoc* para MP4\n\nO usa *${global.prefix}ytmp3* o *${global.prefix}ytmp4* manualmente.`,
+    }, { quoted: m });
+
+    global.cachePlay10 = global.cachePlay10 || {};
+    global.cachePlay10[m.key.id] = {
+      videoUrl: text,
+      title: "descarga",
+      tipo: 'youtube'
+    };
+
+    return;
   }
-} catch (e) {
-  console.error("❌ Error en autodescarga:", e);
+
+  // INSTAGRAM
+  if (hasIG) {
+    const { data } = await axios.get(`https://api.dorratz.com/igdl?url=${text}`);
+    for (const item of data.data) {
+      await conn.sendMessage(chatId, {
+        video: { url: item.url },
+        caption: "📥 Video descargado de Instagram\n© Azura Ultra & Cortana"
+      }, { quoted: m });
+    }
+    await conn.sendMessage(chatId, { react: { text: '✅', key: m.key } });
+    return;
+  }
+
+  // FACEBOOK
+  if (hasFB) {
+    const res = await axios.get(`https://api.dorratz.com/fbvideo?url=${encodeURIComponent(text)}`);
+    const results = res.data;
+    if (!results.length) return;
+
+    await conn.sendMessage(chatId, {
+      video: { url: results[0].url },
+      caption: "📥 Video descargado de Facebook\n© Azura Ultra & Cortana"
+    }, { quoted: m });
+    await conn.sendMessage(chatId, { react: { text: '✅', key: m.key } });
+    return;
+  }
+
+  // TIKTOK
+  if (hasTK) {
+    const res = await axios.get(`https://api.dorratz.com/v2/tiktok-dl?url=${text}`);
+    const video = res.data?.data?.media?.org;
+    if (!video) return;
+
+    await conn.sendMessage(chatId, {
+      video: { url: video },
+      caption: "📥 Video descargado de TikTok\n© Azura Ultra & Cortana"
+    }, { quoted: m });
+    await conn.sendMessage(chatId, { react: { text: '✅', key: m.key } });
+    return;
+  }
+
+} catch (err) {
+  console.error("❌ Error en autodescarga:", err);
 }
-// === FIN AUTODESCARGAS ===
+// === FIN AUTODESCARGA POR URL ===
 // === INICIO DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 try {
   const context = msg.message?.extendedTextMessage?.contextInfo;
