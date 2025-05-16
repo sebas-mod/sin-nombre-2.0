@@ -252,9 +252,10 @@ async function handleCommand(sock, msg, command, args, sender) {
     switch (lowerCommand) {
 
 case 'play10': {
+  const chatId = msg.key.remoteJid; // ✅ esta línea evita el error
   const yts = require('yt-search');
   const axios = require('axios');
-
+  // ...
   if (!text) {
     await sock.sendMessage(chatId, {
       text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play10* Bad Bunny - Yonaguni`
