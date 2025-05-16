@@ -578,13 +578,14 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
+
 // === INICIO AUTODESCARGA POR URL ===
 try {
   const chatId = m.key.remoteJid;
   const isGroup = chatId.endsWith("@g.us");
-  const text = m.message?.conversation || m.message?.extendedTextMessage?.text || "";
-  const isOwner = global.owner.some(([id]) => id === m.sender.replace(/[^0-9]/g, ""));
   const senderId = m.key.participant || m.key.remoteJid;
+  const isOwner = global.owner.some(([id]) => id === senderId.replace(/[^0-9]/g, ""));
+  const text = m.message?.conversation || m.message?.extendedTextMessage?.text || "";
 
   const activosPath = "./activos.json";
   const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
@@ -607,16 +608,50 @@ try {
 
   await conn.sendMessage(chatId, { react: { text: '⏳', key: m.key } });
 
-  // YOUTUBE
+  // YOUTUBE - cita para elegir
   if (hasYT) {
-    await conn.sendMessage(chatId, {
-      text: `🎧 *Video detectado*\n\nResponde con:\n• 5 o *musicadoc* para MP3\n• 6 o *videodoc* para MP4\n\nO usa *${global.prefix}ytmp3* o *${global.prefix}ytmp4* manualmente.`,
+    const yts = require('yt-search');
+    const search = await yts(text);
+    const video = search.videos[0];
+    if (!video) throw new Error("No se encontró ningún video");
+
+    const videoUrl = video.url;
+    const title = video.title;
+    const duration = video.timestamp;
+    const views = video.views.toLocaleString();
+    const author = video.author.name;
+    const thumbnail = video.thumbnail;
+
+    const info = `
+╔═════════════════╗
+║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝗹𝘁𝗋𝗮 & 𝘾𝙤𝙧𝙩𝙖𝙣𝙖 ✦
+╚═════════════════╝
+
+📀 *𝙄𝗻𝗳𝗼 𝗱𝗲𝗹 𝘃𝗶𝗱𝗲𝗼:*  
+╭───────────────╮  
+├ 🎼 *Título:* ${title}
+├ ⏱️ *Duración:* ${duration}
+├ 👁️ *Vistas:* ${views}
+├ 👤 *Autor:* ${author}
+└ 🔗 *Link:* ${videoUrl}
+╰───────────────╯
+
+📥 *Opciones de descarga por cita:*  
+┣ 🎵 *Audio:* responde con *1* o *audio*  
+┣ 📄 *Audio doc:* responde con *3* o *musicadoc*  
+┣ 🎥 *Video:* responde con *2* o *video*  
+┣ 📦 *Video doc:* responde con *4* o *videodoc*  
+┗ ⚠️ *O usa manualmente:* ${global.prefix}ytmp3 o ${global.prefix}ytmp4`;
+
+    const enviado = await conn.sendMessage(chatId, {
+      image: { url: thumbnail },
+      caption: info
     }, { quoted: m });
 
     global.cachePlay10 = global.cachePlay10 || {};
-    global.cachePlay10[m.key.id] = {
-      videoUrl: text,
-      title: "descarga",
+    global.cachePlay10[enviado.key.id] = {
+      videoUrl: videoUrl,
+      title: title,
       tipo: 'youtube'
     };
 
