@@ -4340,6 +4340,8 @@ case 'menu': {
 ⎔ ${global.prefix}netflix
 ⎔ ${global.prefix}setpago
 ⎔ ${global.prefix}pago
+⎔ ${global.prefix}setcombos
+⎔ ${global.prefix}setreglas
 
 ╭──────────────╮  
 │ ✦ 𝙄𝘼 - 𝘾𝙃𝘼𝙏 𝘽𝙊𝙏 ✦ │  
