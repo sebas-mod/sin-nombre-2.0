@@ -251,14 +251,14 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
-case 'play10': {
+case 'play': {
   const chatId = msg.key.remoteJid;
   const yts = require('yt-search');
   const axios = require('axios');
 
   if (!text) {
     await sock.sendMessage(chatId, {
-      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play10* Bad Bunny - Yonaguni`
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play* Bad Bunny - Yonaguni`
     }, { quoted: msg });
     break;
   }
@@ -283,7 +283,6 @@ case 'play10': {
 ╔═════════════════╗
 ║✦ 𝘼𝙕𝙐𝙍𝘼 𝙐𝗹𝗍𝗋𝗮 & 𝘾𝙤𝙧𝙩𝙖𝙣𝙖 ✦
 ╚═════════════════╝
-
 📀 *𝙄𝗻𝗳𝗼 𝗱𝗲𝗹 𝘃𝗶𝗱𝗲𝗼:*  
 ╭───────────────╮  
 ├ 🎼 *Título:* ${title}
@@ -292,20 +291,18 @@ case 'play10': {
 ├ 👤 *Autor:* ${author}
 └ 🔗 *Link:* ${videoUrl}
 ╰───────────────╯
-
-📥 *Opciones de Descarga si usas termux o estás en otros host que no sea Sky Ultra Plus:*  
-┣ 🎵 *Audio:* _${global.prefix}play5 ${text}_
-┣ 🎥 *Video:* _${global.prefix}play6 ${text}_
+📥 *Opciones de Descargas si usas termux o estás en otros host que no sea Sky Ultra Plus:*  
+┣ 🎵 *Audio:* _${global.prefix}play5 boza hoy_
+┣ 🎥 *Video:* _${global.prefix}play6 boza hoy_
 ┗ ⚠️ *¿No se reproduce?* Usa _${global.prefix}ff_
-
-⏳ *Procesado por Azura Ultra & Cortana Bot*
 ═════════════════════  
    𖥔 Azura Ultra & Cortana 𖥔
 ═════════════════════
-
-✳️ *Para descargar:*
-• Responde este mensaje con *1* o *audio* para música
-• Responde con *2* o *video* para el video
+✳️ *Para descargar desde este mensaje:*
+• Responde con *1* o *audio* para recibir la música.
+• Responde con *2* o *video* para recibir el video.
+• Responde con *3* o *musicadoc* para recibir música como documento.
+• Responde con *4* o *videodoc* para recibir el video como documento.
 `;
 
     const sent = await sock.sendMessage(chatId, {
@@ -1959,7 +1956,7 @@ case "git": {
 }
 
         
-case 'play': {
+case 'play11': {
     const axios = require('axios');
     const yts = require('yt-search');
     const fs = require('fs');
