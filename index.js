@@ -578,28 +578,58 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
+
 // === INICIO DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 try {
   const context = msg.message?.extendedTextMessage?.contextInfo;
   const citado = context?.stanzaId;
   const texto = msg.message?.conversation?.toLowerCase() || msg.message?.extendedTextMessage?.text?.toLowerCase() || "";
+  const chatId = msg.key.remoteJid;
 
   if (citado && global.cachePlay10[citado]) {
     const data = global.cachePlay10[citado];
 
     if (texto === '1' || texto === 'audio') {
-      await sock.sendMessage(chatId, { text: '🎶 Descargando audio...' }, { quoted: msg });
+      await sock.sendMessage(chatId, { react: { text: '🎵', key: msg.key } });
+
+      await sock.sendMessage(chatId, { text: '🎶 Descargando y comprimiendo audio...' }, { quoted: msg });
 
       const res = await axios.get(`https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(data.videoUrl)}&type=audio&quality=128kbps&apikey=russellxz`);
-      const dl = await axios.get(res.data.data.url, { responseType: 'arraybuffer' });
+      const download = await axios.get(res.data.data.url, { responseType: 'arraybuffer' });
 
+      const fs = require('fs');
+      const path = require('path');
+      const ffmpeg = require('fluent-ffmpeg');
+      const tmp = path.join(__dirname, 'tmp');
+      if (!fs.existsSync(tmp)) fs.mkdirSync(tmp);
+
+      const input = path.join(tmp, `input-${Date.now()}.m4a`);
+      const output = path.join(tmp, `output-${Date.now()}.mp3`);
+      fs.writeFileSync(input, Buffer.from(download.data));
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(input)
+          .audioCodec('libmp3lame')
+          .audioBitrate('128k')
+          .format('mp3')
+          .save(output)
+          .on('end', resolve)
+          .on('error', reject);
+      });
+
+      const audioBuffer = fs.readFileSync(output);
       await sock.sendMessage(chatId, {
-        audio: Buffer.from(dl.data),
+        audio: audioBuffer,
         mimetype: 'audio/mpeg',
         fileName: `${data.title}.mp3`
       }, { quoted: msg });
 
+      fs.unlinkSync(input);
+      fs.unlinkSync(output);
+
     } else if (texto === '2' || texto === 'video') {
+      await sock.sendMessage(chatId, { react: { text: '🎬', key: msg.key } });
+
       await sock.sendMessage(chatId, { text: '🎥 Descargando video...' }, { quoted: msg });
 
       const calidades = ['720p', '480p', '360p'];
@@ -623,17 +653,17 @@ try {
 
     } else {
       await sock.sendMessage(chatId, {
-        text: '⚠️ Responde con *1* o *audio* para descargar música\n*2* o *video* para descargar el video.'
+        text: '⚠️ *Responde con:*\n1 ó "audio" para música\n2 ó "video" para el video.'
       }, { quoted: msg });
     }
 
-    delete global.cachePlay10[citado]; // Limpiar caché después de usar
-
+    delete global.cachePlay10[citado];
   }
 } catch (err) {
   console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
+    
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
   const fs = require("fs");
