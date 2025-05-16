@@ -250,7 +250,30 @@ setInterval(async () => {
         }
       }
     }
-
+//antidelete limpieza
+setInterval(() => {
+  try {
+    const cleanFiles = ['./antidelete.json', './antideletepri.json'];
+    const maxAge = 1000 * 60 * 45;
+    for (const file of cleanFiles) {
+      if (fs.existsSync(file)) {
+        const data = JSON.parse(fs.readFileSync(file));
+        const now = Date.now();
+        const filtered = {};
+        for (const id in data) {
+          const item = data[id];
+          if (now - item.timestamp < maxAge) {
+            filtered[id] = item;
+          }
+        }
+        fs.writeFileSync(file, JSON.stringify(filtered, null, 2));
+      }
+    }
+  } catch (e) {
+    console.error("❌ Error limpiando antidelete.json:", e);
+  }
+}, 1000 * 60 * 45);
+    
     // === REVISAR APERTURA AUTOMÁTICA ===
     const tiempoAbrirPath = path.resolve("./tiempo2.json");
     if (fs.existsSync(tiempoAbrirPath)) {
@@ -1109,19 +1132,6 @@ if (msg.message?.protocolMessage?.type === 0) {
   }
 }
 // === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
-
-
-// === INICIO LIMPIEZA AUTOMÁTICA CADA 45 MIN ===
-setInterval(() => {
-  const cleanFiles = ['./antidelete.json', './antideletepri.json'];
-  for (const file of cleanFiles) {
-    if (fs.existsSync(file)) {
-      fs.writeFileSync(file, JSON.stringify({}, null, 2));
-    //  console.log(`🧹 Archivo ${file} limpiado automáticamente.`);
-    }
-  }
-}, 1000 * 60 * 45);
-// === FIN LIMPIEZA ===
     
 // 🔗 Antilink en grupos
       if (isGroup && activos.antilink?.[chatId]) {
