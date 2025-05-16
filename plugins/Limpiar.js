@@ -1,8 +1,11 @@
 const fs = require('fs');
 
-const handler = async (msg, { conn, isAdmin, isOwner }) => {
+const handler = async (msg, { conn, isAdmin }) => {
   const chatId = msg.key.remoteJid;
   const isGroup = chatId.endsWith('@g.us');
+  const sender = msg.key.participant || msg.key.remoteJid;
+  const senderNum = sender.replace(/[^0-9]/g, '');
+  const isOwner = global.owner.some(([id]) => id === senderNum);
 
   if (isGroup && !isAdmin && !isOwner) {
     return conn.sendMessage(chatId, {
