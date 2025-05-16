@@ -584,22 +584,19 @@ try {
   const citado = context?.quotedMessage;
 
   // Verifica si es respuesta a un mensaje del bot
-  if (citado && context.participant === conn.user.id) {
+  if (citado && context.participant === sock.user.id) {
     const texto = msg.message?.conversation?.toLowerCase() || msg.message?.extendedTextMessage?.text?.toLowerCase() || "";
 
     if (texto === "1" || texto === "audio") {
-      // Ejecutar lógica para descargar audio
-      await conn.sendMessage(chatId, { text: "🎵 Descargando audio..." }, { quoted: msg });
-      // Aquí llamas a tu lógica play1 o similar
+      await sock.sendMessage(chatId, { text: "🎵 Descargando audio..." }, { quoted: msg });
+      // Aquí puedes ejecutar lógica de descarga de audio (ej: llamar a play1)
 
     } else if (texto === "2" || texto === "video") {
-      // Ejecutar lógica para descargar video
-      await conn.sendMessage(chatId, { text: "🎬 Descargando video..." }, { quoted: msg });
-      // Aquí llamas a tu lógica play2 o similar
+      await sock.sendMessage(chatId, { text: "🎬 Descargando video..." }, { quoted: msg });
+      // Aquí puedes ejecutar lógica de descarga de video (ej: llamar a play2)
 
     } else {
-      // Si responde cualquier otra cosa al mensaje del bot
-      await conn.sendMessage(chatId, {
+      await sock.sendMessage(chatId, {
         text: "❗ Responde con:\n*1* o *audio* para descargar el audio\n*2* o *video* para descargar el video.",
       }, { quoted: msg });
     }
@@ -607,7 +604,7 @@ try {
 } catch (e) {
   console.error("❌ Error en detector de respuesta:", e);
 }
-// === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===    
+// === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
   const fs = require("fs");
