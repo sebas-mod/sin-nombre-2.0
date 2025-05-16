@@ -584,7 +584,11 @@ try {
   const activos = fs.existsSync(activosPath) ? JSON.parse(fs.readFileSync(activosPath)) : {};
   const autodes = activos?.autodes?.[msg.key.remoteJid];
 
-  const texto = text || "";
+  const texto =
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    "";
+
   const ytRegex = /(?:https?:\/\/)?(?:www\.)?(youtube\.com|youtu\.be)\/[^\s]+/gi;
   const igRegex = /(?:https?:\/\/)?(?:www\.)?(instagram\.com)\/[^\s]+/gi;
   const ttRegex = /(?:https?:\/\/)?(?:www\.)?(tiktok\.com)\/[^\s]+/gi;
