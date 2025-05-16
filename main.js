@@ -18,7 +18,7 @@ function isUrl(string) {
 }
 
 const filePath = path.resolve('./activossubbots.json');
-
+global.cachePlay10 = {}; // Guardará los datos de play10 por ID de mensaje
 // Crear archivo con estructura inicial si no existe
 if (!fs.existsSync(filePath)) {
   const estructuraInicial = {
@@ -251,6 +251,62 @@ async function handleCommand(sock, msg, command, args, sender) {
 
     switch (lowerCommand) {
 
+case 'play10': {
+  const yts = require('yt-search');
+  const axios = require('axios');
+
+  if (!text) {
+    await sock.sendMessage(chatId, {
+      text: `✳️ Usa el comando correctamente:\n\n📌 Ejemplo: *${global.prefix}play10* Bad Bunny - Yonaguni`
+    }, { quoted: msg });
+    break;
+  }
+
+  await sock.sendMessage(chatId, {
+    react: { text: '⏳', key: msg.key }
+  });
+
+  try {
+    const search = await yts(text);
+    const video = search.videos[0];
+    if (!video) throw new Error("No se encontraron resultados");
+
+    const info = `
+╭──── *AZURA ULTRA & CORTANA* ────╮
+🎧 *Título:* ${video.title}
+⏱️ *Duración:* ${video.timestamp}
+👁️ *Vistas:* ${video.views.toLocaleString()}
+📺 *Canal:* ${video.author.name}
+🔗 *Link:* ${video.url}
+╰────────────────────────────╯
+
+✳️ Responde este mensaje con:
+*1* o *audio* para descargar música
+*2* o *video* para descargar el video
+`;
+
+    const sent = await sock.sendMessage(chatId, {
+      image: { url: video.thumbnail },
+      caption: info
+    }, { quoted: msg });
+
+    // Guardamos en la caché temporal por ID de mensaje
+    global.cachePlay10[sent.key.id] = {
+      videoUrl: video.url,
+      title: video.title,
+      tipo: 'youtube'
+    };
+
+  } catch (e) {
+    console.error("❌ Error en play10:", e);
+    await sock.sendMessage(chatId, {
+      text: `❌ Error al procesar el video.`
+    }, { quoted: msg });
+  }
+
+  break;
+}
+        
 case "menuaudio": {
     try {
         // Reacción antes de enviar el menú
