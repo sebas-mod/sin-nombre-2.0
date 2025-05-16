@@ -646,7 +646,8 @@ try {
       await sock.sendMessage(chatId, {
         video: Buffer.from(videoBuffer.data),
         mimetype: 'video/mp4',
-        fileName: `${data.title}.mp4`
+        fileName: `${data.title}.mp4`,
+        caption: `🎬 Aquí tiene su video.\n\nDisfrútelo y continúe explorando el mundo digital.\n\n© Azura Ultra & Cortana`
       }, { quoted: msg });
 
     } else {
@@ -655,11 +656,11 @@ try {
       }, { quoted: msg });
     }
 
-    // Configurar eliminación automática del caché a los 5 minutos
+    // Limpiar caché después de 5 minutos
     if (!data._timer) {
       data._timer = setTimeout(() => {
         delete global.cachePlay10[citado];
-      }, 5 * 60 * 1000); // 5 minutos
+      }, 5 * 60 * 1000);
     }
   }
 } catch (err) {
