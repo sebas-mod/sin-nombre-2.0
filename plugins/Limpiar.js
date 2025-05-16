@@ -5,17 +5,19 @@ const handler = async (msg, { conn, isAdmin }) => {
   const isGroup = chatId.endsWith('@g.us');
   const sender = msg.key.participant || msg.key.remoteJid;
   const senderNum = sender.replace(/[^0-9]/g, '');
+  const botNum = conn.user.id.split(':')[0]; // ID del bot sin @s.whatsapp.net
   const isOwner = global.owner.some(([id]) => id === senderNum);
+  const isBot = senderNum === botNum;
 
-  if (isGroup && !isAdmin && !isOwner) {
+  if (isGroup && !isAdmin && !isOwner && !isBot) {
     return conn.sendMessage(chatId, {
-      text: '❌ Solo *admins* o *dueños* pueden usar este comando.'
+      text: '❌ Solo *admins*, *dueños* o el *bot mismo* pueden usar este comando.'
     }, { quoted: msg });
   }
 
-  if (!isGroup && !isOwner) {
+  if (!isGroup && !isOwner && !isBot) {
     return conn.sendMessage(chatId, {
-      text: '❌ Solo el *dueño* puede usar este comando en privado.'
+      text: '❌ Solo el *dueño* o el *bot* puede usar este comando en privado.'
     }, { quoted: msg });
   }
 
