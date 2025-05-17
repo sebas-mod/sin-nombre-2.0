@@ -4378,6 +4378,8 @@ case 'menu': {
 ⎔ ${global.prefix}pago
 ⎔ ${global.prefix}setcombos
 ⎔ ${global.prefix}setreglas
+⎔ ${global.prefix}reglas
+⎔ ${global.prefix}combos
 
 ╭──────────────╮  
 │ ✦ 𝙄𝘼 - 𝘾𝙃𝘼𝙏 𝘽𝙊𝙏 ✦ │  
@@ -4546,6 +4548,9 @@ case 'menugrupo': {
 ├✦ ${global.prefix}invocar  
 ├✦ ${global.prefix}todos  
 ├✦ ${global.prefix}totalmensaje
+├✦ ${global.prefix}fantasmas
+├✦ ${global.prefix}fankick
+├✦ ${global.prefix}okfan
 ├✦ ${global.prefix}delete
 ├✦ ${global.prefix}damelink  
 ├✦ ${global.prefix}abrir/ automaticamente
