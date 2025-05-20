@@ -4534,6 +4534,8 @@ case 'menugrupo': {
 ├✦ ${global.prefix}antiporno on o off
 ├✦ ${global.prefix}antidelete on o off
 ├✦ ${global.prefix}setfoto  
+├✦ ${global.prefix}setreglas
+├✦ ${global.prefix}reglas
 ├✦ ${global.prefix}welcome on/off  
 ├✦ ${global.prefix}despedidas on/off
 ├✦ ${global.prefix}modocaliente on/off
