@@ -54,5 +54,5 @@ ${sinLib.length ? sinLib.join('\n') : '• Ninguno'}
   }
 };
 
-handler.command = ['verlib'];
+handler.command = ['verlid'];
 module.exports = handler;
