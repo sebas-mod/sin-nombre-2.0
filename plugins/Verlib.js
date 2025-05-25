@@ -9,7 +9,6 @@ const handler = async (msg, { conn }) => {
   }
 
   try {
-    // Reacción mientras procesa
     await conn.sendMessage(chatId, {
       react: { text: '🔍', key: msg.key }
     });
@@ -21,10 +20,12 @@ const handler = async (msg, { conn }) => {
     const sinLib = [];
 
     for (const p of participantes) {
-      if (p.id.endsWith('@s.whatsapp.net')) {
-        conLib.push(p.id.split('@')[0]);
-      } else if (p.id.endsWith('@lid')) {
-        sinLib.push(p.id);
+      const jid = p.id || '';
+      if (jid.endsWith('@s.whatsapp.net')) {
+        const numero = jid.split('@')[0];
+        conLib.push(`• ${jid}  +${numero}`);
+      } else if (jid.endsWith('@lid')) {
+        sinLib.push(`• ${jid}`);
       }
     }
 
@@ -33,10 +34,10 @@ const handler = async (msg, { conn }) => {
 👥 *Total miembros:* ${participantes.length}
 
 ✅ *Con LIB (número visible):* ${conLib.length}
-${conLib.map(n => `• +${n}`).join('\n') || 'Ninguno'}
+${conLib.length ? conLib.join('\n') : '• Ninguno'}
 
 ❌ *Sin LIB (ocultos - lid):* ${sinLib.length}
-${sinLib.map(j => `• ${j}`).join('\n') || 'Ninguno'}
+${sinLib.length ? sinLib.join('\n') : '• Ninguno'}
 
 ℹ️ WhatsApp está ocultando números reales con el formato *@lid* para proteger la privacidad.
 `;
@@ -44,6 +45,7 @@ ${sinLib.map(j => `• ${j}`).join('\n') || 'Ninguno'}
     await conn.sendMessage(chatId, {
       text: mensaje.trim()
     }, { quoted: msg });
+
   } catch (err) {
     console.error("❌ Error en verlib:", err);
     await conn.sendMessage(chatId, {
