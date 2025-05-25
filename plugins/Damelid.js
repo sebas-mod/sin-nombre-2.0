@@ -22,7 +22,7 @@ const handler = async (msg, { conn }) => {
   const numero = objetivo.replace(/[^0-9]/g, '');
 
   const mensaje = `
-📡 *Identificador LIB:*
+📡 *Identificador LID:*
 👤 *Usuario:* ${objetivo}
 🔢 *Número:* +${numero}
 🔐 *Tipo:* ${tipo}
@@ -33,5 +33,5 @@ const handler = async (msg, { conn }) => {
   }, { quoted: msg });
 };
 
-handler.command = ['damelib'];
+handler.command = ['damelid'];
 module.exports = handler;
