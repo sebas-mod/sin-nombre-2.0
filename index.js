@@ -49,24 +49,6 @@ async function getPrompt() {
   }
 }
 
-function limpiarAntidelete() {
-  const files = ['./antidelete.json', './antideletepri.json'];
-  for (const file of files) {
-    try {
-      if (fs.existsSync(file)) {
-        fs.writeFileSync(file, JSON.stringify({}, null, 2));
-        console.log(`🧹 Limpieza automática de: ${path.basename(file)}`);
-      }
-    } catch (err) {
-      console.error(`❌ Error limpiando ${file}:`, err);
-    }
-  }
-}
-
-// Ejecutar la limpieza cada 1 hora (60 min)
-setInterval(() => {
-  limpiarAntidelete();
-}, 60 * 60 * 1000); // 3600000 ms = 1 hora
   
 function cleanResponse(text) {
   if (!text) return '';
@@ -269,7 +251,7 @@ setInterval(async () => {
         }
       }
     }
-//antidelete limpieza
+//limpieza
     
     // === REVISAR APERTURA AUTOMÁTICA ===
     const tiempoAbrirPath = path.resolve("./tiempo2.json");
