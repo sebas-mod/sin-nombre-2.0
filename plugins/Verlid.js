@@ -36,7 +36,7 @@ const handler = async (msg, { conn }) => {
 ✅ *Sin LIB (número visible):* ${conLib.length}
 ${conLib.length ? conLib.join('\n') : '• Ninguno'}
 
-❌ *Con LIB (ocultos - lid):* ${sinLib.length}
+❌ *Con LIB (numeros ocultos por - lid para mayor seguridad segun whatsapp):* ${sinLib.length}
 ${sinLib.length ? sinLib.join('\n') : '• Ninguno'}
 
 ℹ️ WhatsApp está ocultando números reales con el formato *@lid* para proteger la privacidad.
