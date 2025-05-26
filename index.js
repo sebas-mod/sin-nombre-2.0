@@ -684,7 +684,50 @@ try {
   console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
-    
+// === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
+try {
+  const chatId = m.key.remoteJid;
+  const senderId = m.key.participant || m.key.remoteJid;
+  const isGroup = chatId.endsWith("@g.us");
+
+  if (!isGroup) return;
+
+  const mutePath = "./mute.json";
+  const muteData = fs.existsSync(mutePath) ? JSON.parse(fs.readFileSync(mutePath)) : {};
+  const muteList = muteData[chatId] || [];
+
+  if (muteList.includes(senderId)) {
+    global._muteCounter = global._muteCounter || {};
+    const key = `${chatId}:${senderId}`;
+    global._muteCounter[key] = (global._muteCounter[key] || 0) + 1;
+
+    const count = global._muteCounter[key];
+
+    // Mensajes de advertencia
+    if (count === 8 || count === 14) {
+      await sock.sendMessage(chatId, {
+        text: `⚠️ @${senderId.split("@")[0]} estás muteado.\nSi llegas a 15 mensajes, se considerará falta grave.`,
+        mentions: [senderId]
+      });
+    }
+
+    // Eliminar mensaje
+    await sock.sendMessage(chatId, {
+      delete: {
+        remoteJid: chatId,
+        fromMe: false,
+        id: m.key.id,
+        participant: senderId
+      }
+    });
+
+    return; // Previene procesamiento del mensaje muteado
+  }
+
+} catch (err) {
+  console.error("❌ Error en lógica de muteo:", err);
+}
+// === FIN BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===    
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
   const fs = require("fs");
