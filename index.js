@@ -684,12 +684,12 @@ try {
   console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
-
 // === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
 try {
   const chatId = msg.key.remoteJid;
-  const isGroup = chatId.endsWith("@g.us");
-  if (!isGroup) return; // No aplicar muteo fuera de grupos
+
+  // Solo aplicar en grupos
+  if (!chatId.endsWith("@g.us")) return;
 
   const senderId = msg.key.participant || msg.key.remoteJid;
   const mutePath = "./mute.json";
@@ -700,9 +700,9 @@ try {
     global._muteCounter = global._muteCounter || {};
     const key = `${chatId}:${senderId}`;
     global._muteCounter[key] = (global._muteCounter[key] || 0) + 1;
+
     const count = global._muteCounter[key];
 
-    // === ADVERTENCIAS ===
     if (count === 8) {
       await sock.sendMessage(chatId, {
         text: `⚠️ @${senderId.split("@")[0]} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
@@ -717,7 +717,6 @@ try {
       });
     }
 
-    // === ELIMINACIÓN AL MENSAJE 15 ===
     if (count >= 15) {
       const metadata = await sock.groupMetadata(chatId);
       const user = metadata.participants.find(p => p.id === senderId);
@@ -729,7 +728,8 @@ try {
           text: `❌ @${senderId.split("@")[0]} fue eliminado por ignorar el mute.`,
           mentions: [senderId]
         });
-        delete global._muteCounter[key]; // reset
+        delete global._muteCounter[key];
+        return;
       } else {
         await sock.sendMessage(chatId, {
           text: `🔇 @${senderId.split("@")[0]} es administrador y no se puede eliminar.`,
@@ -738,7 +738,7 @@ try {
       }
     }
 
-    // === ELIMINAR EL MENSAJE ===
+    // Eliminar mensaje del usuario muteado
     await sock.sendMessage(chatId, {
       delete: {
         remoteJid: chatId,
@@ -748,7 +748,7 @@ try {
       }
     });
 
-    return; // Detiene el procesamiento del mensaje muteado
+    return;
   }
 } catch (err) {
   console.error("❌ Error en lógica de muteo:", err);
