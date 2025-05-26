@@ -31,6 +31,15 @@ const handler = async (msg, { conn }) => {
     }, { quoted: msg });
   }
 
+  const targetNum = target.replace(/[^0-9]/g, "");
+  const isTargetOwner = global.owner.some(([id]) => id === targetNum);
+
+  if (isTargetOwner) {
+    return conn.sendMessage(chatId, {
+      text: "❌ No puedes mutear al *dueño del bot*."
+    }, { quoted: msg });
+  }
+
   const mutePath = path.resolve("./mute.json");
   const muteData = fs.existsSync(mutePath) ? JSON.parse(fs.readFileSync(mutePath)) : {};
   if (!muteData[chatId]) muteData[chatId] = [];
