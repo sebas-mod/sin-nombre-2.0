@@ -684,10 +684,11 @@ try {
   console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
+
 // === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
 try {
-  const chatId = m.key.remoteJid;
-  const senderId = m.key.participant || m.key.remoteJid;
+  const chatId = msg.key.remoteJid;
+  const senderId = msg.key.participant || msg.key.remoteJid;
   const isGroup = chatId.endsWith("@g.us");
 
   if (!isGroup) return;
@@ -703,31 +704,60 @@ try {
 
     const count = global._muteCounter[key];
 
-    // Mensajes de advertencia
-    if (count === 8 || count === 14) {
+    // === ADVERTENCIAS ===
+    if (count === 8) {
       await sock.sendMessage(chatId, {
-        text: `⚠️ @${senderId.split("@")[0]} estás muteado.\nSi llegas a 15 mensajes, se considerará falta grave.`,
+        text: `⚠️ @${senderId.split("@")[0]} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
         mentions: [senderId]
       });
     }
 
-    // Eliminar mensaje
+    if (count === 13) {
+      await sock.sendMessage(chatId, {
+        text: `⛔ @${senderId.split("@")[0]} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
+        mentions: [senderId]
+      });
+    }
+
+    // === ELIMINACIÓN AL MENSAJE 15 ===
+    if (count >= 15) {
+      const metadata = await sock.groupMetadata(chatId);
+      const user = metadata.participants.find(p => p.id === senderId);
+      const isAdmin = user?.admin === 'admin' || user?.admin === 'superadmin';
+
+      if (!isAdmin) {
+        await sock.groupParticipantsUpdate(chatId, [senderId], "remove");
+        await sock.sendMessage(chatId, {
+          text: `❌ @${senderId.split("@")[0]} fue eliminado por ignorar el mute.`,
+          mentions: [senderId]
+        });
+        delete global._muteCounter[key]; // reset
+        return;
+      } else {
+        await sock.sendMessage(chatId, {
+          text: `🔇 @${senderId.split("@")[0]} es administrador y no se puede eliminar.`,
+          mentions: [senderId]
+        });
+      }
+    }
+
+    // === ELIMINAR EL MENSAJE ===
     await sock.sendMessage(chatId, {
       delete: {
         remoteJid: chatId,
         fromMe: false,
-        id: m.key.id,
+        id: msg.key.id,
         participant: senderId
       }
     });
 
-    return; // Previene procesamiento del mensaje muteado
+    return;
   }
-
 } catch (err) {
   console.error("❌ Error en lógica de muteo:", err);
 }
-// === FIN BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===    
+// === FIN BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
+    
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
   const fs = require("fs");
