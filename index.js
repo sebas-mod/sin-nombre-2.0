@@ -706,11 +706,25 @@ try {
 
 // === INICIO BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
 try {
-  const banPath = "./ban.json";
+  const banPath = path.resolve("./ban.json");
   const banData = fs.existsSync(banPath) ? JSON.parse(fs.readFileSync(banPath)) : {};
-  const isGroup = chatId.endsWith("@g.us");
 
-  if (isGroup && banData[chatId]?.includes(senderId)) {
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+  if (!messageText.startsWith(global.prefix)) return;
+
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const senderId = msg.key.participant || msg.key.remoteJid;
+  const senderClean = senderId.replace(/[^0-9]/g, "");
+  const senderLID = senderId; // ejemplo: 123456789012345@lid
+  const senderClassic = `${senderClean}@s.whatsapp.net`; // ejemplo: 521234567890@...
+
+  const isFromMe = msg.key.fromMe;
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+
+  const groupBanList = banData[chatId] || [];
+
+  if ((groupBanList.includes(senderClassic) || groupBanList.includes(senderLID)) && !isOwner && !isFromMe) {
     const frases = [
       "🚫 @usuario estás baneado por pendejo. ¡Abusaste demasiado del bot!",
       "❌ Lo siento @usuario, pero tú ya no puedes usarme. Aprende a comportarte.",
@@ -719,17 +733,17 @@ try {
       "😤 Quisiste usarme pero estás baneado, @usuario. Vuelve en otra vida."
     ];
 
-    const msgAleatoria = frases[Math.floor(Math.random() * frases.length)].replace("@usuario", `@${senderId.split("@")[0]}`);
+    const texto = frases[Math.floor(Math.random() * frases.length)].replace("@usuario", `@${senderClean}`);
 
     await sock.sendMessage(chatId, {
-      text: msgAleatoria,
+      text: texto,
       mentions: [senderId]
     }, { quoted: msg });
 
-    return; // corta la ejecución para que no llegue a los comandos
+    return;
   }
-} catch (err) {
-  console.error("❌ Error al validar usuario baneado:", err);
+} catch (e) {
+  console.error("❌ Error procesando bloqueo de usuarios baneados:", e);
 }
 // === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
     
