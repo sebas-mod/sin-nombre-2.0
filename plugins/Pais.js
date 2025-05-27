@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require("fs");
 
 const handler = async (msg, { conn, args }) => {
   const chatId = msg.key.remoteJid;
@@ -30,26 +30,30 @@ const handler = async (msg, { conn, args }) => {
   };
   const flag = flagMap[code] || "🌐";
 
-  const participants = metadata.participants.map(p => p.id);
-  const matches = participants.filter(id => id.endsWith("@s.whatsapp.net") && id.replace(/[^0-9]/g, "").startsWith(code));
+  const participants = metadata.participants;
+  const matched = participants.filter(p => {
+    const jid = p.id || "";
+    return jid.endsWith("@s.whatsapp.net") && jid.replace(/[^0-9]/g, "").startsWith(code);
+  });
 
-  if (!matches.length) {
+  if (matched.length === 0) {
     return conn.sendMessage(chatId, {
-      text: `❌ No hay usuarios con código +${code} en este grupo.`
+      text: `❌ No hay usuarios con número visible del país +${code} en este grupo.\n\n⚠️ WhatsApp puede ocultar números como @lid y no se puede detectar su país.`
     }, { quoted: msg });
   }
 
-  const mentions = matches;
-  const lines = mentions.map(id => `• @${id.split("@")[0]}`);
-  const caption = `🌎 *Usuarios del país +${code} ${flag} han sido llamados:*\n\n${lines.join("\n")}`;
+  const mentions = matched.map(p => p.id);
+  const list = mentions.map(id => `• @${id.split("@")[0]}`).join("\n");
+
+  const textMsg = `🌍 *Usuarios del país +${code} ${flag} convocados:*\n\n${list}`;
 
   await conn.sendMessage(chatId, {
-    text: caption,
+    text: textMsg,
     mentions
   }, { quoted: msg });
 
   await conn.sendMessage(chatId, {
-    react: { text: "📍", key: msg.key }
+    react: { text: "🌐", key: msg.key }
   });
 };
 
