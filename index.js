@@ -581,6 +581,25 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
 }
 // === FIN LÓGICA ANTIS STICKERS ===
 
+// === INICIO BLOQUEO DE COMANDOS SI EL BOT ESTÁ APAGADO EN EL GRUPO ===
+try {
+  const activosPath = "./activos.json";
+  const activos = fs.existsSync(activosPath)
+    ? JSON.parse(fs.readFileSync(activosPath, "utf-8"))
+    : {};
+
+  const isApagado = activos.apagado?.[chatId] === true;
+  const senderClean = sender.replace(/[^0-9]/g, "");
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+
+  if (isGroup && isApagado && !isOwner) {
+    return; // Ignora comandos de usuarios comunes si el bot está apagado
+  }
+} catch (e) {
+  console.error("❌ Error en lógica de bloqueo por apagado:", e);
+}
+// === FIN BLOQUEO DE COMANDOS SI EL BOT ESTÁ APAGADO EN EL GRUPO ===
+    
 // === INICIO DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 try {
   const context = msg.message?.extendedTextMessage?.contextInfo;
