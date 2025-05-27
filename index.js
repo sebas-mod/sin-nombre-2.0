@@ -703,7 +703,37 @@ try {
   console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
+// === INICIO BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
+try {
+  const banPath = "./ban.json";
+  const banData = fs.existsSync(banPath) ? JSON.parse(fs.readFileSync(banPath)) : {};
+  const isGroup = chatId.endsWith("@g.us");
 
+  // Solo aplica si es grupo y el usuario está en la lista
+  if (isGroup && banData[chatId]?.includes(senderId)) {
+    const frases = [
+      "🚫 @usuario estás baneado por pendejo. ¡Abusaste demasiado del bot!",
+      "❌ Lo siento @usuario, pero tú ya no puedes usarme. Aprende a comportarte.",
+      "🔒 No tienes permiso @usuario. Fuiste baneado por molestar mucho.",
+      "👎 ¡Bloqueado! @usuario abusaste del sistema y ahora no puedes usarme.",
+      "😤 Quisiste usarme pero estás baneado, @usuario. Vuelve en otra vida."
+    ];
+
+    const msgAleatoria = frases[Math.floor(Math.random() * frases.length)].replace("@usuario", `@${senderId.split("@")[0]}`);
+
+    await sock.sendMessage(chatId, {
+      text: msgAleatoria,
+      mentions: [senderId]
+    }, { quoted: msg });
+
+    return; // evita que ejecute comandos
+  }
+} catch (err) {
+  console.error("❌ Error al validar usuario baneado:", err);
+}
+// === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
+
+    
 // === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
 try {
   const chatId = msg.key.remoteJid;
