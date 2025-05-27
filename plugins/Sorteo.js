@@ -11,8 +11,9 @@ const handler = async (msg, { conn, args }) => {
 
   const meta = await conn.groupMetadata(chatId);
   const isAdmin = meta.participants.find(p => p.id === sender)?.admin;
+  const isFromMe = msg.key.fromMe;
 
-  if (!isAdmin && !isOwner) {
+  if (!isAdmin && !isOwner && !isFromMe) {
     return conn.sendMessage(chatId, {
       text: "❌ Solo *admins* o *el dueño del bot* pueden usar este comando."
     }, { quoted: msg });
@@ -26,10 +27,11 @@ const handler = async (msg, { conn, args }) => {
 
   await conn.sendMessage(chatId, { react: { text: '🎲', key: msg.key } });
 
-  const participantes = meta.participants.filter(p => !p.admin && !p.id.endsWith('@lid'));
+  const participantes = meta.participants.filter(p => !p.admin && p.id !== conn.user.id);
+
   if (participantes.length === 0) {
     return conn.sendMessage(chatId, {
-      text: "⚠️ No hay usuarios visibles para realizar el sorteo."
+      text: "⚠️ No hay suficientes participantes para hacer el sorteo."
     }, { quoted: msg });
   }
 
@@ -47,14 +49,14 @@ const handler = async (msg, { conn, args }) => {
   }, { quoted: msg });
 
   for (let i = 1; i < pasos.length; i++) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(r => setTimeout(r, 1500));
     await conn.sendMessage(chatId, {
       edit: tempMsg.key,
       text: pasos[i]
     });
   }
 
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await new Promise(r => setTimeout(r, 1500));
   await conn.sendMessage(chatId, {
     edit: tempMsg.key,
     text: `🎉 *SORTEO REALIZADO*\n\n🏆 *Premio:* ${text}\n👑 *Ganador:* @${ganador.split("@")[0]}`,
