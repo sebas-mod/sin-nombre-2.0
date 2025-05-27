@@ -703,13 +703,13 @@ try {
   console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
+
 // === INICIO BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
 try {
   const banPath = "./ban.json";
   const banData = fs.existsSync(banPath) ? JSON.parse(fs.readFileSync(banPath)) : {};
   const isGroup = chatId.endsWith("@g.us");
 
-  // Solo aplica si es grupo y el usuario está en la lista
   if (isGroup && banData[chatId]?.includes(senderId)) {
     const frases = [
       "🚫 @usuario estás baneado por pendejo. ¡Abusaste demasiado del bot!",
@@ -726,13 +726,12 @@ try {
       mentions: [senderId]
     }, { quoted: msg });
 
-    return; // evita que ejecute comandos
+    return; // corta la ejecución para que no llegue a los comandos
   }
 } catch (err) {
   console.error("❌ Error al validar usuario baneado:", err);
 }
 // === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
-
     
 // === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
 try {
