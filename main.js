@@ -3888,23 +3888,20 @@ case 'botname': {
 }
             
 case 'vergrupos': {
-  // Solo el owner puede usar este comando
   if (!global.isOwner(sender)) {
     await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Solo el owner puede usar este comando." });
     return;
   }
-  
-  // Agrega una reacción para indicar que el comando se ha activado
+
   await sock.sendMessage(msg.key.remoteJid, { react: { text: "👀", key: msg.key } });
-  
+
   const fs = require("fs");
   const activosPath = "./activos.json";
   let activos = {};
   if (fs.existsSync(activosPath)) {
     activos = JSON.parse(fs.readFileSync(activosPath, "utf-8"));
   }
-  
-  // Obtén todos los grupos en los que está el bot
+
   let groups;
   try {
     groups = await sock.groupFetchAllParticipating();
@@ -3913,46 +3910,43 @@ case 'vergrupos': {
     await sock.sendMessage(msg.key.remoteJid, { text: "❌ Error al obtener la lista de grupos." });
     return;
   }
-  
+
   let groupIds = Object.keys(groups);
   if (groupIds.length === 0) {
     await sock.sendMessage(msg.key.remoteJid, { text: "No estoy en ningún grupo." });
     return;
   }
-  
-  let messageText = "*📋 Lista de Grupos y Configuraciones Activas:*\n\n";
-  
+
+  let messageText = "*📋 Lista de Grupos y Estados Activos:*\n\n";
+
   for (const groupId of groupIds) {
     let subject = groupId;
     try {
       const meta = await sock.groupMetadata(groupId);
       subject = meta.subject || groupId;
-    } catch (e) {
-      console.error(`Error obteniendo metadata de ${groupId}:`, e);
-    }
-    
-    // Verifica las configuraciones por grupo en activos.json
-    let antiarabe = (activos.antiarabe && activos.antiarabe[groupId]) ? "✅" : "❌";
-    let antilink = (activos.antilink && activos.antilink[groupId]) ? "✅" : "❌";
-    let welcome = (activos.welcome && activos.welcome[groupId]) ? "✅" : "❌";
-    let modoadmins = (activos.modoAdmins && activos.modoAdmins[groupId]) ? "✅" : "❌";
-    // Modo privado es global
-    let modoPrivado = (activos.modoPrivado) ? "✅" : "❌";
-    
-    messageText += `*Nombre:* ${subject}\n`;
+    } catch (e) {}
+
+    const estado = (key) => (activos[key] && activos[key][groupId]) ? "✅" : "❌";
+    const globalEstado = (key) => (activos[key]) ? "✅" : "❌";
+
+    messageText += `*Grupo:* ${subject}\n`;
     messageText += `*ID:* ${groupId}\n`;
-    messageText += `*antiarabe:* ${antiarabe}\n`;
-    messageText += `*antilink:* ${antilink}\n`;
-    messageText += `*welcome:* ${welcome}\n`;
-    messageText += `*modoAdmins:* ${modoadmins}\n`;
-    messageText += `*modoPrivado (global):* ${modoPrivado}\n`;
-    messageText += "─────────────────\n";
+    messageText += `🔒 *modoAdmins:* ${estado("modoAdmins")}\n`;
+    messageText += `⛔ *apagado:* ${estado("apagado")}\n`;
+    messageText += `🚫 *antilink:* ${estado("antilink")}\n`;
+    messageText += `🧑‍🦱 *antiarabe:* ${estado("antiarabe")}\n`;
+    messageText += `🔞 *antiporno:* ${estado("antiporno")}\n`;
+    messageText += `🔄 *antidelete:* ${estado("antidelete")}\n`;
+    messageText += `🎮 *rpgazura:* ${estado("rpgazura")}\n`;
+    messageText += `🛑 *antis (spam stickers):* ${estado("antis")}\n`;
+    messageText += `👋 *welcome:* ${estado("welcome")}\n`;
+    messageText += `🌐 *modoPrivado (global):* ${globalEstado("modoPrivado")}\n`;
+    messageText += "───────────────────────\n";
   }
-  
-  // Envía la lista al owner
+
   await sock.sendMessage(msg.key.remoteJid, { text: messageText });
   break;
-}            
+}
         
 case 'bc': {
   // Verifica que el usuario sea owner
@@ -4195,6 +4189,9 @@ case 'menuowner': {
 ➠ ${global.prefix}re
 ➠ ${global.prefix}antideletepri on o off
 ➠ ${global.prefix}unre
+➠ ${global.prefix}apagar
+➠ ${global.prefix}prender
+
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯  
 
       𝗗𝗲𝘀𝗮𝗿𝗿𝗼𝗹𝗹𝗮𝗱𝗼 𝗽𝗼𝗿: ʳᵘˢˢᵉˡˡ ˣᶻ  
@@ -4380,6 +4377,7 @@ case 'menu': {
 ⎔ ${global.prefix}setreglas
 ⎔ ${global.prefix}reglas
 ⎔ ${global.prefix}combos
+⎔ ${global.prefix}sorteo
 
 ╭──────────────╮  
 │ ✦ 𝙄𝘼 - 𝘾𝙃𝘼𝙏 𝘽𝙊𝙏 ✦ │  
@@ -4475,6 +4473,7 @@ case 'menu': {
 ⎔ ${global.prefix}personalidad  
 ⎔ ${global.prefix}ship  
 ⎔ ${global.prefix}parejas  
+⎔ ${global.prefix}menurpg
 
 ╭──────────────╮  
 │ ✦ COMANDO +18 ✦ │  
@@ -4555,6 +4554,10 @@ case 'menugrupo': {
 ├✦ ${global.prefix}okfan
 ├✦ ${global.prefix}delete
 ├✦ ${global.prefix}damelink  
+├✦ ${global.prefix}mute
+├✦ ${global.prefix}unmute
+├✦ ${global.prefix}ban
+├✦ ${global.prefix}unban
 ├✦ ${global.prefix}abrir/ automaticamente
 ├✦ ${global.prefix}cerrar/ automaticamente
 ├✦ ${global.prefix}abrirgrupo  
