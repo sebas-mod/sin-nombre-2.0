@@ -704,49 +704,6 @@ try {
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 
-// === INICIO BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
-try {
-  const banPath = path.resolve("./ban.json");
-  const banData = fs.existsSync(banPath) ? JSON.parse(fs.readFileSync(banPath)) : {};
-
-  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-  if (!messageText.startsWith(global.prefix)) return;
-
-  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
-
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const senderClean = senderId.replace(/[^0-9]/g, "");
-  const senderLID = senderId; // ejemplo: 123456789012345@lid
-  const senderClassic = `${senderClean}@s.whatsapp.net`; // ejemplo: 521234567890@...
-
-  const isFromMe = msg.key.fromMe;
-  const isOwner = global.owner.some(([id]) => id === senderClean);
-
-  const groupBanList = banData[chatId] || [];
-
-  if ((groupBanList.includes(senderClassic) || groupBanList.includes(senderLID)) && !isOwner && !isFromMe) {
-    const frases = [
-      "🚫 @usuario estás baneado por pendejo. ¡Abusaste demasiado del bot!",
-      "❌ Lo siento @usuario, pero tú ya no puedes usarme. Aprende a comportarte.",
-      "🔒 No tienes permiso @usuario. Fuiste baneado por molestar mucho.",
-      "👎 ¡Bloqueado! @usuario abusaste del sistema y ahora no puedes usarme.",
-      "😤 Quisiste usarme pero estás baneado, @usuario. Vuelve en otra vida."
-    ];
-
-    const texto = frases[Math.floor(Math.random() * frases.length)].replace("@usuario", `@${senderClean}`);
-
-    await sock.sendMessage(chatId, {
-      text: texto,
-      mentions: [senderId]
-    }, { quoted: msg });
-
-    return;
-  }
-} catch (e) {
-  console.error("❌ Error procesando bloqueo de usuarios baneados:", e);
-}
-// === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
-    
 // === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
 try {
   const chatId = msg.key.remoteJid;
@@ -816,6 +773,50 @@ try {
   console.error("❌ Error en lógica de muteo:", err);
 }
 // === FIN BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
+    
+// === INICIO BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
+try {
+  const banPath = path.resolve("./ban.json");
+  const banData = fs.existsSync(banPath) ? JSON.parse(fs.readFileSync(banPath)) : {};
+
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+  if (!messageText.startsWith(global.prefix)) return;
+
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const senderId = msg.key.participant || msg.key.remoteJid;
+  const senderClean = senderId.replace(/[^0-9]/g, "");
+  const senderLID = senderId; // ejemplo: 123456789012345@lid
+  const senderClassic = `${senderClean}@s.whatsapp.net`; // ejemplo: 521234567890@...
+
+  const isFromMe = msg.key.fromMe;
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+
+  const groupBanList = banData[chatId] || [];
+
+  if ((groupBanList.includes(senderClassic) || groupBanList.includes(senderLID)) && !isOwner && !isFromMe) {
+    const frases = [
+      "🚫 @usuario estás baneado por pendejo. ¡Abusaste demasiado del bot!",
+      "❌ Lo siento @usuario, pero tú ya no puedes usarme. Aprende a comportarte.",
+      "🔒 No tienes permiso @usuario. Fuiste baneado por molestar mucho.",
+      "👎 ¡Bloqueado! @usuario abusaste del sistema y ahora no puedes usarme.",
+      "😤 Quisiste usarme pero estás baneado, @usuario. Vuelve en otra vida."
+    ];
+
+    const texto = frases[Math.floor(Math.random() * frases.length)].replace("@usuario", `@${senderClean}`);
+
+    await sock.sendMessage(chatId, {
+      text: texto,
+      mentions: [senderId]
+    }, { quoted: msg });
+
+    return;
+  }
+} catch (e) {
+  console.error("❌ Error procesando bloqueo de usuarios baneados:", e);
+}
+// === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
+    
     
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
