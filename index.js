@@ -580,26 +580,6 @@ if (isGroup && activos.antis?.[chatId] && !fromMe && stickerMsg) {
   }
 }
 // === FIN LÓGICA ANTIS STICKERS ===
-
-// === INICIO BLOQUEO DE COMANDOS SI EL BOT ESTÁ APAGADO EN EL GRUPO ===
-try {
-  const activosPath = "./activos.json";
-  const activos = fs.existsSync(activosPath)
-    ? JSON.parse(fs.readFileSync(activosPath, "utf-8"))
-    : {};
-
-  const isApagado = activos.apagado?.[chatId] === true;
-  const senderClean = sender.replace(/[^0-9]/g, "");
-  const isOwner = global.owner.some(([id]) => id === senderClean);
-
-  if (isGroup && isApagado && !isOwner) {
-    return; // Ignora comandos de usuarios comunes si el bot está apagado
-  }
-} catch (e) {
-  console.error("❌ Error en lógica de bloqueo por apagado:", e);
-}
-// === FIN BLOQUEO DE COMANDOS SI EL BOT ESTÁ APAGADO EN EL GRUPO ===
-    
 // === INICIO DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
 try {
   const context = msg.message?.extendedTextMessage?.contextInfo;
@@ -703,296 +683,6 @@ try {
   console.error("❌ Error en respuesta play10:", err);
 }
 // === FIN DETECTOR DE RESPUESTAS A MENSAJES DEL BOT ===
-
-// === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
-try {
-  const chatId = msg.key.remoteJid;
-  const isGroup = chatId.endsWith("@g.us");
-
-  if (isGroup) {
-    const senderId = msg.key.participant || msg.key.remoteJid;
-    const mutePath = "./mute.json";
-    const muteData = fs.existsSync(mutePath) ? JSON.parse(fs.readFileSync(mutePath)) : {};
-    const muteList = muteData[chatId] || [];
-
-    if (muteList.includes(senderId)) {
-      global._muteCounter = global._muteCounter || {};
-      const key = `${chatId}:${senderId}`;
-      global._muteCounter[key] = (global._muteCounter[key] || 0) + 1;
-
-      const count = global._muteCounter[key];
-
-      if (count === 8) {
-        await sock.sendMessage(chatId, {
-          text: `⚠️ @${senderId.split("@")[0]} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
-          mentions: [senderId]
-        });
-      }
-
-      if (count === 13) {
-        await sock.sendMessage(chatId, {
-          text: `⛔ @${senderId.split("@")[0]} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
-          mentions: [senderId]
-        });
-      }
-
-      if (count >= 15) {
-        const metadata = await sock.groupMetadata(chatId);
-        const user = metadata.participants.find(p => p.id === senderId);
-        const isAdmin = user?.admin === 'admin' || user?.admin === 'superadmin';
-
-        if (!isAdmin) {
-          await sock.groupParticipantsUpdate(chatId, [senderId], "remove");
-          await sock.sendMessage(chatId, {
-            text: `❌ @${senderId.split("@")[0]} fue eliminado por ignorar el mute.`,
-            mentions: [senderId]
-          });
-          delete global._muteCounter[key];
-        } else {
-          await sock.sendMessage(chatId, {
-            text: `🔇 @${senderId.split("@")[0]} es administrador y no se puede eliminar.`,
-            mentions: [senderId]
-          });
-        }
-      }
-
-      // eliminar mensaje
-      await sock.sendMessage(chatId, {
-        delete: {
-          remoteJid: chatId,
-          fromMe: false,
-          id: msg.key.id,
-          participant: senderId
-        }
-      });
-
-      return; // este return es interno, no afecta el resto
-    }
-  }
-} catch (err) {
-  console.error("❌ Error en lógica de muteo:", err);
-}
-// === FIN BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
-    
-// === INICIO BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
-try {
-  const banPath = path.resolve("./ban.json");
-  const banData = fs.existsSync(banPath) ? JSON.parse(fs.readFileSync(banPath)) : {};
-
-  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-  if (!messageText.startsWith(global.prefix)) return;
-
-  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
-
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const senderClean = senderId.replace(/[^0-9]/g, "");
-  const senderLID = senderId; // ejemplo: 123456789012345@lid
-  const senderClassic = `${senderClean}@s.whatsapp.net`; // ejemplo: 521234567890@...
-
-  const isFromMe = msg.key.fromMe;
-  const isOwner = global.owner.some(([id]) => id === senderClean);
-
-  const groupBanList = banData[chatId] || [];
-
-  if ((groupBanList.includes(senderClassic) || groupBanList.includes(senderLID)) && !isOwner && !isFromMe) {
-    const frases = [
-      "🚫 @usuario estás baneado por pendejo. ¡Abusaste demasiado del bot!",
-      "❌ Lo siento @usuario, pero tú ya no puedes usarme. Aprende a comportarte.",
-      "🔒 No tienes permiso @usuario. Fuiste baneado por molestar mucho.",
-      "👎 ¡Bloqueado! @usuario abusaste del sistema y ahora no puedes usarme.",
-      "😤 Quisiste usarme pero estás baneado, @usuario. Vuelve en otra vida."
-    ];
-
-    const texto = frases[Math.floor(Math.random() * frases.length)].replace("@usuario", `@${senderClean}`);
-
-    await sock.sendMessage(chatId, {
-      text: texto,
-      mentions: [senderId]
-    }, { quoted: msg });
-
-    return;
-  }
-} catch (e) {
-  console.error("❌ Error procesando bloqueo de usuarios baneados:", e);
-}
-// === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
-    
-    
-// === INICIO CONTADOR DE MENSAJES POR GRUPO ===
-try {
-  const fs = require("fs");
-  const path = require("path");
-
-  const conteoPath = path.resolve("./conteo.json");
-  if (!fs.existsSync(conteoPath)) {
-    fs.writeFileSync(conteoPath, JSON.stringify({}, null, 2));
-  }
-
-  const conteoData = JSON.parse(fs.readFileSync(conteoPath, "utf-8"));
-
-  const chatId = msg.key.remoteJid;
-  const senderId = msg.key.participant || msg.key.remoteJid;
-  const isGroup = chatId.endsWith("@g.us");
-  const fromMe = msg.key.fromMe;
-  const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net"; // Número del bot en formato JID
-
-  if (isGroup) {
-    // Si mensaje de usuario (no bot)
-    if (!fromMe) {
-      if (!conteoData[chatId]) conteoData[chatId] = {};
-      if (!conteoData[chatId][senderId]) conteoData[chatId][senderId] = 0;
-      conteoData[chatId][senderId] += 1;
-    }
-
-    // Si mensaje del propio bot
-    if (fromMe) {
-      if (!conteoData[chatId]) conteoData[chatId] = {};
-      if (!conteoData[chatId][botNumber]) conteoData[chatId][botNumber] = 0;
-      conteoData[chatId][botNumber] += 1;
-    }
-
-    fs.writeFileSync(conteoPath, JSON.stringify(conteoData, null, 2));
-  }
-
-} catch (error) {
-  console.error("❌ Error en contador de mensajes:", error);
-}
-// === FIN CONTADOR DE MENSAJES POR GRUPO ===
-// === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
-try {
-  const guarPath = path.resolve('./guar.json');
-  if (fs.existsSync(guarPath)) {
-    const guarData = JSON.parse(fs.readFileSync(guarPath, 'utf-8'));
-
-    // Normalizar mensaje: sin espacios, tildes, mayúsculas ni símbolos
-    const cleanText = messageText
-      .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^\w]/g, '');
-
-    for (const key of Object.keys(guarData)) {
-      const cleanKey = key
-        .toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w]/g, '');
-
-      if (cleanText === cleanKey) {
-        const item = guarData[key];
-        const buffer = Buffer.from(item.buffer, 'base64');
-
-        let payload = {};
-
-        switch (item.extension) {
-          case 'jpg':
-          case 'jpeg':
-          case 'png':
-            payload.image = buffer;
-            break;
-          case 'mp4':
-            payload.video = buffer;
-            break;
-          case 'mp3':
-          case 'ogg':
-          case 'opus':
-            payload.audio = buffer;
-            payload.mimetype = item.mimetype || 'audio/mpeg';
-            payload.ptt = false; // ← Cambia a true si quieres que lo envíe como nota de voz
-            break;
-          case 'webp':
-            payload.sticker = buffer;
-            break;
-          default:
-            payload.document = buffer;
-            payload.mimetype = item.mimetype || "application/octet-stream";
-            payload.fileName = `archivo.${item.extension}`;
-            break;
-        }
-
-        await sock.sendMessage(chatId, payload, { quoted: msg });
-        return; // ← evitar que siga procesando si ya se encontró una coincidencia
-      }
-    }
-  }
-} catch (e) {
-  console.error("❌ Error al revisar guar.json:", e);
-}
-// === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
-// === INICIO LÓGICA CHATGPT POR GRUPO ===
-try {
-  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
-  const isGroup = msg.key.remoteJid.endsWith("@g.us");
-  const chatId = msg.key.remoteJid;
-  const chatgptActivo = activos.chatgpt?.[chatId];
-  const fromMe = msg.key.fromMe;
-
-  const messageText = msg.message?.conversation || 
-                      msg.message?.extendedTextMessage?.text || 
-                      msg.message?.imageMessage?.caption || 
-                      msg.message?.videoMessage?.caption || "";
-
-  if (isGroup && chatgptActivo && !fromMe && messageText.length > 0) {
-    const encodedText = encodeURIComponent(messageText);
-    const sessionID = "1727468410446638"; // ID de sesión
-    const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
-
-    const axios = require("axios");
-    const res = await axios.get(apiUrl);
-    const respuesta = res.data?.data?.message;
-
-    if (respuesta) {
-      await sock.sendMessage(chatId, {
-        text: respuesta,
-      }, { quoted: msg }); // <-- Aquí se cita correctamente el mensaje del usuario
-    }
-  }
-} catch (e) {
-  console.error("❌ Error en lógica ChatGPT por grupo:", e);
-}
-// === FIN LÓGICA CHATGPT POR GRUPO ===
-
-// === INICIO LÓGICA LUMI AI POR GRUPO ===
-try {
-  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
-  const isGroup = msg.key.remoteJid.endsWith("@g.us");
-  const chatId = msg.key.remoteJid;
-  const lumiActivo = activos.lumi?.[chatId];
-  const fromMe = msg.key.fromMe;
-
-  const text =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.imageMessage?.caption ||
-    msg.message?.videoMessage?.caption ||
-    "";
-
-  if (isGroup && lumiActivo && !fromMe && text.length > 0) {
-    const name = '[XEX]';
-    const prompt = await getPrompt();
-    let result = '';
-
-    try {
-      result = await luminaiQuery(text, name, prompt);
-      result = cleanResponse(result);
-    } catch (e) {
-      console.error('Error Luminai:', e);
-      try {
-        result = await perplexityQuery(text, prompt);
-      } catch (e) {
-        console.error('Error Perplexity:', e);
-        result = '❌ No se obtuvo respuesta de los servicios';
-      }
-    }
-
-    if (result) {
-      await sock.sendMessage(chatId, {
-        text: result
-      }, { quoted: msg });
-    }
-  }
-} catch (error) {
-  console.error("❌ Error en lógica Lumi AI automática:", error);
-}
-// === FIN LÓGICA LUMI AI POR GRUPO ===
 // === INICIO GUARDADO ANTIDELETE ===
 try {
   const activos = fs.existsSync('./activos.json')
@@ -1140,7 +830,296 @@ if (msg.message?.protocolMessage?.type === 0) {
     console.error("❌ Error en lógica antidelete:", err);
   }
 }
-// === FIN DETECCIÓN DE MENSAJE ELIMINADO ===
+// === FIN DETECCIÓN DE MENSAJE ELIMINADO ===    
+// === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+try {
+  const guarPath = path.resolve('./guar.json');
+  if (fs.existsSync(guarPath)) {
+    const guarData = JSON.parse(fs.readFileSync(guarPath, 'utf-8'));
+
+    // Normalizar mensaje: sin espacios, tildes, mayúsculas ni símbolos
+    const cleanText = messageText
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w]/g, '');
+
+    for (const key of Object.keys(guarData)) {
+      const cleanKey = key
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w]/g, '');
+
+      if (cleanText === cleanKey) {
+        const item = guarData[key];
+        const buffer = Buffer.from(item.buffer, 'base64');
+
+        let payload = {};
+
+        switch (item.extension) {
+          case 'jpg':
+          case 'jpeg':
+          case 'png':
+            payload.image = buffer;
+            break;
+          case 'mp4':
+            payload.video = buffer;
+            break;
+          case 'mp3':
+          case 'ogg':
+          case 'opus':
+            payload.audio = buffer;
+            payload.mimetype = item.mimetype || 'audio/mpeg';
+            payload.ptt = false; // ← Cambia a true si quieres que lo envíe como nota de voz
+            break;
+          case 'webp':
+            payload.sticker = buffer;
+            break;
+          default:
+            payload.document = buffer;
+            payload.mimetype = item.mimetype || "application/octet-stream";
+            payload.fileName = `archivo.${item.extension}`;
+            break;
+        }
+
+        await sock.sendMessage(chatId, payload, { quoted: msg });
+        return; // ← evitar que siga procesando si ya se encontró una coincidencia
+      }
+    }
+  }
+} catch (e) {
+  console.error("❌ Error al revisar guar.json:", e);
+}
+// === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+    
+// === INICIO CONTADOR DE MENSAJES POR GRUPO ===
+try {
+  const fs = require("fs");
+  const path = require("path");
+
+  const conteoPath = path.resolve("./conteo.json");
+  if (!fs.existsSync(conteoPath)) {
+    fs.writeFileSync(conteoPath, JSON.stringify({}, null, 2));
+  }
+
+  const conteoData = JSON.parse(fs.readFileSync(conteoPath, "utf-8"));
+
+  const chatId = msg.key.remoteJid;
+  const senderId = msg.key.participant || msg.key.remoteJid;
+  const isGroup = chatId.endsWith("@g.us");
+  const fromMe = msg.key.fromMe;
+  const botNumber = sock.user.id.split(":")[0] + "@s.whatsapp.net"; // Número del bot en formato JID
+
+  if (isGroup) {
+    // Si mensaje de usuario (no bot)
+    if (!fromMe) {
+      if (!conteoData[chatId]) conteoData[chatId] = {};
+      if (!conteoData[chatId][senderId]) conteoData[chatId][senderId] = 0;
+      conteoData[chatId][senderId] += 1;
+    }
+
+    // Si mensaje del propio bot
+    if (fromMe) {
+      if (!conteoData[chatId]) conteoData[chatId] = {};
+      if (!conteoData[chatId][botNumber]) conteoData[chatId][botNumber] = 0;
+      conteoData[chatId][botNumber] += 1;
+    }
+
+    fs.writeFileSync(conteoPath, JSON.stringify(conteoData, null, 2));
+  }
+
+} catch (error) {
+  console.error("❌ Error en contador de mensajes:", error);
+}
+// === FIN CONTADOR DE MENSAJES POR GRUPO ===
+// === INICIO BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
+try {
+  const chatId = msg.key.remoteJid;
+  const isGroup = chatId.endsWith("@g.us");
+
+  if (isGroup) {
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const mutePath = "./mute.json";
+    const muteData = fs.existsSync(mutePath) ? JSON.parse(fs.readFileSync(mutePath)) : {};
+    const muteList = muteData[chatId] || [];
+
+    if (muteList.includes(senderId)) {
+      global._muteCounter = global._muteCounter || {};
+      const key = `${chatId}:${senderId}`;
+      global._muteCounter[key] = (global._muteCounter[key] || 0) + 1;
+
+      const count = global._muteCounter[key];
+
+      if (count === 8) {
+        await sock.sendMessage(chatId, {
+          text: `⚠️ @${senderId.split("@")[0]} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
+          mentions: [senderId]
+        });
+      }
+
+      if (count === 13) {
+        await sock.sendMessage(chatId, {
+          text: `⛔ @${senderId.split("@")[0]} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
+          mentions: [senderId]
+        });
+      }
+
+      if (count >= 15) {
+        const metadata = await sock.groupMetadata(chatId);
+        const user = metadata.participants.find(p => p.id === senderId);
+        const isAdmin = user?.admin === 'admin' || user?.admin === 'superadmin';
+
+        if (!isAdmin) {
+          await sock.groupParticipantsUpdate(chatId, [senderId], "remove");
+          await sock.sendMessage(chatId, {
+            text: `❌ @${senderId.split("@")[0]} fue eliminado por ignorar el mute.`,
+            mentions: [senderId]
+          });
+          delete global._muteCounter[key];
+        } else {
+          await sock.sendMessage(chatId, {
+            text: `🔇 @${senderId.split("@")[0]} es administrador y no se puede eliminar.`,
+            mentions: [senderId]
+          });
+        }
+      }
+
+      // eliminar mensaje
+      await sock.sendMessage(chatId, {
+        delete: {
+          remoteJid: chatId,
+          fromMe: false,
+          id: msg.key.id,
+          participant: senderId
+        }
+      });
+
+      return; // este return es interno, no afecta el resto
+    }
+  }
+} catch (err) {
+  console.error("❌ Error en lógica de muteo:", err);
+}
+// === FIN BLOQUEO DE MENSAJES DE USUARIOS MUTEADOS ===
+    
+// === INICIO BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
+try {
+  const banPath = path.resolve("./ban.json");
+  const banData = fs.existsSync(banPath) ? JSON.parse(fs.readFileSync(banPath)) : {};
+
+  const messageText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+  if (!messageText.startsWith(global.prefix)) return;
+
+  const commandOnly = messageText.slice(global.prefix.length).trim().split(" ")[0].toLowerCase();
+
+  const senderId = msg.key.participant || msg.key.remoteJid;
+  const senderClean = senderId.replace(/[^0-9]/g, "");
+  const senderLID = senderId; // ejemplo: 123456789012345@lid
+  const senderClassic = `${senderClean}@s.whatsapp.net`; // ejemplo: 521234567890@...
+
+  const isFromMe = msg.key.fromMe;
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+
+  const groupBanList = banData[chatId] || [];
+
+  if ((groupBanList.includes(senderClassic) || groupBanList.includes(senderLID)) && !isOwner && !isFromMe) {
+    const frases = [
+      "🚫 @usuario estás baneado por pendejo. ¡Abusaste demasiado del bot!",
+      "❌ Lo siento @usuario, pero tú ya no puedes usarme. Aprende a comportarte.",
+      "🔒 No tienes permiso @usuario. Fuiste baneado por molestar mucho.",
+      "👎 ¡Bloqueado! @usuario abusaste del sistema y ahora no puedes usarme.",
+      "😤 Quisiste usarme pero estás baneado, @usuario. Vuelve en otra vida."
+    ];
+
+    const texto = frases[Math.floor(Math.random() * frases.length)].replace("@usuario", `@${senderClean}`);
+
+    await sock.sendMessage(chatId, {
+      text: texto,
+      mentions: [senderId]
+    }, { quoted: msg });
+
+    return;
+  }
+} catch (e) {
+  console.error("❌ Error procesando bloqueo de usuarios baneados:", e);
+}
+// === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
+    
+// === INICIO LÓGICA CHATGPT POR GRUPO ===
+try {
+  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
+  const isGroup = msg.key.remoteJid.endsWith("@g.us");
+  const chatId = msg.key.remoteJid;
+  const chatgptActivo = activos.chatgpt?.[chatId];
+  const fromMe = msg.key.fromMe;
+
+  const messageText = msg.message?.conversation || 
+                      msg.message?.extendedTextMessage?.text || 
+                      msg.message?.imageMessage?.caption || 
+                      msg.message?.videoMessage?.caption || "";
+
+  if (isGroup && chatgptActivo && !fromMe && messageText.length > 0) {
+    const encodedText = encodeURIComponent(messageText);
+    const sessionID = "1727468410446638"; // ID de sesión
+    const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
+
+    const axios = require("axios");
+    const res = await axios.get(apiUrl);
+    const respuesta = res.data?.data?.message;
+
+    if (respuesta) {
+      await sock.sendMessage(chatId, {
+        text: respuesta,
+      }, { quoted: msg }); // <-- Aquí se cita correctamente el mensaje del usuario
+    }
+  }
+} catch (e) {
+  console.error("❌ Error en lógica ChatGPT por grupo:", e);
+}
+// === FIN LÓGICA CHATGPT POR GRUPO ===
+
+// === INICIO LÓGICA LUMI AI POR GRUPO ===
+try {
+  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
+  const isGroup = msg.key.remoteJid.endsWith("@g.us");
+  const chatId = msg.key.remoteJid;
+  const lumiActivo = activos.lumi?.[chatId];
+  const fromMe = msg.key.fromMe;
+
+  const text =
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    msg.message?.imageMessage?.caption ||
+    msg.message?.videoMessage?.caption ||
+    "";
+
+  if (isGroup && lumiActivo && !fromMe && text.length > 0) {
+    const name = '[XEX]';
+    const prompt = await getPrompt();
+    let result = '';
+
+    try {
+      result = await luminaiQuery(text, name, prompt);
+      result = cleanResponse(result);
+    } catch (e) {
+      console.error('Error Luminai:', e);
+      try {
+        result = await perplexityQuery(text, prompt);
+      } catch (e) {
+        console.error('Error Perplexity:', e);
+        result = '❌ No se obtuvo respuesta de los servicios';
+      }
+    }
+
+    if (result) {
+      await sock.sendMessage(chatId, {
+        text: result
+      }, { quoted: msg });
+    }
+  }
+} catch (error) {
+  console.error("❌ Error en lógica Lumi AI automática:", error);
+}
+// === FIN LÓGICA LUMI AI POR GRUPO ===
     
 // 🔗 Antilink en grupos
       if (isGroup && activos.antilink?.[chatId]) {
@@ -1198,7 +1177,25 @@ if (msg.message?.protocolMessage?.type === 0) {
       // 🔒 En privado si no es de la lista, no responde
       if (!isGroup && !fromMe && !isOwner(sender) && !isAllowedUser(sender)) return;
     }
+// === INICIO BLOQUEO DE COMANDOS SI EL BOT ESTÁ APAGADO EN EL GRUPO ===
+try {
+  const activosPath = "./activos.json";
+  const activos = fs.existsSync(activosPath)
+    ? JSON.parse(fs.readFileSync(activosPath, "utf-8"))
+    : {};
 
+  const isApagado = activos.apagado?.[chatId] === true;
+  const senderClean = sender.replace(/[^0-9]/g, "");
+  const isOwner = global.owner.some(([id]) => id === senderClean);
+
+  if (isGroup && isApagado && !isOwner) {
+    return; // Ignora comandos de usuarios comunes si el bot está apagado
+  }
+} catch (e) {
+  console.error("❌ Error en lógica de bloqueo por apagado:", e);
+}
+// === FIN BLOQUEO DE COMANDOS SI EL BOT ESTÁ APAGADO EN EL GRUPO ===
+    
 // === INICIO LÓGICA COMANDOS DESDE STICKER ===
 try {
   const jsonPath = "./comandos.json";
