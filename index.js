@@ -831,6 +831,37 @@ if (msg.message?.protocolMessage?.type === 0) {
   }
 }
 // === FIN DETECCIÓN DE MENSAJE ELIMINADO ===    
+// 🔗 Antilink en grupos
+      if (isGroup && activos.antilink?.[chatId]) {
+        if (messageText.includes("https://chat.whatsapp.com/")) {
+          let canBypass = fromMe || isOwner(sender);
+          try {
+            const metadata = await sock.groupMetadata(chatId);
+            const participant = metadata.participants.find(p => p.id.replace(/[^0-9]/g, "") === sender);
+            const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
+            if (isAdmin) canBypass = true;
+          } catch (e) {
+            console.error("Error leyendo metadata (antilink):", e);
+            canBypass = true; // Evita expulsar por error si no se puede obtener metadata
+          }
+
+          if (!canBypass) {
+            await sock.sendMessage(chatId, { delete: msg.key });
+            await sock.sendMessage(chatId, {
+              text: `⚠️ @${sender} ha enviado un enlace no permitido y ha sido expulsado.`,
+              mentions: [msg.key.participant || msg.key.remoteJid]
+            });
+            try {
+              await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
+            } catch (e) {
+              console.error("Error al expulsar:", e);
+            }
+            return;
+          }
+        }
+      } 
+  //fin de antilink por grupo    
+    
 // === LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
 try {
   const guarPath = path.resolve('./guar.json');
@@ -1121,36 +1152,7 @@ try {
 }
 // === FIN LÓGICA LUMI AI POR GRUPO ===
     
-// 🔗 Antilink en grupos
-      if (isGroup && activos.antilink?.[chatId]) {
-        if (messageText.includes("https://chat.whatsapp.com/")) {
-          let canBypass = fromMe || isOwner(sender);
-          try {
-            const metadata = await sock.groupMetadata(chatId);
-            const participant = metadata.participants.find(p => p.id.replace(/[^0-9]/g, "") === sender);
-            const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin";
-            if (isAdmin) canBypass = true;
-          } catch (e) {
-            console.error("Error leyendo metadata (antilink):", e);
-            canBypass = true; // Evita expulsar por error si no se puede obtener metadata
-          }
 
-          if (!canBypass) {
-            await sock.sendMessage(chatId, { delete: msg.key });
-            await sock.sendMessage(chatId, {
-              text: `⚠️ @${sender} ha enviado un enlace no permitido y ha sido expulsado.`,
-              mentions: [msg.key.participant || msg.key.remoteJid]
-            });
-            try {
-              await sock.groupParticipantsUpdate(chatId, [msg.key.participant || msg.key.remoteJid], "remove");
-            } catch (e) {
-              console.error("Error al expulsar:", e);
-            }
-            return;
-          }
-        }
-      } 
-      
   // 🔐 Modo Privado activado
     if (activos.modoPrivado) {
       if (isGroup) {
