@@ -922,6 +922,82 @@ try {
   console.error("❌ Error al revisar guar.json:", e);
 }
 // === FIN LÓGICA DE RESPUESTA AUTOMÁTICA CON PALABRA CLAVE ===
+// === INICIO LÓGICA CHATGPT POR GRUPO ===
+try {
+  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
+  const isGroup = msg.key.remoteJid.endsWith("@g.us");
+  const chatId = msg.key.remoteJid;
+  const chatgptActivo = activos.chatgpt?.[chatId];
+  const fromMe = msg.key.fromMe;
+
+  const messageText = msg.message?.conversation || 
+                      msg.message?.extendedTextMessage?.text || 
+                      msg.message?.imageMessage?.caption || 
+                      msg.message?.videoMessage?.caption || "";
+
+  if (isGroup && chatgptActivo && !fromMe && messageText.length > 0) {
+    const encodedText = encodeURIComponent(messageText);
+    const sessionID = "1727468410446638"; // ID de sesión
+    const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
+
+    const axios = require("axios");
+    const res = await axios.get(apiUrl);
+    const respuesta = res.data?.data?.message;
+
+    if (respuesta) {
+      await sock.sendMessage(chatId, {
+        text: respuesta,
+      }, { quoted: msg }); // <-- Aquí se cita correctamente el mensaje del usuario
+    }
+  }
+} catch (e) {
+  console.error("❌ Error en lógica ChatGPT por grupo:", e);
+}
+// === FIN LÓGICA CHATGPT POR GRUPO ===
+
+// === INICIO LÓGICA LUMI AI POR GRUPO ===
+try {
+  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
+  const isGroup = msg.key.remoteJid.endsWith("@g.us");
+  const chatId = msg.key.remoteJid;
+  const lumiActivo = activos.lumi?.[chatId];
+  const fromMe = msg.key.fromMe;
+
+  const text =
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    msg.message?.imageMessage?.caption ||
+    msg.message?.videoMessage?.caption ||
+    "";
+
+  if (isGroup && lumiActivo && !fromMe && text.length > 0) {
+    const name = '[XEX]';
+    const prompt = await getPrompt();
+    let result = '';
+
+    try {
+      result = await luminaiQuery(text, name, prompt);
+      result = cleanResponse(result);
+    } catch (e) {
+      console.error('Error Luminai:', e);
+      try {
+        result = await perplexityQuery(text, prompt);
+      } catch (e) {
+        console.error('Error Perplexity:', e);
+        result = '❌ No se obtuvo respuesta de los servicios';
+      }
+    }
+
+    if (result) {
+      await sock.sendMessage(chatId, {
+        text: result
+      }, { quoted: msg });
+    }
+  }
+} catch (error) {
+  console.error("❌ Error en lógica Lumi AI automática:", error);
+}
+// === FIN LÓGICA LUMI AI POR GRUPO ===
     
 // === INICIO CONTADOR DE MENSAJES POR GRUPO ===
 try {
@@ -1075,83 +1151,6 @@ try {
   console.error("❌ Error procesando bloqueo de usuarios baneados:", e);
 }
 // === FIN BLOQUEO DE COMANDOS A USUARIOS BANEADOS ===
-    
-// === INICIO LÓGICA CHATGPT POR GRUPO ===
-try {
-  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
-  const isGroup = msg.key.remoteJid.endsWith("@g.us");
-  const chatId = msg.key.remoteJid;
-  const chatgptActivo = activos.chatgpt?.[chatId];
-  const fromMe = msg.key.fromMe;
-
-  const messageText = msg.message?.conversation || 
-                      msg.message?.extendedTextMessage?.text || 
-                      msg.message?.imageMessage?.caption || 
-                      msg.message?.videoMessage?.caption || "";
-
-  if (isGroup && chatgptActivo && !fromMe && messageText.length > 0) {
-    const encodedText = encodeURIComponent(messageText);
-    const sessionID = "1727468410446638"; // ID de sesión
-    const apiUrl = `https://api.neoxr.eu/api/gpt4-session?q=${encodedText}&session=${sessionID}&apikey=russellxz`;
-
-    const axios = require("axios");
-    const res = await axios.get(apiUrl);
-    const respuesta = res.data?.data?.message;
-
-    if (respuesta) {
-      await sock.sendMessage(chatId, {
-        text: respuesta,
-      }, { quoted: msg }); // <-- Aquí se cita correctamente el mensaje del usuario
-    }
-  }
-} catch (e) {
-  console.error("❌ Error en lógica ChatGPT por grupo:", e);
-}
-// === FIN LÓGICA CHATGPT POR GRUPO ===
-
-// === INICIO LÓGICA LUMI AI POR GRUPO ===
-try {
-  const activos = fs.existsSync("./activos.json") ? JSON.parse(fs.readFileSync("./activos.json", "utf-8")) : {};
-  const isGroup = msg.key.remoteJid.endsWith("@g.us");
-  const chatId = msg.key.remoteJid;
-  const lumiActivo = activos.lumi?.[chatId];
-  const fromMe = msg.key.fromMe;
-
-  const text =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.imageMessage?.caption ||
-    msg.message?.videoMessage?.caption ||
-    "";
-
-  if (isGroup && lumiActivo && !fromMe && text.length > 0) {
-    const name = '[XEX]';
-    const prompt = await getPrompt();
-    let result = '';
-
-    try {
-      result = await luminaiQuery(text, name, prompt);
-      result = cleanResponse(result);
-    } catch (e) {
-      console.error('Error Luminai:', e);
-      try {
-        result = await perplexityQuery(text, prompt);
-      } catch (e) {
-        console.error('Error Perplexity:', e);
-        result = '❌ No se obtuvo respuesta de los servicios';
-      }
-    }
-
-    if (result) {
-      await sock.sendMessage(chatId, {
-        text: result
-      }, { quoted: msg });
-    }
-  }
-} catch (error) {
-  console.error("❌ Error en lógica Lumi AI automática:", error);
-}
-// === FIN LÓGICA LUMI AI POR GRUPO ===
     
 
   // 🔐 Modo Privado activado
