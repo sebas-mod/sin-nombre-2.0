@@ -222,6 +222,25 @@ setInterval(async () => {
                 }
             }
 
+// Ruta de los archivos a limpiar
+const archivosAntidelete = ['./antidelete.json', './antideletepri.json'];
+
+function limpiarAntidelete() {
+  for (const archivo of archivosAntidelete) {
+    if (fs.existsSync(archivo)) {
+      fs.writeFileSync(archivo, JSON.stringify({}, null, 2));
+      console.log(`🧹 Archivo limpiado: ${archivo}`);
+    }
+  }
+}
+
+// Ejecutar limpieza cada 30 minutos
+setInterval(limpiarAntidelete, 30 * 60 * 1000); // 30 min
+
+// Ejecutar una vez al inicio
+limpiarAntidelete();
+//cada 30 minutos antidelete          
+          
 // Función para revisar y actualizar grupos cada 5 segundos
 setInterval(async () => {
   try {
