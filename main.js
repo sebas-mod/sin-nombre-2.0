@@ -1735,7 +1735,7 @@ case 'ff2': {
 
     break;
 }
-case 'tag': {
+case 'n': {
   try {
     const chatId = msg.key.remoteJid;
     const senderJid = msg.key.participant || msg.key.remoteJid;
