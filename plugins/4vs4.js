@@ -25,7 +25,22 @@ const handler = async (msg, { conn, args }) => {
     }, { quoted: msg });
   }
 
-  await conn.sendMessage(chatId, { react: { text: '🎮', key: msg.key } });
+  // Convertir la hora ingresada a formato 24h base México
+  const to24Hour = (str) => {
+    let [time, modifier] = str.toLowerCase().split(/(am|pm)/);
+    let [h, m] = time.split(":").map(n => parseInt(n));
+    if (modifier === 'pm' && h !== 12) h += 12;
+    if (modifier === 'am' && h === 12) h = 0;
+    return { h, m: m || 0 };
+  };
+
+  const to12Hour = (h, m) => {
+    const suffix = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return `${h}:${m.toString().padStart(2, '0')}${suffix}`;
+  };
+
+  const base = to24Hour(horaTexto);
 
   const zonas = [
     { pais: "🇲🇽 MÉXICO", offset: 0 },
@@ -34,8 +49,18 @@ const handler = async (msg, { conn, args }) => {
     { pais: "🇵🇦 PANAMÁ", offset: 0 },
     { pais: "🇸🇻 EL SALVADOR", offset: 0 },
     { pais: "🇨🇱 CHILE", offset: 2 },
-    { pais: "🇦🇷 ARGENTINA", offset: 2 }
+    { pais: "🇦🇷 ARGENTINA", offset: 2 },
+    { pais: "🇪🇸 ESPAÑA", offset: 7 }
   ];
+
+  const horaMsg = zonas.map(z => {
+    let newH = base.h + z.offset;
+    let newM = base.m;
+    if (newH >= 24) newH -= 24;
+    return `${z.pais} : ${to12Hour(newH, newM)}`;
+  }).join("\n");
+
+  await conn.sendMessage(chatId, { react: { text: '🎮', key: msg.key } });
 
   const participantes = meta.participants.filter(p => p.id !== conn.user.id);
   if (participantes.length < 12) {
@@ -43,8 +68,6 @@ const handler = async (msg, { conn, args }) => {
       text: "⚠️ Se necesitan al menos *12 usuarios* para formar 2 escuadras y suplentes."
     }, { quoted: msg });
   }
-
-  const horaMsg = zonas.map(z => `${z.pais} : ${horaTexto}`).join("\n");
 
   const tempMsg = await conn.sendMessage(chatId, {
     text: "🎮 Preparando escuadras de Free Fire..."
