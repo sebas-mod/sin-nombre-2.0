@@ -13,15 +13,15 @@ const handler = async (msg, { conn }) => {
 
   const latency = Date.now() - start;
   const memoryUsage = process.memoryUsage();
-  const totalMemMB = (os.totalmem() / 1024 / 1024).toFixed(0);
-  const usedMemMB = (memoryUsage.rss / 1024 / 1024).toFixed(0);
+  const totalMemGB = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
+  const usedMemGB = (memoryUsage.rss / 1024 / 1024 / 1024).toFixed(2);
 
   const info = `*📍 LATENCIA DEL BOT*\n\n` +
     `🏓 *Velocidad:* ${latency} ms\n` +
-    `📦 *RAM usada:* ${usedMemMB} MB / ${totalMemMB} MB\n` +
+    `📦 *RAM usada:* ${usedMemGB} GB / ${totalMemGB} GB\n` +
     `📡 *Estado del bot:* En línea ✅\n` +
     `🧠 *CPU:* ${os.cpus()[0].model}\n\n` +
-    `📍 *Uptime:* ${(process.uptime() / 60).toFixed(1)} minutos`;
+    `⏱️ *Uptime:* ${(process.uptime() / 60).toFixed(1)} minutos`;
 
   // Editar el mensaje anterior con los resultados
   await conn.sendMessage(chatId, {
