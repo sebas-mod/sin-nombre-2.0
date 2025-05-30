@@ -3,13 +3,13 @@ const handler = async (msg, { conn }) => {
   const prefix = global.prefix;
 
   try {
-    // Reacción
+    // Reacción al usar el comando
     await conn.sendMessage(chatId, { react: { text: "📋", key: msg.key } });
 
-    // Imagen fija
+    // Imagen fija del menú
     const imgUrl = 'https://cdn.russellxz.click/92980869.jpeg';
 
-    // Texto del menú
+    // Menú con marca de agua al final
     const texto = `╭──────>⋆☽⋆⋆☾⋆<──────╮
 ✰ 𝙁𝙍𝙀𝙀 𝙁𝙄𝙍𝙀 𝙈𝙀𝙉𝙐 ✰
 ╰──────>⋆☽⋆⋆☾⋆<──────╯
@@ -28,9 +28,13 @@ const handler = async (msg, { conn }) => {
 🍉 ➺ *${prefix}16vs16*
 🍉 ➺ *${prefix}20vs20*
 🍉 ➺ *${prefix}24vs24*
-🍉 ➺ *${prefix}guerr*`;
+🍉 ➺ *${prefix}guerr*
 
-    // Enviar menú con imagen fija
+─────────────
+🤖 *Desarrollado por Russell XZ*
+🤖 *Azura Ultra & Cortana Bot*`;
+
+    // Enviar menú con imagen
     await conn.sendMessage(chatId, {
       image: { url: imgUrl },
       caption: texto
