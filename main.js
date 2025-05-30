@@ -4363,6 +4363,7 @@ case 'menu': {
 ⎔ ${global.prefix}menurpg  
 ⎔ ${global.prefix}info  
 ⎔ ${global.prefix}menuowner  
+⎔ ${global.prefix}menufree
 
 ╭──────────────╮  
 │ ✦ PARA VENTAS ✦ │  
