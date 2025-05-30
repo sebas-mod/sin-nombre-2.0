@@ -1,10 +1,9 @@
-const fs = require("fs");
-
 const handler = async (msg, { conn, args }) => {
   const chatId = msg.key.remoteJid;
   const sender = msg.key.participant || msg.key.remoteJid;
   const senderNum = sender.replace(/[^0-9]/g, "");
   const isOwner = global.owner.some(([id]) => id === senderNum);
+  const isFromMe = msg.key.fromMe;
 
   if (!chatId.endsWith("@g.us")) {
     return conn.sendMessage(chatId, { text: "❌ Este comando solo puede usarse en grupos." }, { quoted: msg });
@@ -13,7 +12,7 @@ const handler = async (msg, { conn, args }) => {
   const meta = await conn.groupMetadata(chatId);
   const isAdmin = meta.participants.find(p => p.id === sender)?.admin;
 
-  if (!isAdmin && !isOwner) {
+  if (!isAdmin && !isOwner && !isFromMe) {
     return conn.sendMessage(chatId, {
       text: "❌ Solo *admins* o *el dueño del bot* pueden usar este comando."
     }, { quoted: msg });
@@ -30,56 +29,22 @@ const handler = async (msg, { conn, args }) => {
 
   const zonas = [
     { pais: "🇲🇽 MÉXICO", offset: 0 },
-    { pais: "🇨🇴 COLOMBIA", offset: 1 },
-    { pais: "🇵🇪 PERÚ", offset: 1 },
-    { pais: "🇵🇦 PANAMÁ", offset: 1 },
+    { pais: "🇨🇴 COLOMBIA", offset: 0 },
+    { pais: "🇵🇪 PERÚ", offset: 0 },
+    { pais: "🇵🇦 PANAMÁ", offset: 0 },
     { pais: "🇸🇻 EL SALVADOR", offset: 0 },
     { pais: "🇨🇱 CHILE", offset: 2 },
     { pais: "🇦🇷 ARGENTINA", offset: 2 }
   ];
 
-  const parseHora = (texto) => {
-    const match = texto.match(/(\d{1,2}):(\d{2})\s?(am|pm)/i);
-    if (!match) return null;
-    let [ , hour, minute, meridian ] = match;
-    hour = parseInt(hour);
-    minute = parseInt(minute);
-    if (meridian.toLowerCase() === "pm" && hour !== 12) hour += 12;
-    if (meridian.toLowerCase() === "am" && hour === 12) hour = 0;
-    return { hour, minute };
-  };
-
-  const baseHora = parseHora(horaTexto);
-  if (!baseHora) {
-    return conn.sendMessage(chatId, {
-      text: "⛔ Hora inválida. Usa el formato como: 4:30pm"
-    }, { quoted: msg });
-  }
-
-  const horaMsg = zonas.map(z => {
-    const totalMinutes = (baseHora.hour + z.offset) * 60 + baseHora.minute;
-    const h = Math.floor((totalMinutes % 1440) / 60);
-    const m = totalMinutes % 60;
-    const meridian = h >= 12 ? "pm" : "am";
-    const displayH = h % 12 === 0 ? 12 : h % 12;
-    const hhmm = `${displayH}:${m.toString().padStart(2, "0")}${meridian}`;
-    return `${z.pais} : ${hhmm}`;
-  }).join("\n");
-
-  // === Incluye a TODOS los participantes (usuarios, admins, owner) excepto @lid
-  let participantes = meta.participants.filter(p => !p.id.endsWith("@lid"));
-
-  // Verifica si el owner está en la lista y no lo excluye
+  const participantes = meta.participants.filter(p => p.id !== conn.user.id);
   if (participantes.length < 12) {
     return conn.sendMessage(chatId, {
-      text: "⚠️ Se necesitan al menos *12 usuarios* visibles para crear 2 escuadras y suplentes."
+      text: "⚠️ Se necesitan al menos *12 usuarios* para formar 2 escuadras y suplentes."
     }, { quoted: msg });
   }
 
-  const shuffled = participantes.sort(() => Math.random() - 0.5);
-  const escuadra1 = shuffled.slice(0, 4);
-  const escuadra2 = shuffled.slice(4, 8);
-  const suplentes = shuffled.slice(8, 12);
+  const horaMsg = zonas.map(z => `${z.pais} : ${horaTexto}`).join("\n");
 
   const tempMsg = await conn.sendMessage(chatId, {
     text: "🎮 Preparando escuadras de Free Fire..."
@@ -93,15 +58,19 @@ const handler = async (msg, { conn, args }) => {
   ];
 
   for (let i = 0; i < pasos.length; i++) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(r => setTimeout(r, 1500));
     await conn.sendMessage(chatId, {
       edit: tempMsg.key,
       text: pasos[i]
     });
   }
 
-  const renderJugadores = (arr) =>
-    arr.map((u, i) => `${i === 0 ? "👑" : "🥷🏻"} ┇ @${u.id.split("@")[0]}`).join("\n");
+  const shuffled = participantes.sort(() => Math.random() - 0.5);
+  const escuadra1 = shuffled.slice(0, 4);
+  const escuadra2 = shuffled.slice(4, 8);
+  const suplentes = shuffled.slice(8, 12);
+
+  const renderJugadores = (arr) => arr.map((u, i) => `${i === 0 ? "👑" : "🥷🏻"} ┇ @${u.id.split("@")[0]}`).join("\n");
 
   const textoFinal = `*4 𝐕𝐄𝐑𝐒𝐔𝐒 4*\n\n⏱ 𝐇𝐎𝐑𝐀𝐑𝐈𝐎\n${horaMsg}\n\n➥ 𝐌𝐎𝐃𝐀𝐋𝐈𝐃𝐀𝐃: 🔫 Clásico\n➥ 𝐉𝐔𝐆𝐀𝐃𝐎𝐑𝐄𝐒:\n\n      𝗘𝗦𝗖𝗨𝗔𝗗𝗥𝗔 1\n\n${renderJugadores(escuadra1)}\n\n    ㅤʚ 𝐒𝐔𝐏𝐋𝐄𝐍𝐓𝐄𝐒:\n${renderJugadores(suplentes.slice(0, 2))}\n\n     𝗘𝗦𝗖𝗨𝗔𝗗𝗥𝗔 2\n\n${renderJugadores(escuadra2)}\n\n    ㅤʚ 𝐒𝐔𝐏𝐋𝐄𝐍𝐓𝐄𝐒:\n${renderJugadores(suplentes.slice(2))}`;
 
