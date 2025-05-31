@@ -17,7 +17,7 @@ const handler = async (msg, { conn, text, usedPrefix }) => {
               `🔹 *Para obtener la foto de perfil de alguien:* \n` +
               `   - *Responde a su mensaje con:* _${usedPrefix}perfil_\n\n` +
               `🔹 *Para obtener la foto de perfil de un número:* \n` +
-              `   - _${usedPrefix}perfil +1 555-123-4567_\n\n` +
+              `   - _${usedPrefix}perfil +54 9 11 6688-7146_\n\n` +
               `🔹 *Para obtener la foto de perfil de un usuario mencionado:* \n` +
               `   - _${usedPrefix}perfil @usuario_\n\n` +
               `⚠️ *Nota:* Algunos usuarios pueden tener su foto de perfil privada.`
