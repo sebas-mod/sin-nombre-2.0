@@ -203,4 +203,5 @@ Usa ${global.prefix}serbot para volver a conectar.`
 handler.command = ['sercode', 'code', 'jadibot', 'serbot', 'qr'];
 handler.tags = ['owner'];
 handler.help = ['serbot', 'code'];
+handler.owner = true
 module.exports = handler;
